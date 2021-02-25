@@ -1,0 +1,20 @@
+image: debian:stable
+
+before_script:
+  - apt-get update
+  - apt-get install python3 python3-distutils curl git -y
+  - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -
+  - source $HOME/.poetry/env
+  - poetry --version
+  - poetry install -vv
+
+test:
+  script:
+    - poetry run pytest
+
+build:
+  script:
+    - poetry build
+  artifacts:
+    paths:
+      - dist/*

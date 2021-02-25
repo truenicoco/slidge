@@ -1,0 +1,8 @@
+__pycache__
+*.__pycache__
+*.pyc
+dist/
+.pytest_cache
+*.bak
+.vscode
+docs/build
