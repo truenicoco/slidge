@@ -17,6 +17,7 @@ from slidge.session import sessions
 from slidge.gateway import BaseGateway
 from slidge.base_legacy import LegacyError, BaseLegacyClient
 
+
 def my_tostring(xml):
     return (
         xml.dom.minidom.parseString(tostring(xml))
@@ -36,10 +37,11 @@ assets_path = Path(__file__).parent.parent / "assets"
 
 class MockLegacyClient(BaseLegacyClient):
     buddy1 = Buddy("buddy1")
-    buddy1.avatar = assets_path / "buddy1.png"
+    with (assets_path / "buddy1.png").open("rb") as fp:
+        buddy1.avatar_bytes = fp.read()
     buddy2 = Buddy("buddy2")
-    buddy2.avatar = assets_path / "buddy2.png"
-
+    with (assets_path / "buddy2.png").open("rb") as fp:
+        buddy2.avatar_bytes = fp.read()
     buddies = [buddy1, buddy2]
 
     legacy_sent = []
