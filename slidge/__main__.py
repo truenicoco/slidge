@@ -8,7 +8,7 @@ import importlib
 from argparse import ArgumentParser
 from configparser import ConfigParser
 
-from slidge.plugins import xep_0100, xep_0077
+from slidge.plugins import xep_0100
 
 
 if __name__ == "__main__":

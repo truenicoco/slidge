@@ -90,6 +90,7 @@ class BaseGateway(ComponentXMPP):
 
         self._prompt_futures = dict()
 
+
         self.register_plugin(
             "xep_0077",
             pconfig={
@@ -119,7 +120,6 @@ class BaseGateway(ComponentXMPP):
 
         self._init_db()
         self._init_event_handlers()
-        self._make_vcard()
         self.roster.set_backend(RosterBackend(self.boundjid.bare))
 
         # self.use_origin_id = False
@@ -142,7 +142,7 @@ class BaseGateway(ComponentXMPP):
             "user_remove",
         )
         # Waiting for the async internal API merge
-        self["xep_0077"]._user_validate = self._user_validate
+        # self["xep_0077"]._user_validate = self._user_validate
 
     def _init_event_handlers(self):
         self.add_event_handler("session_start", self._startup)
@@ -181,25 +181,25 @@ class BaseGateway(ComponentXMPP):
         self.add_event_handler("groupchat_join", self._on_groupchat_join)
         self.add_event_handler("groupchat_message", groupchat_message)
 
-    def _startup(self, event):
+    async def _startup(self, event):
+        await self._make_avatar()
         for jid in self.client_roster:
             self["xep_0100"].send_presence(pto=jid)
             self["xep_0100"].send_presence(pto=jid, ptype="probe")
 
-    def _make_vcard(self):
-        # FIXME: this is basically the same thing than Buddy._make_vcard, so not DRY
-        vcard = self["xep_0054"].make_vcard()
+    async def _make_avatar(self):
         if self.AVATAR is not None:
             with self.AVATAR.open("rb") as fp:
                 avatar_bytes = fp.read()
+            vcard = self["xep_0054"].make_vcard()
             vcard["PHOTO"]["BINVAL"] = avatar_bytes
-            hash_ = hashlib.sha1(avatar_bytes).hexdigest()
-            # TODO: avoid using this private method
-            # Requires patching xep0153 for gateways?
-            self["xep_0153"]._set_hash(
-                jid=self.boundjid, node=None, ifrom=None, args=hash_
+            await self["xep_0153"].api["set_hash"](
+                jid=self.jid, args=hashlib.sha1(avatar_bytes).hexdigest()
             )
-        self["xep_0054"].publish_vcard(jid=self.boundjid.bare, vcard=vcard)
+            await self["xep_0054"].api["set_vcard"](
+                jid=self.jid,
+                args=vcard,
+            )
 
     async def _on_groupchat_join(self, presence: Presence):
         user_jid = presence["from"]
@@ -207,7 +207,6 @@ class BaseGateway(ComponentXMPP):
         if user is None:
             return
 
-        # if presence["to"].resource:
         muc_node = presence["to"].username
         log.debug(f"{user} wants to join {muc_node}")
         await sessions.by_jid(user_jid).mucs.by_jid_node(muc_node).user_join(presence)
@@ -259,18 +258,16 @@ class BaseGateway(ComponentXMPP):
             raise XMPPError(text=e.msg)
 
     async def _user_validate(self, jid, node, ifrom, reg):
-        # FIXME: this really needs to be async somehow
-
         await self.legacy_client.validate(ifrom, reg)
         user = User(
             jid=ifrom, legacy_id=reg["username"], legacy_password=reg["password"]
         )
         user.commit()
 
-    def _user_get(self, jid, node, ifrom, stanza):
+    async def _user_get(self, jid, node, ifrom, stanza):
         return User.by_jid(stanza["from"])
 
-    def _user_remove(self, jid, node, ifrom, stanza):
+    async def _user_remove(self, jid, node, ifrom, stanza):
         sessions.destroy_by_jid(stanza["from"])
         user = User.by_jid(stanza["from"])
         user.delete()

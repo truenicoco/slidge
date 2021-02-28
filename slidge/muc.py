@@ -295,7 +295,7 @@ class LegacyMuc:
         self.xmpp["xep_0249"].send_invitation(
             jid=self.user.jid,
             roomjid=self.jid,
-            reason=f"This is the group {muc.subject}",
+            reason=f"This is the group {self.subject}",
         )
 
 

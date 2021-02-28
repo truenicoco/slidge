@@ -122,14 +122,15 @@ class TestGateway(SlixGatewayTest):
             </presence>
         """
         )
+        h = self.xmpp.loop.run_until_complete(
+            self.xmpp["xep_0153"].api["get_hash"](jid=self.xmpp.boundjid)
+        )
         self.send(
             f"""
             <presence to="{self.user_jid.bare}"
                       from="{self.xmpp.boundjid.bare}">
                 <x xmlns="vcard-temp:x:update">
-                                    <photo>
-                    {self.xmpp["xep_0153"].api["get_hash"](jid=self.xmpp.boundjid, node=None, ifrom=None, args={})}
-                    </photo>
+                    <photo>{h}</photo>
                 </x>
             </presence>
             """
@@ -247,6 +248,11 @@ class TestGateway(SlixGatewayTest):
             """
         )
         #
+        h = self.xmpp.loop.run_until_complete(
+            self.xmpp["xep_0153"].api["get_hash"](
+                jid=self.xmpp.boundjid, node=None, ifrom=None, args={}
+            )
+        )
         self.send(
             f"""
             <presence xmlns="jabber:component:accept"
@@ -254,7 +260,7 @@ class TestGateway(SlixGatewayTest):
                       from='{self.xmpp.boundjid.bare}'>
                 <x xmlns="vcard-temp:x:update">
                     <photo>
-                    {self.xmpp["xep_0153"].api["get_hash"](jid=self.xmpp.boundjid, node=None, ifrom=None, args={})}</photo>
+                    {h}</photo>
                 </x>
                 <priority>0</priority>
             </presence>
@@ -333,7 +339,9 @@ class TestGateway(SlixGatewayTest):
 
     def test_user_join_muc(self):
         self.login_user()
-        muc = sessions.by_jid(self.user_jid).mucs.by_legacy_id(self.legacy_client.muc.legacy_id)
+        muc = sessions.by_jid(self.user_jid).mucs.by_legacy_id(
+            self.legacy_client.muc.legacy_id
+        )
         self.recv(
             f"""
             <presence to="{muc.jid.username}@{self.xmpp.boundjid.bare}/{self.user_muc_nickname}"
@@ -345,8 +353,10 @@ class TestGateway(SlixGatewayTest):
             </presence>
             """
         )  # No caps because this triggers a disco unconsistently
-        print(self.next_sent())  # FIXME: Gateway sends a presence here, I don't think we
-                                 # really want that
+        print(
+            self.next_sent()
+        )  # FIXME: Gateway sends a presence here, I don't think we
+        # really want that
         for nick in self.legacy_client.occupants:
             # stanza = self.next_sent()
             # stanzas.append(stanza)
@@ -375,9 +385,8 @@ class TestGateway(SlixGatewayTest):
                 <x xmlns="vcard-temp:x:update" />
             </presence>
             """,
-            use_values=False
+            use_values=False,
         )
-
 
         # assert False is True
         # for nick in self.legacy_client.occupants:

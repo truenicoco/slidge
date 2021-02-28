@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import pytest
 import hashlib
@@ -100,7 +101,7 @@ class TestBuddy(SlixGatewayTest):
         self.buddies.add(buddy)
         buddy._make_identity()
         self.xmpp.loop.run_until_complete(buddy.update_caps())
-        caps = self.xmpp["xep_0115"].get_caps(jid=buddy.jid)
+        caps = self.xmpp.loop.run_until_complete(self.xmpp["xep_0115"].get_caps(jid=buddy.jid))
         self.check(
             caps,
             f"""
@@ -119,6 +120,7 @@ class TestBuddy(SlixGatewayTest):
         )
         buddy.send_xmpp_presence()
         _ = self.next_sent()
+        verstring = self.xmpp.loop.run_until_complete(self.xmpp["xep_0115"].get_verstring(buddy.jid))
         self.send(
             f"""
             <presence xmlns="jabber:component:accept"
@@ -128,7 +130,7 @@ class TestBuddy(SlixGatewayTest):
                       <c xmlns="http://jabber.org/protocol/caps"
                          node="{self.xmpp["xep_0115"].caps_node}"
                          hash="sha-1"
-                         ver="{self.xmpp["xep_0115"].get_verstring(buddy.jid)}" />
+                         ver="{verstring}" />
                       <priority>0</priority>
             </presence>
             """
@@ -165,16 +167,12 @@ class TestBuddy(SlixGatewayTest):
     def test_avatar_hash_in_presence(self):
         buddy = Buddy("buddy_legacy_id")
         self.buddies.add(buddy)
-        with NamedTemporaryFile(suffix=".png") as file:
-            file.write(b"xxxxxxx")
-            buddy.avatar = Path(file.name)
-            buddy._make_identity()
-            buddy._make_vcard()
-            hash_ = hashlib.sha1(file.read()).hexdigest()
-        # vcard = self.xmpp.loop.run_until_complete(
-        #     self.xmpp["xep_0054"].get_vcard(jid=buddy.jid, local=True)
-        # )
-        # print(vcard)
+        avatar_bytes = b"xxxxxxx"
+        hash_ = hashlib.sha1(avatar_bytes).hexdigest()
+
+        buddy.avatar_bytes = avatar_bytes
+        buddy._make_identity()
+        self.xmpp.loop.run_until_complete(buddy._make_vcard())
         buddy.send_xmpp_presence()
         _ = self.next_sent()  # handshake
         self.send(
@@ -189,6 +187,7 @@ class TestBuddy(SlixGatewayTest):
             </presence>
             """
         )
+        assert self.next_sent() is None
 
     def test_send_xmpp_message(self):
         buddy = self.add_buddy()
@@ -243,3 +242,5 @@ class TestBuddy(SlixGatewayTest):
             </message>
             """,
         )
+
+logging.basicConfig(level=logging.DEBUG)

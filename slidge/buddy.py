@@ -47,13 +47,13 @@ class Buddy:
 
         self._ptype: str = ptype
         self.xmpp: typing.Optional[BaseGateway] = None
-        self.avatar: typing.Optional[Path] = None
+        self.avatar_bytes: typing.Optional[bytes] = None
         self.user: typing.Optional[User] = None
 
     def __repr__(self):
         return f"<Buddy '{self.legacy_id}' ({self.jid})>"
 
-    def finalize(self):
+    async def finalize(self):
         """
         Create identity, caps and vcard.
 
@@ -62,25 +62,22 @@ class Buddy:
         log.debug(f"Finalizing {self}")
         self._make_roster_entry()
         self._make_identity()
-        self._make_vcard()
+        await self._make_vcard()
 
     def _make_roster_entry(self):
         self.xmpp.roster[self.jid].add(self.user.jid, ato=True, afrom=True, save=False)
 
-    def _make_vcard(self):
+    async def _make_vcard(self):
         vcard = self.xmpp["xep_0054"].make_vcard()
-        if self.avatar is not None:
-            with self.avatar.open("rb") as fp:
-                avatar_bytes = fp.read()
-            vcard["PHOTO"]["BINVAL"] = avatar_bytes
-            hash_ = hashlib.sha1(avatar_bytes).hexdigest()
-            # TODO: avoid using this private method
-            # Requires patching xep0153 for gateways?
-            self.xmpp["xep_0153"]._set_hash(
-                jid=self.jid, node=None, ifrom=None, args=hash_
+        if self.avatar_bytes is not None:
+            vcard["PHOTO"]["BINVAL"] = self.avatar_bytes
+            await self.xmpp["xep_0153"].api["set_hash"](
+                jid=self.jid, args=hashlib.sha1(self.avatar_bytes).hexdigest()
             )
-            # self.xmpp["xep_0153"].set_avatar(jid=self.jid, avatar=avatar_bytes)
-        self.xmpp["xep_0054"].publish_vcard(jid=self.jid, vcard=vcard)
+        await self.xmpp["xep_0054"].api["set_vcard"](
+            jid=self.jid,
+            args=vcard,
+        )
 
     def _make_identity(self):
         log.debug(f"Making identity of {self}")
@@ -249,7 +246,9 @@ class Buddy:
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["body"] = body
-        msg["delay"].set_stamp(timestamp.isoformat()[:19] + "Z")  # pylint: disable=no-member
+        msg["delay"].set_stamp(
+            timestamp.isoformat()[:19] + "Z"
+        )  # pylint: disable=no-member
 
         carbon = Message()
         carbon["from"] = self.user.jid.bare
@@ -398,7 +397,7 @@ class Buddies:
         log.debug(f"Sending buddies presences for {self.user}: {list(self)}")
         for buddy in self:
             log.debug(f"{buddy}")
-            buddy.finalize()
+            await buddy.finalize()
             buddy.send_xmpp_presence(ptype=buddy.ptype)
         asyncio.gather(*(buddy.update_caps() for buddy in self))
 

@@ -17,8 +17,6 @@ from slidge.session import sessions
 from slidge.gateway import BaseGateway
 from slidge.base_legacy import LegacyError, BaseLegacyClient
 
-from slidge.plugins import xep_0077
-
 def my_tostring(xml):
     return (
         xml.dom.minidom.parseString(tostring(xml))
