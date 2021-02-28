@@ -100,8 +100,12 @@ class Buddy:
             "vcard-temp",
             "urn:xmpp:receipts",
         ):
-            self.xmpp["xep_0030"].add_feature(feature=f, jid=self.jid)
+            await self.xmpp["xep_0030"].add_feature(feature=f, jid=self.jid)
+        # Broadcasting now results in bare JID presences from legacy contacts
+        # that gajim does not like
+        self.xmpp["xep_0115"].broadcast = False
         await self.xmpp["xep_0030"].update_caps(jid=self.jid)
+        self.xmpp["xep_0115"].broadcast = True
 
     @property
     def ptype(self):
