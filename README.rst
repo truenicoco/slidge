@@ -17,4 +17,8 @@ Another related project is `matterbridge <https://github.com/42wim/matterbridge>
 this projects focuses on XMPP to take advantage of its amazing features when matterbridge
 is geared towards mattermost.
 
+Homepage: `gitlab <https://gitlab.com/nicocool84/slidge/>`_
+
+Chat room: `slidge@conference.nicoco.fr <xmpp:slidge@conference.nicoco.fr?join>`_
+
 `Docs (WIP) are here <https://slidge.readthedocs.io>`_.
