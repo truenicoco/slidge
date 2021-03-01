@@ -13,7 +13,7 @@ but we target python specifically.
 At this point, only a `signald <https://gitlab.com/signald>`_-based gateway is
 available as a proof of concept.
 
-Another related project is `matterbridge <https://github.com/42wim/matterbridge>`, but
+Another related project is `matterbridge <https://github.com/42wim/matterbridge>`_, but
 this projects focuses on XMPP to take advantage of its amazing features when matterbridge
 is geared towards mattermost.
 

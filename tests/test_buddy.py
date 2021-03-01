@@ -100,7 +100,7 @@ class TestBuddy(SlixGatewayTest):
         buddy = Buddy("buddy_legacy_id")
         self.buddies.add(buddy)
         buddy._make_identity()
-        self.xmpp.loop.run_until_complete(buddy.update_caps())
+        self.xmpp.loop.run_until_complete(buddy._update_caps())
         caps = self.xmpp.loop.run_until_complete(self.xmpp["xep_0115"].get_caps(jid=buddy.jid))
         self.check(
             caps,

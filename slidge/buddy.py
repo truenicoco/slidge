@@ -63,6 +63,7 @@ class Buddy:
         self._make_roster_entry()
         self._make_identity()
         await self._make_vcard()
+        await self._update_caps()
 
     def _make_roster_entry(self):
         self.xmpp.roster[self.jid].add(self.user.jid, ato=True, afrom=True, save=False)
@@ -85,7 +86,7 @@ class Buddy:
             jid=self.jid, category=self.IDENTITY_CATEGORY, itype=self.IDENTITY_TYPE
         )
 
-    async def update_caps(self):
+    async def _update_caps(self):
         log.debug(f"Updating caps of {self}")
         # FIXME: which features are really needed here?
         for f in (
@@ -98,11 +99,23 @@ class Buddy:
             "urn:xmpp:receipts",
         ):
             await self.xmpp["xep_0030"].add_feature(feature=f, jid=self.jid)
+        info = await self.xmpp['xep_0030'].get_info(self.jid, node=None, local=True)
+        if isinstance(info, Iq):
+            info = info['disco_info']
+        ver = self.xmpp['xep_0115'].generate_verstring(info, self.xmpp['xep_0115'].hash)
+        await self.xmpp['xep_0030'].set_info(
+            jid=self.jid,
+            node='%s#%s' % (self.xmpp['xep_0115'].caps_node, ver),
+            info=info
+        )
+        await self.xmpp['xep_0115'].cache_caps(ver, info)
+        await self.xmpp['xep_0115'].assign_verstring(self.jid, ver)
+
         # Broadcasting now results in bare JID presences from legacy contacts
         # that gajim does not like
-        self.xmpp["xep_0115"].broadcast = False
-        await self.xmpp["xep_0030"].update_caps(jid=self.jid)
-        self.xmpp["xep_0115"].broadcast = True
+        # self.xmpp["xep_0115"].broadcast = False
+        # await self.xmpp["xep_0030"].update_caps(jid=self.jid)
+        # self.xmpp["xep_0115"].broadcast = True
 
     @property
     def ptype(self):
@@ -399,7 +412,6 @@ class Buddies:
             log.debug(f"{buddy}")
             await buddy.finalize()
             buddy.send_xmpp_presence(ptype=buddy.ptype)
-        asyncio.gather(*(buddy.update_caps() for buddy in self))
 
     async def _roster_manipulation(self, subscription):
         await self.xmpp["xep_0356"].set_roster(
