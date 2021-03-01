@@ -1,5 +1,6 @@
 import time
 import logging
+import hashlib
 
 import pytest
 
@@ -122,6 +123,7 @@ class TestGateway(SlixGatewayTest):
             </presence>
         """
         )
+        self.xmpp.loop.run_until_complete(self.xmpp._startup(event=None))
         h = self.xmpp.loop.run_until_complete(
             self.xmpp["xep_0153"].api["get_hash"](jid=self.xmpp.boundjid)
         )
@@ -168,19 +170,22 @@ class TestGateway(SlixGatewayTest):
         )
         self.recv(f"""<iq id="1" type="result" />""")
         for buddy in self.xmpp.legacy_client.buddies:
+            ver = self.xmpp.loop.run_until_complete(self.xmpp["xep_0115"].get_verstring(jid=buddy.jid))
+            h = hashlib.sha1(buddy.avatar_bytes).hexdigest()
+            # h = self.xmpp.loop.run_until_complete(self.xmpp["xep_0153"].api["get_hash"](jid=buddy.jid))
             self.send(
                 f"""
                 <presence to="{self.user_jid.bare}"
                           from="{buddy.jid}">
                     <x xmlns="vcard-temp:x:update">
                     <photo>
-                    {self.xmpp["xep_0153"].api["get_hash"](jid=buddy.jid, node=None, ifrom=None, args={})}
+                    {h}
                     </photo>
                     </x>
                     <c xmlns="http://jabber.org/protocol/caps"
                        node="{self.xmpp["xep_0115"].caps_node}"
                        hash="sha-1"
-                       ver="{self.xmpp["xep_0115"].get_verstring(buddy.jid)}" />
+                       ver="{ver}" />
                     <priority>0</priority>
                 </presence>""",
             )
@@ -239,6 +244,7 @@ class TestGateway(SlixGatewayTest):
 
     def test_probe_gateway_by_registered_user(self):
         self.add_user()
+        self.xmpp.loop.run_until_complete(self.xmpp._startup(event=None))
         log.debug(f"roster: {self.xmpp.client_roster}")
         self.recv(
             f"""
@@ -353,9 +359,6 @@ class TestGateway(SlixGatewayTest):
             </presence>
             """
         )  # No caps because this triggers a disco unconsistently
-        print(
-            self.next_sent()
-        )  # FIXME: Gateway sends a presence here, I don't think we
         # really want that
         for nick in self.legacy_client.occupants:
             # stanza = self.next_sent()
