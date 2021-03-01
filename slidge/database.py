@@ -111,14 +111,6 @@ class RosterBackend:
             )
 
     def save(self, owner_jid, jid, item_state, db_state):
-        if owner_jid != self.gateway_jid:
-            # No need to store legacy contact roster, they only have
-            # the corresponding jabber user with sub=both in them…
-            # FIXME: after consideration, we should store contacts of legacy users
-            # because of this race condition: user launches his XMPP client, sends probes
-            # to his legacy buddies, gateway replies unsub for all of them before
-            # pushing them again to the user's roster, resulting in unwanted noise
-            return
         item_state = deepcopy(item_state)
         item_state["from_"] = item_state.pop("from")
         item_state.pop("groups")

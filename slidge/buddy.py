@@ -66,7 +66,7 @@ class Buddy:
         await self._update_caps()
 
     def _make_roster_entry(self):
-        self.xmpp.roster[self.jid].add(self.user.jid, ato=True, afrom=True, save=False)
+        self.xmpp.roster[self.jid].add(self.user.jid, ato=True, afrom=True, save=True)
 
     async def _make_vcard(self):
         vcard = self.xmpp["xep_0054"].make_vcard()
