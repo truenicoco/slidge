@@ -230,6 +230,22 @@ class TestMuc(SlixGatewayTest):
             """
         )
 
+    def test_change_subject(self):
+        muc = self.add_muc()
+        muc.user_resources = ["pda"]
+
+        muc.change_subject("Fire Burn and Cauldron Bubble!", "secondwitch")
+        self.send(
+            """
+        <message
+            from='coven@chat.shakespeare.lit/secondwitch'
+            to='hag66@shakespeare.lit/pda'
+            type='groupchat'>
+          <subject>Fire Burn and Cauldron Bubble!</subject>
+        </message>
+        """
+        )
+
     # def test_disco_features(self):
     #     pass
     #     # Identity category = gateway so this cannot (?) work

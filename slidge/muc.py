@@ -289,6 +289,14 @@ class LegacyMuc:
         # msg["delay"].set_stamp("2002-10-13T23:58:37Z")
         msg.send()
 
+    def change_subject(self, subject: str, subject_changer: str):
+        to = copy(self.user.jid)
+        self.subject = subject
+        self.subject_changer = subject_changer
+        for res in self.user_resources:
+            to.resource = res
+            self.send_subject(to)
+
     async def shutdown(self):
         for r in self.user_resources:
             to = self.user.jid
