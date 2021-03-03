@@ -34,7 +34,7 @@ class Occupant:
     def xmpp(self):
         return self.muc.xmpp
 
-    def make_join_presence(self):
+    def make_presence(self):
         pfrom = self.muc.jid
         pfrom.resource = self.nick
         presence = self.xmpp.make_presence(pfrom=pfrom)
@@ -50,7 +50,6 @@ class Occupant:
         message["body"] = body
         message["from"] = jid
         return message
-
 
 class Occupants:
     def __init__(self, muc):
@@ -72,6 +71,22 @@ class Occupants:
             log.error("Occupant with this nickname already present, replacing him")
         occupant.muc = self.muc
         self._occupants[occupant.nick] = occupant
+        for res in self.muc.user_resources:
+            pres = occupant.make_presence()
+            to = copy(self.muc.user.jid)
+            to.resource = res
+            pres["to"] = to
+            pres.send()
+
+    def remove(self, occupant: Occupant):
+        self._occupants.pop(occupant.nick)
+        for res in self.muc.user_resources:
+            pres = occupant.make_presence()
+            pres["type"] = "unavailable"
+            to = copy(self.muc.user.jid)
+            to.resource = res
+            pres["to"] = to
+            pres.send()
 
     def by_nick(self, nick):
         try:
@@ -172,7 +187,7 @@ class LegacyMuc:
         self.user_resources.append(full_user_jid.resource)
 
         for occupant in self.occupants:
-            presence = occupant.make_join_presence()
+            presence = occupant.make_presence()
             presence["to"] = full_user_jid
             presence.send()
 

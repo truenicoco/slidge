@@ -101,5 +101,6 @@ class MockLegacyClient(BaseLegacyClient):
     async def muc_occupants(self, user: User, legacy_group_id: str):
         return self.occupants
 
+Client = MockLegacyClient
 
 log = logging.getLogger(__name__)

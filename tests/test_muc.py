@@ -191,6 +191,45 @@ class TestMuc(SlixGatewayTest):
         )
         assert self.next_sent() is None
 
+    def test_participant_enters(self):
+        muc = self.add_muc()
+        muc.user_resources = ["pda"]
+        occ = Occupant(nick=f"thirdwitch", role="participant", affiliation="member")
+        muc.occupants.add(occ)
+        # occ.make_join_presence().send()
+        self.send(
+            """
+            <presence
+                from='coven@chat.shakespeare.lit/thirdwitch'
+                to='hag66@shakespeare.lit/pda'>
+            <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member' role='participant'/>
+            </x>
+            <x xmlns="vcard-temp:x:update" />
+            </presence>
+            """
+        )
+
+    def test_participant_exits(self):
+        muc = self.add_muc()
+        occ = Occupant(nick=f"thirdwitch", role="participant", affiliation="member")
+        muc.occupants.add(occ)
+
+        muc.user_resources = ["pda"]
+        muc.occupants.remove(occ)
+        self.send(
+            """
+            <presence
+                from='coven@chat.shakespeare.lit/thirdwitch'
+                to='hag66@shakespeare.lit/pda'
+                type='unavailable'>
+            <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member' role='participant'/>
+            </x>
+            </presence>
+            """
+        )
+
     # def test_disco_features(self):
     #     pass
     #     # Identity category = gateway so this cannot (?) work
