@@ -17,8 +17,6 @@ from slidge.session import sessions
 from slidge.buddy import Buddy
 from slidge.muc import LegacyMuc
 
-from slidge.plugins import xep_0100
-
 
 class BaseGateway(ComponentXMPP):
     """

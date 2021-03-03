@@ -6,11 +6,11 @@ from typing import List, Dict
 from configparser import SectionProxy
 
 from slixmpp import Message, Iq
+from slixmpp.plugins.xep_0100 import LegacyError as BaseLegacyError
 
 from slidge.database import User
 from slidge.muc import LegacyMuc
 from slidge.buddy import Buddy
-from slidge.plugins.xep_0100 import LegacyError as BaseLegacyError
 
 
 class LegacyError(BaseLegacyError):
