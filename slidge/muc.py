@@ -201,7 +201,7 @@ class LegacyMuc:
         presence = self.xmpp.make_presence(pto=full_user_jid, pfrom=pfrom)
         presence["muc"]["status_codes"] = {110, 210}
         presence["muc"]["affiliation"] = self.user_affiliation
-        presence["muc"]["role"] = "participant"
+        presence["muc"]["role"] = self.user_role
         presence.send()
 
         self.history.send(full_user_jid)

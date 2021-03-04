@@ -246,6 +246,41 @@ class TestMuc(SlixGatewayTest):
         """
         )
 
+    def test_user_is_moderator(self):
+        muc = self.add_muc()
+        muc.user_role = "moderator"
+        presence = Presence()
+        presence["from"] = self.user.jid
+        presence["to"] = f"{muc.jid}/thirdwitch"
+        self.xmpp.loop.run_until_complete(muc.user_join(presence, sync_occupants=False))
+        self.send(
+            """
+            <presence
+                from='coven@chat.shakespeare.lit/thirdwitch'
+                to='hag66@shakespeare.lit/pda'>
+            <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member' role='moderator'/>
+                <status code='110'/>
+                <status code='210'/>
+            </x>
+            <x xmlns="vcard-temp:x:update" />
+            </presence>
+            """,
+            use_values=False,
+        )
+        self.send(
+            """
+            <message xmlns="jabber:component:accept"
+                     type="groupchat"
+                     from="coven@chat.shakespeare.lit/slidge"
+                     to="hag66@shakespeare.lit/pda">
+                <subject>A Dark Cave</subject>
+            </message>
+            """,
+        )
+        assert self.next_sent() is None
+        assert "pda" in muc.user_resources
+
     # def test_disco_features(self):
     #     pass
     #     # Identity category = gateway so this cannot (?) work

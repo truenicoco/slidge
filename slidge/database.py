@@ -94,6 +94,11 @@ class RosterEntry(Base):
         for k, v in item_state.items():
             setattr(self, k, v)
 
+    @classmethod
+    def all(cls):
+        return session.query(cls)
+
+
 class RosterBackend:
     def __init__(self, gateway_jid):
         self.gateway_jid = gateway_jid

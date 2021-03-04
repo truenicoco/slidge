@@ -27,6 +27,7 @@ class MockLegacyClient(BaseLegacyClient):
     legacy_sent = []
 
     muc = LegacyMuc(legacy_id="GrOuP")
+    muc.user_role = "moderator"
     occupants = ["participant1", "participant2", "participant3"]
 
     @property
