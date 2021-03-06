@@ -88,7 +88,6 @@ class BaseGateway(ComponentXMPP):
 
         self._prompt_futures = dict()
 
-
         self.register_plugin(
             "xep_0077",
             pconfig={
@@ -118,9 +117,20 @@ class BaseGateway(ComponentXMPP):
 
         self._init_db()
         self._init_event_handlers()
+        self._init_api()
         self.roster.set_backend(RosterBackend(self.boundjid.bare))
 
         # self.use_origin_id = False
+
+    def _init_api(self):
+        self["xep_0100"].api.register(self._legacy_contact_add, "legacy_contact_add")
+        # self.api.register(self._legacy_contact_remove, "legacy_contact_remove")
+
+    async def _legacy_contact_add(self, jid, node, ifrom, contact_jid: JID):
+        # try:
+        await sessions.by_jid(ifrom).buddies.by_jid(contact_jid).subscribe()
+        # except LegacyError:
+        #     pass
 
     def _init_db(self):
         init_session(

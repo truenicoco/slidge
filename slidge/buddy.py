@@ -315,6 +315,12 @@ class Buddy:
         """
         await self.legacy.send_pause(user=self.user, legacy_buddy_id=self.legacy_id)
 
+    async def subscribe(self):
+        await self.legacy.add_buddy(user=self.user, legacy_buddy_id=self.legacy_id)
+
+    async def unsubscribe(self):
+        await self.legacy.remove_buddy(user=self.user, legacy_buddy_id=self.legacy_id)
+
 
 class Buddies:
     """

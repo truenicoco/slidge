@@ -112,6 +112,280 @@ class TestGateway(SlixGatewayTest):
             use_values=False,
         )
 
+    def test_send_message_to_legacy_buddy_not_in_roster(self):
+        self.add_user()
+        self.recv(
+            f"""
+            <message from="{self.user_jid}"
+                     to="buddy@{self.xmpp.boundjid.bare}">
+                <body>Hello</body>
+            </message>
+            """
+        )
+        log.debug(f"Send queue: {id(self.legacy_sent)}, {self.legacy_sent}")
+
+        msg = self.xmpp.legacy_client.last_sent
+        assert msg["from"].legacy_id == self.user.legacy_id
+        assert msg["from"].jid == self.user.jid
+        assert msg["to"] == "buddy"
+        assert msg["msg"]["body"] == "Hello"
+        assert msg["type"] == "1on1"
+
+    def test_probe_gateway_by_unregistered_user(self):
+        self.recv(
+            f"""
+            <presence from='{self.user_jid}'
+                      to='{self.xmpp.boundjid.bare}'
+                      type='probe' />
+            """
+        )
+        #
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      to='{self.user_jid.bare}'
+                      from='{self.xmpp.boundjid.bare}'
+                      type='unsubscribed' />
+            """
+        )
+
+    def test_probe_gateway_by_registered_user(self):
+        self.add_user()
+        self.xmpp.loop.run_until_complete(self.xmpp._startup(event=None))
+        log.debug(f"roster: {self.xmpp.client_roster}")
+        self.recv(
+            f"""
+            <presence from='{self.user_jid}'
+                      to='{self.xmpp.boundjid.bare}'
+                      type='probe' />
+            """
+        )
+        #
+        h = self.xmpp.loop.run_until_complete(
+            self.xmpp["xep_0153"].api["get_hash"](
+                jid=self.xmpp.boundjid, node=None, ifrom=None, args={}
+            )
+        )
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      to='{self.user_jid.bare}'
+                      from='{self.xmpp.boundjid.bare}'>
+                <x xmlns="vcard-temp:x:update">
+                    <photo>
+                    {h}</photo>
+                </x>
+                <priority>0</priority>
+            </presence>
+            """
+        )
+
+    def test_probe_invalid_buddy(self):
+        self.recv(
+            f"""
+            <presence from='{self.user_jid}'
+                      to='buddy@{self.xmpp.boundjid.bare}'
+                      type='probe' />
+            """
+        )
+        #
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      to='{self.user_jid.bare}'
+                      from='buddy@{self.xmpp.boundjid.bare}'
+                      type='unsubscribed'>
+            </presence>
+            """
+        )
+
+    def test_probe_valid_buddy(self):
+        self.add_user()
+        buddy = sessions[self.user].buddies.by_legacy_id("buddy")
+        buddy._make_roster_entry()
+        self.recv(
+            f"""
+            <presence from='{self.user_jid}'
+                      to='{buddy.jid}'
+                      type='probe' />
+            """
+        )
+        #
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      to='{self.user_jid.bare}'
+                      from='{buddy.jid.bare}'>
+                <x xmlns="vcard-temp:x:update" />
+                <priority>0</priority>
+            </presence>
+            """
+        )
+
+    def test_logout_inexisting_user(self):
+        self.xmpp.event("legacy_logout", {"from": self.user_jid})
+        assert self.next_sent() is None
+
+    def test_logout_inexisting_session(self):
+        self.add_user()
+        self.xmpp.event("legacy_logout", {"from": self.user_jid})
+        assert self.next_sent() is None
+
+    def test_user_join_muc(self):
+        self.login_user()
+        muc = sessions.by_jid(self.user_jid).mucs.by_legacy_id(
+            self.legacy_client.muc.legacy_id
+        )
+        self.recv(
+            f"""
+            <presence to="{muc.jid.username}@{self.xmpp.boundjid.bare}/{self.user_muc_nickname}"
+                      from="{self.user_jid}">
+                <x xmlns="http://jabber.org/protocol/muc">
+                    <history maxchars="0" />
+                </x>
+                <x xmlns="vcard-temp:x:update"><photo /></x>
+            </presence>
+            """
+        )  # No caps because this triggers a disco unconsistently
+        # really want that
+        for nick in self.legacy_client.occupants:
+            # stanza = self.next_sent()
+            # stanzas.append(stanza)
+            # print(nick, stanza)
+            self.send(
+                f"""
+                <presence to="{self.user_jid}"
+                          from="{muc.jid}/{nick}">
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                    <item affiliation="member"
+                          role="participant" />
+                    </x>
+                    <x xmlns="vcard-temp:x:update" />
+                </presence>
+                """
+            )
+        self.send(
+            f"""
+            <presence from='{muc.jid}/{self.user_muc_nickname}'
+                      to='{self.user_jid}'>
+                <x xmlns='http://jabber.org/protocol/muc#user'>
+                    <item affiliation='member' role='moderator'/>
+                    <status code='110'/>
+                    <status code='210'/>
+                </x>
+                <x xmlns="vcard-temp:x:update" />
+            </presence>
+            """,
+            use_values=False,
+        )
+
+        # assert False is True
+        # for nick in self.legacy_client.occupants:
+        #     stanzas.append(self.next_sent())
+
+    def test_add_buddy_success(self):
+        self.login_user()
+        self.recv(
+            f"""
+            <presence from="{self.user.jid.bare}"
+                      to="buddy3@{self.xmpp.boundjid.bare}"
+                      type="subscribe" />
+            """
+        )
+        self.send(
+            f"""
+            <presence to="{self.user.jid.bare}"
+                      from="buddy3@{self.xmpp.boundjid.bare}"
+                      type="subscribed" />
+            """
+        )
+        self.send(
+            f"""
+            <presence to="{self.user.jid.bare}"
+                      from="buddy3@{self.xmpp.boundjid.bare}">
+                      <x xmlns="vcard-temp:x:update" />
+                      <priority>0</priority>
+            </presence>
+            """
+        )
+        self.send(
+            f"""
+            <presence to="{self.user.jid.bare}"
+                      from="buddy3@{self.xmpp.boundjid.bare}"
+                      type="subscribe" />
+            """
+        )
+        self.recv(
+            f"""
+            <presence from="{self.user.jid.bare}"
+                      to="buddy3@{self.xmpp.boundjid.bare}"
+                      type="subscribed" />
+            """
+        )
+        assert self.next_sent() is None
+
+
+    def test_add_buddy_denied(self):
+        self.login_user()
+        self.recv(
+            f"""
+            <presence from="{self.user.jid.bare}"
+                      to="notabuddy@{self.xmpp.boundjid.bare}"
+                      type="subscribe" />
+            """
+        )
+        self.send(
+            f"""
+            <presence to="{self.user.jid.bare}"
+                      from="notabuddy@{self.xmpp.boundjid.bare}"
+                      type="unsubscribed" />
+            """
+        )
+        assert self.next_sent() is None
+
+    # FIXME: doesn't work in test setting, but OK in real life
+    # def test_send_legacy_message_ack_read_reply(self):
+    #     # legacy_client = MockLegacyClient()
+    #     # self.xmpp.legacy_client = legacy_client
+    #     self.recv_privileges()
+    #     self.add_user()
+    #     self.recv(
+    #         f"""
+    #         <message from="{self.user_jid}"
+    #                  to="buddy@{self.xmpp.boundjid.bare}"
+    #                  type="chat"
+    #                  id="abc">
+    #             <body>heho</body>
+    #             <origin-id xmlns="urn:xmpp:sid:0"
+    #                        id="abc" />
+    #                 <request xmlns="urn:xmpp:receipts" />
+    #                 <active xmlns="http://jabber.org/protocol/chatstates" />
+    #             <markable xmlns="urn:xmpp:chat-markers:0" />
+    #         </message>
+    #         """
+    #     )
+    #     log.debug(f"Sessions xmpp {self.xmpp}")
+    #     # Nothing seems sent in test
+
+    # FIXME: doesn't always work
+    # def test_composing_to_buddy(self):
+    #     self.recv_privileges()
+    #     self.add_user()
+    #     self.recv(
+    #         f"""
+    #         <message to="buddy1@{self.xmpp.boundjid.bare}"
+    #                  id="67d315b0-0e2a-4da5-851f-5fb7be7a503c"
+    #                  type="chat"
+    #                  from="{self.user_jid}">
+    #             <origin-id xmlns="urn:xmpp:sid:0"
+    #                        id="67d315b0-0e2a-4da5-851f-5fb7be7a503c" />
+    #             <composing xmlns="http://jabber.org/protocol/chatstates" />
+    #             <no-store xmlns="urn:xmpp:hints" />
+    #         </message>
+    #         """
+    #     )
+    #     assert self.xmpp.legacy_client.last_sent["type"] == "composing"
+
     # Removed this one because roster automagically send presences everywhere and I
     # didn't manage to sort it out :(
     # def test_user_with_buddies_got_online(self):
@@ -258,220 +532,6 @@ class TestGateway(SlixGatewayTest):
     #         """
     #     )
     #     assert self.next_sent() is None
-
-    def test_send_message_to_legacy_buddy_not_in_roster(self):
-        self.add_user()
-        self.recv(
-            f"""
-            <message from="{self.user_jid}"
-                     to="buddy@{self.xmpp.boundjid.bare}">
-                <body>Hello</body>
-            </message>
-            """
-        )
-        log.debug(f"Send queue: {id(self.legacy_sent)}, {self.legacy_sent}")
-
-        msg = self.xmpp.legacy_client.last_sent
-        assert msg["from"].legacy_id == self.user.legacy_id
-        assert msg["from"].jid == self.user.jid
-        assert msg["to"] == "buddy"
-        assert msg["msg"]["body"] == "Hello"
-        assert msg["type"] == "1on1"
-
-    def test_probe_gateway_by_unregistered_user(self):
-        self.recv(
-            f"""
-            <presence from='{self.user_jid}'
-                      to='{self.xmpp.boundjid.bare}'
-                      type='probe' />
-            """
-        )
-        #
-        self.send(
-            f"""
-            <presence xmlns="jabber:component:accept"
-                      to='{self.user_jid.bare}'
-                      from='{self.xmpp.boundjid.bare}'
-                      type='unsubscribed' />
-            """
-        )
-
-    def test_probe_gateway_by_registered_user(self):
-        self.add_user()
-        self.xmpp.loop.run_until_complete(self.xmpp._startup(event=None))
-        log.debug(f"roster: {self.xmpp.client_roster}")
-        self.recv(
-            f"""
-            <presence from='{self.user_jid}'
-                      to='{self.xmpp.boundjid.bare}'
-                      type='probe' />
-            """
-        )
-        #
-        h = self.xmpp.loop.run_until_complete(
-            self.xmpp["xep_0153"].api["get_hash"](
-                jid=self.xmpp.boundjid, node=None, ifrom=None, args={}
-            )
-        )
-        self.send(
-            f"""
-            <presence xmlns="jabber:component:accept"
-                      to='{self.user_jid.bare}'
-                      from='{self.xmpp.boundjid.bare}'>
-                <x xmlns="vcard-temp:x:update">
-                    <photo>
-                    {h}</photo>
-                </x>
-                <priority>0</priority>
-            </presence>
-            """
-        )
-
-    def test_probe_invalid_buddy(self):
-        self.recv(
-            f"""
-            <presence from='{self.user_jid}'
-                      to='buddy@{self.xmpp.boundjid.bare}'
-                      type='probe' />
-            """
-        )
-        #
-        self.send(
-            f"""
-            <presence xmlns="jabber:component:accept"
-                      to='{self.user_jid.bare}'
-                      from='buddy@{self.xmpp.boundjid.bare}'
-                      type='unsubscribed'>
-            </presence>
-            """
-        )
-
-    def test_probe_valid_buddy(self):
-        self.add_user()
-        buddy = sessions[self.user].buddies.by_legacy_id("buddy")
-        buddy._make_roster_entry()
-        self.recv(
-            f"""
-            <presence from='{self.user_jid}'
-                      to='{buddy.jid}'
-                      type='probe' />
-            """
-        )
-        #
-        self.send(
-            f"""
-            <presence xmlns="jabber:component:accept"
-                      to='{self.user_jid.bare}'
-                      from='{buddy.jid.bare}'>
-                <x xmlns="vcard-temp:x:update" />
-                <priority>0</priority>
-            </presence>
-            """
-        )
-
-    def test_logout_inexisting_user(self):
-        self.xmpp.event("legacy_logout", {"from": self.user_jid})
-        assert self.next_sent() is None
-
-    def test_logout_inexisting_session(self):
-        self.add_user()
-        self.xmpp.event("legacy_logout", {"from": self.user_jid})
-        assert self.next_sent() is None
-
-    # FIXME: doesn't always work
-    # def test_composing_to_buddy(self):
-    #     self.recv_privileges()
-    #     self.add_user()
-    #     self.recv(
-    #         f"""
-    #         <message to="buddy1@{self.xmpp.boundjid.bare}"
-    #                  id="67d315b0-0e2a-4da5-851f-5fb7be7a503c"
-    #                  type="chat"
-    #                  from="{self.user_jid}">
-    #             <origin-id xmlns="urn:xmpp:sid:0"
-    #                        id="67d315b0-0e2a-4da5-851f-5fb7be7a503c" />
-    #             <composing xmlns="http://jabber.org/protocol/chatstates" />
-    #             <no-store xmlns="urn:xmpp:hints" />
-    #         </message>
-    #         """
-    #     )
-    #     assert self.xmpp.legacy_client.last_sent["type"] == "composing"
-
-    def test_user_join_muc(self):
-        self.login_user()
-        muc = sessions.by_jid(self.user_jid).mucs.by_legacy_id(
-            self.legacy_client.muc.legacy_id
-        )
-        self.recv(
-            f"""
-            <presence to="{muc.jid.username}@{self.xmpp.boundjid.bare}/{self.user_muc_nickname}"
-                      from="{self.user_jid}">
-                <x xmlns="http://jabber.org/protocol/muc">
-                    <history maxchars="0" />
-                </x>
-                <x xmlns="vcard-temp:x:update"><photo /></x>
-            </presence>
-            """
-        )  # No caps because this triggers a disco unconsistently
-        # really want that
-        for nick in self.legacy_client.occupants:
-            # stanza = self.next_sent()
-            # stanzas.append(stanza)
-            # print(nick, stanza)
-            self.send(
-                f"""
-                <presence to="{self.user_jid}"
-                          from="{muc.jid}/{nick}">
-                    <x xmlns="http://jabber.org/protocol/muc#user">
-                    <item affiliation="member"
-                          role="participant" />
-                    </x>
-                    <x xmlns="vcard-temp:x:update" />
-                </presence>
-                """
-            )
-        self.send(
-            f"""
-            <presence from='{muc.jid}/{self.user_muc_nickname}'
-                      to='{self.user_jid}'>
-                <x xmlns='http://jabber.org/protocol/muc#user'>
-                    <item affiliation='member' role='moderator'/>
-                    <status code='110'/>
-                    <status code='210'/>
-                </x>
-                <x xmlns="vcard-temp:x:update" />
-            </presence>
-            """,
-            use_values=False,
-        )
-
-        # assert False is True
-        # for nick in self.legacy_client.occupants:
-        #     stanzas.append(self.next_sent())
-
-    # FIXME: doesn't work in test setting, but OK in real life
-    # def test_send_legacy_message_ack_read_reply(self):
-    #     # legacy_client = MockLegacyClient()
-    #     # self.xmpp.legacy_client = legacy_client
-    #     self.recv_privileges()
-    #     self.add_user()
-    #     self.recv(
-    #         f"""
-    #         <message from="{self.user_jid}"
-    #                  to="buddy@{self.xmpp.boundjid.bare}"
-    #                  type="chat"
-    #                  id="abc">
-    #             <body>heho</body>
-    #             <origin-id xmlns="urn:xmpp:sid:0"
-    #                        id="abc" />
-    #                 <request xmlns="urn:xmpp:receipts" />
-    #                 <active xmlns="http://jabber.org/protocol/chatstates" />
-    #             <markable xmlns="urn:xmpp:chat-markers:0" />
-    #         </message>
-    #         """
-    #     )
-    #     log.debug(f"Sessions xmpp {self.xmpp}")
-    #     # Nothing seems sent in test
 
 
 logging.basicConfig(level=logging.DEBUG)

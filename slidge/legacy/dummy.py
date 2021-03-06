@@ -102,6 +102,11 @@ class MockLegacyClient(BaseLegacyClient):
     async def muc_occupants(self, user: User, legacy_group_id: str):
         return self.occupants
 
+    async def add_buddy(self, user: User, legacy_buddy_id: str):
+        log.debug(f"Adding buddy {legacy_buddy_id}")
+        if legacy_buddy_id != "buddy3":
+            raise LegacyError("buddy does not exist")
+
 Client = MockLegacyClient
 
 log = logging.getLogger(__name__)

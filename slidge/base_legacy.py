@@ -118,3 +118,14 @@ class BaseLegacyClient:
         """
         Mark a message as read on the legacy network.
         """
+
+    async def add_buddy(self, user: User, legacy_buddy_id: str):
+        """
+        Attempt to add a contact on the legacy service's roster.
+        Should raise LegacyError if something goes wrong (user does not exist)
+        """
+
+    async def remove_buddy(self, user: User, legacy_buddy_id: str):
+        """
+        Remove a contact on the legacy service's roster.
+        """
