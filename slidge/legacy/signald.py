@@ -24,6 +24,7 @@ from slidge.api import (
     User,
     LegacyError,
 )
+from slidge.session import Session
 
 
 class Gateway(BaseGateway):
@@ -196,7 +197,9 @@ class Client(BaseLegacyClient):
         )
         muc_list = []
         for g in (await self.signald.list_groups(account=user.legacy_id)).groups:
-            muc = LegacyMuc(legacy_id=g.id, subject=g.title, user_nickname=nickname)
+            muc = LegacyMuc(g.id)
+            muc.subject = g.title
+            muc.user_nickname = nickname
             muc_list.append(muc)
         return muc_list
 
@@ -285,28 +288,45 @@ class Client(BaseLegacyClient):
         asyncio.create_task(self.on_envelope(envelope))
 
     async def on_envelope(self, envelope: JsonMessageEnvelopev1):
+        session = sessions.by_legacy_id(envelope.username)
+
+        if envelope.type == "RECEIPT":
+            await self.on_receipt(session, envelope)
+            return
+        elif envelope.type == "CIPHERTEXT":
+            await self.on_ciphertext(session, envelope)
+            return
+
+    async def on_receipt(self, session: Session, envelope: JsonMessageEnvelopev1):
+        # Weird to use the timestamp of the envelope here, but is seems to work
+        try:
+            msg = self.timestamps[envelope.timestamp]
+        except KeyError:
+            log.debug(
+                "Receipt for a message we didn't send, "
+                "a typing event or a read mark, ignoring"
+            )
+        else:
+            session.buddies.by_legacy_id(envelope.source.number).send_xmpp_ack(msg)
+
+    async def on_ciphertext(self, session: Session, envelope: JsonMessageEnvelopev1):
         source_number = envelope.source.number
-        legacy_id = envelope.username
-        session = sessions.by_legacy_id(legacy_id)
-        if envelope.typing is not None:
-            action = envelope.typing.action
-            if envelope.typing.groupId is not None:
-                return  # No typing notif for groups
-            if action == "STARTED":
-                session.buddies.by_legacy_id(source_number).starts_typing()
-            elif action == "STOPPED":
-                session.buddies.by_legacy_id(source_number).stopped_typing()
+
         if envelope.dataMessage is not None:
             group = envelope.dataMessage.groupV2
             if group is None:
                 if envelope.dataMessage.body is not None:
                     body = envelope.dataMessage.body
                     timestamp_ms = envelope.dataMessage.timestamp
-                    msg = session.buddies.by_legacy_id(source_number).send_xmpp_message(body)
+                    msg = session.buddies.by_legacy_id(source_number).send_xmpp_message(
+                        body
+                    )
                     self.sent_messages[msg["id"]] = timestamp_ms
             else:
                 fut = asyncio.create_task(
-                    self.signald.get_profile(account=legacy_id, address=envelope.source)
+                    self.signald.get_profile(
+                        account=session.legacy_id, address=envelope.source
+                    )
                 )
                 if envelope.dataMessage.body is not None:
                     fut.add_done_callback(
@@ -315,6 +335,30 @@ class Client(BaseLegacyClient):
                             body=envelope.dataMessage.body,
                         )
                     )
+
+        if envelope.typing is not None:
+            action = envelope.typing.action
+            if envelope.typing.groupId is not None:
+                return  # No typing notif for groups
+            if action == "STARTED":
+                session.buddies.by_legacy_id(source_number).starts_typing()
+            elif action == "STOPPED":
+                session.buddies.by_legacy_id(source_number).stopped_typing()
+
+        if envelope.receipt is not None:
+            if envelope.source is not None:
+                if source_number is not None:
+                    if envelope.receipt.type == "READ":
+                        for timestamp in envelope.receipt.timestamps:
+                            try:
+                                msg = self.timestamps.pop(timestamp)
+                            except KeyError:
+                                log.debug("Read marker for a message we didn't send")
+                            else:
+                                session.buddies.by_legacy_id(
+                                    source_number
+                                ).send_xmpp_read(msg)
+
         if envelope.syncMessage is not None:
             sent = envelope.syncMessage.sent
             if sent is not None:
@@ -326,34 +370,12 @@ class Client(BaseLegacyClient):
                                 sent.destination.number
                             ).send_xmpp_carbon(
                                 body=sent.message.body,
-                                timestamp_iso=timestamp_to_str(sent.message.timestamp),
+                                timestamp=timestamp_to_datetime(sent.message.timestamp),
                             )
                         else:
                             session.mucs.by_legacy_id(group.id).carbon(
                                 sent.message.body
                             )
-        if envelope.type == "RECEIPT":
-            # Weird to use the timestamp of the envelope here, but is seems to work
-            try:
-                msg = self.timestamps[envelope.timestamp]
-            except KeyError:
-                log.debug("Receipt for a message we didn't send")
-            else:
-                session.buddies.by_legacy_id(source_number).send_xmpp_ack(msg)
-        if envelope.receipt is not None:
-            if envelope.source is not None:
-                if source_number is not None:
-                    if envelope.receipt.type == "READ":
-                        for timestamp in envelope.receipt.timestamps:
-                            try:
-                                msg = self.timestamps.pop(timestamp)
-                            except KeyError:
-                                log.debug("Read marker for a message we didn't send")
-                            else:
-                                session.buddies.by_legacy_id(source_number).send_xmpp_read(
-                                    msg
-                                )
-
 
 def resolve_name_from_profile(profile: Profilev1) -> str:
     nickname = profile.name
@@ -364,11 +386,11 @@ def resolve_name_from_profile(profile: Profilev1) -> str:
     return nickname
 
 
-def timestamp_to_str(timestamp_ms: int) -> str:
+def timestamp_to_datetime(timestamp_ms: int) -> str:
     if timestamp_ms is None:
         return ""
     timestamp = timestamp_ms // 1000
-    return datetime.fromtimestamp(timestamp).isoformat()[:19] + "Z"
+    return datetime.fromtimestamp(timestamp) #.isoformat()[:19] + "Z"
 
 
 log = logging.getLogger(__name__)
