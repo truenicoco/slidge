@@ -1,49 +1,81 @@
 """
+Slidge can be configured via CLI args, environment variables and/or INI files.
+To use env vars, use this convention: ``--server`` becomes ``SLIDGE_SERVER``.
 """
-
-import asyncio
-import time
-import logging
 import importlib
-from argparse import ArgumentParser
-from configparser import ConfigParser
+import logging
+
+import configargparse
+
+from .db import user_store
+
+from .gateway import BaseGateway
 
 
-
-if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("config")
-    parser.add_argument(
-        "--quiet",
-        "-q",
-        help="Override log config settings and set loglevel to warning",
-        action="store_true",
-        default=False,
+# noinspection PyUnresolvedReferences
+def get_parser():
+    p = configargparse.ArgParser(
+        default_config_files=["/etc/slidge/conf.d/*.conf"], description=__doc__
     )
-    args = parser.parse_args()
-
-    config_path = args.config
-    config = ConfigParser()
-    config.read(config_path)
-
-    logging.basicConfig(
-        level=logging.WARNING if args.quiet else config["logging"]["level"].upper(),
-        format="%(asctime)s:%(levelname)s:%(name)s:%(message)s",
+    p.add(
+        "--legacy-module",
+        help="Importable python module containing (at least) Gateway and LegacyClient",
+        env_var="SLIDGE_LEGACY_MODULE",
     )
+    p.add("-c", "--configuration", help="Path to a INI file", env_var="SLIDGE_CONFIG")
+    p.add(
+        "-s",
+        "--server",
+        env_var="SLIDGE_SERVER",
+        default="localhost",
+        help="The XMPP server's host name.",
+    )
+    p.add(
+        "-p",
+        "--port",
+        default="5347",
+        env_var="SLIDGE_PORT",
+        help="The XMPP server's port for incoming component connections",
+    )
+    p.add(
+        "--secret",
+        default="secret",
+        env_var="SLIDGE_SECRET",
+        help="The gateway component's secret (required to connect to the XMPP server)",
+    )
+    p.add(
+        "-j",
+        "--jid",
+        default="slidge.localhost",
+        env_var="SLIDGE_JID",
+        help="The gateway component's JID",
+    )
+    p.add(
+        "--db",
+        default="/var/lib/slidge/slidge.db",
+        env_var="SLIDGE_DB",
+        help="Shelve file used to store persistent user data.",
+    )
+    return p
 
-    log = logging.getLogger(__name__)
 
-    legacy_module = importlib.import_module(config["legacy"].get("module"))
-    component_class = getattr(legacy_module, "Gateway")
-    client_class = getattr(legacy_module, "Client")
+def main():
+    args = get_parser().parse_args()
+    logging.basicConfig(level=logging.DEBUG)
 
-    gateway = component_class(config, client_class)
+    user_store.set_file(args.db)
+
+    module = importlib.import_module(args.legacy_module)
+
+    gateway: BaseGateway = module.Gateway(args.jid, args.secret, args.server, args.port)
+    gateway.legacy = module.LegacyClient(gateway)
     gateway.connect()
 
     try:  # TODO: handle reconnection
         gateway.process()
     except (KeyboardInterrupt, Exception) as e:
-        log.info(f"The gateway stopped because of {e}, trying to cleanly shut down")
-        asyncio.get_event_loop().run_until_complete(gateway.shutdown())
         gateway.disconnect()
-        gateway.process(forever=False)
+
+
+if __name__ == "__main__":
+    main()

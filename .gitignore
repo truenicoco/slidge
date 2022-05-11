@@ -6,3 +6,4 @@ dist/
 *.bak
 .vscode
 docs/build
+persistent/

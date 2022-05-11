@@ -1,0 +1,61 @@
+services:
+  prosody:
+    build:
+      context: .
+      target: prosody-dev
+    ports:
+      - "5222:5222"
+      - "5281:5281"
+    volumes:
+      - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
+
+  slidge-dummy:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --legacy-module=slidge.legacy.dummy
+      - --server=prosody
+      - --jid=dummy.localhost
+    volumes:
+      - ./slidge:/slidge/slidge
+      - ./assets:/slidge/assets
+      - ./persistent/slidge/dummy:/var/lib/slidge
+    depends_on:
+      - prosody
+
+  slidge-telegram:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --legacy-module=slidge.legacy.telegram
+      - --server=prosody
+      - --jid=telegram.localhost
+    volumes:
+      - ./slidge:/slidge/slidge
+      - ./persistent/tdlib:/tdlib
+      - ./persistent/slidge/telegram:/var/lib/slidge
+    depends_on:
+      - prosody
+
+  slidge-signal:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --legacy-module=slidge.legacy.signal
+      - --server=prosody
+      - --jid=signal.localhost
+    volumes:
+      - ./slidge:/slidge/slidge
+      - ./persistent/signald:/signald
+      - ./persistent/slidge/signal:/var/lib/slidge
+    depends_on:
+      - prosody
+      - signald
+
+  signald:
+    image: signald/signald:latest
+    volumes:
+      - ./persistent/signald:/signald
