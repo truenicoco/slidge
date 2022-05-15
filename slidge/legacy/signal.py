@@ -31,18 +31,27 @@ class Gateway(BaseGateway):
         try:
             f = self.input_futures.pop(user.bare_jid)
         except KeyError:
-            if msg["body"] == "link":
-                await self.link()
+            cmd = msg["body"]
+            if cmd == "link":
+                await self.link(user)
             else:
                 self.send_message(mto=msg.get_from(), mbody="Come again?")
         else:
             f.set_result(msg["body"])
 
-    async def link(self):
+    async def link(self, user: GatewayUser):
         """
         Not implemented yet
         """
-        raise NotImplementedError
+        uri = await self.input(user, "URI?")
+        session = Signal.sessions_by_phone.get(user.registration_form["phone"])
+
+        try:
+            await session.signal.add_device(account=session.phone, uri=uri)
+        except SignaldException as e:
+            self.send_message(mto=user.jid, mbody=f"Problem: {e}")
+        else:
+            self.send_message(mto=user.jid, mbody=f"Linking OK")
 
 
 # noinspection PyPep8Naming
