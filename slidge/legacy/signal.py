@@ -32,14 +32,14 @@ class Gateway(BaseGateway):
             f = self.input_futures.pop(user.bare_jid)
         except KeyError:
             cmd = msg["body"]
-            if cmd == "link":
-                await self.link(user)
+            if cmd == "add_device":
+                await self.add_device(user)
             else:
                 self.send_message(mto=msg.get_from(), mbody="Come again?")
         else:
             f.set_result(msg["body"])
 
-    async def link(self, user: GatewayUser):
+    async def add_device(self, user: GatewayUser):
         """
         Not implemented yet
         """
@@ -139,7 +139,19 @@ class SignalSession:
         """
         choice = await self.xmpp.input(self.user, "[link] or [register]?")
         if choice == "link":
-            raise NotImplementedError
+            uri = await self.signal.generate_linking_uri()
+            self.xmpp.send_message(mto=self.user.jid, mbody=f"{uri.uri}")
+            try:
+                await self.signal.finish_link(
+                    device_name="slidge", session_id=uri.session_id
+                )
+                await self.subscribe()
+            except SignaldException as e:
+                self.xmpp.send_message(
+                    mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                )
+                return
+
         elif choice == "register":
             try:
                 await self.signal.register(self.phone)
