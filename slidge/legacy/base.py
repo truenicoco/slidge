@@ -2,7 +2,7 @@ import hashlib
 import logging
 from abc import ABC
 from datetime import datetime
-from typing import Optional, Literal, Dict
+from typing import Optional, Literal, Dict, Any
 
 from slixmpp import Message, JID, Iq, Presence
 from slixmpp.plugins.xep_0100 import LegacyError
@@ -38,6 +38,7 @@ class LegacyContact(ABC):
         legacy_id: str,
         name: str = "",
         avatar: Optional[bytes] = None,
+        extra_info: Optional[Any] = None
     ):
         """
 
@@ -52,6 +53,7 @@ class LegacyContact(ABC):
         self.avatar = avatar
         self.xmpp.loop.create_task(self.make_vcard())
         self.xmpp.loop.create_task(self.make_caps())
+        self.extra_info = extra_info
 
     def __repr__(self):
         return f"<LegacyContact '{self.jid}' ({self.user})>"

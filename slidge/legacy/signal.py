@@ -2,7 +2,7 @@
 Gateway to the signal network, using signald. Only supports registering a new number currently.
 Linking to an existing account will be implemented once file upload works.
 """
-
+import datetime
 import logging
 from typing import Dict, Optional
 
@@ -106,13 +106,17 @@ class SignalSession:
         :param xmpp:
         """
         self.user = user
-        self.signal = signal
         self.xmpp = xmpp
-        self.connected = False
+
         self.phone: str = self.user.registration_form["phone"]
+        self.signal = signal
+
+        self.connected = False
         self.contacts: Dict[str, LegacyContact] = {}
+        self.contacts_by_uuid: Dict[str, LegacyContact] = {}
         self.unacked: Dict[int, Message] = {}
         self.unread: Dict[int, Message] = {}
+
         Signal.sessions_by_phone[self.phone] = self
 
     async def subscribe(self):
@@ -175,7 +179,9 @@ class SignalSession:
             else:
                 with open(full_profile.avatar, "rb") as f:
                     avatar = f.read()
-            contact = self.contact(profile.address.number, profile.name, avatar)
+            contact = self.contact(
+                profile.address.number, profile.name, avatar, profile.address.uuid
+            )
             await contact.add_to_roster()
             contact.online()
 
@@ -185,7 +191,16 @@ class SignalSession:
 
         :param msg:
         """
-        contact = self.contact(msg.source.number)
+        if msg.sync_message is not None:
+            dest = msg.sync_message.sent.destination
+            contact = self.contact(dest.number, uuid=dest.uuid)
+            sent_msg = msg.sync_message.sent.message
+            contact.carbon(
+                body=sent_msg.body,
+                date=datetime.datetime.fromtimestamp(sent_msg.timestamp / 1000),
+            )
+
+        contact = self.contact(msg.source.number, uuid=msg.source.uuid)
 
         if msg.data_message is not None:
             contact.send_message(body=msg.data_message.body, chat_state=None)
@@ -218,9 +233,10 @@ class SignalSession:
 
     def contact(
         self,
-        phone: str,
+        phone: Optional[str] = None,
         name: Optional[str] = None,
         avatar: Optional[bytes] = None,
+        uuid: Optional[str] = None,
     ):
         """
         Helper to build a :class:`.LegacyContact` attached to this session's :class:`.GatewayUser`
@@ -228,10 +244,33 @@ class SignalSession:
         :param phone: phone number of the contact
         :param name: name of the contact (for roster population)
         :param avatar: picture of the contact
+        :param uuid: The UUID of the contact (useful for carbons, where phone number
+            does not necessarily appear)
         """
+        if phone is None:
+            if uuid is None:
+                raise TypeError("Must specify either uuid or phone")
+            else:
+                c = self.contacts_by_uuid.get(uuid)
+                if c is None:
+                    raise KeyError(uuid)
+                    # log.warning("Cannot find phone number with UUID: %s", uuid)
+                    # return
+                return c
+
         c = self.contacts.get(phone)
+
         if c is None:
-            self.contacts[phone] = c = LegacyContact(self.user, phone, name, avatar)
+            self.contacts[phone] = c = LegacyContact(
+                self.user, phone, name, avatar, extra_info=uuid
+            )
+            if uuid is not None:
+                self.contacts_by_uuid[uuid] = c
+
+        if uuid is not None and c.extra_info is None:
+            c.extra_info = uuid
+            self.contacts_by_uuid[uuid] = c
+
         return c
 
 
