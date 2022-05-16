@@ -11,10 +11,3 @@ before_script:
 test:
   script:
     - poetry run pytest
-
-build:
-  script:
-    - poetry build
-  artifacts:
-    paths:
-      - dist/*
