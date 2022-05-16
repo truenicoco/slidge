@@ -1,19 +1,36 @@
 """
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
-
+import dataclasses
 import logging
 from asyncio import Future
-from typing import Dict
+from typing import Dict, Iterable
 
-from slixmpp import ComponentXMPP, Message
-from slixmpp.thirdparty import OrderedSet
+from slixmpp import ComponentXMPP, Message, Iq
 
 from .db import user_store, RosterBackend, GatewayUser
 
 
+@dataclasses.dataclass
+class RegistrationField:
+    name: str
+    label: str = None
+    required: bool = True
+    private: bool = False
+    type: str = None
+    value: str = ""
+
+
 class BaseGateway(ComponentXMPP):
-    REGISTRATION_FIELDS: OrderedSet = OrderedSet(["username", "password"])
+    REGISTRATION_FIELDS: Iterable[RegistrationField] = [
+        RegistrationField(name="username", label="Legacy user name"),
+        RegistrationField(name="password", label="Legacy password"),
+        RegistrationField(
+            name="something_else",
+            label="Some optional stuff not covered by jabber:iq:register",
+            required=False,
+        ),
+    ]
     """Set of fields presented to the gateway user when registering using :xep:`0077`"""
     REGISTRATION_INSTRUCTIONS: str = "Enter your legacy credentials"
 
@@ -48,10 +65,11 @@ class BaseGateway(ComponentXMPP):
         for p in self.PLUGINS:
             self.register_plugin(p)
 
+        log.debug("%s", [f.name for f in self.REGISTRATION_FIELDS if f.required])
         self.register_plugin(
             "xep_0077",
             pconfig={
-                "form_fields": self.REGISTRATION_FIELDS,
+                "form_fields": [],
                 "form_instructions": self.REGISTRATION_INSTRUCTIONS,
             },
         )
@@ -84,6 +102,10 @@ class BaseGateway(ComponentXMPP):
             user_store.remove,
             "user_remove",
         )
+        self["xep_0077"].api.register(
+            self.make_registration_form,
+            "make_registration_form",
+        )
 
         self.roster.set_backend(RosterBackend)
 
@@ -92,6 +114,56 @@ class BaseGateway(ComponentXMPP):
         for jid in user_store.users:
             # We need to see which registered users are online, this will trigger legacy_login in return
             self["xep_0100"].send_presence(ptype="probe", pto=jid)
+
+    async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
+        reg = iq["register"]
+        user = user_store.get_by_stanza(iq)
+        log.debug("User found: %s", user)
+
+        form = reg["form"]
+        form.add_field(
+            "FORM_TYPE",
+            ftype="hidden",
+            value="jabber:iq:register",
+        )
+        form["title"] = f"Registration to '{self.COMPONENT_NAME}'"
+        form["instructions"] = self.REGISTRATION_INSTRUCTIONS
+
+        if user is None:
+            user = {}
+        else:
+            reg["registered"] = False
+            form.add_field(
+                "remove",
+                label="Remove my registration",
+                required=True,
+                ftype="boolean",
+                value=False
+            )
+
+        for field in self.REGISTRATION_FIELDS:
+            if field.name in reg.interfaces:
+                val = user.get(field.name)
+                if val is None:
+                    reg.add_field(field.name)
+                else:
+                    reg[field.name] = val
+
+        reg["instructions"] = self.REGISTRATION_INSTRUCTIONS
+
+        for field in self.REGISTRATION_FIELDS:
+            field.value = user.get(field.name, field.value)
+            form.add_field(
+                field.name,
+                label=field.label,
+                required=field.required,
+                ftype=field.type,
+                value=field.value,
+            )
+
+        reply = iq.reply()
+        reply.set_payload(reg)
+        return reply
 
     async def on_gateway_message(self, msg: Message):
         """
