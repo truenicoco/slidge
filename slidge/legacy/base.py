@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional, Literal, Dict, Any
 
 from slixmpp import Message, JID, Iq, Presence
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0100 import LegacyError
 
 from ..db import GatewayUser, user_store
@@ -291,24 +292,27 @@ class BaseLegacyClient(ABC):
         self.xmpp = xmpp
         LegacyContact.xmpp = xmpp
 
-        xmpp["xep_0077"].api.register(
-            self.user_validate,
-            "user_validate",
-        )
+        xmpp["xep_0077"].api.register(self.user_validate, "user_validate")
 
         xmpp.add_event_handler("legacy_login", self.login)
         xmpp.add_event_handler("legacy_logout", self.logout)
         xmpp.add_event_handler("legacy_message", self.on_message)
+        xmpp.add_event_handler("user_unregister", self.unregister)
 
-    async def user_validate(self, _gateway_jid, _node, ifrom: JID, registration_iq: Iq):
-        log.debug("User validate: %s", (ifrom.bare, registration_iq))
-        registration_form = {f: registration_iq[f] for f in registration_iq["fields"]}
+    async def user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        log.debug("User validate: %s", (ifrom.bare, iq))
+        form = iq["register"]["form"].get_values()
+
+        for field in self.xmpp.REGISTRATION_FIELDS:
+            if field.required and not form.get(field.name):
+                raise XMPPError("Please fill in all fields", etype="modify")
+
         try:
-            await self.validate(ifrom, registration_form)
+            await self.validate(ifrom, form)
         except LegacyError as e:
             raise ValueError(f"Login Problem: {e}")
         else:
-            user_store.add(ifrom, registration_form)
+            user_store.add(ifrom, form)
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         """
@@ -351,6 +355,14 @@ class BaseLegacyClient(ABC):
         Called when the gateway user attempts to send a message through the gateway.
 
         :param msg:
+        """
+        raise NotImplementedError
+
+    async def unregister(self, iq: Iq):
+        """
+        Called when the gateway user attempts to send a message through the gateway.
+
+        :param iq:
         """
         raise NotImplementedError
 
