@@ -9,17 +9,27 @@ from typing import Dict, Optional
 from slixmpp import Message, JID, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0100 import LegacyError
-from slixmpp.thirdparty import OrderedSet
 
 from pysignald_async import SignaldAPI, SignaldException
 import pysignald_async.generated as sigapi
 
-from slidge import GatewayUser, user_store, BaseGateway, LegacyContact, BaseLegacyClient
+from slidge import (
+    GatewayUser,
+    user_store,
+    BaseGateway,
+    LegacyContact,
+    BaseLegacyClient,
+    RegistrationField,
+)
 
 
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter your phone number, starting with +"
-    REGISTRATION_FIELDS = OrderedSet(["phone"])
+    REGISTRATION_FIELDS = [
+        RegistrationField(
+            name="phone", label="Phone number (ex: +123456789)", required=True
+        )
+    ]
 
     ROSTER_GROUP = "Signal"
 
