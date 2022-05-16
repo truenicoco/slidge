@@ -294,9 +294,11 @@ async def on_user_composing(msg: Message):
 async def on_user_displayed(msg: Message):
     tg = sessions.get(user_store.get_by_stanza(msg))
     log.debug("Unread: %s", tg.unread_by_user)
-    tg_id = tg.unread_by_user.pop(msg["displayed"]["id"])
-    if tg_id is None:
+    try:
+        tg_id = tg.unread_by_user.pop(msg["displayed"]["id"])
+    except KeyError:
         log.warning("Received read mark for a message we didn't send: %s", msg)
+        return
     # noinspection PyTypeChecker
     query = tgapi.ViewMessages.construct(
         chat_id=int(msg.get_to().user),
