@@ -126,6 +126,7 @@ class SignalSession:
         self.contacts_by_uuid: Dict[str, LegacyContact] = {}
         self.unacked: Dict[int, Message] = {}
         self.unread: Dict[int, Message] = {}
+        self.unread_by_user: Dict[str, int] = {}
 
         Signal.sessions_by_phone[self.phone] = self
 
@@ -214,6 +215,9 @@ class SignalSession:
         :param msg:
         """
         if msg.sync_message is not None:
+            if msg.sync_message.sent is None:
+                log.debug("Ignoring %s", msg)  # Probably a 'message read' marker
+                return
             dest = msg.sync_message.sent.destination
             contact = self.contact(dest.number, uuid=dest.uuid)
             sent_msg = msg.sync_message.sent.message
@@ -225,11 +229,13 @@ class SignalSession:
         contact = self.contact(msg.source.number, uuid=msg.source.uuid)
 
         if msg.data_message is not None:
-            contact.send_message(body=msg.data_message.body, chat_state=None)
+            sent_msg = contact.send_message(body=msg.data_message.body, chat_state=None)
+            self.unread_by_user[sent_msg.get_id()] = msg.data_message.timestamp
 
         if msg.typing_message is not None:
             action = msg.typing_message.action
             if action == "STARTED":
+                contact.active()
                 contact.composing()
             elif action == "STOPPED":
                 contact.paused()
@@ -302,6 +308,7 @@ class LegacyClient(BaseLegacyClient):
 
     def __init__(self, xmpp: Gateway):
         super().__init__(xmpp)
+        self.xmpp.add_event_handler("marker_displayed", on_user_displayed)
         self.xmpp.add_event_handler("session_start", self.connect_signal)
         self.xmpp.add_event_handler("chatstate_composing", self.on_user_composing)
 
@@ -386,6 +393,16 @@ class LegacyClient(BaseLegacyClient):
             address=sigapi.JsonAddressv1(number=msg.get_to().user),
             typing=True,
         )
+
+
+async def on_user_displayed(msg: Message):
+    session = sessions.get(user_store.get_by_stanza(msg))
+    signal_id = session.unread_by_user.pop(msg["displayed"]["id"])
+    await session.signal.mark_read(
+        account=session.phone,
+        to=sigapi.JsonAddressv1(number=msg.get_to().user),
+        timestamps=[signal_id],
+    )
 
 
 sessions: Dict[GatewayUser, SignalSession] = {}
