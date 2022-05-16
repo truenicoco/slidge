@@ -4,19 +4,38 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from slixmpp import Message, JID, Presence
-from slixmpp.thirdparty import OrderedSet
 
 import aiotdlib
 import aiotdlib.api as tgapi
 
-from slidge import user_store, BaseGateway, GatewayUser, BaseLegacyClient, LegacyContact
+from slidge import (
+    user_store,
+    BaseGateway,
+    GatewayUser,
+    BaseLegacyClient,
+    LegacyContact,
+    RegistrationField,
+)
 
 
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = """
-Visit https://my.telegram.org/apps to get API ID (=zip) and HASH (=first name)
+You can visit https://my.telegram.org/apps to get an API ID and an API HASH
+
+This is the only tested login method, but other methods (password, bot token, 2FA...) should work too,
+in theory at least.
 """
-    REGISTRATION_FIELDS = OrderedSet(["phone", "zip", "first"])
+    REGISTRATION_FIELDS = [
+        RegistrationField(name="phone", label="Phone number", required=True),
+        RegistrationField(name="api_id", label="API ID", required=False),
+        RegistrationField(name="api_hash", label="API hash", required=False),
+        RegistrationField(
+            name="", value="The fields below have not been tested", type="fixed"
+        ),
+        RegistrationField(name="bot_token", label="Bot token", required=False),
+        RegistrationField(name="first", label="First name", required=False),
+        RegistrationField(name="last", label="Last name", required=False),
+    ]
     """Here we abuse the authorized registration fields to get the relevant info..."""
 
     ROSTER_GROUP = "Telegram"
@@ -27,13 +46,14 @@ Visit https://my.telegram.org/apps to get API ID (=zip) and HASH (=first name)
 class TelegramSession(aiotdlib.Client):
     def __init__(self, xmpp: BaseGateway, user: GatewayUser, **kwargs):
         super().__init__(**kwargs)
-        self.xmpp = xmpp
         self.user = user
+        self.xmpp = xmpp
+
+        self.connected = False
+        self.contacts: Dict[int, LegacyContact] = {}
         self.unacked: Dict[int, Message] = {}
         self.unread: Dict[int, Message] = {}
         self.unread_by_user: Dict[str, int] = {}
-        self.contacts: Dict[int, LegacyContact] = {}
-        self.connected = False
 
         self.add_event_handler(
             on_telegram_message,
@@ -58,6 +78,15 @@ class TelegramSession(aiotdlib.Client):
 
     async def __auth_get_code(self) -> str:
         return await self.xmpp.input(self.user, "Enter code")
+
+    async def __auth_get_password(self) -> str:
+        return await self.xmpp.input(self.user, "Enter 2FA password:")
+
+    async def __auth_get_first_name(self) -> str:
+        return await self.xmpp.input(self.user, "Enter first name:")
+
+    async def __auth_get_last_name(self) -> str:
+        return await self.xmpp.input(self.user, "Enter last name:")
 
     async def add_contacts_to_roster(self):
         chats = await self.get_main_list_chats_all()
@@ -110,13 +139,18 @@ class LegacyClient(BaseLegacyClient):
             raise KeyError(p.get_from().bare)
         tg = sessions.get(user)
         if tg is None:
-            registration_form = user.registration_form
+            registration_form = {
+                k: v if v != "" else None for k, v in user.registration_form.items()
+            }
             tg = TelegramSession(
                 self.xmpp,
                 user,
-                api_id=int(registration_form["zip"]),
-                api_hash=registration_form["first"],
+                api_id=int(registration_form["api_id"]),
+                api_hash=registration_form["api_hash"],
                 phone_number=registration_form["phone"],
+                bot_token=registration_form["bot_token"],
+                first_name=registration_form["first"],
+                last_name=registration_form["last"],
                 database_encryption_key="USELESS",
                 files_directory=Path("/tdlib"),
             )
