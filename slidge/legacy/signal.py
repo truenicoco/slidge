@@ -200,10 +200,6 @@ class Session(BaseSession):
         self.phone: str = self.user.registration_form["phone"]
         Signal.sessions_by_phone[self.phone] = self
 
-    @staticmethod
-    def create(xmpp: Gateway, user: GatewayUser) -> "Session":
-        return Session(xmpp, user)
-
     async def login(self, p: Presence = None):
         """
         Attempt to listen to incoming events for this account,

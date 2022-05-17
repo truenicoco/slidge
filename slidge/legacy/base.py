@@ -446,23 +446,20 @@ class BaseSession(ABC):
         self.logged = False
 
         self.contacts = self.roster_cls(self)
+        self.post_init()
 
-    # I believe something more elegant could be bone
-    @staticmethod
-    def create(xmpp: BaseGateway, user: GatewayUser) -> "BaseSession":
+    def post_init(self):
         """
-        Create a non-logged session instance
-
-        :param xmpp:
-        :param user:
-        :return: An instance of the legacy network's own ``Session`` class
+        Add useful attributes for your session here, if necessary
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
     def from_stanza(cls, s) -> "BaseSession":
         """
         Get a user's :class:`LegacySession` using the "from" field of a stanza
+
+        Ensure that we only have a single session instance per user
 
         :param s:
         :return:
@@ -472,7 +469,7 @@ class BaseSession(ABC):
             raise KeyError(s.get_from())
         session = sessions.get(user)
         if session is None:
-            sessions[user] = session = cls.create(cls.xmpp, user)
+            sessions[user] = session = cls(cls.xmpp, user)
         return session
 
     async def login(self, p: Presence):

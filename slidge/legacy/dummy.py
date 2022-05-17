@@ -27,11 +27,6 @@ class Session(BaseSession):
         super(Session, self).__init__(xmpp, user)
         self.counter = 0
 
-    @staticmethod
-    def create(xmpp: BaseGateway, user: GatewayUser) -> "BaseSession":
-        s = Session(xmpp, user)
-        return s
-
     async def login(self, p: Presence):
         self.logged = True
         for b, a in zip(BUDDIES, AVATARS):

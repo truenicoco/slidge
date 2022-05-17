@@ -32,7 +32,6 @@ class Gateway(BaseGateway):
         RegistrationField(name="first", label="First name", required=False),
         RegistrationField(name="last", label="Last name", required=False),
     ]
-    """Here we abuse the authorized registration fields to get the relevant info..."""
 
     ROSTER_GROUP = "Telegram"
 
@@ -59,20 +58,15 @@ class LegacyClient(BaseLegacyClient):
 
 class Session(BaseSession):
     tdlib_path = Path("/tdlib")
+    tg: "TelegramClient"
 
-    def __init__(self, xmpp: BaseGateway, user: GatewayUser):
-        super().__init__(xmpp, user)
-        self.tg: Optional[TelegramClient] = None
-
-    @staticmethod
-    def create(xmpp: BaseGateway, user: GatewayUser) -> "Session":
+    def post_init(self):
         registration_form = {
-            k: v if v != "" else None for k, v in user.registration_form.items()
+            k: v if v != "" else None for k, v in self.user.registration_form.items()
         }
-        s = Session(xmpp, user)
-        tg = TelegramClient(
-            xmpp,
-            s,
+        self.tg = TelegramClient(
+            self.xmpp,
+            self,
             api_id=int(registration_form["api_id"]),
             api_hash=registration_form["api_hash"],
             phone_number=registration_form["phone"],
@@ -82,8 +76,6 @@ class Session(BaseSession):
             database_encryption_key="USELESS",
             files_directory=Session.tdlib_path,
         )
-        s.tg = tg
-        return s
 
     async def login(self, p: Presence):
         async with self.tg as tg:
