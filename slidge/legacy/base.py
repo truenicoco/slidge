@@ -14,7 +14,8 @@ from ..gateway import BaseGateway
 
 class LegacyContact:
     """
-    This class represents a contact a gateway user can interact with
+    This class represents a contact a gateway user can interact with.
+    If this is subclassed, make sure to change :py:attr:`.Roster.contact_cls` accordingly
     """
 
     RESOURCE: str = "slidge"
@@ -40,10 +41,10 @@ class LegacyContact:
         jid_username: str,
     ):
         """
-
-        :param session:
-        :param legacy_id:
-        :param jid_username:
+        :param session: The session this contact is part of
+        :param legacy_id: The contact's legacy ID
+        :param jid_username: User part of this contact's 'puppet' JID.
+            NB: case-insensitive, and some special characters are not allowed
         """
         self.session = session
         self.user = session.user
@@ -62,7 +63,7 @@ class LegacyContact:
     @property
     def jid(self) -> JID:
         """
-        Full JID (resource-included) of the contact
+        Full JID (including the 'puppet' resource) of the contact
         """
         j = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         j.resource = self.RESOURCE
@@ -70,6 +71,9 @@ class LegacyContact:
 
     @property
     def name(self):
+        """
+        Friendly name of the contact, as it should appear in the user's roster
+        """
         return self._name
 
     @name.setter
@@ -78,6 +82,9 @@ class LegacyContact:
 
     @property
     def avatar(self):
+        """
+        An image that represents this contact
+        """
         return self._avatar
 
     @avatar.setter
@@ -300,6 +307,17 @@ class LegacyContact:
 
 
 class LegacyRoster:
+    """
+    Virtual roster of a gateway user, that allows to represent all
+    of their contacts as singleton instances (if used properly and not too bugged).
+
+    The point of having singletons is for slixmpp to correctly advertise
+    capabilities and vcard of contacts.
+
+    If overridden (see :class:`.signal.Roster`), make sure to update :py:attr:`.Session.roster_cls`
+    accordingly.
+    """
+
     contact_cls = LegacyContact
 
     def __init__(self, session: "BaseSession"):
@@ -307,7 +325,17 @@ class LegacyRoster:
         self.contacts_by_bare_jid: Dict[str, LegacyContact] = {}
         self.contacts_by_legacy_id: Dict[Any, LegacyContact] = {}
 
-    def by_jid(self, contact_jid: JID):
+    def by_jid(self, contact_jid: JID) -> LegacyContact:
+        """
+        Retrieve a contact by their JID
+
+        If the contact was not instantiated before, it will be created
+        using :meth:`.LegacyRoster.jid_username_to_legacy_id` to infer their
+        legacy user ID.
+
+        :param contact_jid:
+        :return:
+        """
         bare = contact_jid.bare
         c = self.contacts_by_bare_jid.get(bare)
         if c is None:
@@ -322,7 +350,17 @@ class LegacyRoster:
             self.contacts_by_bare_jid[bare] = c
         return c
 
-    def by_legacy_id(self, legacy_id: Any):
+    def by_legacy_id(self, legacy_id: Any) -> LegacyContact:
+        """
+        Retrieve a contact by their legacy_id
+
+        If the contact was not instantiated before, it will be created
+        using :meth:`.LegacyRoster.legacy_id_to_jid_username` to infer their
+        legacy user ID.
+
+        :param legacy_id:
+        :return:
+        """
         c = self.contacts_by_legacy_id.get(legacy_id)
         if c is None:
             log.debug("Contact %s not found in roster", legacy_id)
@@ -332,23 +370,68 @@ class LegacyRoster:
             self.contacts_by_legacy_id[legacy_id] = c
         return c
 
-    def by_stanza(self, s):
+    def by_stanza(self, s) -> LegacyContact:
+        """
+        Retrieve a contact by the destination of a stanza
+
+        See :meth:`.Roster.by_legacy_id` for more info.
+
+        :param s:
+        :return:
+        """
         return self.by_jid(s.get_to())
 
     @staticmethod
     def legacy_id_to_jid_username(legacy_id: Any) -> str:
+        """
+        Convert a legacy ID to a valid 'user' part of a JID
+
+        Should be overridden for cases where the str conversion of
+        the legacy_id is not enough, e.g., if it contains forbidden character.
+
+        :param legacy_id:
+        """
         return str(legacy_id)
 
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> Hashable:
+        """
+        Convert a JID user part to a legacy ID.
+
+        Should be overridden in case legacy IDs are not strings, for instance
+
+        :param jid_username:
+        :return:
+        """
         return jid_username
 
 
 class BaseSession(ABC):
+    """
+    Represents a gateway user logged in to the network and performing actions.
+
+    Must be overridden for a functional slidge plugin
+    """
+
     store_unacked = True
+    """
+    If the legacy network supports message receipts, keep track of messages for later
+    sending back a receipt to the user.
+    """
     store_unread = True
+    """
+    If the legacy network supports 'read marks', keep track of messages sent by the user
+    to later mark them as read by their contacts
+    """
     store_unread_by_user = True
+    """
+    If the legacy network supports 'read marks', keep track of messages received by the user
+    and transmit read marks from XMPP to the legacy network
+    """
     roster_cls = LegacyRoster
+    """
+    Roster class to use for this session. Change it if you override :class:`.Roster`
+    """
     xmpp: Optional[BaseGateway] = None
 
     def __init__(self, xmpp: BaseGateway, user: GatewayUser):
@@ -364,12 +447,26 @@ class BaseSession(ABC):
 
         self.contacts = self.roster_cls(self)
 
+    # I believe something more elegant could be bone
     @staticmethod
     def create(xmpp: BaseGateway, user: GatewayUser) -> "BaseSession":
+        """
+        Create a non-logged session instance
+
+        :param xmpp:
+        :param user:
+        :return: An instance of the legacy network's own ``Session`` class
+        """
         raise NotImplementedError
 
     @classmethod
-    def from_stanza(cls, s):
+    def from_stanza(cls, s) -> "BaseSession":
+        """
+        Get a user's :class:`LegacySession` using the "from" field of a stanza
+
+        :param s:
+        :return:
+        """
         user = user_store.get_by_stanza(s)
         if user is None:
             raise KeyError(s.get_from())
@@ -421,32 +518,70 @@ class BaseSession(ABC):
         try:
             legacy_msg_id = self.unread_by_user.pop(displayed_msg_id)
         except KeyError:
-            log.debug("Received read marker for a msg we did not send: %s", self.unread_by_user)
+            log.debug(
+                "Received read marker for a msg we did not send: %s",
+                self.unread_by_user,
+            )
         else:
             await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
-    async def send(self, m: Message, c: LegacyContact) -> Hashable:
+    async def send(self, m: Message, c: LegacyContact) -> Optional[Hashable]:
+        """
+        The user sends a message from xmpp to the legacy network
+
+        :param m: The XMPP message
+        :param c: Recipient of the message
+        :return: An ID of some sort that can be used later to ack and mark the message
+            as read by the user
+        """
         raise NotImplementedError
 
     async def active(self, c: LegacyContact):
+        """
+        The use sens an 'active' chat state to the legacy network
+
+        :param c: Recipient of the active chat state
+        """
         raise NotImplementedError
 
     async def inactive(self, c: LegacyContact):
+        """
+        The use sens an 'inactive' chat state to the legacy network
+
+        :param c:
+        :return:
+        """
         raise NotImplementedError
 
     async def composing(self, c: LegacyContact):
+        """
+        The use sens an 'inactive' starts typing
+
+        :param c:
+        :return:
+        """
         raise NotImplementedError
 
     async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+        """
+
+
+        :param legacy_msg_id: Identifier of the message, return value of by :meth:`.BaseSession.send`
+        :param c:
+        :return:
+        """
         raise NotImplementedError
 
 
 class BaseLegacyClient(ABC):
     """
-    Abstract base class for communicating with the legacy network
+    Abstract base class for interacting with the legacy network
     """
 
     session_cls = BaseSession
+    """
+    This is automatically overridden by the legacy network subclass of :class:`.BaseSession`
+    """
 
     def __init__(self, xmpp: BaseGateway):
         """
@@ -454,7 +589,7 @@ class BaseLegacyClient(ABC):
         """
         self.xmpp = LegacyContact.xmpp = self.session_cls.xmpp = xmpp
 
-        xmpp["xep_0077"].api.register(self.user_validate, "user_validate")
+        xmpp["xep_0077"].api.register(self._user_validate, "user_validate")
         xmpp.add_event_handler("user_unregister", self._on_user_unregister)
 
         get_session = self.session_cls.from_stanza
@@ -477,14 +612,24 @@ class BaseLegacyClient(ABC):
         self.xmpp.add_event_handler("chatstate_composing", composing)
 
     def config(self, argv: List[str]):
+        """
+        Override this to access CLI args to configure the slidge plugin
+
+        :param argv: CLI args that were not parsed by Slidge
+        """
         pass
 
     async def legacy_login(self, p: Presence):
+        """
+        Logs a :class:`.BaseSession` instance to the legacy network
+
+        :param p: Presence from a :class:`.GatewayUser` directed at the gateway's own JID
+        """
         session = self.session_cls.from_stanza(p)
         if not session.logged:
             await session.login(p)
 
-    async def user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         log.debug("User validate: %s", (ifrom.bare, iq))
         form = iq["register"]["form"].get_values()
 
@@ -505,10 +650,9 @@ class BaseLegacyClient(ABC):
         """
         Validate a registration form from a user.
 
-        Since :xep:`0077` is pretty limited (fields name are restricted, single step only which
-        is a problem for 2FA, SMS code auth...), it is OK to validate anything that looks good here
-        and continue the registration progress via direct messages to the user (using :func:`.BaseGateway.input`
-        for instance)
+        Since :xep:`0077` is pretty limited in terms of validation, it is OK to validate
+        anything that looks good here and continue the legacy auth process via direct messages
+        to the user (using :func:`.BaseGateway.input` for instance)
 
         :param user_jid:
         :param registration_form:

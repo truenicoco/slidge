@@ -1,6 +1,15 @@
 Slidge 🛷
 =========
 
+.. image:: https://readthedocs.org/projects/slidge/badge/?version=latest
+    :target: https://slidge.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation status
+
+.. image:: https://gitlab.com/nicocool84/slidge/badges/master/pipeline.svg
+    :target: https://gitlab.com/group-name/project-name/commits/master
+    :alt: Pipeline status
+
+
 Pythonic XMPP gateways made easy.
 
 An XMPP component that attempts to follow XEPs to provide an generic
@@ -30,22 +39,27 @@ profile and not mess up your normal user settings and such.
 It is definitely possible to set up everything without docker, but note that the
 aiotdlib package needs to be manually built (wheels from pypi are incomplete unfortunately).
 
+About privacy
+-------------
+
+Slidge (and most if not all XMPP gateway that I know of) will break end-to-end encryption,
+or more precisely one of the 'ends' become the gateway itself.
+If privacy is a major concern for you, my advice would be to:
+
+- use XMPP + OMEMO
+- self-host your gateways
+- have your gateways hosted by someone you know AFK
+
+
 Related projects
 ----------------
 
-Slidge is heavily inspired by `Spectrum <https://www.spectrum.im/>`_.
-Spectrum "backends" (our *legacy clients*) can be written in any language,
-but we target python specifically.
-
-Another related project is `matterbridge <https://github.com/42wim/matterbridge>`_, but
-this projects focuses on XMPP to take advantage of its amazing features when matterbridge
-is geared towards mattermost.
-
-`XMPP-discord-bridge <https://git.polynom.me/PapaTutuWawa/xmpp-discord-bridge>`_ also uses slixmpp,
-but focuses on discord only on discord channels.
+- `Spectrum <https://www.spectrum.im/>`_
+- `Bitfrost <https://github.com/matrix-org/matrix-bifrost>`_
+- `Mautrix <https://github.com/mautrix>`_
+- `matterbridge <https://github.com/42wim/matterbridge>`_
+- `XMPP-discord-bridge <https://git.polynom.me/PapaTutuWawa/xmpp-discord-bridge>`_
 
 Homepage: `gitlab <https://gitlab.com/nicocool84/slidge/>`_
 
 Chat room: `slidge@conference.nicoco.fr <xmpp:slidge@conference.nicoco.fr?join>`_
-
-`Docs (WIP) are here <https://slidge.readthedocs.io>`_.

@@ -4,7 +4,7 @@ This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easi
 import dataclasses
 import logging
 from asyncio import Future
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Literal
 
 from slixmpp import ComponentXMPP, Message, Iq
 
@@ -13,12 +13,25 @@ from .db import user_store, RosterBackend, GatewayUser
 
 @dataclasses.dataclass
 class RegistrationField:
+    """
+    Represents a field of the form that a user will see when registering to the gateway
+    via their XMPP client.
+    """
+
     name: str
+    """
+    Internal name of the field, will be used to retrieve via :py:attr:`.GatewayUser.registration_form`
+    """
     label: str = None
+    """Description of the field that the aspiring user will see"""
     required: bool = True
+    """Whether this field is mandatory or not"""
     private: bool = False
-    type: str = None
+    """For sensitive info that should not be displayed on screen while the user types."""
+    type: Literal["boolean", "fixed", "text-single"] = "text-single"
+    """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
+    """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
 
 
 class BaseGateway(ComponentXMPP):
@@ -31,7 +44,10 @@ class BaseGateway(ComponentXMPP):
             required=False,
         ),
     ]
-    """Set of fields presented to the gateway user when registering using :xep:`0077`"""
+    """
+    Iterable of fields presented to the gateway user when registering using :xep:`0077`
+    `extended <https://xmpp.org/extensions/xep-0077.html#extensibility>`_ by :xep:`0004`
+    """
     REGISTRATION_INSTRUCTIONS: str = "Enter your legacy credentials"
 
     COMPONENT_NAME: str = "SliXMPP gateway"
@@ -138,7 +154,7 @@ class BaseGateway(ComponentXMPP):
                 label="Remove my registration",
                 required=True,
                 ftype="boolean",
-                value=False
+                value=False,
             )
 
         for field in self.REGISTRATION_FIELDS:
@@ -200,7 +216,12 @@ class BaseGateway(ComponentXMPP):
 
     def ack(self, msg: Message):
         """
-        Send a message receipt (:xep:`0184`) in response to a message sent by a gateway user
+        Send a message receipt (:xep:`0184`) in response to a message sent by a gateway user.
+
+        This should be sent to attest the message was effectively sent on the legacy network.
+        If the legacy network support delivery receipts from contact's clients, :meth:`.LegacyContact.ack`
+        is preferable.
+
 
         :param msg: The message to ack
         """

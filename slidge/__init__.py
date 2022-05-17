@@ -25,6 +25,7 @@ def send_marker(self, mto, id: str, marker: str, thread=None, *, mfrom=None):
     msg.send()
 
 
+# patch to allow data forms instead of the more limited jabber:iq:register protocol
 async def _handle_registration(self, iq: Iq):
     if iq["type"] == "get":
         await self._send_form(iq)

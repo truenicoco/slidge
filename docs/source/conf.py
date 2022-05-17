@@ -35,8 +35,12 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
-    "sphinxarg.ext"
+    "sphinxarg.ext",
+    "autoapi.extension"
 ]
+
+autoapi_type = 'python'
+autoapi_dirs = ['../../slidge']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

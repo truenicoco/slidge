@@ -7,9 +7,9 @@ Welcome to SliXMPP gateway's documentation!
 
    readme
    config
-   glossary
+   tutorial
    features
-   api
+   glossary
 
 
 Indices and tables

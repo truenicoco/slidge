@@ -7,7 +7,7 @@ import dataclasses
 import logging
 import shelve
 from os import PathLike
-from typing import Dict, Set, Iterable
+from typing import Dict, Iterable
 
 from slixmpp import JID, Presence, Message
 

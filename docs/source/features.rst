@@ -7,10 +7,11 @@ We need testing!
 Gateway interaction
 *******************
 
+This is mostly working but must be tested in depth.
+
 - ☑ In band registration (:xep:`0077`)
-- ☑ Following good practices listed in :xep:`0100` (to be confirmed)
-- ☑ More complex registration flows (2FA, SMS, QR codes…) via direct messages between the user and the gateway component
-- ☐ Managing legacy network profile
+- ☑ More complex registration flows (2FA, SMS, QR codes…) via direct messages between the
+  user and the gateway component
 
 One-to-one messaging (contacts)
 *******************************
@@ -22,7 +23,9 @@ One-to-one messaging (contacts)
 - ☑ Chat states (composing, paused, :xep:`0085`)
 - ☑ Chat markers (:xep:`0333`)
 - ☑ Carbon messages for messages sent from official legacy clients (:xep:`0280` and :xep:`0356`)
+- ☐ Sync own read status between XMPP and official client
 - ☐ HTTP file upload (:xep:`0363`)
+- ☐ Last message correction (:xep:`0308`)
 
 Group chats (MUCs)
 ******************
