@@ -9,8 +9,6 @@ import configargparse
 
 from .db import user_store
 
-from .gateway import BaseGateway
-
 
 # noinspection PyUnresolvedReferences
 def get_parser():
@@ -60,15 +58,18 @@ def get_parser():
 
 
 def main():
-    args = get_parser().parse_args()
+    args, argv = get_parser().parse_known_args()
     logging.basicConfig(level=logging.DEBUG)
 
     user_store.set_file(args.db)
 
     module = importlib.import_module(args.legacy_module)
+    module.LegacyClient.session_cls = module.Session
 
-    gateway: BaseGateway = module.Gateway(args.jid, args.secret, args.server, args.port)
-    gateway.legacy = module.LegacyClient(gateway)
+    gateway = module.Gateway(args.jid, args.secret, args.server, args.port)
+    client = module.LegacyClient(gateway)
+    if len(argv) != 0:
+        client.config(argv)
     gateway.connect()
 
     try:  # TODO: handle reconnection

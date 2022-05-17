@@ -2,7 +2,13 @@ from slixmpp import Iq
 
 from .db import user_store, GatewayUser
 from .gateway import BaseGateway, RegistrationField
-from .legacy.base import LegacyContact, BaseLegacyClient
+from .legacy.base import (
+    LegacyContact,
+    BaseLegacyClient,
+    sessions,
+    BaseSession,
+    LegacyRoster,
+)
 
 import slixmpp.plugins.xep_0077
 import slixmpp.plugins.xep_0333
@@ -32,7 +38,7 @@ async def _handle_registration(self, iq: Iq):
             try:
                 await self.api["user_remove"](None, None, iq["from"], iq)
             except KeyError:
-                slixmpp.plugins.xep_0333.register._send_error(
+                slixmpp.plugins.xep_0077.register._send_error(
                     iq,
                     "404",
                     "cancel",
@@ -48,7 +54,7 @@ async def _handle_registration(self, iq: Iq):
         for field in self.form_fields:
             if not iq["register"][field]:
                 # Incomplete Registration
-                slixmpp.plugins.xep_0333.register._send_error(
+                slixmpp.plugins.xep_0077.register._send_error(
                     iq,
                     "406",
                     "modify",
@@ -60,7 +66,7 @@ async def _handle_registration(self, iq: Iq):
         try:
             await self.api["user_validate"](None, None, iq["from"], iq["register"])
         except ValueError as e:
-            slixmpp.plugins.xep_0333.register._send_error(
+            slixmpp.plugins.xep_0077.register._send_error(
                 iq,
                 "406",
                 "modify",
@@ -84,7 +90,7 @@ async def handle_data_form(self, iq: Iq):
             try:
                 await self.api["user_remove"](None, None, iq["from"], iq)
             except KeyError:
-                slixmpp.plugins.xep_0333.register._send_error(
+                slixmpp.plugins.xep_0077.register._send_error(
                     iq,
                     "404",
                     "cancel",
@@ -100,7 +106,7 @@ async def handle_data_form(self, iq: Iq):
     try:
         await self.api["user_validate"](None, None, iq["from"], iq)
     except ValueError as e:
-        slixmpp.plugins.xep_0333.register._send_error(
+        slixmpp.plugins.xep_0077.register._send_error(
             iq,
             "406",
             "modify",
@@ -116,3 +122,15 @@ async def handle_data_form(self, iq: Iq):
 slixmpp.plugins.xep_0333.XEP_0333.send_marker = send_marker
 slixmpp.plugins.xep_0077.XEP_0077._handle_registration = _handle_registration
 slixmpp.plugins.xep_0077.XEP_0077.handle_data_form = handle_data_form
+
+__all__ = [
+    "BaseLegacyClient",
+    "BaseGateway",
+    "BaseSession",
+    "GatewayUser",
+    "LegacyContact",
+    "LegacyRoster",
+    "RegistrationField",
+    "sessions",
+    "user_store",
+]

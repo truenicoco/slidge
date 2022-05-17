@@ -1,30 +1,26 @@
 import datetime
+import functools
 import logging
+from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
-from slixmpp import Message, JID, Presence
+from slixmpp import Message, JID, Presence, Iq
 
 import aiotdlib
 import aiotdlib.api as tgapi
 
-from slidge import (
-    user_store,
-    BaseGateway,
-    GatewayUser,
-    BaseLegacyClient,
-    LegacyContact,
-    RegistrationField,
-)
+from slidge import *
+
+REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH
+
+This is the only tested login method, but other methods (password, bot token, 2FA...)
+should work too, in theory at least.
+"""
 
 
 class Gateway(BaseGateway):
-    REGISTRATION_INSTRUCTIONS = """
-You can visit https://my.telegram.org/apps to get an API ID and an API HASH
-
-This is the only tested login method, but other methods (password, bot token, 2FA...) should work too,
-in theory at least.
-"""
+    REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
         RegistrationField(name="phone", label="Phone number", required=True),
         RegistrationField(name="api_id", label="API ID", required=False),
@@ -43,53 +39,101 @@ in theory at least.
     COMPONENT_NAME = "Telegram (slidge)"
 
 
-class TelegramSession(aiotdlib.Client):
-    def __init__(self, xmpp: BaseGateway, user: GatewayUser, **kwargs):
-        super().__init__(**kwargs)
-        self.user = user
-        self.xmpp = xmpp
+class LegacyClient(BaseLegacyClient):
+    def __init__(self, xmpp: Gateway):
+        super().__init__(xmpp)
 
-        self.connected = False
-        self.contacts: Dict[int, LegacyContact] = {}
-        self.unacked: Dict[int, Message] = {}
-        self.unread: Dict[int, Message] = {}
-        self.unread_by_user: Dict[str, int] = {}
+    def config(self, argv: List[str]):
+        parser = ArgumentParser()
+        parser.add_argument("--tdlib-path")
+        args = parser.parse_args(argv)
+        if args.tdlib_path is not None:
+            Session.tdlib_files = Path(args.tdlib_path)
 
-        self.add_event_handler(
-            on_telegram_message,
-            tgapi.API.Types.UPDATE_NEW_MESSAGE,
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        pass
+
+    async def unregister(self, user: GatewayUser, iq: Iq):
+        pass
+
+
+class Session(BaseSession):
+    tdlib_path = Path("/tdlib")
+
+    def __init__(self, xmpp: BaseGateway, user: GatewayUser):
+        super().__init__(xmpp, user)
+        self.tg: Optional[TelegramClient] = None
+
+    @staticmethod
+    def create(xmpp: BaseGateway, user: GatewayUser) -> "Session":
+        registration_form = {
+            k: v if v != "" else None for k, v in user.registration_form.items()
+        }
+        s = Session(xmpp, user)
+        tg = TelegramClient(
+            xmpp,
+            s,
+            api_id=int(registration_form["api_id"]),
+            api_hash=registration_form["api_hash"],
+            phone_number=registration_form["phone"],
+            bot_token=registration_form["bot_token"],
+            first_name=registration_form["first"],
+            last_name=registration_form["last"],
+            database_encryption_key="USELESS",
+            files_directory=Session.tdlib_path,
         )
-        self.add_event_handler(
-            on_message_success,
-            tgapi.API.Types.UPDATE_MESSAGE_SEND_SUCCEEDED,
-        )
-        self.add_event_handler(
-            on_contact_status,
-            tgapi.API.Types.UPDATE_USER_STATUS,
-        )
-        self.add_event_handler(
-            on_contact_chat_action,
-            tgapi.API.Types.UPDATE_CHAT_ACTION,
-        )
-        self.add_event_handler(
-            on_contact_read,
-            tgapi.API.Types.UPDATE_CHAT_READ_OUTBOX,
+        s.tg = tg
+        return s
+
+    async def login(self, p: Presence):
+        async with self.tg as tg:
+            self.logged = True
+            await self.add_contacts_to_roster()
+            await tg.idle()
+
+    async def logout(self, p: Presence):
+        pass
+
+    async def send(self, m: Message, c: LegacyContact) -> int:
+        # noinspection PyTypeChecker
+        # ^ because c.legacy_id is of general type Hashable, but it's an int for telegram
+        result = await self.tg.send_text(chat_id=c.legacy_id, text=m["body"])
+        log.debug("Result: %s", result)
+        return result.id
+
+    async def active(self, c: LegacyContact):
+        action = tgapi.OpenChat.construct(chat_id=c.legacy_id)
+        res = await self.tg.request(action)
+        log.debug("Open chat res: %s", res)
+
+    async def inactive(self, c: LegacyContact):
+        action = tgapi.CloseChat.construct(chat_id=c.legacy_id)
+        res = await self.tg.request(action)
+        log.debug("Close chat res: %s", res)
+
+    async def composing(self, c: LegacyContact):
+        action = tgapi.SendChatAction.construct(
+            chat_id=c.legacy_id,
+            action=tgapi.ChatActionTyping(),
+            message_thread_id=0,  # TODO: check what telegram's threads really are
         )
 
-    async def __auth_get_code(self) -> str:
-        return await self.xmpp.input(self.user, "Enter code")
+        res = await self.tg.request(action)
+        log.debug("Send composing res: %s", res)
 
-    async def __auth_get_password(self) -> str:
-        return await self.xmpp.input(self.user, "Enter 2FA password:")
-
-    async def __auth_get_first_name(self) -> str:
-        return await self.xmpp.input(self.user, "Enter first name:")
-
-    async def __auth_get_last_name(self) -> str:
-        return await self.xmpp.input(self.user, "Enter last name:")
+    async def displayed(self, tg_id: int, c: LegacyContact):
+        log.debug("Unread: %s", self.unread_by_user)
+        query = tgapi.ViewMessages.construct(
+            chat_id=c.legacy_id,
+            message_thread_id=0,
+            message_ids=[tg_id],
+            force_read=True,
+        )
+        res = await self.tg.request(query)
+        log.debug("Send chat action res: %s", res)
 
     async def add_contacts_to_roster(self):
-        chats = await self.get_main_list_chats_all()
+        chats = await self.tg.get_main_list_chats_all()
         for chat in chats:
             if not isinstance(chat.type_, tgapi.ChatTypePrivate):
                 log.debug("Skipping %s as it is of type %s", chat.title, chat.type_)
@@ -98,85 +142,47 @@ class TelegramSession(aiotdlib.Client):
                 query = tgapi.DownloadFile.construct(
                     file_id=chat.photo.big.id, synchronous=True, priority=32
                 )
-                response: tgapi.File = await self.request(query)
+                response: tgapi.File = await self.tg.request(query)
                 with open(response.local.path, "rb") as f:
                     avatar = f.read()
             else:
                 avatar = None
-            contact = self.contact(chat.id, chat.title, avatar)
+            contact = self.contacts.by_legacy_id(chat.id)
+            contact.name = chat.title
+            contact.avatar = avatar
             await contact.add_to_roster()
             contact.online()
 
-    def contact(
-        self,
-        contact_user_id: int,
-        name: Optional[str] = None,
-        avatar: Optional[bytes] = None,
-    ) -> LegacyContact:
-        c = self.contacts.get(contact_user_id)
-        if c is None:
-            self.contacts[contact_user_id] = c = LegacyContact(
-                self.user, legacy_id=str(contact_user_id), name=name, avatar=avatar
-            )
 
-        return c
+class TelegramClient(aiotdlib.Client):
+    def __init__(self, xmpp: BaseGateway, session: Session, **kw):
+        super().__init__(**kw)
+        self.session = session
 
+        async def input_(prompt):
+            return await xmpp.input(session.user, prompt)
 
-class LegacyClient(BaseLegacyClient):
-    def __init__(self, xmpp: Gateway):
-        super().__init__(xmpp)
-        self.xmpp.add_event_handler("marker_displayed", on_user_displayed)
-        self.xmpp.add_event_handler("chatstate_active", on_user_active)
-        self.xmpp.add_event_handler("chatstate_inactive", on_user_inactive)
-        self.xmpp.add_event_handler("chatstate_composing", on_user_composing)
+        self.input = input_
+        self.__auth_get_code = functools.partial(input_, "Enter code")
+        self.__auth_get_password = functools.partial(input_, "Enter 2FA password:")
+        self.__auth_get_first_name = functools.partial(input_, "Enter first name:")
+        self.__auth_get_last_name = functools.partial(input_, "Enter last name:")
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        pass
-
-    async def login(self, p: Presence):
-        user = user_store.get_by_stanza(p)
-        if user is None:
-            raise KeyError(p.get_from().bare)
-        tg = sessions.get(user)
-        if tg is None:
-            registration_form = {
-                k: v if v != "" else None for k, v in user.registration_form.items()
-            }
-            tg = TelegramSession(
-                self.xmpp,
-                user,
-                api_id=int(registration_form["api_id"]),
-                api_hash=registration_form["api_hash"],
-                phone_number=registration_form["phone"],
-                bot_token=registration_form["bot_token"],
-                first_name=registration_form["first"],
-                last_name=registration_form["last"],
-                database_encryption_key="USELESS",
-                files_directory=Path("/tdlib"),
-            )
-            tg.connected = True
-            sessions[user] = tg
-            async with tg:
-                await tg.add_contacts_to_roster()
-                await tg.idle()
-
-    async def logout(self, p: Presence):
-        pass
-
-    async def on_message(self, msg: Message):
-        user = user_store.get_by_stanza(msg)
-        tg = sessions.get(user)
-        # noinspection PyTypeChecker
-        result = await tg.send_text(chat_id=int(msg.get_to().user), text=msg["body"])
-        tg.unacked[result.id] = msg
-        tg.unread[result.id] = msg
-        log.debug("Result: %s", result)
+        for h, t in [
+            (on_telegram_message, tgapi.API.Types.UPDATE_NEW_MESSAGE),
+            (on_message_success, tgapi.API.Types.UPDATE_MESSAGE_SEND_SUCCEEDED),
+            (on_contact_status, tgapi.API.Types.UPDATE_USER_STATUS),
+            (on_contact_chat_action, tgapi.API.Types.UPDATE_CHAT_ACTION),
+            (on_contact_read, tgapi.API.Types.UPDATE_CHAT_READ_OUTBOX),
+        ]:
+            log.debug("Adding telegram event handlers")
+            self.add_event_handler(h, t)
 
 
-# noinspection PyUnresolvedReferences
-async def on_telegram_message(client: TelegramSession, update: tgapi.UpdateNewMessage):
+async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage):
     log.debug("Telegram update: %s", update)
     msg: tgapi.Message = update.message
+    session = tg.session
 
     if msg.is_channel_post:
         log.debug("Ignoring channel post")
@@ -187,11 +193,13 @@ async def on_telegram_message(client: TelegramSession, update: tgapi.UpdateNewMe
         # but maybe this does not handle all possible cases gracefully?
         if (
             msg.sending_state is not None
-            or msg.id in client.unacked
-            or msg.id in client.unread
+            or msg.id in session.unacked
+            or msg.id in session.unread
         ):
+
             return
-        contact = client.contact(msg.chat_id)
+        contact = session.contacts.by_legacy_id(msg.chat_id)
+        # noinspection PyUnresolvedReferences
         contact.carbon(msg.content.text.text, datetime.datetime.fromtimestamp(msg.date))
         return
 
@@ -200,27 +208,27 @@ async def on_telegram_message(client: TelegramSession, update: tgapi.UpdateNewMe
         log.debug("Ignoring non-user sender")  # Does this happen?
         return
 
-    contact = client.contact(msg.sender_id.user_id)
-    txt: tgapi.FormattedText = msg.content.text
-    sent_msg = contact.send_message(body=txt.text)
-
-    client.unread_by_user[sent_msg.get_id()] = msg.id
+    # noinspection PyUnresolvedReferences
+    contact = session.contacts.by_legacy_id(msg.sender_id.user_id)
+    # noinspection PyUnresolvedReferences
+    contact.send_message(body=msg.content.text.text, legacy_msg_id=msg.id)
 
 
 async def on_message_success(
-    client: TelegramSession, update: tgapi.UpdateMessageSendSucceeded
+    tg: TelegramClient, update: tgapi.UpdateMessageSendSucceeded
 ):
+    session = tg.session
     try:
-        msg = client.unacked.pop(update.message.id)
+        msg = session.unacked.pop(update.message.id)
     except KeyError:
         log.debug("We did not send: %s", update.message.id)
-        return
-    client.xmpp.ack(msg)
+    else:
+        session.xmpp.ack(msg)
 
 
-async def on_contact_status(client: TelegramSession, update: tgapi.UpdateUserStatus):
-    contact = LegacyContact(user=client.user, legacy_id=str(update.user_id))
-
+async def on_contact_status(tg: TelegramClient, update: tgapi.UpdateUserStatus):
+    session = tg.session
+    contact = session.contacts.by_legacy_id(update.user_id)
     status = update.status
     if isinstance(status, tgapi.UserStatusOnline):
         contact.active()
@@ -231,18 +239,19 @@ async def on_contact_status(client: TelegramSession, update: tgapi.UpdateUserSta
         log.debug("Ignoring status %s", update)
 
 
-async def on_contact_read(client: TelegramSession, update: tgapi.UpdateChatReadOutbox):
-    msg = client.unread.pop(update.last_read_outbox_message_id)
-    if msg is None:
+async def on_contact_read(tg: TelegramClient, update: tgapi.UpdateChatReadOutbox):
+    session = tg.session
+    try:
+        msg = session.unread.pop(update.last_read_outbox_message_id)
+    except KeyError:
         log.debug("Ignoring read mark for %s", update)
-        return
-    contact = client.contact(update.chat_id)
-    contact.displayed(msg)
+    else:
+        contact = session.contacts.by_legacy_id(update.chat_id)
+        contact.displayed(msg)
 
 
-async def on_contact_chat_action(
-    client: TelegramSession, action: tgapi.UpdateChatAction
-):
+async def on_contact_chat_action(tg: TelegramClient, action: tgapi.UpdateChatAction):
+    session = tg.session
     sender = action.sender_id
     if not isinstance(sender, tgapi.MessageSenderUser):
         log.debug("Ignoring action: %s", action)
@@ -252,63 +261,8 @@ async def on_contact_chat_action(
     if chat_id != sender.user_id:
         log.debug("Ignoring action: %s", action)
         return
-    contact = client.contact(chat_id)
+    contact = session.contacts.by_legacy_id(chat_id)
     contact.composing()
 
 
-async def on_user_active(msg: Message):
-    user = user_store.get_by_stanza(msg)
-    tg = sessions.get(user)
-    # noinspection PyTypeChecker
-    chat_id = int(msg.get_to().user)
-    action = tgapi.OpenChat.construct(chat_id=chat_id)
-    res = await tg.request(action)
-    log.debug("Open chat res: %s", res)
-
-
-async def on_user_inactive(msg: Message):
-    user = user_store.get_by_stanza(msg)
-    tg = sessions.get(user)
-    # noinspection PyTypeChecker
-    chat_id = int(msg.get_to().user)
-    action = tgapi.CloseChat.construct(chat_id=chat_id)
-    res = await tg.request(action)
-    log.debug("Open chat res: %s", res)
-
-
-async def on_user_composing(msg: Message):
-    user = user_store.get_by_stanza(msg)
-    tg = sessions.get(user)
-    # noinspection PyTypeChecker
-    chat_id = int(msg.get_to().user)
-    action = tgapi.SendChatAction.construct(
-        chat_id=chat_id,
-        action=tgapi.ChatActionTyping(),
-        message_thread_id=0,  # TODO: check what telegram's threads really are
-    )
-
-    res = await tg.request(action)
-    log.debug("Send chat action res: %s", res)
-
-
-async def on_user_displayed(msg: Message):
-    tg = sessions.get(user_store.get_by_stanza(msg))
-    log.debug("Unread: %s", tg.unread_by_user)
-    try:
-        tg_id = tg.unread_by_user.pop(msg["displayed"]["id"])
-    except KeyError:
-        log.warning("Received read mark for a message we didn't send: %s", msg)
-        return
-    # noinspection PyTypeChecker
-    query = tgapi.ViewMessages.construct(
-        chat_id=int(msg.get_to().user),
-        message_thread_id=0,
-        message_ids=[tg_id],
-        force_read=True,
-    )
-    res = await tg.request(query)
-    log.debug("Send chat action res: %s", res)
-
-
-sessions: Dict[GatewayUser, TelegramSession] = {}
 log = logging.getLogger(__name__)

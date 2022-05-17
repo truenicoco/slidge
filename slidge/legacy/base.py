@@ -2,7 +2,7 @@ import hashlib
 import logging
 from abc import ABC
 from datetime import datetime
-from typing import Optional, Literal, Dict, Any
+from typing import Optional, Literal, Dict, Any, Hashable, List
 
 from slixmpp import Message, JID, Iq, Presence
 from slixmpp.exceptions import XMPPError
@@ -12,7 +12,7 @@ from ..db import GatewayUser, user_store
 from ..gateway import BaseGateway
 
 
-class LegacyContact(ABC):
+class LegacyContact:
     """
     This class represents a contact a gateway user can interact with
     """
@@ -35,29 +35,29 @@ class LegacyContact(ABC):
 
     def __init__(
         self,
-        user: GatewayUser,
-        legacy_id: str,
-        name: str = "",
-        avatar: Optional[bytes] = None,
-        extra_info: Optional[Any] = None
+        session: "BaseSession",
+        legacy_id: Hashable,
+        jid_username: str,
     ):
         """
 
-        :param user: The user this contact can chat with
-        :param legacy_id: The ID of the
-        :param name: Name used for the user's roster entry
-        :param avatar: An image representing the contact
+        :param session:
+        :param legacy_id:
+        :param jid_username:
         """
-        self.user = user
+        self.session = session
+        self.user = session.user
         self.legacy_id = legacy_id
-        self.name = name
-        self.avatar = avatar
-        self.xmpp.loop.create_task(self.make_vcard())
+        self.jid_username = jid_username
+
+        self._name = None
+        self._avatar = None
+
         self.xmpp.loop.create_task(self.make_caps())
-        self.extra_info = extra_info
+        self.xmpp.loop.create_task(self.make_vcard())
 
     def __repr__(self):
-        return f"<LegacyContact '{self.jid}' ({self.user})>"
+        return f"<LegacyContact '{self.jid}' - '{self.name}' - {self.user}>"
 
     @property
     def jid(self) -> JID:
@@ -69,12 +69,21 @@ class LegacyContact(ABC):
         return j
 
     @property
-    def jid_username(self) -> str:
-        """
-        The username part of the contact's legacy ID.
-        Should be overridden to provide character escaping if required.
-        """
-        return self.legacy_id
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, n: str):
+        self._name = n
+
+    @property
+    def avatar(self):
+        return self._avatar
+
+    @avatar.setter
+    def avatar(self, a: bytes):
+        self._avatar = a
+        self.xmpp.loop.create_task(self.make_vcard())
 
     async def make_caps(self):
         """
@@ -238,18 +247,28 @@ class LegacyContact(ABC):
             mfrom=self.jid,
         )
 
-    def send_message(self, body: str = "", chat_state: Optional[str] = "active"):
+    def send_message(
+        self,
+        body: str = "",
+        chat_state: Optional[str] = "active",
+        legacy_msg_id: Optional[Hashable] = None,
+    ):
         """
         Transmit a message from the contact to the user
 
         :param body: Context of the message
         :param chat_state: By default, will send an "active" chat state (:xep:`0085`) along with the
             message. Set this to ``None`` if this is not desired.
+        :param legacy_msg_id:
         """
         msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, mbody=body)
         if chat_state is not None:
             msg["chat_state"] = chat_state
         msg.send()
+        if legacy_msg_id is not None and self.session.store_unread_by_user:
+            i = msg.get_id()
+            log.debug("Storing correspondence between %s and %s", i)
+            self.session.unread_by_user[i] = legacy_msg_id
         return msg
 
     def carbon(self, body: str, date: datetime):
@@ -280,53 +299,84 @@ class LegacyContact(ABC):
         self.xmpp["xep_0356"].send_privileged_message(carbon)
 
 
-class BaseLegacyClient(ABC):
-    """
-    Abstract base class for communicating with the legacy network
-    """
+class LegacyRoster:
+    contact_cls = LegacyContact
 
-    def __init__(self, xmpp: BaseGateway):
-        """
-        :param xmpp: The gateway, to interact with the XMPP network
-        """
+    def __init__(self, session: "BaseSession"):
+        self.session = session
+        self.contacts_by_bare_jid: Dict[str, LegacyContact] = {}
+        self.contacts_by_legacy_id: Dict[Any, LegacyContact] = {}
+
+    def by_jid(self, contact_jid: JID):
+        bare = contact_jid.bare
+        c = self.contacts_by_bare_jid.get(bare)
+        if c is None:
+            jid_username = str(contact_jid.username)
+            log.debug("Contact %s not found", contact_jid)
+            c = self.contact_cls(
+                self.session,
+                self.jid_username_to_legacy_id(jid_username),
+                jid_username,
+            )
+            c.bare_jid = bare
+            self.contacts_by_bare_jid[bare] = c
+        return c
+
+    def by_legacy_id(self, legacy_id: Any):
+        c = self.contacts_by_legacy_id.get(legacy_id)
+        if c is None:
+            log.debug("Contact %s not found in roster", legacy_id)
+            c = self.contact_cls(
+                self.session, legacy_id, self.legacy_id_to_jid_username(legacy_id)
+            )
+            self.contacts_by_legacy_id[legacy_id] = c
+        return c
+
+    def by_stanza(self, s):
+        return self.by_jid(s.get_to())
+
+    @staticmethod
+    def legacy_id_to_jid_username(legacy_id: Any) -> str:
+        return str(legacy_id)
+
+    @staticmethod
+    def jid_username_to_legacy_id(jid_username: str) -> Hashable:
+        return jid_username
+
+
+class BaseSession(ABC):
+    store_unacked = True
+    store_unread = True
+    store_unread_by_user = True
+    roster_cls = LegacyRoster
+    xmpp: Optional[BaseGateway] = None
+
+    def __init__(self, xmpp: BaseGateway, user: GatewayUser):
         self.xmpp = xmpp
-        LegacyContact.xmpp = xmpp
+        self.user = user
+        if self.store_unacked:
+            self.unacked: Dict[Any, Message] = {}
+        if self.store_unread:
+            self.unread: Dict[Any, Message] = {}
+        if self.store_unread_by_user:
+            self.unread_by_user: Dict[str, Any] = {}
+        self.logged = False
 
-        xmpp["xep_0077"].api.register(self.user_validate, "user_validate")
+        self.contacts = self.roster_cls(self)
 
-        xmpp.add_event_handler("legacy_login", self.login)
-        xmpp.add_event_handler("legacy_logout", self.logout)
-        xmpp.add_event_handler("legacy_message", self.on_message)
-        xmpp.add_event_handler("user_unregister", self.unregister)
-
-    async def user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        log.debug("User validate: %s", (ifrom.bare, iq))
-        form = iq["register"]["form"].get_values()
-
-        for field in self.xmpp.REGISTRATION_FIELDS:
-            if field.required and not form.get(field.name):
-                raise XMPPError("Please fill in all fields", etype="modify")
-
-        try:
-            await self.validate(ifrom, form)
-        except LegacyError as e:
-            raise ValueError(f"Login Problem: {e}")
-        else:
-            user_store.add(ifrom, form)
-
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        """
-        Validate a registration form from a user.
-
-        Since :xep:`0077` is pretty limited (fields name are restricted, single step only which
-        is a problem for 2FA, SMS code auth...), it is OK to validate anything that looks good here
-        and continue the registration progress via direct messages to the user (using :func:`.BaseGateway.input`
-        for instance)
-
-        :param user_jid:
-        :param registration_form:
-        """
+    @staticmethod
+    def create(xmpp: BaseGateway, user: GatewayUser) -> "BaseSession":
         raise NotImplementedError
+
+    @classmethod
+    def from_stanza(cls, s):
+        user = user_store.get_by_stanza(s)
+        if user is None:
+            raise KeyError(s.get_from())
+        session = sessions.get(user)
+        if session is None:
+            sessions[user] = session = cls.create(cls.xmpp, user)
+        return session
 
     async def login(self, p: Presence):
         """
@@ -350,21 +400,133 @@ class BaseLegacyClient(ABC):
         """
         raise NotImplementedError
 
-    async def on_message(self, msg: Message):
-        """
-        Called when the gateway user attempts to send a message through the gateway.
+    async def send_from_msg(self, m: Message):
+        legacy_msg_id = await self.send(m, self.contacts.by_stanza(m))
+        if self.store_unacked:
+            self.unacked[legacy_msg_id] = m
+        if self.store_unread:
+            self.unread[legacy_msg_id] = m
 
-        :param msg:
+    async def active_from_msg(self, m: Message):
+        await self.active(self.contacts.by_stanza(m))
+
+    async def inactive_from_msg(self, m: Message):
+        await self.inactive(self.contacts.by_stanza(m))
+
+    async def composing_from_msg(self, m: Message):
+        await self.composing(self.contacts.by_stanza(m))
+
+    async def displayed_from_msg(self, m: Message):
+        displayed_msg_id = m["displayed"]["id"]
+        try:
+            legacy_msg_id = self.unread_by_user.pop(displayed_msg_id)
+        except KeyError:
+            log.debug("Received read marker for a msg we did not send: %s", self.unread_by_user)
+        else:
+            await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
+
+    async def send(self, m: Message, c: LegacyContact) -> Hashable:
+        raise NotImplementedError
+
+    async def active(self, c: LegacyContact):
+        raise NotImplementedError
+
+    async def inactive(self, c: LegacyContact):
+        raise NotImplementedError
+
+    async def composing(self, c: LegacyContact):
+        raise NotImplementedError
+
+    async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+        raise NotImplementedError
+
+
+class BaseLegacyClient(ABC):
+    """
+    Abstract base class for communicating with the legacy network
+    """
+
+    session_cls = BaseSession
+
+    def __init__(self, xmpp: BaseGateway):
+        """
+        :param xmpp: The gateway, to interact with the XMPP network
+        """
+        self.xmpp = LegacyContact.xmpp = self.session_cls.xmpp = xmpp
+
+        xmpp["xep_0077"].api.register(self.user_validate, "user_validate")
+        xmpp.add_event_handler("user_unregister", self._on_user_unregister)
+
+        get_session = self.session_cls.from_stanza
+
+        # fmt: off
+        async def logout(p): await get_session(p).logout(p)
+        async def msg(m): await get_session(m).send_from_msg(m)
+        async def disp(m): await get_session(m).displayed_from_msg(m)
+        async def active(m): await get_session(m).active_from_msg(m)
+        async def inactive(m): await get_session(m).inactive_from_msg(m)
+        async def composing(m): await get_session(m).composing_from_msg(m)
+        # fmt: on
+
+        xmpp.add_event_handler("legacy_login", self.legacy_login)
+        xmpp.add_event_handler("legacy_logout", logout)
+        xmpp.add_event_handler("legacy_message", msg)
+        self.xmpp.add_event_handler("marker_displayed", disp)
+        self.xmpp.add_event_handler("chatstate_active", active)
+        self.xmpp.add_event_handler("chatstate_inactive", inactive)
+        self.xmpp.add_event_handler("chatstate_composing", composing)
+
+    def config(self, argv: List[str]):
+        pass
+
+    async def legacy_login(self, p: Presence):
+        session = self.session_cls.from_stanza(p)
+        if not session.logged:
+            await session.login(p)
+
+    async def user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        log.debug("User validate: %s", (ifrom.bare, iq))
+        form = iq["register"]["form"].get_values()
+
+        for field in self.xmpp.REGISTRATION_FIELDS:
+            if field.required and not form.get(field.name):
+                raise XMPPError("Please fill in all fields", etype="modify")
+
+        form_dict = {f.name: form.get(f.name) for f in self.xmpp.REGISTRATION_FIELDS}
+
+        try:
+            await self.validate(ifrom, form_dict)
+        except LegacyError as e:
+            raise ValueError(f"Login Problem: {e}")
+        else:
+            user_store.add(ifrom, form)
+
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        """
+        Validate a registration form from a user.
+
+        Since :xep:`0077` is pretty limited (fields name are restricted, single step only which
+        is a problem for 2FA, SMS code auth...), it is OK to validate anything that looks good here
+        and continue the registration progress via direct messages to the user (using :func:`.BaseGateway.input`
+        for instance)
+
+        :param user_jid:
+        :param registration_form:
         """
         raise NotImplementedError
 
-    async def unregister(self, iq: Iq):
-        """
-        Called when the gateway user attempts to send a message through the gateway.
+    async def _on_user_unregister(self, iq: Iq):
+        await self.unregister(user_store.get_by_stanza(iq), iq)
 
+    async def unregister(self, user: GatewayUser, iq: Iq):
+        """
+        Called when the user unregister from the gateway
+
+        :param user:
         :param iq:
         """
         raise NotImplementedError
 
 
 log = logging.getLogger(__name__)
+sessions: Dict[GatewayUser, BaseSession] = {}
