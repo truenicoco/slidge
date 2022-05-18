@@ -2,7 +2,8 @@ import hashlib
 import logging
 from abc import ABC
 from datetime import datetime
-from typing import Optional, Literal, Dict, Any, Hashable, List
+from pathlib import Path
+from typing import Optional, Literal, Dict, Any, Hashable, List, Type, IO
 
 from slixmpp import Message, JID, Iq, Presence
 from slixmpp.exceptions import XMPPError
@@ -26,6 +27,7 @@ class LegacyContact:
         "http://jabber.org/protocol/chatstates",
         "urn:xmpp:receipts",
         "vcard-temp",
+        "jabber:x:oob",
     }
     """
     A list of features advertised through service discovery and client capabilities.
@@ -252,7 +254,21 @@ class LegacyContact:
             mfrom=self.jid,
         )
 
-    def send_message(
+    def _make_message(self, **kwargs):
+        return self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)
+
+    def _send_message(self, msg: Message, legacy_msg_id: Optional[Hashable] = None):
+        msg.send()
+        if legacy_msg_id is not None and self.session.store_unread_by_user:
+            i = msg.get_id()
+            log.debug(
+                "Storing correspondence between %s (XMPP) and %s (legacy)",
+                i,
+                legacy_msg_id,
+            )
+            self.session.unread_by_user[i] = legacy_msg_id
+
+    def send_text(
         self,
         body: str = "",
         chat_state: Optional[str] = "active",
@@ -266,15 +282,32 @@ class LegacyContact:
             message. Set this to ``None`` if this is not desired.
         :param legacy_msg_id:
         """
-        msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, mbody=body)
+        msg = self._make_message(mbody=body, mtype="chat")
         if chat_state is not None:
             msg["chat_state"] = chat_state
-        msg.send()
-        if legacy_msg_id is not None and self.session.store_unread_by_user:
-            i = msg.get_id()
-            log.debug("Storing correspondence between %s and %s", i)
-            self.session.unread_by_user[i] = legacy_msg_id
+        self._send_message(msg, legacy_msg_id)
         return msg
+
+    async def send_file(
+        self,
+        filename: Optional[Path] = None,
+        content_type: Optional[str] = None,
+        input_file: Optional[IO[bytes]] = None,
+    ):
+        try:
+            log.debug("HOST: %s", self.xmpp.server_host)
+            url = await self.xmpp["xep_0363"].upload_file(
+                filename=filename,
+                content_type=content_type,
+                input_file=input_file,
+            )
+        except Exception as e:
+            log.exception(e)
+        else:
+            msg = self._make_message()
+            msg["oob"]["url"] = url
+            msg["body"] = url
+            self._send_message(msg)
 
     def carbon(self, body: str, date: datetime):
         """
@@ -427,7 +460,7 @@ class BaseSession(ABC):
     xmpp: BaseGateway
 
     def __init__(self, user: GatewayUser):
-        self._roster_cls = get_unique_subclass(LegacyRoster)
+        self._roster_cls: Type[LegacyRoster] = get_unique_subclass(LegacyRoster)
 
         self.user = user
         if self.store_unacked:
@@ -488,7 +521,16 @@ class BaseSession(ABC):
         raise NotImplementedError
 
     async def send_from_msg(self, m: Message):
-        legacy_msg_id = await self.send(m, self.contacts.by_stanza(m))
+        url = m["oob"]["url"]
+        text = m["body"]
+        if url:
+            legacy_msg_id = await self.send_file(url, self.contacts.by_stanza(m))
+        elif text:
+            legacy_msg_id = await self.send_text(text, self.contacts.by_stanza(m))
+        else:
+            log.debug("Ignoring %s", m)
+            return
+        self.xmpp.ack(m)
         if self.store_unacked:
             self.unacked[legacy_msg_id] = m
         if self.store_unread:
@@ -515,12 +557,23 @@ class BaseSession(ABC):
         else:
             await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
-    async def send(self, m: Message, c: LegacyContact) -> Optional[Hashable]:
+    async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
         """
-        The user sends a message from xmpp to the legacy network
+        The user wants to send a text message from xmpp to the legacy network
 
-        :param m: The XMPP message
+        :param t: Content of the message
         :param c: Recipient of the message
+        :return: An ID of some sort that can be used later to ack and mark the message
+            as read by the user
+        """
+        raise NotImplementedError
+
+    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+        """
+        The user has sent a file using HTTP Upload
+
+        :param u: URL of the file
+        :param c: Recipient of the file
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """

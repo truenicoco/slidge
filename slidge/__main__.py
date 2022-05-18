@@ -49,6 +49,12 @@ def get_parser():
         help="The gateway component's JID",
     )
     p.add(
+        "--upload-service",
+        default="upload.localhost",
+        env_var="SLIDGE_UPLOAD",
+        help="JID of an HTTP upload service the gateway can use.",
+    )
+    p.add(
         "--db",
         default="/var/lib/slidge/slidge.db",
         env_var="SLIDGE_DB",
@@ -65,7 +71,7 @@ def main():
 
     module = importlib.import_module(args.legacy_module)
 
-    gateway = module.Gateway(args.jid, args.secret, args.server, args.port)
+    gateway = module.Gateway(args)
     client = module.LegacyClient(gateway)
     if len(argv) != 0:
         client.config(argv)

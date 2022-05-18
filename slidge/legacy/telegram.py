@@ -1,16 +1,21 @@
+import asyncio
 import datetime
 import functools
 import logging
+import tempfile
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, List
+from mimetypes import guess_type
 
-from slixmpp import Message, JID, Presence, Iq
+import aiohttp
+from slixmpp import JID, Presence, Iq
 
 import aiotdlib
 import aiotdlib.api as tgapi
 
 from slidge import *
+
 
 REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH
 
@@ -36,6 +41,24 @@ class Gateway(BaseGateway):
     ROSTER_GROUP = "Telegram"
 
     COMPONENT_NAME = "Telegram (slidge)"
+
+
+class Contact(LegacyContact):
+    legacy_id: int
+
+
+class Roster(LegacyRoster):
+    @staticmethod
+    def jid_username_to_legacy_id(jid_username: str) -> int:
+        """
+        Convert a JID user part to a legacy ID.
+
+        Should be overridden in case legacy IDs are not strings, for instance
+
+        :param jid_username:
+        :return:
+        """
+        return int(jid_username)
 
 
 class LegacyClient(BaseLegacyClient):
@@ -82,24 +105,42 @@ class Session(BaseSession):
     async def logout(self, p: Presence):
         pass
 
-    async def send(self, m: Message, c: LegacyContact) -> int:
-        # noinspection PyTypeChecker
-        # ^ because c.legacy_id is of general type Hashable, but it's an int for telegram
-        result = await self.tg.send_text(chat_id=c.legacy_id, text=m["body"])
+    async def send_text(self, t: str, c: Contact) -> int:
+        result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
         log.debug("Result: %s", result)
         return result.id
 
-    async def active(self, c: LegacyContact):
+    async def send_file(self, u: str, c: Contact) -> int:
+        type_, _ = guess_type(u)
+        if type_ is not None:
+            type_, subtype = type_.split("/")
+
+        if type_ == "image":
+            async with aiohttp.ClientSession() as session:
+                async with session.get(u) as response:
+                    response.raise_for_status()
+                    with tempfile.NamedTemporaryFile() as file:
+                        bytes_ = await response.read()
+                        file.write(bytes_)
+                        result = await self.tg.send_photo(
+                            chat_id=c.legacy_id, photo=file.name
+                        )
+        else:
+            result = await self.tg.send_text(chat_id=c.legacy_id, text=u)
+
+        return result.id
+
+    async def active(self, c: Contact):
         action = tgapi.OpenChat.construct(chat_id=c.legacy_id)
         res = await self.tg.request(action)
         log.debug("Open chat res: %s", res)
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: Contact):
         action = tgapi.CloseChat.construct(chat_id=c.legacy_id)
         res = await self.tg.request(action)
         log.debug("Close chat res: %s", res)
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: Contact):
         action = tgapi.SendChatAction.construct(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
@@ -109,7 +150,7 @@ class Session(BaseSession):
         res = await self.tg.request(action)
         log.debug("Send composing res: %s", res)
 
-    async def displayed(self, tg_id: int, c: LegacyContact):
+    async def displayed(self, tg_id: int, c: Contact):
         log.debug("Unread: %s", self.unread_by_user)
         query = tgapi.ViewMessages.construct(
             chat_id=c.legacy_id,
@@ -196,10 +237,31 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
         log.debug("Ignoring non-user sender")  # Does this happen?
         return
 
-    # noinspection PyUnresolvedReferences
-    contact = session.contacts.by_legacy_id(msg.sender_id.user_id)
-    # noinspection PyUnresolvedReferences
-    contact.send_message(body=msg.content.text.text, legacy_msg_id=msg.id)
+    contact = session.contacts.by_legacy_id(sender.user_id)
+
+    content = msg.content
+    if isinstance(content, tgapi.MessageText):
+        # TODO: parse formatted text to markdown
+        formatted_text = content.text
+        contact.send_text(body=formatted_text.text, legacy_msg_id=msg.id)
+        return
+
+    if isinstance(content, tgapi.MessagePhoto):
+        photo = content.photo
+        best_file = max(photo.sizes, key=lambda x: x.width).photo
+    elif isinstance(content, tgapi.MessageVideo):
+        best_file = content.video.video
+
+    else:
+        raise NotImplemented
+
+    query = tgapi.DownloadFile.construct(
+        file_id=best_file.id, synchronous=True, priority=1
+    )
+    best_file: tgapi.File = await tg.request(query)
+    await contact.send_file(best_file.local.path)
+    if content.caption.text:
+        contact.send_text(content.caption.text, legacy_msg_id=msg.id)
 
 
 async def on_message_success(

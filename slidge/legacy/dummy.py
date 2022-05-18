@@ -23,8 +23,8 @@ class Gateway(BaseGateway):
 
 
 class Session(BaseSession):
-    def __init__(self, xmpp, user):
-        super(Session, self).__init__(xmpp, user)
+    def __init__(self, user):
+        super(Session, self).__init__(user)
         self.counter = 0
 
     async def login(self, p: Presence):
@@ -39,7 +39,8 @@ class Session(BaseSession):
     async def logout(self, p: Presence):
         log.debug("User has disconnected")
 
-    async def send(self, msg: Message, contact: LegacyContact) -> int:
+    async def send_from_msg(self, msg: Message) -> int:
+        contact = self.contacts.by_stanza(msg)
         if contact.legacy_id not in BUDDIES:
             raise XMPPError(text="Contact does not exist")
 
@@ -51,15 +52,14 @@ class Session(BaseSession):
         await asyncio.sleep(1)
 
         contact.active()
-        # not sure why this does not work in gajim.
-        # it seems to work with telegram and signal...
+        await asyncio.sleep(1)
         contact.composing()
         await asyncio.sleep(1)
 
         legacy_msg_id = self.counter
-        reply = contact.send_message("OK", legacy_msg_id=legacy_msg_id)
+        reply = contact.send_text("OK", legacy_msg_id=legacy_msg_id)
+        await contact.send_file(filename=ASSETS_DIR / "buddy1.png")
 
-        # useful to transport "read mark" to the legacy network
         log.debug("Sent message ID: %s", reply["id"])
 
         async def later():

@@ -24,7 +24,7 @@ One-to-one messaging (contacts)
 - ☑ Chat markers (:xep:`0333`)
 - ☑ Carbon messages for messages sent from official legacy clients (:xep:`0280` and :xep:`0356`)
 - ☐ Sync own read status between XMPP and official client
-- ☐ HTTP file upload (:xep:`0363`)
+- ☑ HTTP file upload (:xep:`0363`)
 - ☐ Last message correction (:xep:`0308`)
 
 Group chats (MUCs)

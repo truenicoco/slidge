@@ -295,7 +295,7 @@ class Session(BaseSession):
         contact = self.contacts.by_json_address(msg.source)
 
         if msg.data_message is not None:
-            sent_msg = contact.send_message(body=msg.data_message.body, chat_state=None)
+            sent_msg = contact.send_text(body=msg.data_message.body, chat_state=None)
             self.unread_by_user[sent_msg.get_id()] = msg.data_message.timestamp
 
         if msg.typing_message is not None:
@@ -324,7 +324,7 @@ class Session(BaseSession):
                         return
                     contact.displayed(msg)
 
-    async def send(self, m: Message, c: Contact) -> Hashable:
+    async def send_text(self, t: str, c: Contact) -> Hashable:
         response = await signal.send(
             account=self.phone,
             recipientAddress=c.signal_address,
@@ -339,7 +339,6 @@ class Session(BaseSession):
             or result.proof_required_failure
         ):
             raise XMPPError(str(result))
-        self.xmpp.ack(m)
         return response.timestamp
 
     async def active(self, c: LegacyContact):

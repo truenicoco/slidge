@@ -57,6 +57,7 @@ class BaseGateway(ComponentXMPP):
 
     PLUGINS = {
         "xep_0054",  # vCard-temp
+        "xep_0066",  # Out of Band Data
         "xep_0085",  # Chat state notifications
         "xep_0115",  # Entity capabilities
         "xep_0153",  # vCard-Based Avatars
@@ -68,14 +69,12 @@ class BaseGateway(ComponentXMPP):
 
     ROSTER_GROUP = "slidge"
 
-    def __init__(self, jid: str, secret: str, server: str, port: str):
+    def __init__(self, args):
         """
-        :param jid: The gateway's JID
-        :param secret: The gateway's secret
-        :param server: The XMPP server to connect to
-        :param port: The port used by the XMPP server to accept component connections
+
+        :param args: CLI arguments parsed by :func:`.slidge.__main__.get_parser()`
         """
-        super().__init__(jid, secret, server, port)
+        super().__init__(args.jid, args.secret, args.server, args.port)
         self.input_futures: Dict[str, Future] = {}
 
         for p in self.PLUGINS:
@@ -107,6 +106,13 @@ class BaseGateway(ComponentXMPP):
             },
         )
 
+        self.register_plugin(
+            "xep_0363",  # HTTP file upload
+            pconfig={
+                "upload_service": args.upload_service,
+            },
+        )
+
         self.add_event_handler("session_start", self.on_session_start)
         self.add_event_handler("gateway_message", self.on_gateway_message)
 
@@ -127,6 +133,10 @@ class BaseGateway(ComponentXMPP):
 
     async def on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
+        # prevents XMPP clients from considering the gateway as an HTTP upload
+        await self["xep_0030"].del_feature(
+            feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
+        )
         for jid in user_store.users:
             # We need to see which registered users are online, this will trigger legacy_login in return
             self["xep_0100"].send_presence(ptype="probe", pto=jid)
