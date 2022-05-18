@@ -92,6 +92,14 @@ VirtualHost "localhost"
            roster = "both";
            message = "outgoing";
      },
+     ["mattermost.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
+     ["facebook.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
   }
 
 VirtualHost "prosody"
@@ -105,6 +113,14 @@ VirtualHost "prosody"
            message = "outgoing";
      },
      ["signal.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
+     ["mattermost.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
+     ["facebook.localhost"] = {
            roster = "both";
            message = "outgoing";
      },
@@ -122,6 +138,14 @@ Component "telegram.localhost"
   modules_enabled = {"privilege"}
 
 Component "signal.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "mattermost.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "facebook.localhost"
   component_secret = "secret"
   modules_enabled = {"privilege"}
 

@@ -31,6 +31,8 @@ COPY poetry.lock pyproject.toml /slidge/
 RUN poetry export --without-hashes > /slidge/requirements.txt
 RUN poetry export --without-hashes --extras telegram > /slidge/requirements-telegram.txt
 RUN poetry export --without-hashes --extras signal > /slidge/requirements-signal.txt
+RUN poetry export --without-hashes --extras mattermost > /slidge/requirements-mattermost.txt
+RUN poetry export --without-hashes --extras facebook > /slidge/requirements-facebook.txt
 
 FROM poetry AS tdlib
 
@@ -70,11 +72,9 @@ ENTRYPOINT ["python", "-m", "slidge"]
 
 FROM slidge AS slidge-dev
 
-COPY --from=builder /slidge/requirements-telegram.txt /slidge/requirements-telegram.txt
-COPY --from=builder /slidge/requirements-signal.txt /slidge/requirements-signal.txt
+COPY --from=builder /slidge/*.txt /slidge/
 
-RUN pip install -r ./requirements-telegram.txt && pip cache purge
-RUN pip install -r ./requirements-signal.txt && pip cache purge
+RUN for f in /slidge/*.txt; do pip install -r $f; done && pip cache purge
 
 RUN pip install watchdog[watchmedo] && pip cache purge
 
