@@ -426,13 +426,7 @@ class BaseSession(ABC):
     """
 
     def __init__(self, xmpp: BaseGateway, user: GatewayUser):
-        roster_classes = LegacyRoster.__subclasses__()
-        if len(roster_classes) == 1:
-            self._roster_cls = roster_classes[0]
-        elif len(roster_classes) > 1:
-            raise RuntimeError(
-                "LegacyRoster should only be subclassed once per plugin", roster_classes
-            )
+        self._roster_cls = get_unique_subclass(LegacyRoster)
 
         self.xmpp = xmpp
         self.user = user
