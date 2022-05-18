@@ -185,6 +185,7 @@ class Session(BaseSession):
     """
     Represents a signal account
     """
+
     def __init__(self, user: GatewayUser):
         """
 
@@ -328,7 +329,7 @@ class Session(BaseSession):
         response = await signal.send(
             account=self.phone,
             recipientAddress=c.signal_address,
-            messageBody=m["body"],
+            messageBody=t,
         )
         result = response.results[0]
         log.debug("Result: %s", result)
@@ -340,6 +341,9 @@ class Session(BaseSession):
         ):
             raise XMPPError(str(result))
         return response.timestamp
+
+    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+        pass
 
     async def active(self, c: LegacyContact):
         pass

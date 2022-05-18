@@ -14,7 +14,7 @@ services:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.legacy.dummy
+      - --legacy-module=slidge.plugins.dummy
       - --server=localhost
       - --jid=dummy.localhost
     volumes:
@@ -30,7 +30,7 @@ services:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.legacy.telegram
+      - --legacy-module=slidge.plugins.telegram
       - --server=localhost
       - --jid=telegram.localhost
     volumes:
@@ -46,7 +46,7 @@ services:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.legacy.signal
+      - --legacy-module=slidge.plugins.signal
       - --server=localhost
       - --jid=signal.localhost
     volumes:
@@ -63,7 +63,7 @@ services:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.legacy.messenger
+      - --legacy-module=slidge.plugins.messenger
       - --server=localhost
       - --jid=facebook.localhost
       - --fb-dir=/fb
@@ -80,7 +80,7 @@ services:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.legacy.mattermost
+      - --legacy-module=slidge.plugins.mattermost
       - --server=localhost
       - --jid=mattermost.localhost
     volumes:
