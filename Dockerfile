@@ -22,7 +22,8 @@ RUN prosodyctl register test localhost password
 
 FROM python:3.9-bullseye AS poetry
 
-RUN pip install "poetry==1.1.13" wheel
+RUN --mount=type=cache,id=slidge-poetry,target=/root/.cache/pip \
+    pip install "poetry==1.1.13" wheel
 
 FROM poetry AS builder
 
@@ -36,7 +37,8 @@ RUN poetry export --without-hashes --extras facebook > /slidge/requirements-face
 
 FROM poetry AS tdlib
 
-RUN apt update && apt install git -y
+RUN --mount=type=cache,id=slidge-apt-tdlib,target=/var/cache/apt \
+    apt update && apt install git -y
 
 WORKDIR /
 RUN git clone https://github.com/pylakey/aiotdlib.git
@@ -53,7 +55,8 @@ ENV PATH /venv/bin:$PATH
 
 WORKDIR slidge
 COPY --from=builder /slidge/requirements.txt /slidge/requirements.txt
-RUN pip install -r ./requirements.txt && pip cache purge
+RUN --mount=type=cache,id=slidge-slidge,target=/root/.cache/pip \
+    pip install -r ./requirements.txt && pip cache purge
 
 COPY ./slidge /slidge
 
@@ -62,11 +65,12 @@ STOPSIGNAL SIGINT
 RUN mkdir -p /var/lib/slidge
 
 COPY --from=tdlib /aiotdlib/dist/* /tmp
-RUN pip install /tmp/*.whl
+RUN --mount=type=cache,id=slidge-slidge,target=/root/.cache/pip \
+    pip install /tmp/*.whl
 
-RUN DEBIAN_FRONTEND=noninteractive apt update && \
-  apt install libc++1 -y && \
-  rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,id=slidge-slidge-apt,target=/var/cache/apt \
+    DEBIAN_FRONTEND=noninteractive apt update && \
+    apt install libc++1 -y
 
 ENTRYPOINT ["python", "-m", "slidge"]
 
@@ -74,22 +78,15 @@ FROM slidge AS slidge-dev
 
 COPY --from=builder /slidge/*.txt /slidge/
 
-RUN for f in /slidge/*.txt; do pip install -r $f; done && pip cache purge
+RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
+    for f in /slidge/*.txt; do pip install -r $f; done
 
-RUN pip install watchdog[watchmedo] && pip cache purge
+RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
+    pip install watchdog[watchmedo] && pip cache purge
 
-ENTRYPOINT ["watchmedo", "auto-restart", "--directory=/slidge/slidge", "--pattern=*.py", "-R", "--", "python", "-m", "slidge"]
+COPY --from=prosody /etc/prosody/certs/localhost.crt /usr/local/share/ca-certificates/
+RUN  update-ca-certificates
 
-#FROM slidge AS discord
-#
-#RUN apt install git
-#
-#WORKDIR /
-#RUN git clone https://git.polynom.me/PapaTutuWawa/xmpp-discord-bridge.git
-#WORKDIR /xmpp-discord-bridge
-#
-#RUN mkdir /avatars
-#
-#RUN python setup.py install
-#
-#ENTRYPOINT ["xmpp-discord-bridge", "--debug"]
+ENTRYPOINT ["watchmedo", "auto-restart", \
+            "--directory=/slidge/slidge", "--pattern=*.py", "-R", "--", \
+            "python", "-m", "slidge"]

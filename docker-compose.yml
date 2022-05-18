@@ -4,8 +4,8 @@ services:
       context: .
       target: prosody-dev
     ports:
-      - "5222:5222"
-      - "5281:5281"
+      - "127.0.0.1:5222:5222"
+      - "127.0.0.1:5281:5281"
     volumes:
       - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
 
@@ -15,7 +15,7 @@ services:
       target: slidge-dev
     command:
       - --legacy-module=slidge.legacy.dummy
-      - --server=prosody
+      - --server=localhost
       - --jid=dummy.localhost
     volumes:
       - ./slidge:/slidge/slidge
@@ -23,6 +23,7 @@ services:
       - ./persistent/slidge/dummy:/var/lib/slidge
     depends_on:
       - prosody
+    network_mode: "service:prosody"
 
   slidge-telegram:
     build:
@@ -30,7 +31,7 @@ services:
       target: slidge-dev
     command:
       - --legacy-module=slidge.legacy.telegram
-      - --server=prosody
+      - --server=localhost
       - --jid=telegram.localhost
     volumes:
       - ./slidge:/slidge/slidge
@@ -38,6 +39,7 @@ services:
       - ./persistent/slidge/telegram:/var/lib/slidge
     depends_on:
       - prosody
+    network_mode: "service:prosody"
 
   slidge-signal:
     build:
@@ -45,7 +47,7 @@ services:
       target: slidge-dev
     command:
       - --legacy-module=slidge.legacy.signal
-      - --server=prosody
+      - --server=localhost
       - --jid=signal.localhost
     volumes:
       - ./slidge:/slidge/slidge
@@ -54,6 +56,7 @@ services:
     depends_on:
       - prosody
       - signald
+    network_mode: "service:prosody"
 
   slidge-messenger:
     build:
@@ -61,7 +64,7 @@ services:
       target: slidge-dev
     command:
       - --legacy-module=slidge.legacy.messenger
-      - --server=prosody
+      - --server=localhost
       - --jid=facebook.localhost
       - --fb-dir=/fb
     volumes:
@@ -70,6 +73,7 @@ services:
       - ./persistent/slidge/signal:/var/lib/slidge
     depends_on:
       - prosody
+    network_mode: "service:prosody"
 
   slidge-mattermost:
     build:
@@ -77,13 +81,14 @@ services:
       target: slidge-dev
     command:
       - --legacy-module=slidge.legacy.mattermost
-      - --server=prosody
+      - --server=localhost
       - --jid=mattermost.localhost
     volumes:
       - ./slidge:/slidge/slidge
       - ./persistent/slidge/mattermost:/var/lib/slidge
     depends_on:
       - prosody
+    network_mode: "service:prosody"
 
   signald:
     image: signald/signald:latest
