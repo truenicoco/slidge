@@ -15,7 +15,6 @@ from ..gateway import BaseGateway
 class LegacyContact:
     """
     This class represents a contact a gateway user can interact with.
-    If this is subclassed, make sure to change :py:attr:`.Roster.contact_cls` accordingly
     """
 
     RESOURCE: str = "slidge"
@@ -31,8 +30,6 @@ class LegacyContact:
     """
     A list of features advertised through service discovery and client capabilities.
     """
-
-    xmpp: BaseGateway = None
 
     def __init__(
         self,
@@ -54,6 +51,7 @@ class LegacyContact:
         self._name = None
         self._avatar = None
 
+        self.xmpp = session.xmpp
         self.xmpp.loop.create_task(self.make_caps())
         self.xmpp.loop.create_task(self.make_vcard())
 
@@ -313,14 +311,12 @@ class LegacyRoster:
 
     The point of having singletons is for slixmpp to correctly advertise
     capabilities and vcard of contacts.
-
-    If overridden (see :class:`.signal.Roster`), make sure to update :py:attr:`.Session.roster_cls`
-    accordingly.
     """
 
-    contact_cls = LegacyContact
-
     def __init__(self, session: "BaseSession"):
+        self._contact_cls = get_unique_subclass(LegacyContact)
+        self._contact_cls.xmpp = session.xmpp
+
         self.session = session
         self.contacts_by_bare_jid: Dict[str, LegacyContact] = {}
         self.contacts_by_legacy_id: Dict[Any, LegacyContact] = {}
@@ -341,7 +337,7 @@ class LegacyRoster:
         if c is None:
             jid_username = str(contact_jid.username)
             log.debug("Contact %s not found", contact_jid)
-            c = self.contact_cls(
+            c = self._contact_cls(
                 self.session,
                 self.jid_username_to_legacy_id(jid_username),
                 jid_username,
@@ -364,7 +360,7 @@ class LegacyRoster:
         c = self.contacts_by_legacy_id.get(legacy_id)
         if c is None:
             log.debug("Contact %s not found in roster", legacy_id)
-            c = self.contact_cls(
+            c = self._contact_cls(
                 self.session, legacy_id, self.legacy_id_to_jid_username(legacy_id)
             )
             self.contacts_by_legacy_id[legacy_id] = c
@@ -428,13 +424,16 @@ class BaseSession(ABC):
     If the legacy network supports 'read marks', keep track of messages received by the user
     and transmit read marks from XMPP to the legacy network
     """
-    roster_cls = LegacyRoster
-    """
-    Roster class to use for this session. Change it if you override :class:`.Roster`
-    """
-    xmpp: Optional[BaseGateway] = None
 
     def __init__(self, xmpp: BaseGateway, user: GatewayUser):
+        roster_classes = LegacyRoster.__subclasses__()
+        if len(roster_classes) == 1:
+            self._roster_cls = roster_classes[0]
+        elif len(roster_classes) > 1:
+            raise RuntimeError(
+                "LegacyRoster should only be subclassed once per plugin", roster_classes
+            )
+
         self.xmpp = xmpp
         self.user = user
         if self.store_unacked:
@@ -445,7 +444,7 @@ class BaseSession(ABC):
             self.unread_by_user: Dict[str, Any] = {}
         self.logged = False
 
-        self.contacts = self.roster_cls(self)
+        self.contacts = self._roster_cls(self)
         self.post_init()
 
     def post_init(self):
@@ -575,21 +574,18 @@ class BaseLegacyClient(ABC):
     Abstract base class for interacting with the legacy network
     """
 
-    session_cls = BaseSession
-    """
-    This is automatically overridden by the legacy network subclass of :class:`.BaseSession`
-    """
-
     def __init__(self, xmpp: BaseGateway):
         """
         :param xmpp: The gateway, to interact with the XMPP network
         """
-        self.xmpp = LegacyContact.xmpp = self.session_cls.xmpp = xmpp
+        self._session_cls = get_unique_subclass(BaseSession)
+
+        self.xmpp = self._session_cls.xmpp = xmpp
 
         xmpp["xep_0077"].api.register(self._user_validate, "user_validate")
         xmpp.add_event_handler("user_unregister", self._on_user_unregister)
 
-        get_session = self.session_cls.from_stanza
+        get_session = self._session_cls.from_stanza
 
         # fmt: off
         async def logout(p): await get_session(p).logout(p)
@@ -622,7 +618,7 @@ class BaseLegacyClient(ABC):
 
         :param p: Presence from a :class:`.GatewayUser` directed at the gateway's own JID
         """
-        session = self.session_cls.from_stanza(p)
+        session = self._session_cls.from_stanza(p)
         if not session.logged:
             await session.login(p)
 
@@ -667,6 +663,18 @@ class BaseLegacyClient(ABC):
         :param iq:
         """
         raise NotImplementedError
+
+
+def get_unique_subclass(cls):
+    classes = cls.__subclasses__()
+    if len(classes) == 0:
+        return cls
+    elif len(classes) == 1:
+        return classes[0]
+    elif len(classes) > 1:
+        raise RuntimeError(
+            "This class should only be subclassed once by plugin!", cls, classes
+        )
 
 
 log = logging.getLogger(__name__)

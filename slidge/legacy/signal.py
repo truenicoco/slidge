@@ -132,8 +132,6 @@ class Contact(LegacyContact):
 
 
 class Roster(LegacyRoster):
-    contact_cls = Contact
-
     def __init__(self, session):
         super().__init__(session)
         self.contacts_by_uuid: Dict[str, Contact] = {}
@@ -187,9 +185,6 @@ class Session(BaseSession):
     """
     Represents a signal account
     """
-
-    roster_cls = Roster
-
     def __init__(self, xmpp: Gateway, user: GatewayUser):
         """
 

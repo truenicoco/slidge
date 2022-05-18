@@ -64,7 +64,6 @@ def main():
     user_store.set_file(args.db)
 
     module = importlib.import_module(args.legacy_module)
-    module.LegacyClient.session_cls = module.Session
 
     gateway = module.Gateway(args.jid, args.secret, args.server, args.port)
     client = module.LegacyClient(gateway)
