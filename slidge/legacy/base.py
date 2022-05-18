@@ -185,8 +185,9 @@ class LegacyContact:
         )
 
     def chat_state(self, state: str):
-        msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid)
+        msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, mtype="chat")
         msg["chat_state"] = state
+        msg.enable("no-store")
         msg.send()
 
     def active(self):
