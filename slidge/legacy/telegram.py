@@ -76,7 +76,6 @@ class Session(BaseSession):
 
     async def login(self, p: Presence):
         async with self.tg as tg:
-            self.logged = True
             await self.add_contacts_to_roster()
             await tg.idle()
 

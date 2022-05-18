@@ -185,13 +185,12 @@ class Session(BaseSession):
     """
     Represents a signal account
     """
-    def __init__(self, xmpp: Gateway, user: GatewayUser):
+    def __init__(self, user: GatewayUser):
         """
 
         :param user:
-        :param xmpp:
         """
-        super().__init__(xmpp, user)
+        super().__init__(user)
         self.phone: str = self.user.registration_form["phone"]
         Signal.sessions_by_phone[self.phone] = self
 

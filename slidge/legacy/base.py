@@ -424,11 +424,11 @@ class BaseSession(ABC):
     If the legacy network supports 'read marks', keep track of messages received by the user
     and transmit read marks from XMPP to the legacy network
     """
+    xmpp: BaseGateway
 
-    def __init__(self, xmpp: BaseGateway, user: GatewayUser):
+    def __init__(self, user: GatewayUser):
         self._roster_cls = get_unique_subclass(LegacyRoster)
 
-        self.xmpp = xmpp
         self.user = user
         if self.store_unacked:
             self.unacked: Dict[Any, Message] = {}
@@ -462,7 +462,7 @@ class BaseSession(ABC):
             raise KeyError(s.get_from())
         session = sessions.get(user)
         if session is None:
-            sessions[user] = session = cls(cls.xmpp, user)
+            sessions[user] = session = cls(user)
         return session
 
     async def login(self, p: Presence):
@@ -573,7 +573,6 @@ class BaseLegacyClient(ABC):
         :param xmpp: The gateway, to interact with the XMPP network
         """
         self._session_cls = get_unique_subclass(BaseSession)
-
         self.xmpp = self._session_cls.xmpp = xmpp
 
         xmpp["xep_0077"].api.register(self._user_validate, "user_validate")
@@ -614,6 +613,7 @@ class BaseLegacyClient(ABC):
         """
         session = self._session_cls.from_stanza(p)
         if not session.logged:
+            session.logged = True
             await session.login(p)
 
     async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
