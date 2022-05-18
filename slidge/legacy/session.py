@@ -3,6 +3,7 @@ from abc import ABC
 from typing import Type, Dict, Any, Optional, Hashable
 
 from slixmpp import Message, Presence
+from slixmpp.exceptions import XMPPError
 
 from ..gateway import BaseGateway
 from ..db import GatewayUser, user_store
@@ -69,7 +70,10 @@ class BaseSession(ABC):
         """
         user = user_store.get_by_stanza(s)
         if user is None:
-            raise KeyError(s.get_from())
+            raise XMPPError(
+                text="User not found", condition="subscription-required", etype="auth"
+            )
+
         session = sessions.get(user)
         if session is None:
             sessions[user] = session = cls(user)

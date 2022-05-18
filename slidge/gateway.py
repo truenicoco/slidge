@@ -137,9 +137,9 @@ class BaseGateway(ComponentXMPP):
         await self["xep_0030"].del_feature(
             feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
         )
-        for jid in user_store.users:
+        for user in user_store.get_all():
             # We need to see which registered users are online, this will trigger legacy_login in return
-            self["xep_0100"].send_presence(ptype="probe", pto=jid)
+            self["xep_0100"].send_presence(ptype="probe", pto=user.jid)
 
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         reg = iq["register"]

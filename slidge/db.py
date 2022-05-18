@@ -7,7 +7,7 @@ import dataclasses
 import logging
 import shelve
 from os import PathLike
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 from slixmpp import JID, Presence, Message
 
@@ -55,7 +55,7 @@ class UserStore:
     """
 
     def __init__(self):
-        self.users = None
+        self._users: Optional[shelve.Shelf] = None
 
     def set_file(self, filename: PathLike):
         """
@@ -63,7 +63,7 @@ class UserStore:
 
         :param filename: Path to the shelf file
         """
-        self.users = shelve.open(filename=str(filename))
+        self._users = shelve.open(filename=str(filename))
 
     def get_all(self) -> Iterable[GatewayUser]:
         """
@@ -71,7 +71,7 @@ class UserStore:
 
         :return: An iterable of GatewayUsers
         """
-        return self.users.values()
+        return self._users.values()
 
     def add(self, jid: JID, registration_form: Dict[str, str]):
         """
@@ -84,12 +84,12 @@ class UserStore:
         :param registration_form: Content of the registration form (:xep:`0077`)
         """
         log.debug("Adding user %s with form: %s", jid, registration_form)
-        self.users[jid.bare] = GatewayUser(
+        self._users[jid.bare] = GatewayUser(
             bare_jid=jid.bare,
             registration_form=registration_form,
         )
-        self.users.sync()
-        log.debug("Store: %s", self.users)
+        self._users.sync()
+        log.debug("Store: %s", self._users)
 
     def get(self, _gateway_jid, _node, ifrom: JID, iq) -> GatewayUser:
         """
@@ -106,7 +106,7 @@ class UserStore:
         if ifrom is None:  # bug in SliXMPP's XEP_0100 plugin
             ifrom = iq["from"]
         log.debug("Getting user %s", ifrom.bare)
-        return self.users.get(ifrom.bare)
+        return self._users.get(ifrom.bare)
 
     def remove(self, _gateway_jid, _node, ifrom: JID, _iq):
         """
@@ -120,8 +120,8 @@ class UserStore:
         :param _iq:
         """
         log.debug("Removing user %s", ifrom.bare)
-        del self.users[ifrom.bare]
-        self.users.sync()
+        del self._users[ifrom.bare]
+        self._users.sync()
 
     def get_by_jid(self, jid: JID) -> GatewayUser:
         """
@@ -130,7 +130,7 @@ class UserStore:
         :param jid: JID of the gateway user
         :return:
         """
-        return self.users.get(jid.bare)
+        return self._users.get(jid.bare)
 
     def get_by_stanza(self, s: [Presence, Message]) -> GatewayUser:
         """
