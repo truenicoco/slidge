@@ -39,9 +39,6 @@ class Gateway(BaseGateway):
 
 
 class LegacyClient(BaseLegacyClient):
-    def __init__(self, xmpp: Gateway):
-        super().__init__(xmpp)
-
     def config(self, argv: List[str]):
         parser = ArgumentParser()
         parser.add_argument("--tdlib-path")
