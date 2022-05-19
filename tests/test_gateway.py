@@ -8,15 +8,15 @@ from slixmpp import Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.test import SlixTest
 
+from slidge.gateway import SLIXMPP_PLUGINS
 from slidge import *
-
-
-class C:
-    pass
 
 
 class GatewayTest(BaseGateway):
     def __init__(self, jid, password, server, port, plugin_config):
+        class C:
+            pass
+
         C.jid = jid
         C.secret = password
         C.server = server
@@ -84,37 +84,29 @@ class Session(BaseSession):
         pass
 
 
-class LegacyClient(BaseLegacyClient):
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        pass
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        pass
-
-
 slixmpp.test.slixtest.ComponentXMPP = GatewayTest
 
 
-class TestAimShakespeare(SlixTest):
+class TestAimShakespeareBase(SlixTest):
     def setUp(self):
         self.stream_start(
             mode="component",
-            plugins=BaseGateway.PLUGINS,
+            plugins=SLIXMPP_PLUGINS,
             jid="aim.shakespeare.lit",
             server="shakespeare.lit",
             plugin_config={
                 "xep_0100": {"component_name": "AIM Gateway", "type": "aim"}
             },
         )
-        user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
+        self.shelf_path = Path(tempfile.mkdtemp()) / "test.db"
+        user_store.set_file(self.shelf_path)
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        self.legacy = LegacyClient(self.xmpp)
 
     def next_sent(self):
         self.wait_for_send_queue()
-        sent = self.xmpp.socket.next_sent(timeout=0.5)
+        sent = self.xmpp.socket.next_sent(timeout=1)
         if sent is None:
             return None
         xml = self.parse_xml(sent)
@@ -153,6 +145,19 @@ class TestAimShakespeare(SlixTest):
         assert m.get_from() == "juliet@aim.shakespeare.lit/slidge"
         assert m["body"] == "I love you"
 
+    def test_romeo_composing(self):
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit'
+                     from='romeo@montague.lit'>
+                <composing xmlns='http://jabber.org/protocol/chatstates'/>
+            </message>
+            """
+        )
+        assert len(Session.composing_chat_states_received_by_juliet) == 1
+        assert Session.composing_chat_states_received_by_juliet[0].legacy_id == 123
+
     def test_from_eve_to_juliet(self):
         # just ignore messages from unregistered users
         self.recv(
@@ -166,18 +171,18 @@ class TestAimShakespeare(SlixTest):
         )
         self.send(None)
 
-    def test_romeo_composing(self):
-        self.recv(
-            """
-            <message type='chat'
-                     to='juliet@aim.shakespeare.lit'
-                     from='romeo@montague.lit'>
-                <composing xmlns='http://jabber.org/protocol/chatstates'/>
-            </message>
-            """
-        )
-        assert len(Session.composing_chat_states_received_by_juliet) == 1
-        assert Session.composing_chat_states_received_by_juliet[0].legacy_id == 123
+    def test_juliet_sends_text(self):
+        session = Session.from_jid(JID("romeo@montague.lit"))
+        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        msg = juliet.send_text(body="What what?")
+
+        # msg = self.next_sent()
+        #  ^ this would be better but works when the test is run alone and fails
+        # when all tests are run at once...
+
+        assert msg["from"] == f"juliet@aim.shakespeare.lit/{LegacyContact.RESOURCE}"
+        assert msg["to"] == "romeo@montague.lit"
+        assert msg["body"] == "What what?"
 
 
 log = logging.getLogger(__name__)

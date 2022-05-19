@@ -2,13 +2,12 @@ import logging
 from abc import ABC
 from typing import Type, Dict, Any, Optional, Hashable
 
-from slixmpp import Message, Presence
+from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
-from ..gateway import BaseGateway
 from ..db import GatewayUser, user_store
 from .contact import LegacyContact
-from .util import get_unique_subclass
+from ..util import get_unique_subclass
 
 
 class BaseSession(ABC):
@@ -33,7 +32,7 @@ class BaseSession(ABC):
     If the legacy network supports 'read marks', keep track of messages received by the user
     and transmit read marks from XMPP to the legacy network
     """
-    xmpp: BaseGateway
+    xmpp: "BaseGateway"
 
     def __init__(self, user: GatewayUser):
         from .contact import LegacyRoster  # circular import hell
@@ -59,6 +58,18 @@ class BaseSession(ABC):
         pass
 
     @classmethod
+    def _from_user_or_none(cls, user):
+        if user is None:
+            raise XMPPError(
+                text="User not found", condition="subscription-required", etype="auth"
+            )
+
+        session = _sessions.get(user)
+        if session is None:
+            _sessions[user] = session = cls(user)
+        return session
+
+    @classmethod
     def from_stanza(cls, s) -> "BaseSession":
         """
         Get a user's :class:`LegacySession` using the "from" field of a stanza
@@ -68,16 +79,11 @@ class BaseSession(ABC):
         :param s:
         :return:
         """
-        user = user_store.get_by_stanza(s)
-        if user is None:
-            raise XMPPError(
-                text="User not found", condition="subscription-required", etype="auth"
-            )
+        return cls._from_user_or_none(user_store.get_by_stanza(s))
 
-        session = sessions.get(user)
-        if session is None:
-            sessions[user] = session = cls(user)
-        return session
+    @classmethod
+    def from_jid(cls, jid: JID):
+        return cls._from_user_or_none(user_store.get_by_jid(jid))
 
     async def login(self, p: Presence):
         """
@@ -111,7 +117,7 @@ class BaseSession(ABC):
         else:
             log.debug("Ignoring %s", m)
             return
-        self.xmpp.ack(m)
+        self.xmpp["xep_0184"].ack(m)
         if self.store_unacked:
             self.unacked[legacy_msg_id] = m
         if self.store_unread:
@@ -197,5 +203,5 @@ class BaseSession(ABC):
         raise NotImplementedError
 
 
-sessions: Dict[GatewayUser, BaseSession] = {}
+_sessions: Dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)

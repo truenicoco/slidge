@@ -1,121 +1,78 @@
 """
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
-import dataclasses
 import logging
+from abc import ABC
 from asyncio import Future
-from typing import Dict, Iterable, Literal
+from typing import Dict, Iterable, Optional, List
 
-from slixmpp import ComponentXMPP, Message, Iq
+from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
+from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0100 import LegacyError
 
 from .db import user_store, RosterBackend, GatewayUser
+from .util import get_unique_subclass, RegistrationField
+from .legacy.session import BaseSession
 
 
-@dataclasses.dataclass
-class RegistrationField:
-    """
-    Represents a field of the form that a user will see when registering to the gateway
-    via their XMPP client.
-    """
-
-    name: str
-    """
-    Internal name of the field, will be used to retrieve via :py:attr:`.GatewayUser.registration_form`
-    """
-    label: str = None
-    """Description of the field that the aspiring user will see"""
-    required: bool = True
-    """Whether this field is mandatory or not"""
-    private: bool = False
-    """For sensitive info that should not be displayed on screen while the user types."""
-    type: Literal["boolean", "fixed", "text-single"] = "text-single"
-    """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
-    value: str = ""
-    """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
-
-
-class BaseGateway(ComponentXMPP):
+class BaseGateway(ComponentXMPP, ABC):
     REGISTRATION_FIELDS: Iterable[RegistrationField] = [
-        RegistrationField(name="username", label="Legacy user name"),
-        RegistrationField(name="password", label="Legacy password"),
-        RegistrationField(
-            name="something_else",
-            label="Some optional stuff not covered by jabber:iq:register",
-            required=False,
-        ),
+        RegistrationField(name="username", label="User name", required=True),
+        RegistrationField(name="password", label="Password", required=True),
     ]
     """
     Iterable of fields presented to the gateway user when registering using :xep:`0077`
     `extended <https://xmpp.org/extensions/xep-0077.html#extensibility>`_ by :xep:`0004`
     """
-    REGISTRATION_INSTRUCTIONS: str = "Enter your legacy credentials"
+    REGISTRATION_INSTRUCTIONS: str = "Enter your credentials"
 
-    COMPONENT_NAME: str = "SliXMPP gateway"
+    COMPONENT_NAME: str = NotImplemented
     """Name of the component, as seen in service discovery"""
-    COMPONENT_TYPE: str = ""
+    COMPONENT_TYPE: Optional[str] = ""
     """Type of the gateway, should ideally follow https://xmpp.org/registrar/disco-categories.html"""
 
-    PLUGINS = {
-        "xep_0054",  # vCard-temp
-        "xep_0066",  # Out of Band Data
-        "xep_0085",  # Chat state notifications
-        "xep_0115",  # Entity capabilities
-        "xep_0153",  # vCard-Based Avatars
-        "xep_0280",  # Carbons
-        "xep_0333",  # Chat markers
-        "xep_0334",  # Message Processing Hints
-        "xep_0356",  # Privileged Entity
-    }
-
-    ROSTER_GROUP = "slidge"
+    ROSTER_GROUP: str = "slidge"
 
     def __init__(self, args):
         """
 
         :param args: CLI arguments parsed by :func:`.slidge.__main__.get_parser()`
         """
-        super().__init__(args.jid, args.secret, args.server, args.port)
-        self.input_futures: Dict[str, Future] = {}
-
-        for p in self.PLUGINS:
-            self.register_plugin(p)
-
-        log.debug("%s", [f.name for f in self.REGISTRATION_FIELDS if f.required])
-        self.register_plugin(
-            "xep_0077",
-            pconfig={
-                "form_fields": [],
-                "form_instructions": self.REGISTRATION_INSTRUCTIONS,
+        super().__init__(
+            args.jid,
+            args.secret,
+            args.server,
+            args.port,
+            plugin_whitelist=SLIXMPP_PLUGINS,
+            plugin_config={
+                "xep_0077": {
+                    "form_fields": [],
+                    "form_instructions": self.REGISTRATION_INSTRUCTIONS,
+                },
+                "xep_0100": {
+                    "component_name": self.COMPONENT_NAME,
+                    "user_store": user_store,
+                    "type": self.COMPONENT_TYPE,
+                },
+                "xep_0184": {
+                    "auto_ack": False,
+                    "auto_request": True,
+                },
+                "xep_0363": {
+                    "upload_service": args.upload_service,
+                },
             },
         )
+        self._session_cls = get_unique_subclass(BaseSession)
+        self._session_cls.xmpp = self
 
-        self.register_plugin(
-            "xep_0100",
-            pconfig={
-                "component_name": self.COMPONENT_NAME,
-                "user_store": user_store,
-                "type": self.COMPONENT_TYPE,
-            },
-        )
+        self.register_plugin("xep_0356")
+        self.register_plugins()
+        self._register_slixmpp_api()
+        self._register_handlers()
+        self._input_futures: Dict[str, Future] = {}
 
-        self.register_plugin(
-            "xep_0184",  # Message Delivery Receipts
-            pconfig={
-                "auto_ack": False,
-                "auto_request": True,
-            },
-        )
-
-        self.register_plugin(
-            "xep_0363",  # HTTP file upload
-            pconfig={
-                "upload_service": args.upload_service,
-            },
-        )
-
-        self.add_event_handler("session_start", self.on_session_start)
-        self.add_event_handler("gateway_message", self.on_gateway_message)
-
+    def _register_slixmpp_api(self):
         self["xep_0077"].api.register(
             user_store.get,
             "user_get",
@@ -128,8 +85,92 @@ class BaseGateway(ComponentXMPP):
             self.make_registration_form,
             "make_registration_form",
         )
-
+        self["xep_0077"].api.register(self._user_validate, "user_validate")
         self.roster.set_backend(RosterBackend)
+
+    def _register_handlers(self):
+        self.add_event_handler("session_start", self.on_session_start)
+        self.add_event_handler("gateway_message", self.on_gateway_message)
+        self.add_event_handler("user_unregister", self._on_user_unregister)
+        self.add_event_handler("legacy_login", self._legacy_login)
+        get_session = self._session_cls.from_stanza
+
+        # fmt: off
+        async def logout(p): await get_session(p).logout(p)
+        async def msg(m): await get_session(m).send_from_msg(m)
+        async def disp(m): await get_session(m).displayed_from_msg(m)
+        async def active(m): await get_session(m).active_from_msg(m)
+        async def inactive(m): await get_session(m).inactive_from_msg(m)
+        async def composing(m): await get_session(m).composing_from_msg(m)
+        # fmt: on
+
+        self.add_event_handler("legacy_logout", logout)
+        self.add_event_handler("legacy_message", msg)
+        self.add_event_handler("marker_displayed", disp)
+        self.add_event_handler("chatstate_active", active)
+        self.add_event_handler("chatstate_inactive", inactive)
+        self.add_event_handler("chatstate_composing", composing)
+
+    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        log.debug("User validate: %s", (ifrom.bare, iq))
+        form = iq["register"]["form"].get_values()
+
+        for field in self.REGISTRATION_FIELDS:
+            if field.required and not form.get(field.name):
+                raise XMPPError("Please fill in all fields", etype="modify")
+
+        form_dict = {f.name: form.get(f.name) for f in self.REGISTRATION_FIELDS}
+
+        try:
+            await self.validate(ifrom, form_dict)
+        except LegacyError as e:
+            raise ValueError(f"Login Problem: {e}")
+        else:
+            user_store.add(ifrom, form)
+
+    async def _legacy_login(self, p: Presence):
+        """
+        Logs a :class:`.BaseSession` instance to the legacy network
+
+        :param p: Presence from a :class:`.GatewayUser` directed at the gateway's own JID
+        """
+        session = self._session_cls.from_stanza(p)
+        if not session.logged:
+            session.logged = True
+            await session.login(p)
+
+    async def _on_user_unregister(self, iq: Iq):
+        await self.unregister(user_store.get_by_stanza(iq), iq)
+
+    def config(self, argv: List[str]):
+        """
+        Override this to access CLI args to configure the slidge plugin
+
+        :param argv: CLI args that were not parsed by Slidge
+        """
+        pass
+
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        """
+        Validate a registration form from a user.
+
+        Since :xep:`0077` is pretty limited in terms of validation, it is OK to validate
+        anything that looks good here and continue the legacy auth process via direct messages
+        to the user (using :func:`.BaseGateway.input` for instance)
+
+        :param user_jid:
+        :param registration_form:
+        """
+        pass
+
+    async def unregister(self, user: GatewayUser, iq: Iq):
+        """
+        Called when the user unregister from the gateway
+
+        :param user:
+        :param iq:
+        """
+        pass
 
     async def on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
@@ -203,7 +244,7 @@ class BaseGateway(ComponentXMPP):
         log.debug("Gateway msg: %s", msg)
         user = user_store.get_by_stanza(msg)
         try:
-            f = self.input_futures.pop(user.bare_jid)
+            f = self._input_futures.pop(user.bare_jid)
         except KeyError:
             self.send(msg.reply(body="I got that, but I'm not doing anything with it"))
         else:
@@ -220,23 +261,37 @@ class BaseGateway(ComponentXMPP):
         if text is not None:
             self.send_message(mto=user.jid, mbody=text)
         f = Future()
-        self.input_futures[user.bare_jid] = f
+        self._input_futures[user.bare_jid] = f
         await f
         return f.result()
 
-    def ack(self, msg: Message):
-        """
-        Send a message receipt (:xep:`0184`) in response to a message sent by a gateway user.
+    # def ack(self, msg: Message):
+    #     """
+    #     Send a message receipt (:xep:`0184`) in response to a message sent by a gateway user.
+    #
+    #     This should be sent to attest the message was effectively sent on the legacy network.
+    #     If the legacy network support delivery receipts from contact's clients, :meth:`.LegacyContact.ack`
+    #     is preferable.
+    #
+    #
+    #     :param msg: The message to ack
+    #     """
+    #     self["xep_0184"].ack(msg)
 
-        This should be sent to attest the message was effectively sent on the legacy network.
-        If the legacy network support delivery receipts from contact's clients, :meth:`.LegacyContact.ack`
-        is preferable.
 
-
-        :param msg: The message to ack
-        """
-        self["xep_0184"].ack(msg)
-
-
-RESOURCE = "slidge"
+SLIXMPP_PLUGINS = [
+    "xep_0054",  # vCard-temp
+    "xep_0066",  # Out of Band Data
+    "xep_0077",  # In-band registration
+    "xep_0085",  # Chat state notifications
+    "xep_0100",  # Gateway interaction
+    "xep_0115",  # Entity capabilities
+    "xep_0153",  # vCard-Based Avatars
+    "xep_0184",  # Message Delivery Receipts
+    "xep_0280",  # Carbons
+    "xep_0333",  # Chat markers
+    "xep_0334",  # Message Processing Hints
+    # "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__
+    "xep_0363",  # HTTP file upload
+]
 log = logging.getLogger(__name__)

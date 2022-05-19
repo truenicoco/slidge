@@ -6,7 +6,7 @@ from typing import Hashable, Literal, Optional, IO, Dict, Any
 
 from slixmpp import JID, Iq, Message
 
-from .util import get_unique_subclass
+from ..util import get_unique_subclass
 
 
 class LegacyContact:

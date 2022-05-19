@@ -1,6 +1,5 @@
 from slixmpp import Iq
 
-
 import slixmpp.plugins.xep_0077
 import slixmpp.plugins.xep_0333
 

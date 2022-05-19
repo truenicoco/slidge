@@ -17,7 +17,8 @@ def get_parser():
     )
     p.add(
         "--legacy-module",
-        help="Importable python module containing (at least) Gateway and LegacyClient",
+        help="Importable python module containing (at least) "
+             "a BaseGateway and a LegacySession subclass",
         env_var="SLIDGE_LEGACY_MODULE",
     )
     p.add("-c", "--configuration", help="Path to a INI file", env_var="SLIDGE_CONFIG")
@@ -70,11 +71,8 @@ def main():
     user_store.set_file(args.db)
 
     module = importlib.import_module(args.legacy_module)
-
     gateway = module.Gateway(args)
-    client = module.LegacyClient(gateway)
-    if len(argv) != 0:
-        client.config(argv)
+    gateway.config(argv)
     gateway.connect()
 
     try:  # TODO: handle reconnection

@@ -20,6 +20,21 @@ class Gateway(BaseGateway):
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."
     )
+    REGISTRATION_FIELDS = list(BaseGateway.REGISTRATION_FIELDS) + [
+        RegistrationField(
+            name="something_else",
+            label="Some optional stuff not covered by jabber:iq:register",
+            required=False,
+            private=True,
+        )
+    ]
+
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        if registration_form["username"] != "n":
+            raise LegacyError("Y a que N!")
+
+    async def unregister(self, user: GatewayUser, iq: Iq):
+        log.debug("User has unregistered from the gateway", user)
 
 
 class Session(BaseSession):
@@ -28,7 +43,6 @@ class Session(BaseSession):
         self.counter = 0
 
     async def login(self, p: Presence):
-        self.logged = True
         for b, a in zip(BUDDIES, AVATARS):
             c = self.contacts.by_legacy_id(b.lower())
             c.name = b.title()
@@ -44,7 +58,7 @@ class Session(BaseSession):
         if contact.legacy_id not in BUDDIES:
             raise XMPPError(text="Contact does not exist")
 
-        self.xmpp.ack(msg)
+        self.xmpp["xep_0184"].ack(msg)
         contact.ack(msg)
         await asyncio.sleep(1)
 
@@ -81,15 +95,6 @@ class Session(BaseSession):
 
     async def displayed(self, legacy_msg_id: int, c: LegacyContact):
         log.debug("Message #%s was read by the user", legacy_msg_id)
-
-
-class LegacyClient(BaseLegacyClient):
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        if registration_form["username"] != "n":
-            raise LegacyError("Y a que N!")
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        log.debug("User has unregistered from the gateway", user)
 
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"

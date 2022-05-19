@@ -7,7 +7,7 @@ import logging
 from argparse import ArgumentParser
 from typing import Dict, Optional, Hashable, List
 
-from slixmpp import Message, JID, Presence, Iq
+from slixmpp import Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0100 import LegacyError
 
@@ -18,6 +18,8 @@ from slidge import *
 
 
 class Gateway(BaseGateway):
+    COMPONENT_NAME = "Signal"
+    COMPONENT_TYPE = "signal"
     REGISTRATION_INSTRUCTIONS = "Enter your phone number, starting with +"
     REGISTRATION_FIELDS = [
         RegistrationField(
@@ -27,13 +29,29 @@ class Gateway(BaseGateway):
 
     ROSTER_GROUP = "Signal"
 
-    COMPONENT_NAME = "Signal"
+    def config(self, argv: List[str]):
+        parser = ArgumentParser()
+        parser.add_argument("--socket", default="/signald/signald.sock")
+        args = parser.parse_args(argv)
+
+        global signald_socket
+        signald_socket = args.socket
+        self.add_event_handler("session_start", self.connect_signal)
+
+    async def connect_signal(self, *_):
+        """
+        Establish connection to the signald socker
+        """
+        global signal
+        log.debug("Connecting to signald...")
+        _, signal = await self.loop.create_unix_connection(Signal, signald_socket)
+        signal.xmpp = self
 
     async def on_gateway_message(self, msg: Message):
         log.debug("Gateway msg: %s", msg)
         user = user_store.get_by_stanza(msg)
         try:
-            f = self.input_futures.pop(user.bare_jid)
+            f = self._input_futures.pop(user.bare_jid)
         except KeyError:
             cmd = msg["body"]
             if cmd == "add_device":
@@ -366,39 +384,7 @@ class Session(BaseSession):
         )
 
 
-class LegacyClient(BaseLegacyClient):
-    xmpp: Gateway
-
-    def __init__(self, xmpp: Gateway):
-        super().__init__(xmpp)
-        self.xmpp.add_event_handler("session_start", self.connect_signal)
-        self.socket = "/signald/signald.sock"
-
-    def config(self, argv: List[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--socket")
-        args = parser.parse_args(argv)
-        if args.socket is not None:
-            self.socket = args.socket
-
-    async def connect_signal(self, *_):
-        """
-        Establish connection to the signald socker
-        """
-        global signal
-        _, signal = await self.xmpp.loop.create_unix_connection(Signal, self.socket)
-        signal.xmpp = self.xmpp
-
-    async def validate(self, user_jid: JID, registration_form):
-        """
-        Just validate any registration to the gateway, we'll handle things via direct messages.
-        """
-        pass
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        pass
-
-
 log = logging.getLogger(__name__)
 
 signal: Optional[Signal] = None
+signald_socket: Optional[str] = None

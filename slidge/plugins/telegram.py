@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import functools
 import logging
@@ -37,10 +36,22 @@ class Gateway(BaseGateway):
         RegistrationField(name="first", label="First name", required=False),
         RegistrationField(name="last", label="Last name", required=False),
     ]
-
     ROSTER_GROUP = "Telegram"
-
     COMPONENT_NAME = "Telegram (slidge)"
+    COMPONENT_TYPE = "telegram"
+
+    def config(self, argv: List[str]):
+        parser = ArgumentParser()
+        parser.add_argument("--tdlib-path", default="/tdlib")
+        args = parser.parse_args(argv)
+        if args.tdlib_path is not None:
+            Session.tdlib_path = Path(args.tdlib_path)
+
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        pass
+
+    async def unregister(self, user: GatewayUser, iq: Iq):
+        pass
 
 
 class Contact(LegacyContact):
@@ -61,23 +72,8 @@ class Roster(LegacyRoster):
         return int(jid_username)
 
 
-class LegacyClient(BaseLegacyClient):
-    def config(self, argv: List[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--tdlib-path")
-        args = parser.parse_args(argv)
-        if args.tdlib_path is not None:
-            Session.tdlib_files = Path(args.tdlib_path)
-
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        pass
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        pass
-
-
 class Session(BaseSession):
-    tdlib_path = Path("/tdlib")
+    tdlib_path = None
     tg: "TelegramClient"
 
     def post_init(self):
@@ -225,7 +221,6 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
             or msg.id in session.unacked
             or msg.id in session.unread
         ):
-
             return
         contact = session.contacts.by_legacy_id(msg.chat_id)
         # noinspection PyUnresolvedReferences
