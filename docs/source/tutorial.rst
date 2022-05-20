@@ -55,10 +55,10 @@ Let's dissect this a bit:
     class Gateway(BaseGateway):
         COMPONENT_NAME = "Gateway to the super duper chat network"
 
-By subclassing :class:`.BaseGateway` we can customize our gateway component in
+By subclassing :class:`slidge.BaseGateway` we can customize our gateway component in
 various ways. Here we just changed its name (something we **have** to do), but
 we could also change the registration form fields by overriding
-:py:attr:`.BaseGateway.REGISTRATION_FIELDS`, among other things.
+:py:attr:`slidge.BaseGateway.REGISTRATION_FIELDS`, among other things.
 
 The legacy session
 ******************
@@ -82,9 +82,9 @@ Setup
 The session represents the gateway user's session on the legacy network.
 If you want to add custom attributes to it, it should be done in the ``post_init``
 method.
-The :py:attr:`.Session.user` attribute is a :class:`.GatewayUser` instance and
+The :py:attr:`slidge.Session.user` attribute is a :class:`slidge.GatewayUser` instance and
 can be used to access the fields that the user filled when subscribing to the gateway,
-via :py:attr:`.GatewayUser.registration_form` dict.
+via :py:attr:`slidge.GatewayUser.registration_form` dict.
 
 Here, we added a ``legacy`` attribute to the session instance, because our fake
 superduper lib is coded this way. YMMV depending on the library you use. Good
@@ -98,7 +98,7 @@ Login
         async def login(self, p: Presence):
             await self.legacy.login()
 
-When the gateway user is logged, this method is called on its :py:attr:`.Session.user`
+When the gateway user is logged, this method is called on its :py:attr:`slidge.Session.user`
 instance. With the superduper library, starting to receive incoming messages is
 very convenient, as you can see.
 
@@ -113,7 +113,7 @@ From legacy to XMPP
 
 We are really lucky, superduper user IDs can directly be mapped to the user part
 of a JID. We can just use our session's virtual legacy roster to retrieve a
-:class:`.LegacyContact` instance. Just by calling :meth:`.LegacyContact.send_text`,
+:class:`slidge.LegacyContact` instance. Just by calling :meth:`slidge.LegacyContact.send_text`,
 we effectively transported the message's text to the gateway user. Ain't that great?
 
 From XMPP to legacy
@@ -128,7 +128,7 @@ When our user sends a message to ``something@superduper.example.com``,
 this method is automagically called, allowing us to transmit the message to the legacy network.
 
 Going further (WIP)
--------------
+-------------------
 
 - Adding a contact to the user's roster and setting its name, avatar, ...
 - Handling legacy user IDs that are not valid JID user part

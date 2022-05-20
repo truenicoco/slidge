@@ -2,17 +2,17 @@ Slidge 🛷
 =========
 
 .. image:: https://readthedocs.org/projects/slidge/badge/?version=latest
-    :target: https://slidge.readthedocs.io/en/latest/?badge=latest
+    :target: https://slidge.readthedocs.io/
     :alt: Documentation status
 
 .. image:: https://gitlab.com/nicocool84/slidge/badges/master/pipeline.svg
-    :target: https://gitlab.com/group-name/project-name/commits/master
+    :target: https://gitlab.com/nicocool84/slidge/-/pipelines
     :alt: Pipeline status
 
 
 Pythonic XMPP gateways made easy.
 
-An XMPP component that attempts to follow XEPs to provide an generic
+An XMPP component that attempts to follow good practices to provide an generic
 way to write XMPP/*legacy network* gateways, leveraging on the power of
 `SliXMPP <https://slixmpp.readthedocs.io>`_.
 

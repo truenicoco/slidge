@@ -31,7 +31,7 @@ class LegacyContact:
 
     def __init__(
         self,
-        session: "BaseSession",
+        session: "slidge.BaseSession",
         legacy_id: Hashable,
         jid_username: str,
     ):
@@ -156,7 +156,7 @@ class LegacyContact:
         Send an "away" presence from this contact to the user.
 
         Does not make much sense in the context of mobile, "always connected" network where
-        :func:`.LegacyContact.inactive` is probably more relevant.
+        :func:`slidge.LegacyContact.inactive` is probably more relevant.
         """
         self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pshow="away")
 
@@ -343,7 +343,7 @@ class LegacyRoster:
     capabilities and vcard of contacts.
     """
 
-    def __init__(self, session: "BaseSession"):
+    def __init__(self, session: "slidge.BaseSession"):
         self._contact_cls = get_unique_subclass(LegacyContact)
         self._contact_cls.xmpp = session.xmpp
 
@@ -356,7 +356,7 @@ class LegacyRoster:
         Retrieve a contact by their JID
 
         If the contact was not instantiated before, it will be created
-        using :meth:`.LegacyRoster.jid_username_to_legacy_id` to infer their
+        using :meth:`slidge.LegacyRoster.jid_username_to_legacy_id` to infer their
         legacy user ID.
 
         :param contact_jid:
@@ -381,7 +381,7 @@ class LegacyRoster:
         Retrieve a contact by their legacy_id
 
         If the contact was not instantiated before, it will be created
-        using :meth:`.LegacyRoster.legacy_id_to_jid_username` to infer their
+        using :meth:`slidge.LegacyRoster.legacy_id_to_jid_username` to infer their
         legacy user ID.
 
         :param legacy_id:
@@ -400,7 +400,7 @@ class LegacyRoster:
         """
         Retrieve a contact by the destination of a stanza
 
-        See :meth:`.Roster.by_legacy_id` for more info.
+        See :meth:`slidge.Roster.by_legacy_id` for more info.
 
         :param s:
         :return:

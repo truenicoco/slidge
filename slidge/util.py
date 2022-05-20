@@ -23,7 +23,7 @@ class RegistrationField:
 
     name: str
     """
-    Internal name of the field, will be used to retrieve via :py:attr:`.GatewayUser.registration_form`
+    Internal name of the field, will be used to retrieve via :py:attr:`slidge.GatewayUser.registration_form`
     """
     label: str = None
     """Description of the field that the aspiring user will see"""

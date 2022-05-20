@@ -196,7 +196,7 @@ class BaseSession(ABC):
         """
 
 
-        :param legacy_msg_id: Identifier of the message, return value of by :meth:`.BaseSession.send`
+        :param legacy_msg_id: Identifier of the message, return value of by :meth:`slidge.BaseSession.send`
         :param c:
         :return:
         """

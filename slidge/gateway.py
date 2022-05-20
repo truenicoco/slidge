@@ -16,6 +16,10 @@ from .legacy.session import BaseSession
 
 
 class BaseGateway(ComponentXMPP, ABC):
+    """
+    Class responsible for interacting with the gateway user ((un)registration) and dispatching
+    messages from the user (or any slixmpp event) to the appropriate handlers.
+    """
     REGISTRATION_FIELDS: Iterable[RegistrationField] = [
         RegistrationField(name="username", label="User name", required=True),
         RegistrationField(name="password", label="Password", required=True),
@@ -130,9 +134,9 @@ class BaseGateway(ComponentXMPP, ABC):
 
     async def _legacy_login(self, p: Presence):
         """
-        Logs a :class:`.BaseSession` instance to the legacy network
+        Logs a :class:`slidge.BaseSession` instance to the legacy network
 
-        :param p: Presence from a :class:`.GatewayUser` directed at the gateway's own JID
+        :param p: Presence from a :class:`slidge.GatewayUser` directed at the gateway's own JID
         """
         session = self._session_cls.from_stanza(p)
         if not session.logged:
