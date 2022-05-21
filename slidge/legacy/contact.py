@@ -254,16 +254,10 @@ class LegacyContact:
     def _make_message(self, **kwargs):
         return self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)
 
-    def _send_message(self, msg: Message, legacy_msg_id: Optional[Hashable] = None):
+    def _send_message(self, msg: Message, legacy_msg_id: Optional[Any] = None):
+        if legacy_msg_id is not None:
+            msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id))
         msg.send()
-        if legacy_msg_id is not None and self.session.store_unread_by_user:
-            i = msg.get_id()
-            log.debug(
-                "Storing correspondence between %s (XMPP) and %s (legacy)",
-                i,
-                legacy_msg_id,
-            )
-            self.session.unread_by_user[i] = legacy_msg_id
 
     def send_text(
         self,
@@ -277,7 +271,8 @@ class LegacyContact:
         :param body: Context of the message
         :param chat_state: By default, will send an "active" chat state (:xep:`0085`) along with the
             message. Set this to ``None`` if this is not desired.
-        :param legacy_msg_id:
+        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
+            user to the legacy network, specify this
         """
         msg = self._make_message(mbody=body, mtype="chat")
         if chat_state is not None:

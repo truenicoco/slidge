@@ -213,6 +213,10 @@ class Session(BaseSession):
         self.phone: str = self.user.registration_form["phone"]
         Signal.sessions_by_phone[self.phone] = self
 
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
+        return int(i)
+
     async def login(self, p: Presence = None):
         """
         Attempt to listen to incoming events for this account,
@@ -311,11 +315,14 @@ class Session(BaseSession):
                 date=datetime.datetime.fromtimestamp(sent_msg.timestamp / 1000),
             )
 
-        contact = self.contacts.by_json_address(msg.source)
+        contact: Contact = self.contacts.by_json_address(msg.source)
 
         if msg.data_message is not None:
-            sent_msg = contact.send_text(body=msg.data_message.body, chat_state=None)
-            self.unread_by_user[sent_msg.get_id()] = msg.data_message.timestamp
+            contact.send_text(
+                body=msg.data_message.body,
+                chat_state=None,
+                legacy_msg_id=msg.data_message.timestamp,
+            )
 
         if msg.typing_message is not None:
             action = msg.typing_message.action

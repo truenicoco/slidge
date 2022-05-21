@@ -93,6 +93,10 @@ class Session(BaseSession):
             files_directory=Session.tdlib_path,
         )
 
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
+        return int(i)
+
     async def login(self, p: Presence):
         async with self.tg as tg:
             await self.add_contacts_to_roster()
@@ -147,7 +151,6 @@ class Session(BaseSession):
         log.debug("Send composing res: %s", res)
 
     async def displayed(self, tg_id: int, c: Contact):
-        log.debug("Unread: %s", self.unread_by_user)
         query = tgapi.ViewMessages.construct(
             chat_id=c.legacy_id,
             message_thread_id=0,

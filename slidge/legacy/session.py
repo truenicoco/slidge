@@ -27,11 +27,7 @@ class BaseSession(ABC):
     If the legacy network supports 'read marks', keep track of messages sent by the user
     to later mark them as read by their contacts
     """
-    store_unread_by_user = True
-    """
-    If the legacy network supports 'read marks', keep track of messages received by the user
-    and transmit read marks from XMPP to the legacy network
-    """
+
     xmpp: "BaseGateway"
 
     def __init__(self, user: GatewayUser):
@@ -44,12 +40,18 @@ class BaseSession(ABC):
             self.unacked: Dict[Any, Message] = {}
         if self.store_unread:
             self.unread: Dict[Any, Message] = {}
-        if self.store_unread_by_user:
-            self.unread_by_user: Dict[str, Any] = {}
         self.logged = False
 
         self.contacts = self._roster_cls(self)
         self.post_init()
+
+    @staticmethod
+    def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: Any):
+        return str(legacy_msg_id)
+
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(i: str) -> Any:
+        return i
 
     def post_init(self):
         """
@@ -135,14 +137,10 @@ class BaseSession(ABC):
     async def displayed_from_msg(self, m: Message):
         displayed_msg_id = m["displayed"]["id"]
         try:
-            legacy_msg_id = self.unread_by_user.pop(displayed_msg_id)
-        except KeyError:
-            log.debug(
-                "Received read marker for a msg we did not send: %s",
-                self.unread_by_user,
-            )
-        else:
-            await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
+            legacy_msg_id = self.xmpp_msg_id_to_legacy_msg_id(displayed_msg_id)
+        except NotImplementedError:
+            legacy_msg_id = None
+        await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
     async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
         """
