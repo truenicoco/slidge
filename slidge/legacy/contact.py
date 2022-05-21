@@ -2,11 +2,14 @@ import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Hashable, Literal, Optional, IO, Dict, Any
+from typing import Hashable, Literal, Optional, IO, Dict, Any, TYPE_CHECKING
 
 from slixmpp import JID, Iq, Message
 
 from ..util import get_unique_subclass
+
+if TYPE_CHECKING:
+    from .session import BaseSession
 
 
 class LegacyContact:
@@ -31,7 +34,7 @@ class LegacyContact:
 
     def __init__(
         self,
-        session: "slidge.BaseSession",
+        session: "BaseSession",
         legacy_id: Hashable,
         jid_username: str,
     ):
@@ -301,6 +304,15 @@ class LegacyContact:
             msg["body"] = url
             self._send_message(msg)
 
+    def _carbon(self, msg: Message):
+        carbon = Message()
+        carbon["from"] = self.user.jid
+        carbon["to"] = self.user.jid
+        carbon["type"] = "chat"
+        carbon["carbon_sent"] = msg
+        carbon.enable("no-copy")
+        self.xmpp["xep_0356"].send_privileged_message(carbon)
+
     def carbon(self, body: str, date: datetime):
         """
         Sync a message sent from an official client by the gateway user to XMPP.
@@ -319,14 +331,28 @@ class LegacyContact:
         msg["body"] = body
         msg["delay"].set_stamp(date)
 
-        carbon = Message()
-        carbon["from"] = self.user.jid
-        carbon["to"] = self.user.jid
-        carbon["type"] = "chat"
-        carbon["carbon_sent"] = msg
-        carbon.enable("no-copy")
+        self._carbon(msg)
 
-        self.xmpp["xep_0356"].send_privileged_message(carbon)
+    def carbon_read(self, legacy_msg_id: str, date: Optional[datetime] = None):
+        """
+        Uses xep:`0356` to impersonate the XMPP user and send a carbon message.
+
+        :param str legacy_msg_id:
+        :param str date:
+        """
+        # we use Message() directly because we need xmlns="jabber:client"
+        log.debug("%s - %s", self.user.jid, self.jid)
+        msg = Message()
+        msg["from"] = self.user.jid.bare
+        msg["to"] = self.jid.bare
+        msg["type"] = "chat"
+        msg["displayed"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
+            legacy_msg_id
+        )
+        if date is not None:
+            msg["delay"].set_stamp(date)
+
+        self._carbon(msg)
 
 
 class LegacyRoster:
@@ -338,7 +364,7 @@ class LegacyRoster:
     capabilities and vcard of contacts.
     """
 
-    def __init__(self, session: "slidge.BaseSession"):
+    def __init__(self, session: "BaseSession"):
         self._contact_cls = get_unique_subclass(LegacyContact)
         self._contact_cls.xmpp = session.xmpp
 

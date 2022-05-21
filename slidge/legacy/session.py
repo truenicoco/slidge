@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from typing import Type, Dict, Any, Optional, Hashable
+from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING
 
 from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
@@ -8,6 +8,9 @@ from slixmpp.exceptions import XMPPError
 from ..db import GatewayUser, user_store
 from .contact import LegacyContact
 from ..util import get_unique_subclass
+
+if TYPE_CHECKING:
+    from ..gateway import BaseGateway
 
 
 class BaseSession(ABC):

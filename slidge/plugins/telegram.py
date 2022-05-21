@@ -202,6 +202,7 @@ class TelegramClient(aiotdlib.Client):
             (on_contact_status, tgapi.API.Types.UPDATE_USER_STATUS),
             (on_contact_chat_action, tgapi.API.Types.UPDATE_CHAT_ACTION),
             (on_contact_read, tgapi.API.Types.UPDATE_CHAT_READ_OUTBOX),
+            (on_user_read_from_other_device, tgapi.API.Types.UPDATE_CHAT_READ_INBOX),
         ]:
             log.debug("Adding telegram event handlers")
             self.add_event_handler(h, t)
@@ -311,6 +312,14 @@ async def on_contact_chat_action(tg: TelegramClient, action: tgapi.UpdateChatAct
         return
     contact = session.contacts.by_legacy_id(chat_id)
     contact.composing()
+
+
+async def on_user_read_from_other_device(
+    tg: TelegramClient, action: tgapi.UpdateChatReadInbox
+):
+    session = tg.session
+    contact = session.contacts.by_legacy_id(action.chat_id)
+    contact.carbon_read(action.last_read_inbox_message_id)
 
 
 log = logging.getLogger(__name__)
