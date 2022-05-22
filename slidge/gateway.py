@@ -20,6 +20,7 @@ class BaseGateway(ComponentXMPP, ABC):
     Class responsible for interacting with the gateway user ((un)registration) and dispatching
     messages from the user (or any slixmpp event) to the appropriate handlers.
     """
+
     REGISTRATION_FIELDS: Iterable[RegistrationField] = [
         RegistrationField(name="username", label="User name", required=True),
         RegistrationField(name="password", label="Password", required=True),
@@ -144,7 +145,10 @@ class BaseGateway(ComponentXMPP, ABC):
             await session.login(p)
 
     async def _on_user_unregister(self, iq: Iq):
-        await self.unregister(user_store.get_by_stanza(iq), iq)
+        user = user_store.get_by_stanza(iq)
+        if user is None:
+            raise KeyError("Cannot find user", user)
+        await self.unregister(user, iq)
 
     def config(self, argv: List[str]):
         """
@@ -200,9 +204,7 @@ class BaseGateway(ComponentXMPP, ABC):
         form["title"] = f"Registration to '{self.COMPONENT_NAME}'"
         form["instructions"] = self.REGISTRATION_INSTRUCTIONS
 
-        if user is None:
-            user = {}
-        else:
+        if user is not None:
             reg["registered"] = False
             form.add_field(
                 "remove",
@@ -214,7 +216,7 @@ class BaseGateway(ComponentXMPP, ABC):
 
         for field in self.REGISTRATION_FIELDS:
             if field.name in reg.interfaces:
-                val = user.get(field.name)
+                val = None if user is None else user.get(field.name)
                 if val is None:
                     reg.add_field(field.name)
                 else:
@@ -223,7 +225,7 @@ class BaseGateway(ComponentXMPP, ABC):
         reg["instructions"] = self.REGISTRATION_INSTRUCTIONS
 
         for field in self.REGISTRATION_FIELDS:
-            field.value = user.get(field.name, field.value)
+            field.value = field.value if user is None else user.get(field.name, field.value)
             form.add_field(
                 field.name,
                 label=field.label,
@@ -247,6 +249,8 @@ class BaseGateway(ComponentXMPP, ABC):
         """
         log.debug("Gateway msg: %s", msg)
         user = user_store.get_by_stanza(msg)
+        if user is None:
+            return
         try:
             f = self._input_futures.pop(user.bare_jid)
         except KeyError:
@@ -264,23 +268,10 @@ class BaseGateway(ComponentXMPP, ABC):
         """
         if text is not None:
             self.send_message(mto=user.jid, mbody=text)
-        f = Future()
+        f = self.loop.create_future()
         self._input_futures[user.bare_jid] = f
         await f
         return f.result()
-
-    # def ack(self, msg: Message):
-    #     """
-    #     Send a message receipt (:xep:`0184`) in response to a message sent by a gateway user.
-    #
-    #     This should be sent to attest the message was effectively sent on the legacy network.
-    #     If the legacy network support delivery receipts from contact's clients, :meth:`.LegacyContact.ack`
-    #     is preferable.
-    #
-    #
-    #     :param msg: The message to ack
-    #     """
-    #     self["xep_0184"].ack(msg)
 
 
 SLIXMPP_PLUGINS = [

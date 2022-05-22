@@ -49,8 +49,8 @@ class LegacyContact:
         self.legacy_id = legacy_id
         self.jid_username = jid_username
 
-        self._name = None
-        self._avatar = None
+        self._name: Optional[str] = None
+        self._avatar: Optional[bytes] = None
 
         self.xmpp = session.xmpp
         self.xmpp.loop.create_task(self.make_caps())
@@ -76,7 +76,7 @@ class LegacyContact:
         return self._name
 
     @name.setter
-    def name(self, n: str):
+    def name(self, n: Optional[str]):
         self._name = n
 
     @property
@@ -409,7 +409,6 @@ class LegacyRoster:
                 self.jid_username_to_legacy_id(jid_username),
                 jid_username,
             )
-            c.bare_jid = bare
             self.contacts_by_bare_jid[bare] = c
         return c
 

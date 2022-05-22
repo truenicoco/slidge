@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Literal
+from typing import Literal, Optional
 
 
 def get_unique_subclass(cls):
@@ -25,7 +25,7 @@ class RegistrationField:
     """
     Internal name of the field, will be used to retrieve via :py:attr:`slidge.GatewayUser.registration_form`
     """
-    label: str = None
+    label: Optional[str] = None
     """Description of the field that the aspiring user will see"""
     required: bool = True
     """Whether this field is mandatory or not"""

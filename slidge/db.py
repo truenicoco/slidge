@@ -7,9 +7,9 @@ import dataclasses
 import logging
 import shelve
 from os import PathLike
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, Union, Optional
 
-from slixmpp import JID, Presence, Message
+from slixmpp import JID, Presence, Message, Iq
 
 
 @dataclasses.dataclass
@@ -55,7 +55,8 @@ class UserStore:
     """
 
     def __init__(self):
-        self._users: Optional[shelve.Shelf] = None
+        # noinspection PyTypeChecker
+        self._users: shelve.Shelf[GatewayUser] = None
 
     def set_file(self, filename: PathLike):
         """
@@ -63,6 +64,8 @@ class UserStore:
 
         :param filename: Path to the shelf file
         """
+        if self._users is not None:
+            raise RuntimeError("Shelf file already set!")
         self._users = shelve.open(filename=str(filename))
 
     def get_all(self) -> Iterable[GatewayUser]:
@@ -91,7 +94,7 @@ class UserStore:
         self._users.sync()
         log.debug("Store: %s", self._users)
 
-    def get(self, _gateway_jid, _node, ifrom: JID, iq) -> GatewayUser:
+    def get(self, _gateway_jid, _node, ifrom: JID, iq) -> Optional[GatewayUser]:
         """
         Get a user from the store
 
@@ -123,7 +126,7 @@ class UserStore:
         del self._users[ifrom.bare]
         self._users.sync()
 
-    def get_by_jid(self, jid: JID) -> GatewayUser:
+    def get_by_jid(self, jid: JID) -> Optional[GatewayUser]:
         """
         Convenience function to get a user from their JID.
 
@@ -132,7 +135,7 @@ class UserStore:
         """
         return self._users.get(jid.bare)
 
-    def get_by_stanza(self, s: [Presence, Message]) -> GatewayUser:
+    def get_by_stanza(self, s: Union[Presence, Message, Iq]) -> Optional[GatewayUser]:
         """
         Convenience function to get a user from a stanza they sent.
 
