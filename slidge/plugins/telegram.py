@@ -276,6 +276,9 @@ async def on_message_success(
 
 
 async def on_contact_status(tg: TelegramClient, update: tgapi.UpdateUserStatus):
+    if update.user_id == await tg.get_my_id():
+        return
+
     session = tg.session
     contact = session.contacts.by_legacy_id(update.user_id)
     status = update.status
