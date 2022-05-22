@@ -313,25 +313,34 @@ class LegacyContact:
         carbon.enable("no-copy")
         self.xmpp["xep_0356"].send_privileged_message(carbon)
 
-    def carbon(self, body: str, date: datetime):
+    def carbon(
+        self,
+        body: str,
+        legacy_id: Optional[Any] = None,
+        date: Optional[datetime] = None,
+    ):
         """
         Sync a message sent from an official client by the gateway user to XMPP.
 
         Uses xep:`0356` to impersonate the XMPP user and send a carbon message.
 
         :param str body: Body of the message.
+        :param legacy_id:
         :param str date: When was this message sent.
         """
         # we use Message() directly because we need xmlns="jabber:client"
-        log.debug("%s - %s", self.user.jid, self.jid)
         msg = Message()
         msg["from"] = self.user.jid.bare
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["body"] = body
-        msg["delay"].set_stamp(date)
+        if legacy_id:
+            msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id))
+        if date:
+            msg["delay"].set_stamp(date)
 
         self._carbon(msg)
+        return msg.get_id()
 
     def carbon_read(self, legacy_msg_id: str, date: Optional[datetime] = None):
         """
