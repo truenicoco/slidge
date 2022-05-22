@@ -320,7 +320,6 @@ class Session(BaseSession):
         if msg.data_message is not None:
             contact.send_text(
                 body=msg.data_message.body,
-                chat_state=None,
                 legacy_msg_id=msg.data_message.timestamp,
             )
 
