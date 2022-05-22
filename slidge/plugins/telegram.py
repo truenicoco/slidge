@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import functools
 import logging
@@ -95,7 +96,10 @@ class Session(BaseSession):
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
-        return int(i)
+        try:
+            return int(i)
+        except ValueError:
+            raise NotImplementedError
 
     async def login(self, p: Presence):
         async with self.tg as tg:
@@ -107,8 +111,11 @@ class Session(BaseSession):
 
     async def send_text(self, t: str, c: Contact) -> int:
         result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
-        log.debug("Result: %s", result)
-        return result.id
+        fut = self.xmpp.loop.create_future()
+        ack_futures[result.id] = fut
+        new_message_id = await fut
+        log.debug("Result: %s / %s", result, new_message_id)
+        return new_message_id
 
     async def send_file(self, u: str, c: Contact) -> int:
         type_, _ = guess_type(u)
@@ -228,7 +235,9 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
             return
         contact = session.contacts.by_legacy_id(msg.chat_id)
         # noinspection PyUnresolvedReferences
-        contact.carbon(msg.content.text.text, datetime.datetime.fromtimestamp(msg.date))
+        contact.carbon(
+            msg.content.text.text, msg.id, datetime.datetime.fromtimestamp(msg.date)
+        )
         return
 
     sender = msg.sender_id
@@ -264,15 +273,17 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
 
 
 async def on_message_success(
-    tg: TelegramClient, update: tgapi.UpdateMessageSendSucceeded
+    _tg: TelegramClient, update: tgapi.UpdateMessageSendSucceeded
 ):
-    session = tg.session
-    try:
-        msg = session.unacked.pop(update.message.id)
-    except KeyError:
-        log.debug("We did not send: %s", update.message.id)
-    else:
-        session.xmpp.ack(msg)
+    for _ in range(10):
+        try:
+            future = ack_futures.pop(update.message.id)
+        except KeyError:
+            await asyncio.sleep(0.5)
+        else:
+            future.set_result(update.message.id)
+            return
+    log.warning("Ignoring Send success for %s", update.message.id)
 
 
 async def on_contact_status(tg: TelegramClient, update: tgapi.UpdateUserStatus):
@@ -325,4 +336,5 @@ async def on_user_read_from_other_device(
     contact.carbon_read(action.last_read_inbox_message_id)
 
 
+ack_futures: Dict[int, asyncio.Future] = {}
 log = logging.getLogger(__name__)

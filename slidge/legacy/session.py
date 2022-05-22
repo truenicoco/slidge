@@ -142,7 +142,9 @@ class BaseSession(ABC):
         try:
             legacy_msg_id = self.xmpp_msg_id_to_legacy_msg_id(displayed_msg_id)
         except NotImplementedError:
-            legacy_msg_id = None
+            log.debug("Couldn't convert xmpp msg ID to legacy ID, ignoring read mark")
+            return
+
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
     async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
