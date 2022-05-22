@@ -5,10 +5,9 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional, Hashable
 
-from slixmpp import Message, JID, Presence, Iq
-from slixmpp.exceptions import XMPPError
+from slixmpp import JID, Presence, Iq
 from slixmpp.plugins.xep_0100 import LegacyError
 
 from slidge import *
@@ -53,36 +52,35 @@ class Session(BaseSession):
     async def logout(self, p: Presence):
         log.debug("User has disconnected")
 
-    async def send_from_msg(self, msg: Message) -> int:
-        contact = self.contacts.by_stanza(msg)
-        if contact.legacy_id not in BUDDIES:
-            raise XMPPError(text="Contact does not exist")
+    async def send_text(self, t: str, c: LegacyContact):
+        i = self.counter
+        self.counter = i + 1
+        self.xmpp.loop.create_task(self.later(c))
+        return i
 
-        self.xmpp["xep_0184"].ack(msg)
-        contact.ack(msg)
+    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+        pass
+
+    async def later(self, c: LegacyContact):
+        i = self.counter - 1
         await asyncio.sleep(1)
-
-        contact.displayed(msg)
+        c.received(i)
         await asyncio.sleep(1)
-
-        contact.active()
+        c.ack(i)
         await asyncio.sleep(1)
-        contact.composing()
+        c.active()
         await asyncio.sleep(1)
-
-        legacy_msg_id = self.counter
-        reply = contact.send_text("OK", legacy_msg_id=legacy_msg_id)
-        await contact.send_file(filename=ASSETS_DIR / "buddy1.png")
-
-        log.debug("Sent message ID: %s", reply["id"])
-
-        async def later():
-            await asyncio.sleep(1)
-            contact.inactive()
-
-        self.xmpp.loop.create_task(later())
-
-        return legacy_msg_id
+        c.displayed(i)
+        await asyncio.sleep(1)
+        c.composing()
+        await asyncio.sleep(1)
+        c.paused()
+        await asyncio.sleep(1)
+        c.composing()
+        await asyncio.sleep(1)
+        c.send_text("OK", legacy_msg_id=i)
+        await asyncio.sleep(1)
+        c.inactive()
 
     async def active(self, c: LegacyContact):
         log.debug("User is active for contact %s", c)

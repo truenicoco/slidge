@@ -215,7 +215,10 @@ class Session(BaseSession):
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
-        return int(i)
+        try:
+            return int(i)
+        except ValueError:
+            raise NotImplementedError
 
     async def login(self, p: Presence = None):
         """
@@ -335,19 +338,10 @@ class Session(BaseSession):
             type_ = msg.receipt_message.type
             if type_ == "DELIVERY":
                 for t in msg.receipt_message.timestamps:
-                    try:
-                        msg = self.unacked.pop(t)
-                    except KeyError:
-                        return
-                    contact.ack(msg)
-                    contact.received(msg)
+                    contact.received(t)
             elif type_ == "READ":
                 for t in msg.receipt_message.timestamps:
-                    try:
-                        msg = self.unread.pop(t)
-                    except KeyError:
-                        return
-                    contact.displayed(msg)
+                    contact.displayed(t)
 
     async def send_text(self, t: str, c: Contact) -> Hashable:
         response = await signal.send(

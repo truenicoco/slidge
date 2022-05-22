@@ -214,45 +214,52 @@ class LegacyContact:
         log.debug("%s go inactive", self)
         self.chat_state("inactive")
 
-    def ack(self, msg: Message):
+    def ack(self, legacy_msg_id: Hashable):
         """
         Send an "acknowledged" message marker (:xep:`0333`) from this contact to the user.
 
-        :param msg: The message this marker refers to
+        :param legacy_msg_id: The message this marker refers to
         """
-        self.send_marker(msg, "acknowledged")
+        # m
+        self.send_marker(legacy_msg_id, "acknowledged")
 
-    def received(self, msg: Message):
+    def received(self, legacy_msg_id: Hashable):
         """
         Send a "received" message marker (:xep:`0333`) from this contact to the user.
 
-        :param msg: The message this marker refers to
+        :param legacy_msg_id: The message this marker refers to
         """
-        self.send_marker(msg, "received")
 
-    def displayed(self, msg: Message):
+        self.send_marker(legacy_msg_id, "received")
+
+    def displayed(self, legacy_msg_id: Hashable):
         """
         Send a "displayed" message marker (:xep:`0333`) from this contact to the user.
 
-        :param msg: The message this marker refers to
+        :param legacy_msg_id: The message this marker refers to
         """
-        self.send_marker(msg, "displayed")
+        self.send_marker(legacy_msg_id, "displayed")
 
     def send_marker(
-        self, msg: Message, marker: Literal["acknowledged", "received", "displayed"]
+        self, legacy_msg_id: Hashable, marker: Literal["acknowledged", "received", "displayed"]
     ):
         """
         Send a message marker (:xep:`0333`) from this contact to the user.
 
-        :param msg: The message this marker refers to
+        :param legacy_msg_id: ID of the message this marker refers to
         :param marker: The marker type
+
         """
-        self.xmpp["xep_0333"].send_marker(
-            mto=self.user.jid,
-            id=msg["id"],
-            marker=marker,
-            mfrom=self.jid,
-        )
+        xmpp_id = self.session.sent.get(legacy_msg_id)
+        if xmpp_id is None:
+            log.debug("Cannot find the XMPP ID of this msg: %s", legacy_msg_id)
+        else:
+            self.xmpp["xep_0333"].send_marker(
+                mto=self.user.jid,
+                id=xmpp_id,
+                marker=marker,
+                mfrom=self.jid,
+            )
 
     def _make_message(self, **kwargs):
         return self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)

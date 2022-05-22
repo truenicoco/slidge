@@ -227,11 +227,7 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
     if msg.is_outgoing:
         # This means slidge is responsible for this message, so no carbon is needed;
         # but maybe this does not handle all possible cases gracefully?
-        if (
-            msg.sending_state is not None
-            or msg.id in session.unacked
-            or msg.id in session.unread
-        ):
+        if msg.sending_state is not None or msg.id in session.sent:
             return
         contact = session.contacts.by_legacy_id(msg.chat_id)
         # noinspection PyUnresolvedReferences
@@ -303,14 +299,9 @@ async def on_contact_status(tg: TelegramClient, update: tgapi.UpdateUserStatus):
 
 
 async def on_contact_read(tg: TelegramClient, update: tgapi.UpdateChatReadOutbox):
-    session = tg.session
-    try:
-        msg = session.unread.pop(update.last_read_outbox_message_id)
-    except KeyError:
-        log.debug("Ignoring read mark for %s", update)
-    else:
-        contact = session.contacts.by_legacy_id(update.chat_id)
-        contact.displayed(msg)
+    tg.session.contacts.by_legacy_id(update.chat_id).displayed(
+        update.last_read_outbox_message_id
+    )
 
 
 async def on_contact_chat_action(tg: TelegramClient, action: tgapi.UpdateChatAction):

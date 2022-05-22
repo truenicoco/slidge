@@ -20,15 +20,10 @@ class BaseSession(ABC):
     Must be overridden for a functional slidge plugin
     """
 
-    store_unacked = True
+    store_sent = True
     """
-    If the legacy network supports message receipts, keep track of messages for later
-    sending back a receipt to the user.
-    """
-    store_unread = True
-    """
-    If the legacy network supports 'read marks', keep track of messages sent by the user
-    to later mark them as read by their contacts
+    Keep track of sent messages. Useful to later update the messages' status, e.g.,
+    with a read mark from the recipient
     """
 
     xmpp: "BaseGateway"
@@ -39,10 +34,8 @@ class BaseSession(ABC):
         self._roster_cls: Type[LegacyRoster] = get_unique_subclass(LegacyRoster)
 
         self.user = user
-        if self.store_unacked:
-            self.unacked: Dict[Any, Message] = {}
-        if self.store_unread:
-            self.unread: Dict[Any, Message] = {}
+        if self.store_sent:
+            self.sent: Dict[Any, str] = {}  # TODO: set a max size for this
         self.logged = False
 
         self.contacts = self._roster_cls(self)
@@ -122,11 +115,8 @@ class BaseSession(ABC):
         else:
             log.debug("Ignoring %s", m)
             return
+        self.sent[legacy_msg_id] = m.get_id()
         self.xmpp["xep_0184"].ack(m)
-        if self.store_unacked:
-            self.unacked[legacy_msg_id] = m
-        if self.store_unread:
-            self.unread[legacy_msg_id] = m
 
     async def active_from_msg(self, m: Message):
         await self.active(self.contacts.by_stanza(m))
