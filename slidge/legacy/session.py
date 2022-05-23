@@ -116,7 +116,6 @@ class BaseSession(ABC):
             log.debug("Ignoring %s", m)
             return
         self.sent[legacy_msg_id] = m.get_id()
-        self.xmpp["xep_0184"].ack(m)
 
     async def active_from_msg(self, m: Message):
         await self.active(self.contacts.by_stanza(m))

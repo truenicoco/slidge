@@ -220,16 +220,16 @@ class LegacyContact:
 
         :param legacy_msg_id: The message this marker refers to
         """
-        # m
         self.send_marker(legacy_msg_id, "acknowledged")
 
     def received(self, legacy_msg_id: Hashable):
         """
-        Send a "received" message marker (:xep:`0333`) from this contact to the user.
+        Send a "received" message marker (:xep:`0333`) and a "message delivery receipt"
+        (:xep:`0184`)
+        from this contact to the user
 
         :param legacy_msg_id: The message this marker refers to
         """
-
         self.send_marker(legacy_msg_id, "received")
 
     def displayed(self, legacy_msg_id: Hashable):
@@ -246,6 +246,8 @@ class LegacyContact:
         """
         Send a message marker (:xep:`0333`) from this contact to the user.
 
+        NB: for the 'received' marker, this also sends a message receipt (:xep:`0184`)
+
         :param legacy_msg_id: ID of the message this marker refers to
         :param marker: The marker type
 
@@ -254,6 +256,12 @@ class LegacyContact:
         if xmpp_id is None:
             log.debug("Cannot find the XMPP ID of this msg: %s", legacy_msg_id)
         else:
+            if marker == "received":
+                receipt = self.xmpp.Message()
+                receipt['to'] = self.user.jid
+                receipt['receipt'] = xmpp_id
+                receipt['from'] = self.jid
+                receipt.send()
             self.xmpp["xep_0333"].send_marker(
                 mto=self.user.jid,
                 id=xmpp_id,
