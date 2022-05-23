@@ -50,6 +50,8 @@ class Gateway(BaseGateway):
     async def on_gateway_message(self, msg: Message):
         log.debug("Gateway msg: %s", msg)
         user = user_store.get_by_stanza(msg)
+        if user is None:
+            raise XMPPError("Please register to the gateway first")
         try:
             f = self._input_futures.pop(user.bare_jid)
         except KeyError:
@@ -63,7 +65,7 @@ class Gateway(BaseGateway):
 
     async def add_device(self, user: GatewayUser):
         uri = await self.input(user, "URI?")
-        session = Signal.sessions_by_phone.get(user.registration_form["phone"])
+        session = Signal.sessions_by_phone[user.registration_form["phone"]]
 
         try:
             await signal.add_device(account=session.phone, uri=uri)
@@ -112,15 +114,17 @@ class Signal(SignaldAPI):
 
 
 class Contact(LegacyContact):
+    session: "Session"
+
     def __init__(
         self,
-        session: "BaseSession",
+        session: "Session",
         phone: str,
         jid_username: str,
     ):
         super().__init__(session, phone, jid_username)
         log.debug("JID: %s", self.jid_username)
-        self._uuid = None
+        self._uuid: Optional[str] = None
 
     @property
     def phone(self):
@@ -150,6 +154,9 @@ class Contact(LegacyContact):
 
 
 class Roster(LegacyRoster):
+    session: "Session"
+    contacts_by_legacy_id: Dict[str, Contact]  # type: ignore
+
     def __init__(self, session):
         super().__init__(session)
         self.contacts_by_uuid: Dict[str, Contact] = {}
@@ -203,6 +210,8 @@ class Session(BaseSession):
     """
     Represents a signal account
     """
+
+    contacts: Roster
 
     def __init__(self, user: GatewayUser):
         """
@@ -318,7 +327,7 @@ class Session(BaseSession):
                 date=datetime.datetime.fromtimestamp(sent_msg.timestamp / 1000),
             )
 
-        contact: Contact = self.contacts.by_json_address(msg.source)
+        contact = self.contacts.by_json_address(msg.source)
 
         if msg.data_message is not None:
             contact.send_text(
@@ -343,7 +352,7 @@ class Session(BaseSession):
                 for t in msg.receipt_message.timestamps:
                     contact.displayed(t)
 
-    async def send_text(self, t: str, c: Contact) -> Hashable:
+    async def send_text(self, t: str, c: Contact) -> Hashable:  # type: ignore[override]
         response = await signal.send(
             account=self.phone,
             recipientAddress=c.signal_address,
@@ -369,14 +378,14 @@ class Session(BaseSession):
     async def inactive(self, c: LegacyContact):
         pass
 
-    async def composing(self, c: Contact):
+    async def composing(self, c: Contact):  # type: ignore[override]
         await signal.typing(
             account=self.phone,
             address=c.signal_address,
             typing=True,
         )
 
-    async def displayed(self, legacy_msg_id: int, c: Contact):
+    async def displayed(self, legacy_msg_id: int, c: Contact):  # type: ignore[override]
         await signal.mark_read(
             account=self.phone,
             to=c.signal_address,
@@ -386,5 +395,5 @@ class Session(BaseSession):
 
 log = logging.getLogger(__name__)
 
-signal: Optional[Signal] = None
+signal: Signal
 signald_socket: Optional[str] = None

@@ -1,5 +1,5 @@
-Welcome to SliXMPP gateway's documentation!
-===========================================
+Slidge
+======
 
 
 .. toctree::

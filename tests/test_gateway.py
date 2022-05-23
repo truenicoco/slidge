@@ -104,6 +104,9 @@ class TestAimShakespeareBase(SlixTest):
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
 
+    def tearDown(self):
+        user_store._users = None
+
     def next_sent(self):
         self.wait_for_send_queue()
         sent = self.xmpp.socket.next_sent(timeout=1)

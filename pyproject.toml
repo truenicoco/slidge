@@ -43,7 +43,8 @@ facebook = ["mautrix-facebook"]
 mattermost = ["mattermostdriver"]
 
 [tool.poetry.scripts]
-poetry = 'slidge.__main__:main'
+slidge = 'slidge.__main__:main'
 
 [tool.mypy]
+exclude = "slixpatch.py"
 ignore_missing_imports = true

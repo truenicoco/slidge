@@ -91,7 +91,7 @@ class Session(BaseSession):
     async def composing(self, c: LegacyContact):
         log.debug("User is composing for contact %s", c)
 
-    async def displayed(self, legacy_msg_id: int, c: LegacyContact):
+    async def displayed(self, legacy_msg_id: int, c: LegacyContact):  # type: ignore[override]
         log.debug("Message #%s was read by the user", legacy_msg_id)
 
 
