@@ -107,6 +107,7 @@ class BaseGateway(ComponentXMPP, ABC):
         async def active(m): await get_session(m).active_from_msg(m)
         async def inactive(m): await get_session(m).inactive_from_msg(m)
         async def composing(m): await get_session(m).composing_from_msg(m)
+        async def paused(m): await get_session(m).paused_from_msg(m)
         # fmt: on
 
         self.add_event_handler("legacy_logout", logout)
@@ -115,6 +116,7 @@ class BaseGateway(ComponentXMPP, ABC):
         self.add_event_handler("chatstate_active", active)
         self.add_event_handler("chatstate_inactive", inactive)
         self.add_event_handler("chatstate_composing", composing)
+        self.add_event_handler("chatstate_paused", paused)
 
     async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         log.debug("User validate: %s", (ifrom.bare, iq))

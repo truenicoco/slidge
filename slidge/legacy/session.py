@@ -126,6 +126,9 @@ class BaseSession(ABC):
     async def composing_from_msg(self, m: Message):
         await self.composing(self.contacts.by_stanza(m))
 
+    async def paused_from_msg(self, m: Message):
+        await self.paused(self.contacts.by_stanza(m))
+
     async def displayed_from_msg(self, m: Message):
         displayed_msg_id = m["displayed"]["id"]
         try:
@@ -168,19 +171,25 @@ class BaseSession(ABC):
 
     async def inactive(self, c: LegacyContact):
         """
-        The use sens an 'inactive' chat state to the legacy network
+        The user sends an 'inactive' chat state to the legacy network
 
         :param c:
-        :return:
         """
         raise NotImplementedError
 
     async def composing(self, c: LegacyContact):
         """
-        The use sens an 'inactive' starts typing
+        The user is typing
 
         :param c:
-        :return:
+        """
+        raise NotImplementedError
+
+    async def paused(self, c: LegacyContact):
+        """
+        The user paused typing
+
+        :param c:
         """
         raise NotImplementedError
 
