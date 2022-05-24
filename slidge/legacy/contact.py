@@ -38,7 +38,7 @@ class LegacyContact:
         "urn:xmpp:receipts",
         "vcard-temp",
         "jabber:x:oob",
-        "urn:xmpp:message-correct:0"
+        "urn:xmpp:message-correct:0",
     }
     """
     A list of features advertised through service discovery and client capabilities.

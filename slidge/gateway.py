@@ -229,7 +229,9 @@ class BaseGateway(ComponentXMPP, ABC):
         reg["instructions"] = self.REGISTRATION_INSTRUCTIONS
 
         for field in self.REGISTRATION_FIELDS:
-            field.value = field.value if user is None else user.get(field.name, field.value)
+            field.value = (
+                field.value if user is None else user.get(field.name, field.value)
+            )
             form.add_field(
                 field.name,
                 label=field.label,

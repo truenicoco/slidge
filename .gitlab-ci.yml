@@ -15,3 +15,7 @@ test:
 mypy:
   script:
     - poetry run mypy slidge
+
+black:
+  script:
+    - poetry run black --check slidge

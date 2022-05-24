@@ -18,7 +18,7 @@ def get_parser():
     p.add(
         "--legacy-module",
         help="Importable python module containing (at least) "
-             "a BaseGateway and a LegacySession subclass",
+        "a BaseGateway and a LegacySession subclass",
         env_var="SLIDGE_LEGACY_MODULE",
     )
     p.add("-c", "--configuration", help="Path to a INI file", env_var="SLIDGE_CONFIG")
