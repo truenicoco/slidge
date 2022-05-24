@@ -1,19 +1,19 @@
 import logging
 from abc import ABC
-from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING
+from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING, Generic
 
 from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from ..db import GatewayUser, user_store
-from .contact import LegacyContact
 from ..util import get_unique_subclass
+from .contact import LegacyContactType, LegacyRosterType, LegacyRoster
 
 if TYPE_CHECKING:
     from ..gateway import BaseGateway
 
 
-class BaseSession(ABC):
+class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
     """
     Represents a gateway user logged in to the network and performing actions.
 
@@ -29,16 +29,14 @@ class BaseSession(ABC):
     xmpp: "BaseGateway"
 
     def __init__(self, user: GatewayUser):
-        from .contact import LegacyRoster  # circular import hell
-
-        self._roster_cls: Type[LegacyRoster] = get_unique_subclass(LegacyRoster)
+        self._roster_cls: Type[LegacyRosterType] = get_unique_subclass(LegacyRoster)
 
         self.user = user
         if self.store_sent:
             self.sent: Dict[Any, str] = {}  # TODO: set a max size for this
         self.logged = False
 
-        self.contacts = self._roster_cls(self)
+        self.contacts: LegacyRosterType = self._roster_cls(self)
         self.post_init()
 
     @staticmethod
@@ -139,7 +137,7 @@ class BaseSession(ABC):
 
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
-    async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_text(self, t: str, c: LegacyContactType) -> Optional[Hashable]:
         """
         The user wants to send a text message from xmpp to the legacy network
 
@@ -150,7 +148,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_file(self, u: str, c: LegacyContactType) -> Optional[Hashable]:
         """
         The user has sent a file using HTTP Upload
 
@@ -161,7 +159,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContactType):
         """
         The use sens an 'active' chat state to the legacy network
 
@@ -169,7 +167,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContactType):
         """
         The user sends an 'inactive' chat state to the legacy network
 
@@ -177,7 +175,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContactType):
         """
         The user is typing
 
@@ -185,7 +183,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def paused(self, c: LegacyContact):
+    async def paused(self, c: LegacyContactType):
         """
         The user paused typing
 
@@ -193,7 +191,7 @@ class BaseSession(ABC):
         """
         raise NotImplementedError
 
-    async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+    async def displayed(self, legacy_msg_id: Any, c: LegacyContactType):
         """
 
 

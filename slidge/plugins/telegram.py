@@ -109,7 +109,7 @@ class Session(BaseSession):
     async def logout(self, p: Presence):
         pass
 
-    async def send_text(self, t: str, c: Contact) -> int:  # type: ignore[override]
+    async def send_text(self, t: str, c: Contact) -> int:
         result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
         fut = self.xmpp.loop.create_future()
         ack_futures[result.id] = fut
@@ -117,7 +117,7 @@ class Session(BaseSession):
         log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
 
-    async def send_file(self, u: str, c: Contact) -> int:  # type: ignore[override]
+    async def send_file(self, u: str, c: Contact) -> int:
         type_, _ = guess_type(u)
         if type_ is not None:
             type_, subtype = type_.split("/")
@@ -137,17 +137,17 @@ class Session(BaseSession):
 
         return result.id
 
-    async def active(self, c: Contact):  # type: ignore[override]
+    async def active(self, c: Contact):
         action = tgapi.OpenChat.construct(chat_id=c.legacy_id)
         res = await self.tg.request(action)
         log.debug("Open chat res: %s", res)
 
-    async def inactive(self, c: Contact):  # type: ignore[override]
+    async def inactive(self, c: Contact):
         action = tgapi.CloseChat.construct(chat_id=c.legacy_id)
         res = await self.tg.request(action)
         log.debug("Close chat res: %s", res)
 
-    async def composing(self, c: Contact):  # type: ignore[override]
+    async def composing(self, c: Contact):
         action = tgapi.SendChatAction.construct(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
@@ -157,7 +157,7 @@ class Session(BaseSession):
         res = await self.tg.request(action)
         log.debug("Send composing res: %s", res)
 
-    async def displayed(self, tg_id: int, c: Contact):  # type: ignore[override]
+    async def displayed(self, tg_id: int, c: Contact):
         query = tgapi.ViewMessages.construct(
             chat_id=c.legacy_id,
             message_thread_id=0,

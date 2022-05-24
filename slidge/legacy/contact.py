@@ -2,7 +2,18 @@ import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Hashable, Literal, Optional, IO, Dict, Any, TYPE_CHECKING
+from typing import (
+    Hashable,
+    Literal,
+    Optional,
+    IO,
+    Dict,
+    Any,
+    TYPE_CHECKING,
+    Type,
+    Generic,
+    TypeVar,
+)
 
 from slixmpp import JID, Iq, Message
 
@@ -241,7 +252,9 @@ class LegacyContact:
         self.send_marker(legacy_msg_id, "displayed")
 
     def send_marker(
-        self, legacy_msg_id: Hashable, marker: Literal["acknowledged", "received", "displayed"]
+        self,
+        legacy_msg_id: Hashable,
+        marker: Literal["acknowledged", "received", "displayed"],
     ):
         """
         Send a message marker (:xep:`0333`) from this contact to the user.
@@ -258,9 +271,9 @@ class LegacyContact:
         else:
             if marker == "received":
                 receipt = self.xmpp.Message()
-                receipt['to'] = self.user.jid
-                receipt['receipt'] = xmpp_id
-                receipt['from'] = self.jid
+                receipt["to"] = self.user.jid
+                receipt["receipt"] = xmpp_id
+                receipt["from"] = self.jid
                 receipt.send()
             self.xmpp["xep_0333"].send_marker(
                 mto=self.user.jid,
@@ -380,7 +393,10 @@ class LegacyContact:
         self._carbon(msg)
 
 
-class LegacyRoster:
+LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
+
+
+class LegacyRoster(Generic[LegacyContactType]):
     """
     Virtual roster of a gateway user, that allows to represent all
     of their contacts as singleton instances (if used properly and not too bugged).
@@ -390,12 +406,12 @@ class LegacyRoster:
     """
 
     def __init__(self, session: "BaseSession"):
-        self._contact_cls = get_unique_subclass(LegacyContact)
+        self._contact_cls: Type[LegacyContactType] = get_unique_subclass(LegacyContact)
         self._contact_cls.xmpp = session.xmpp
 
         self.session = session
-        self.contacts_by_bare_jid: Dict[str, LegacyContact] = {}
-        self.contacts_by_legacy_id: Dict[Any, LegacyContact] = {}
+        self.contacts_by_bare_jid: Dict[str, LegacyContactType] = {}
+        self.contacts_by_legacy_id: Dict[Any, LegacyContactType] = {}
 
     def by_jid(self, contact_jid: JID):
         """
@@ -476,5 +492,7 @@ class LegacyRoster:
         """
         return jid_username
 
+
+LegacyRosterType = TypeVar("LegacyRosterType", bound=LegacyRoster)
 
 log = logging.getLogger(__name__)

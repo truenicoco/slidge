@@ -155,7 +155,7 @@ class Contact(LegacyContact):
 
 class Roster(LegacyRoster):
     session: "Session"
-    contacts_by_legacy_id: Dict[str, Contact]  # type: ignore
+    contacts_by_legacy_id: Dict[str, Contact]
 
     def __init__(self, session):
         super().__init__(session)
@@ -352,7 +352,7 @@ class Session(BaseSession):
                 for t in msg.receipt_message.timestamps:
                     contact.displayed(t)
 
-    async def send_text(self, t: str, c: Contact) -> Hashable:  # type: ignore[override]
+    async def send_text(self, t: str, c: Contact) -> int:
         response = await signal.send(
             account=self.phone,
             recipientAddress=c.signal_address,
@@ -378,14 +378,14 @@ class Session(BaseSession):
     async def inactive(self, c: LegacyContact):
         pass
 
-    async def composing(self, c: Contact):  # type: ignore[override]
+    async def composing(self, c: Contact):
         await signal.typing(
             account=self.phone,
             address=c.signal_address,
             typing=True,
         )
 
-    async def displayed(self, legacy_msg_id: int, c: Contact):  # type: ignore[override]
+    async def displayed(self, legacy_msg_id: int, c: Contact):
         await signal.mark_read(
             account=self.phone,
             to=c.signal_address,
