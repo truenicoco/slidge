@@ -3,6 +3,8 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Hashable, Optional
 
+import pytest
+
 import slixmpp.test.slixtest
 from slixmpp import Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
@@ -86,7 +88,12 @@ class Session(BaseSession):
 
 slixmpp.test.slixtest.ComponentXMPP = GatewayTest
 
+# FIXME: This test must be run before others because it messes up
+#        slidge.BaseSession.__subclasses__ and I did not find
+#        a way to avoid this side-effect. Any help about that is welcome.
 
+
+@pytest.mark.order(1)
 class TestAimShakespeareBase(SlixTest):
     def setUp(self):
         self.stream_start(

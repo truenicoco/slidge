@@ -70,7 +70,7 @@ services:
     volumes:
       - ./slidge:/slidge/slidge
       - ./persistent/fb:/fb
-      - ./persistent/slidge/signal:/var/lib/slidge
+      - ./persistent/slidge/facebook:/var/lib/slidge
     depends_on:
       - prosody
     network_mode: "service:prosody"
