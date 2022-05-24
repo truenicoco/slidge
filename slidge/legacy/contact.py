@@ -351,6 +351,7 @@ class LegacyContact:
         msg["body"] = body
         if legacy_id:
             msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id))
+            self.session.sent[legacy_id] = legacy_id
         if date:
             msg["delay"].set_stamp(date)
 
