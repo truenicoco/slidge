@@ -38,6 +38,7 @@ class LegacyContact:
         "urn:xmpp:receipts",
         "vcard-temp",
         "jabber:x:oob",
+        "urn:xmpp:message-correct:0"
     }
     """
     A list of features advertised through service discovery and client capabilities.
@@ -371,7 +372,7 @@ class LegacyContact:
         self._carbon(msg)
         return msg.get_id()
 
-    def carbon_read(self, legacy_msg_id: str, date: Optional[datetime] = None):
+    def carbon_read(self, legacy_msg_id: Any, date: Optional[datetime] = None):
         """
         Uses xep:`0356` to impersonate the XMPP user and send a carbon message.
 
@@ -391,6 +392,12 @@ class LegacyContact:
             msg["delay"].set_stamp(date)
 
         self._carbon(msg)
+
+    def correct(self, legacy_msg_id: Any, new_text: str):
+        msg = self._make_message()
+        msg["replace"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
+        msg["body"] = new_text
+        self._send_message(msg)
 
 
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)

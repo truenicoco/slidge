@@ -108,6 +108,7 @@ class BaseGateway(ComponentXMPP, ABC):
         async def inactive(m): await get_session(m).inactive_from_msg(m)
         async def composing(m): await get_session(m).composing_from_msg(m)
         async def paused(m): await get_session(m).paused_from_msg(m)
+        async def correct(m): await get_session(m).correct_from_msg(m)
         # fmt: on
 
         self.add_event_handler("legacy_logout", logout)
@@ -117,6 +118,7 @@ class BaseGateway(ComponentXMPP, ABC):
         self.add_event_handler("chatstate_inactive", inactive)
         self.add_event_handler("chatstate_composing", composing)
         self.add_event_handler("chatstate_paused", paused)
+        self.add_event_handler("message_correction", correct)
 
     async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         log.debug("User validate: %s", (ifrom.bare, iq))
@@ -286,6 +288,7 @@ SLIXMPP_PLUGINS = [
     "xep_0153",  # vCard-Based Avatars
     "xep_0184",  # Message Delivery Receipts
     "xep_0280",  # Carbons
+    "xep_0308",  # Last message correction
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints
     # "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__

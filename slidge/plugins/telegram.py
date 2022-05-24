@@ -62,14 +62,6 @@ class Contact(LegacyContact):
 class Roster(LegacyRoster):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
-        """
-        Convert a JID user part to a legacy ID.
-
-        Should be overridden in case legacy IDs are not strings, for instance
-
-        :param jid_username:
-        :return:
-        """
         return int(jid_username)
 
 
@@ -188,6 +180,16 @@ class Session(BaseSession):
             await contact.add_to_roster()
             contact.online()
 
+    async def correct(self, text: str, legacy_msg_id: int, c: Contact):
+        query = tgapi.EditMessageText.construct(
+            chat_id=c.legacy_id,
+            message_id=legacy_msg_id,
+            input_message_content=tgapi.InputMessageText.construct(
+                text=tgapi.FormattedText.construct(text=text)
+            ),
+        )
+        await self.tg.request(query)
+
 
 class TelegramClient(aiotdlib.Client):
     def __init__(self, xmpp: BaseGateway, session: Session, **kw):
@@ -210,8 +212,8 @@ class TelegramClient(aiotdlib.Client):
             (on_contact_chat_action, tgapi.API.Types.UPDATE_CHAT_ACTION),
             (on_contact_read, tgapi.API.Types.UPDATE_CHAT_READ_OUTBOX),
             (on_user_read_from_other_device, tgapi.API.Types.UPDATE_CHAT_READ_INBOX),
+            (on_contact_edit_msg, tgapi.API.Types.UPDATE_MESSAGE_CONTENT),
         ]:
-            log.debug("Adding telegram event handlers")
             self.add_event_handler(h, t)
 
 
@@ -325,6 +327,15 @@ async def on_user_read_from_other_device(
     session = tg.session
     contact = session.contacts.by_legacy_id(action.chat_id)
     contact.carbon_read(action.last_read_inbox_message_id)
+
+
+async def on_contact_edit_msg(tg: TelegramClient, action: tgapi.UpdateMessageContent):
+    new = action.new_content
+    if not isinstance(new, tgapi.MessageText):
+        raise NotImplementedError(new)
+    session = tg.session
+    contact = session.contacts.by_legacy_id(action.chat_id)
+    contact.correct(action.message_id, new.text.text)
 
 
 ack_futures: Dict[int, asyncio.Future] = {}

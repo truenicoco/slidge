@@ -6,7 +6,7 @@ from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from ..db import GatewayUser, user_store
-from ..util import get_unique_subclass
+from ..util import get_unique_subclass, BiDict
 from .contact import LegacyContactType, LegacyRosterType, LegacyRoster
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
 
         self.user = user
         if self.store_sent:
-            self.sent: Dict[Any, str] = {}  # TODO: set a max size for this
+            self.sent: BiDict = BiDict()  # TODO: set a max size for this
         self.logged = False
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
@@ -104,6 +104,10 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
         raise NotImplementedError
 
     async def send_from_msg(self, m: Message):
+        if m["replace"][
+            "id"
+        ]:  # ignore last message correction (handled by a specific method)
+            return
         url = m["oob"]["url"]
         text = m["body"]
         if url:
@@ -136,6 +140,15 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
             return
 
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
+
+    async def correct_from_msg(self, m: Message):
+        xmpp_id = m["replace"]["id"]
+        legacy_id = self.sent.inverse.get(xmpp_id)
+        if legacy_id is None:
+            log.debug("Did not find legacy ID to correct")
+            await self.send_text(m["body"], self.contacts.by_stanza(m))
+        else:
+            await self.correct(m["body"], legacy_id, self.contacts.by_stanza(m))
 
     async def send_text(self, t: str, c: LegacyContactType) -> Optional[Hashable]:
         """
@@ -193,9 +206,24 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
 
     async def displayed(self, legacy_msg_id: Any, c: LegacyContactType):
         """
+        The user has read a message
 
+        This is only possible if a valid ``legacy_msg_id`` was passed when transmitting a message
+        from a contact to the user.
 
-        :param legacy_msg_id: Identifier of the message, return value of by :meth:`slidge.BaseSession.send`
+        :param legacy_msg_id: Identifier of the message, passed to :meth:`slidge.LegacyContact.send_text`
+            or :meth:`slidge.LegacyContact.send_file`
+        :param c:
+        :return:
+        """
+        raise NotImplementedError
+
+    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+        """
+        The user corrected a message using :xep:`308`
+
+        :param text:
+        :param legacy_msg_id:
         :param c:
         :return:
         """

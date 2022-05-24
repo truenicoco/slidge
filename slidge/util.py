@@ -35,3 +35,17 @@ class RegistrationField:
     """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
     """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
+
+
+class BiDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inverse = {}
+        for key, value in self.items():
+            self.inverse[value] = key
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.inverse[self[key]].remove(key)
+        super().__setitem__(key, value)
+        self.inverse[value] = key
