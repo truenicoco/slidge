@@ -22,9 +22,7 @@ class Gateway(BaseGateway):
     COMPONENT_TYPE = "signal"
     REGISTRATION_INSTRUCTIONS = "Enter your phone number, starting with +"
     REGISTRATION_FIELDS = [
-        RegistrationField(
-            name="phone", label="Phone number (ex: +123456789)", required=True
-        )
+        FormField(var="phone", label="Phone number (ex: +123456789)", required=True)
     ]
 
     ROSTER_GROUP = "Signal"

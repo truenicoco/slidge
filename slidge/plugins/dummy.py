@@ -20,8 +20,8 @@ class Gateway(BaseGateway):
         "You can use any password you want."
     )
     REGISTRATION_FIELDS = list(BaseGateway.REGISTRATION_FIELDS) + [
-        RegistrationField(
-            name="something_else",
+        FormField(
+            var="something_else",
             label="Some optional stuff not covered by jabber:iq:register",
             required=False,
             private=True,
@@ -93,6 +93,13 @@ class Session(BaseSession):
 
     async def displayed(self, legacy_msg_id: int, c: LegacyContact):
         log.debug("Message #%s was read by the user", legacy_msg_id)
+
+    async def search(self, form_values: Dict[str, str]):
+        if form_values["first"] == "bubu":
+            return SearchResult(
+                fields=[FormField("first"), FormField("jid", type="jid-single")],
+                items=[{"first": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
+            )
 
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"

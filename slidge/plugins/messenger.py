@@ -22,10 +22,8 @@ from slidge import *
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter facebook credentials"
     REGISTRATION_FIELDS = [
-        RegistrationField(name="email", label="Email", required=True),
-        RegistrationField(
-            name="password", label="Password", required=True, private=True
-        ),
+        FormField(var="email", label="Email", required=True),
+        FormField(var="password", label="Password", required=True, private=True),
     ]
 
     ROSTER_GROUP = "Facebook"

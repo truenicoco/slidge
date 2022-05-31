@@ -233,6 +233,9 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
         """
         raise NotImplementedError
 
+    async def search(self, form_values: Dict[str, str]):
+        raise NotImplementedError
+
 
 _sessions: Dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)

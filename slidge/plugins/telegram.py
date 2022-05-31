@@ -13,6 +13,7 @@ from slixmpp import JID, Presence, Iq
 
 import aiotdlib
 import aiotdlib.api as tgapi
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -27,19 +28,21 @@ should work too, in theory at least.
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
-        RegistrationField(name="phone", label="Phone number", required=True),
-        RegistrationField(name="api_id", label="API ID", required=False),
-        RegistrationField(name="api_hash", label="API hash", required=False),
-        RegistrationField(
-            name="", value="The fields below have not been tested", type="fixed"
-        ),
-        RegistrationField(name="bot_token", label="Bot token", required=False),
-        RegistrationField(name="first", label="First name", required=False),
-        RegistrationField(name="last", label="Last name", required=False),
+        FormField(var="phone", label="Phone number", required=True),
+        FormField(var="api_id", label="API ID", required=False),
+        FormField(var="api_hash", label="API hash", required=False),
+        FormField(var="", value="The fields below have not been tested", type="fixed"),
+        FormField(var="bot_token", label="Bot token", required=False),
+        FormField(var="first", label="First name", required=False),
+        FormField(var="last", label="Last name", required=False),
     ]
     ROSTER_GROUP = "Telegram"
     COMPONENT_NAME = "Telegram (slidge)"
     COMPONENT_TYPE = "telegram"
+
+    SEARCH_FIELDS = [
+        FormField(var="phone", label="Phone number", required=True),
+    ]
 
     def config(self, argv: List[str]):
         parser = ArgumentParser()
@@ -102,7 +105,13 @@ class Session(BaseSession):
         pass
 
     async def send_text(self, t: str, c: Contact) -> int:
-        result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
+        try:
+            result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
+        except tgapi.BadRequest as e:
+            if e.code == 400:
+                raise XMPPError(condition="item-not-found", text="No such contact")
+            else:
+                raise
         fut = self.xmpp.loop.create_future()
         ack_futures[result.id] = fut
         new_message_id = await fut
@@ -190,6 +199,34 @@ class Session(BaseSession):
         )
         await self.tg.request(query)
 
+    async def search(self, form_values: Dict[str, str]):
+        phone = form_values["phone"]
+        response: tgapi.ImportedContacts = await self.tg.request(
+            query=tgapi.ImportContacts(
+                contacts=[
+                    tgapi.Contact(
+                        phone_number=phone,
+                        user_id=0,
+                        first_name=phone,
+                        vcard="",
+                        last_name="",
+                    )
+                ]
+            )
+        )
+        user_id = response.user_ids[0]
+        if user_id == 0:
+            return
+
+        await self.add_contacts_to_roster()
+        contact: Contact = self.contacts.by_legacy_id(user_id)
+        await contact.add_to_roster()
+
+        return SearchResult(
+            fields=[FormField("phone"), FormField("jid", type="jid-single")],
+            items=[{"phone": form_values["phone"], "jid": contact.jid.bare}],
+        )
+
 
 class TelegramClient(aiotdlib.Client):
     def __init__(self, xmpp: BaseGateway, session: Session, **kw):
@@ -213,6 +250,7 @@ class TelegramClient(aiotdlib.Client):
             (on_contact_read, tgapi.API.Types.UPDATE_CHAT_READ_OUTBOX),
             (on_user_read_from_other_device, tgapi.API.Types.UPDATE_CHAT_READ_INBOX),
             (on_contact_edit_msg, tgapi.API.Types.UPDATE_MESSAGE_CONTENT),
+            (on_user_update, tgapi.API.Types.UPDATE_USER),
         ]:
             self.add_event_handler(h, t)
 
@@ -257,7 +295,6 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
         best_file = max(photo.sizes, key=lambda x: x.width).photo
     elif isinstance(content, tgapi.MessageVideo):
         best_file = content.video.video
-
     else:
         raise NotImplemented
 
@@ -336,6 +373,28 @@ async def on_contact_edit_msg(tg: TelegramClient, action: tgapi.UpdateMessageCon
     session = tg.session
     contact = session.contacts.by_legacy_id(action.chat_id)
     contact.correct(action.message_id, new.text.text)
+
+
+async def on_user_update(tg: TelegramClient, action: tgapi.UpdateUser):
+    u = action.user
+    if u.id == tg.get_my_id():
+        return
+    await tg.request(
+        query=tgapi.ImportContacts(
+            contacts=[
+                tgapi.Contact(
+                    phone_number=u.phone_number,
+                    user_id=u.id,
+                    first_name=u.first_name,
+                    last_name=u.last_name,
+                    vcard="",
+                )
+            ]
+        )
+    )
+    contact: Contact = tg.session.contacts.by_legacy_id(u.id)
+    contact.name = u.first_name
+    await contact.add_to_roster()
 
 
 ack_futures: Dict[int, asyncio.Future] = {}

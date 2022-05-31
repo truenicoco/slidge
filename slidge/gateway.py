@@ -11,7 +11,7 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0100 import LegacyError
 
 from .db import user_store, RosterBackend, GatewayUser
-from .util import get_unique_subclass, RegistrationField
+from .util import get_unique_subclass, FormField, SearchResult
 from .legacy.session import BaseSession
 
 
@@ -21,9 +21,9 @@ class BaseGateway(ComponentXMPP, ABC):
     messages from the user (or any slixmpp event) to the appropriate handlers.
     """
 
-    REGISTRATION_FIELDS: Iterable[RegistrationField] = [
-        RegistrationField(name="username", label="User name", required=True),
-        RegistrationField(name="password", label="Password", required=True),
+    REGISTRATION_FIELDS: Iterable[FormField] = [
+        FormField(var="username", label="User name", required=True),
+        FormField(var="password", label="Password", required=True),
     ]
     """
     Iterable of fields presented to the gateway user when registering using :xep:`0077`
@@ -37,6 +37,13 @@ class BaseGateway(ComponentXMPP, ABC):
     """Type of the gateway, should ideally follow https://xmpp.org/registrar/disco-categories.html"""
 
     ROSTER_GROUP: str = "slidge"
+
+    SEARCH_FIELDS: Iterable[FormField] = [
+        FormField(var="first", label="First name", required=True),
+        FormField(var="last", label="Last name", required=True),
+    ]
+    SEARCH_TITLE: str = "Search for legacy contacts"
+    SEARCH_INSTRUCTIONS: str = ""
 
     def __init__(self, args):
         """
@@ -71,6 +78,7 @@ class BaseGateway(ComponentXMPP, ABC):
         self._session_cls = get_unique_subclass(BaseSession)
         self._session_cls.xmpp = self
 
+        self.register_plugin("xep_0055")
         self.register_plugin("xep_0356")
         self.register_plugins()
         self._register_slixmpp_api()
@@ -91,6 +99,10 @@ class BaseGateway(ComponentXMPP, ABC):
             "make_registration_form",
         )
         self["xep_0077"].api.register(self._user_validate, "user_validate")
+
+        self["xep_0055"].api.register(self._search_get_form, "search_get_form")
+        self["xep_0055"].api.register(self._search_query, "search_query")
+
         self.roster.set_backend(RosterBackend)
 
     def _register_handlers(self):
@@ -125,10 +137,10 @@ class BaseGateway(ComponentXMPP, ABC):
         form = iq["register"]["form"].get_values()
 
         for field in self.REGISTRATION_FIELDS:
-            if field.required and not form.get(field.name):
+            if field.required and not form.get(field.var):
                 raise XMPPError("Please fill in all fields", etype="modify")
 
-        form_dict = {f.name: form.get(f.name) for f in self.REGISTRATION_FIELDS}
+        form_dict = {f.var: form.get(f.var) for f in self.REGISTRATION_FIELDS}
 
         try:
             await self.validate(ifrom, form_dict)
@@ -153,6 +165,39 @@ class BaseGateway(ComponentXMPP, ABC):
         if user is None:
             raise KeyError("Cannot find user", user)
         await self.unregister(user, iq)
+
+    async def _search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError(text="Search is only allowed for registered users")
+
+        reply = iq.reply()
+        form = reply["search"]["form"]
+        form["title"] = self.SEARCH_TITLE
+        form["instructions"] = self.SEARCH_INSTRUCTIONS
+        for field in self.SEARCH_FIELDS:
+            form.add_field(**field.dict())
+        return reply
+
+    async def _search_query(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError(text="Search is only allowed for registered users")
+
+        result: SearchResult = await self._session_cls.from_stanza(iq).search(
+            iq["search"]["form"].get_values()
+        )
+
+        if not result:
+            raise XMPPError("item-not-found", text="Nothing was found")
+
+        reply = iq.reply()
+        form = reply["search"]["form"]
+        for field in result.fields:
+            form.add_reported(field.var, label=field.label, type=field.type)
+        for item in result.items:
+            form.add_item(item)
+        return reply
 
     def config(self, argv: List[str]):
         """
@@ -219,21 +264,21 @@ class BaseGateway(ComponentXMPP, ABC):
             )
 
         for field in self.REGISTRATION_FIELDS:
-            if field.name in reg.interfaces:
-                val = None if user is None else user.get(field.name)
+            if field.var in reg.interfaces:
+                val = None if user is None else user.get(field.var)
                 if val is None:
-                    reg.add_field(field.name)
+                    reg.add_field(field.var)
                 else:
-                    reg[field.name] = val
+                    reg[field.var] = val
 
         reg["instructions"] = self.REGISTRATION_INSTRUCTIONS
 
         for field in self.REGISTRATION_FIELDS:
             field.value = (
-                field.value if user is None else user.get(field.name, field.value)
+                field.value if user is None else user.get(field.var, field.value)
             )
             form.add_field(
-                field.name,
+                field.var,
                 label=field.label,
                 required=field.required,
                 ftype=field.type,
@@ -282,6 +327,7 @@ class BaseGateway(ComponentXMPP, ABC):
 
 SLIXMPP_PLUGINS = [
     "xep_0054",  # vCard-temp
+    # "xep_0055",  # Jabber search
     "xep_0066",  # Out of Band Data
     "xep_0077",  # In-band registration
     "xep_0085",  # Chat state notifications
