@@ -4,6 +4,8 @@ import slixmpp.plugins.xep_0077
 import slixmpp.plugins.xep_0333
 import slixmpp.plugins.xep_0356.stanza
 
+from . import xep_0055
+
 # Version bump on privileges
 slixmpp.plugins.xep_0356.stanza.Privilege.namespace = "urn:xmpp:privilege:2"
 slixmpp.plugins.xep_0356.stanza.Perm.namespace = "urn:xmpp:privilege:2"
