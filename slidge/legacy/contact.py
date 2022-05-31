@@ -420,7 +420,7 @@ class LegacyRoster(Generic[LegacyContactType]):
         self.contacts_by_bare_jid: Dict[str, LegacyContactType] = {}
         self.contacts_by_legacy_id: Dict[Any, LegacyContactType] = {}
 
-    def by_jid(self, contact_jid: JID):
+    def by_jid(self, contact_jid: JID) -> LegacyContactType:
         """
         Retrieve a contact by their JID
 
@@ -444,7 +444,7 @@ class LegacyRoster(Generic[LegacyContactType]):
             self.contacts_by_bare_jid[bare] = c
         return c
 
-    def by_legacy_id(self, legacy_id: Any):
+    def by_legacy_id(self, legacy_id: Any) -> LegacyContactType:
         """
         Retrieve a contact by their legacy_id
 
@@ -464,7 +464,7 @@ class LegacyRoster(Generic[LegacyContactType]):
             self.contacts_by_legacy_id[legacy_id] = c
         return c
 
-    def by_stanza(self, s):
+    def by_stanza(self, s) -> LegacyContactType:
         """
         Retrieve a contact by the destination of a stanza
 
