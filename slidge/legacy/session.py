@@ -120,16 +120,20 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
         self.sent[legacy_msg_id] = m.get_id()
 
     async def active_from_msg(self, m: Message):
-        await self.active(self.contacts.by_stanza(m))
+        if m.get_to() != self.xmpp.boundjid.bare:
+            await self.active(self.contacts.by_stanza(m))
 
     async def inactive_from_msg(self, m: Message):
-        await self.inactive(self.contacts.by_stanza(m))
+        if m.get_to() != self.xmpp.boundjid.bare:
+            await self.inactive(self.contacts.by_stanza(m))
 
     async def composing_from_msg(self, m: Message):
-        await self.composing(self.contacts.by_stanza(m))
+        if m.get_to() != self.xmpp.boundjid.bare:
+            await self.composing(self.contacts.by_stanza(m))
 
     async def paused_from_msg(self, m: Message):
-        await self.paused(self.contacts.by_stanza(m))
+        if m.get_to() != self.xmpp.boundjid.bare:
+            await self.paused(self.contacts.by_stanza(m))
 
     async def displayed_from_msg(self, m: Message):
         displayed_msg_id = m["displayed"]["id"]
