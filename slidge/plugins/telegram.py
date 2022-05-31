@@ -290,6 +290,11 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
         contact.send_text(body=formatted_text.text, legacy_msg_id=msg.id)
         return
 
+    if isinstance(content, tgapi.MessageAnimatedEmoji):
+        emoji = content.animated_emoji.sticker.emoji
+        contact.send_text(body=emoji, legacy_msg_id=msg.id)
+        return
+
     if isinstance(content, tgapi.MessagePhoto):
         photo = content.photo
         best_file = max(photo.sizes, key=lambda x: x.width).photo
