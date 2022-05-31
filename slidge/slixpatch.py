@@ -2,6 +2,11 @@ from slixmpp import Iq
 
 import slixmpp.plugins.xep_0077
 import slixmpp.plugins.xep_0333
+import slixmpp.plugins.xep_0356.stanza
+
+# Version bump on privileges
+slixmpp.plugins.xep_0356.stanza.Privilege.namespace = "urn:xmpp:privilege:2"
+slixmpp.plugins.xep_0356.stanza.Perm.namespace = "urn:xmpp:privilege:2"
 
 
 # patch for https://lab.louiz.org/poezio/slixmpp/-/issues/3469
