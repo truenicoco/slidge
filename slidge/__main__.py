@@ -1,9 +1,10 @@
 """
 Slidge can be configured via CLI args, environment variables and/or INI files.
-To use env vars, use this convention: ``--server`` becomes ``SLIDGE_SERVER``.
+To use env vars, use this convention: ``--home-dir`` becomes ``HOME_DIR``.
 """
 import importlib
 import logging
+from pathlib import Path
 
 import configargparse
 
@@ -51,24 +52,52 @@ def get_parser():
     )
     p.add(
         "--upload-service",
-        default="upload.localhost",
         env_var="SLIDGE_UPLOAD",
-        help="JID of an HTTP upload service the gateway can use.",
+        help="JID of an HTTP upload service the gateway can use. "
+        "Defaults to 'upload.${SLIDGE_SERVER}'",
     )
     p.add(
-        "--db",
-        default="/var/lib/slidge/slidge.db",
-        env_var="SLIDGE_DB",
-        help="Shelve file used to store persistent user data.",
+        "--home-dir",
+        env_var="SLIDGE_HOME_DIR",
+        help="Shelve file used to store persistent user data. "
+        "Defaults to /var/lib/slidge/${SLIDGE_JID}",
     )
+    p.add_argument(
+        "-q",
+        "--quiet",
+        help="loglevel=WARNING",
+        action="store_const",
+        dest="loglevel",
+        const=logging.WARNING,
+        default=logging.INFO,
+    )
+    p.add_argument(
+        "-d",
+        "--debug",
+        help="loglevel=DEBUG",
+        action="store_const",
+        dest="loglevel",
+        const=logging.DEBUG,
+    )
+
     return p
 
 
 def main():
     args, argv = get_parser().parse_known_args()
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=args.loglevel)
 
-    user_store.set_file(args.db)
+    if args.upload_service is None:
+        args.upload_service = "upload." + args.server
+
+    if args.home_dir is None:
+        args.home_dir = Path("/var/lib/slidge") / args.jid
+        if not args.home_dir.exists():
+            logging.info("Making directory '%s'", args.home_dir)
+            args.home_dir.mkdir()
+
+    db_file = Path(args.home_dir) / "slidge.db"
+    user_store.set_file(db_file)
 
     module = importlib.import_module(args.legacy_module)
     gateway = module.Gateway(args)

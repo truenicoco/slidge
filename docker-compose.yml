@@ -17,10 +17,10 @@ services:
       - --legacy-module=slidge.plugins.dummy
       - --server=localhost
       - --jid=dummy.localhost
+      - --debug
     volumes:
-      - ./slidge:/slidge/slidge
-      - ./assets:/slidge/assets
-      - ./persistent/slidge/dummy:/var/lib/slidge
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
     depends_on:
       - prosody
     network_mode: "service:prosody"
@@ -33,10 +33,10 @@ services:
       - --legacy-module=slidge.plugins.telegram
       - --server=localhost
       - --jid=telegram.localhost
+      - --debug
     volumes:
-      - ./slidge:/slidge/slidge
-      - ./persistent/tdlib:/tdlib
-      - ./persistent/slidge/telegram:/var/lib/slidge
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
     depends_on:
       - prosody
     network_mode: "service:prosody"
@@ -49,28 +49,28 @@ services:
       - --legacy-module=slidge.plugins.signal
       - --server=localhost
       - --jid=signal.localhost
+      - --debug
     volumes:
-      - ./slidge:/slidge/slidge
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
       - ./persistent/signald:/signald
-      - ./persistent/slidge/signal:/var/lib/slidge
     depends_on:
       - prosody
       - signald
     network_mode: "service:prosody"
 
-  slidge-messenger:
+  slidge-facebook:
     build:
       context: .
       target: slidge-dev
     command:
-      - --legacy-module=slidge.plugins.messenger
+      - --legacy-module=slidge.plugins.facebook
       - --server=localhost
       - --jid=facebook.localhost
-      - --fb-dir=/fb
+      - --debug
     volumes:
       - ./slidge:/slidge/slidge
-      - ./persistent/fb:/fb
-      - ./persistent/slidge/facebook:/var/lib/slidge
+      - ./persistent:/var/lib/slidge
     depends_on:
       - prosody
     network_mode: "service:prosody"

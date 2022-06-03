@@ -3,20 +3,20 @@ import datetime
 import functools
 import logging
 import tempfile
-from argparse import ArgumentParser
+from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List, Optional
 from mimetypes import guess_type
 
 import aiohttp
 from slixmpp import JID, Presence, Iq
+from slixmpp.exceptions import XMPPError
 
 import aiotdlib
 import aiotdlib.api as tgapi
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
-
+from .config import get_parser
 
 REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH
 
@@ -44,12 +44,12 @@ class Gateway(BaseGateway):
         FormField(var="phone", label="Phone number", required=True),
     ]
 
+    args: Namespace
+
     def config(self, argv: List[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--tdlib-path", default="/tdlib")
-        args = parser.parse_args(argv)
-        if args.tdlib_path is not None:
-            Session.tdlib_path = Path(args.tdlib_path)
+        Gateway.args = args = get_parser().parse_args(argv)
+        if args.tdlib_path is None:
+            args.tdlib_path = self.home_dir / "tdlib"
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         pass
@@ -85,8 +85,8 @@ class Session(BaseSession):
             bot_token=registration_form["bot_token"],
             first_name=registration_form["first"],
             last_name=registration_form["last"],
-            database_encryption_key="USELESS",
-            files_directory=Session.tdlib_path,
+            database_encryption_key=Gateway.args.tdlib_key,
+            files_directory=Gateway.args.tdlib_path,
         )
 
     @staticmethod

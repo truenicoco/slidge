@@ -4,6 +4,7 @@ This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easi
 import logging
 from abc import ABC
 from asyncio import Future
+from pathlib import Path
 from typing import Dict, Iterable, Optional, List
 
 from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
@@ -75,6 +76,8 @@ class BaseGateway(ComponentXMPP, ABC):
                 },
             },
         )
+        self.home_dir = Path(args.home_dir)
+
         self._session_cls = get_unique_subclass(BaseSession)
         self._session_cls.xmpp = self
 

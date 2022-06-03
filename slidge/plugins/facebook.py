@@ -3,7 +3,6 @@ import logging
 import random
 import shelve
 import time
-from argparse import ArgumentParser
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Hashable, Dict, List, Union, Deque, Optional
@@ -37,12 +36,6 @@ class Gateway(BaseGateway):
     async def unregister(self, user: GatewayUser, iq: Iq):
         pass
 
-    def config(self, argv: List[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--fb-dir", default=".")
-        args = parser.parse_args(argv)
-        Session.fb_path = Path(args.fb_dir)
-
 
 class Roster(LegacyRoster):
     contacts_by_legacy_id: Dict[int, LegacyContact]
@@ -59,7 +52,6 @@ class Contact(LegacyContact):
 class Session(BaseSession):
     fb_state: AndroidState
 
-    fb_path: Path
     shelf_path: Path
     mqtt: AndroidMQTT
     api: AndroidAPI
@@ -71,7 +63,7 @@ class Session(BaseSession):
     contacts: Roster
 
     def post_init(self):
-        self.shelf_path = self.fb_path / self.user.bare_jid
+        self.shelf_path = self.xmpp.home_dir / self.user.bare_jid
         self.sent_messages = Messages()
         self.received_messages = Messages()
 

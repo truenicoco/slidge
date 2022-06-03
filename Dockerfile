@@ -1,6 +1,7 @@
 FROM debian:stable AS prosody
 
-RUN DEBIAN_FRONTEND=noninteractive apt update && \
+RUN --mount=type=cache,id=slidge-apt-prosody,target=/var/cache/apt \
+    DEBIAN_FRONTEND=noninteractive apt update && \
     apt install extrepo -y && \
     extrepo enable prosody && \
     apt update && \
@@ -9,12 +10,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-
-RUN prosodyctl install https://modules.prosody.im/rocks/mod_privilege-19-1.src.rock
+RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_privilege
+RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_conversejs
 
 RUN mkdir -p /var/run/prosody && chown prosody:prosody /var/run/prosody
 
-ENTRYPOINT /bin/bash -c "sudo -u prosody prosody -F"
+USER prosody
+
+ENTRYPOINT ["prosody", "-F"]
 
 FROM prosody AS prosody-dev
 
@@ -27,6 +30,9 @@ RUN --mount=type=cache,id=slidge-poetry,target=/root/.cache/pip \
 
 FROM poetry AS builder
 
+RUN python3 -m venv /venv/
+ENV PATH /venv/bin:$PATH
+
 WORKDIR slidge
 COPY poetry.lock pyproject.toml /slidge/
 RUN poetry export --without-hashes > /slidge/requirements.txt
@@ -35,11 +41,22 @@ RUN poetry export --without-hashes --extras signal > /slidge/requirements-signal
 RUN poetry export --without-hashes --extras mattermost > /slidge/requirements-mattermost.txt
 RUN poetry export --without-hashes --extras facebook > /slidge/requirements-facebook.txt
 
-FROM poetry AS tdlib
+RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
+    pip install -r ./requirements.txt
+
+FROM python:3.9-slim AS slidge-base
+
+COPY --from=builder /venv /venv
+ENV PATH /venv/bin:$PATH
+
+RUN mkdir -p /var/lib/slidge
+
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+
+FROM poetry AS builder-tdlib
 
 RUN --mount=type=cache,id=slidge-apt-tdlib,target=/var/cache/apt \
     apt update && apt install git -y
-
 WORKDIR /
 RUN git clone https://github.com/pylakey/aiotdlib.git
 WORKDIR /aiotdlib
@@ -48,33 +65,35 @@ RUN poetry install
 RUN poetry run aiotdlib_generator
 RUN poetry build
 
-FROM python:3.9-bullseye AS slidge
-
-RUN python3 -m venv /venv/
+COPY --from=builder /venv /venv
 ENV PATH /venv/bin:$PATH
 
-WORKDIR slidge
-COPY --from=builder /slidge/requirements.txt /slidge/requirements.txt
-RUN --mount=type=cache,id=slidge-slidge,target=/root/.cache/pip \
-    pip install -r ./requirements.txt && pip cache purge
+RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
+    pip install /aiotdlib/dist/*.whl
 
-COPY ./slidge /slidge
+COPY --from=builder /slidge/requirements-telegram.txt /r.txt
+RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
+    pip install -r /r.txt
 
-STOPSIGNAL SIGINT
+FROM slidge-base AS slidge-telegram
 
-RUN mkdir -p /var/lib/slidge
-
-COPY --from=tdlib /aiotdlib/dist/* /tmp
-RUN --mount=type=cache,id=slidge-slidge,target=/root/.cache/pip \
-    pip install /tmp/*.whl
-
-RUN --mount=type=cache,id=slidge-slidge-apt,target=/var/cache/apt \
+RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
     apt install libc++1 -y
 
-ENTRYPOINT ["python", "-m", "slidge"]
+COPY --from=builder-tdlib /venv /venv
 
-FROM slidge AS slidge-dev
+ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.telegram"]
+
+FROM slidge-base AS slidge-signal
+
+COPY --from=builder /slidge/requirements-signal.txt /r.txt
+RUN --mount=type=cache,id=pip-slidge-signal,target=/root/.cache/pip \
+    pip install -r /r.txt
+
+ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.signal"]
+
+FROM slidge-telegram AS slidge-dev
 
 COPY --from=builder /slidge/*.txt /slidge/
 
@@ -82,11 +101,13 @@ RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
     for f in /slidge/*.txt; do pip install -r $f; done
 
 RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
-    pip install watchdog[watchmedo] && pip cache purge
+    pip install watchdog[watchmedo]
 
 COPY --from=prosody /etc/prosody/certs/localhost.crt /usr/local/share/ca-certificates/
-RUN  update-ca-certificates
+RUN update-ca-certificates
+
+COPY ./assets /venv/lib/python3.9/site-packages/assets
 
 ENTRYPOINT ["watchmedo", "auto-restart", \
-            "--directory=/slidge/slidge", "--pattern=*.py", "-R", "--", \
+            "--directory=/venv/lib/python3.9/site-packages/slidge", "--pattern=*.py", "-R", "--", \
             "python", "-m", "slidge"]
