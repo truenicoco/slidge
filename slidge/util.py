@@ -27,7 +27,7 @@ class FormField:
     """
     label: Optional[str] = None
     """Description of the field that the aspiring user will see"""
-    required: bool = True
+    required: bool = False
     """Whether this field is mandatory or not"""
     private: bool = False
     """For sensitive info that should not be displayed on screen while the user types."""
