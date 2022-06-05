@@ -160,9 +160,6 @@ class XEP_0100(BasePlugin):
 
     async def on_presence_subscribed(self, p: Presence):
         log.debug("User subscribe to gateway. Roster: %s", self.xmpp.roster)
-        self.xmpp.roster._rosters[self.xmpp.boundjid.bare][p.get_from()][
-            "pending_out"
-        ] = False
 
     async def _legacy_contact_add(self, jid, node, ifrom, contact_jid: JID):
         pass
