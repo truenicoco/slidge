@@ -8,6 +8,7 @@ from pathlib import Path
 
 import configargparse
 
+from slidge import BaseGateway
 from .db import user_store
 
 

@@ -9,7 +9,7 @@ from . import stanza
 
 class XEP_0055(BasePlugin):
     name = "xep_0055"
-    description = "XEP-0055: Jabber search"
+    description = "XEP-0055: Jabber search (slidge)"
     dependencies = {"xep_0004", "xep_0030"}
     stanza = stanza
     default_config = {

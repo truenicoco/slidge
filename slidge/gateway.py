@@ -59,7 +59,7 @@ class BaseGateway(ComponentXMPP, ABC):
             plugin_whitelist=SLIXMPP_PLUGINS,
             plugin_config={
                 "xep_0077": {
-                    "form_fields": [],
+                    "form_fields": None,
                     "form_instructions": self.REGISTRATION_INSTRUCTIONS,
                 },
                 "xep_0100": {
@@ -81,8 +81,6 @@ class BaseGateway(ComponentXMPP, ABC):
         self._session_cls = get_unique_subclass(BaseSession)
         self._session_cls.xmpp = self
 
-        self.register_plugin("xep_0055")
-        self.register_plugin("xep_0356")
         self.register_plugins()
         self._register_slixmpp_api()
         self._register_handlers()
@@ -337,8 +335,9 @@ class BaseGateway(ComponentXMPP, ABC):
 
 
 SLIXMPP_PLUGINS = [
+    "xep_0050",  # Adhoc commands
     "xep_0054",  # vCard-temp
-    # "xep_0055",  # Jabber search
+    "xep_0055",  # Jabber search
     "xep_0066",  # Out of Band Data
     "xep_0077",  # In-band registration
     "xep_0085",  # Chat state notifications
@@ -350,7 +349,7 @@ SLIXMPP_PLUGINS = [
     "xep_0308",  # Last message correction
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints
-    # "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__
+    "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__
     "xep_0363",  # HTTP file upload
 ]
 log = logging.getLogger(__name__)
