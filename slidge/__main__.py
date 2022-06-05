@@ -100,14 +100,21 @@ def main():
     user_store.set_file(db_file)
 
     module = importlib.import_module(args.legacy_module)
-    gateway = module.Gateway(args)
+    gateway: BaseGateway = module.Gateway(args)
     gateway.config(argv)
     gateway.connect()
 
     try:  # TODO: handle reconnection
         gateway.process()
-    except (KeyboardInterrupt, Exception) as e:
+    except KeyboardInterrupt:
+        logging.debug("Received SIGINT")
+    except Exception as e:
+        logging.exception(e)
+    finally:
+        gateway.shutdown()
         gateway.disconnect()
+        gateway.process(forever=False)
+        logging.info("Successful clean shut down")
 
 
 if __name__ == "__main__":

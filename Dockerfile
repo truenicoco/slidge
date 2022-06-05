@@ -51,7 +51,7 @@ ENV PATH /venv/bin:$PATH
 
 RUN mkdir -p /var/lib/slidge
 
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+STOPSIGNAL SIGINT
 
 FROM poetry AS builder-tdlib
 
@@ -83,6 +83,8 @@ RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
 
 COPY --from=builder-tdlib /venv /venv
 
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.telegram"]
 
 FROM slidge-base AS slidge-signal
@@ -90,6 +92,8 @@ FROM slidge-base AS slidge-signal
 COPY --from=builder /slidge/requirements-signal.txt /r.txt
 RUN --mount=type=cache,id=pip-slidge-signal,target=/root/.cache/pip \
     pip install -r /r.txt
+
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.signal"]
 
