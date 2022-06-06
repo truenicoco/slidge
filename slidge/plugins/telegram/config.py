@@ -1,6 +1,4 @@
-import string
 from argparse import ArgumentParser
-import random
 
 
 def get_parser():
@@ -8,10 +6,7 @@ def get_parser():
     parser.add_argument("--tdlib-path", help="Defaults to ${SLIDGE_HOME_DIR}/tdlib")
     parser.add_argument(
         "--tdlib-key",
-        default="".join(
-            string.ascii_letters[random.randrange(0, len(string.ascii_letters))]
-            for _ in range(30)
-        ),
-        help="Key used to encrypt tdlib persistent DB. Random string by default.",
+        default="NOT_SECURE",
+        help="Key used to encrypt tdlib persistent DB",
     )
     return parser
