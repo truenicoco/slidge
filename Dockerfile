@@ -48,6 +48,7 @@ FROM python:3.9-slim AS slidge-base
 
 COPY --from=builder /venv /venv
 ENV PATH /venv/bin:$PATH
+ENV PYTHONUNBUFFERED=1
 
 RUN mkdir -p /var/lib/slidge
 
