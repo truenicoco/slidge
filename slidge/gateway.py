@@ -9,7 +9,6 @@ from typing import Dict, Iterable, Optional, List
 
 from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
-from slixmpp.plugins.xep_0100 import LegacyError
 
 from .db import user_store, RosterBackend, GatewayUser
 from .util import get_unique_subclass, FormField, SearchResult
@@ -100,6 +99,7 @@ class BaseGateway(ComponentXMPP, ABC):
             "make_registration_form",
         )
         self["xep_0077"].api.register(self._user_validate, "user_validate")
+        self["xep_0077"].api.register(self._user_modify, "user_modify")
 
         self["xep_0055"].api.register(self._search_get_form, "search_get_form")
         self["xep_0055"].api.register(self._search_query, "search_query")
@@ -133,22 +133,19 @@ class BaseGateway(ComponentXMPP, ABC):
         self.add_event_handler("chatstate_paused", paused)
         self.add_event_handler("message_correction", correct)
 
-    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        log.debug("User validate: %s", (ifrom.bare, iq))
-        form = iq["register"]["form"].get_values()
-
+    async def _validate_form(self, ifrom, form_dict):
         for field in self.REGISTRATION_FIELDS:
-            if field.required and not form.get(field.var):
-                raise XMPPError("Please fill in all fields", etype="modify")
+            if field.required and not form_dict.get(field.var):
+                raise ValueError(f"Missing field: '{field.label}'")
 
-        form_dict = {f.var: form.get(f.var) for f in self.REGISTRATION_FIELDS}
+        await self.validate(ifrom, form_dict)
 
-        try:
-            await self.validate(ifrom, form_dict)
-        except LegacyError as e:
-            raise ValueError(f"Login Problem: {e}")
-        else:
-            user_store.add(ifrom, form)
+    async def _user_validate(
+        self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
+    ):
+        log.debug("User validate: %s", ifrom.bare)
+        await self._validate_form(ifrom, form_dict)
+        user_store.add(ifrom, form_dict)
 
     async def _legacy_login(self, p: Presence):
         """
@@ -161,11 +158,16 @@ class BaseGateway(ComponentXMPP, ABC):
             session.logged = True
             await session.login(p)
 
+    async def _user_modify(
+        self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
+    ):
+        user = user_store.get_by_jid(ifrom)
+        log.debug("Modify user: %s", user)
+        await self._validate_form(ifrom, form_dict)
+        user_store.add(ifrom, form_dict)
+
     async def _on_user_unregister(self, iq: Iq):
-        user = user_store.get_by_stanza(iq)
-        if user is None:
-            raise KeyError("Cannot find user", user)
-        await self.unregister(user, iq)
+        await self._session_cls.kill_by_jid(iq.get_from())
 
     async def _search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         user = user_store.get_by_jid(ifrom)
@@ -218,15 +220,6 @@ class BaseGateway(ComponentXMPP, ABC):
 
         :param user_jid:
         :param registration_form:
-        """
-        pass
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        """
-        Called when the user unregister from the gateway
-
-        :param user:
-        :param iq:
         """
         pass
 
@@ -283,15 +276,12 @@ class BaseGateway(ComponentXMPP, ABC):
         reg["instructions"] = self.REGISTRATION_INSTRUCTIONS
 
         for field in self.REGISTRATION_FIELDS:
-            field.value = (
-                field.value if user is None else user.get(field.var, field.value)
-            )
             form.add_field(
                 field.var,
                 label=field.label,
                 required=field.required,
                 ftype=field.type,
-                value=field.value,
+                value=field.value if user is None else user.get(field.var, field.value),
             )
 
         reply = iq.reply()

@@ -195,6 +195,14 @@ class LegacyContact:
             pfrom=self.jid, pto=self.user.jid.bare, ptype="unavailable"
         )
 
+    def unsubscribe(self):
+        """
+        Send an "unsubscribed" presence from this contact to the user.
+        """
+        self.xmpp.send_presence(
+            pfrom=self.jid, pto=self.user.jid.bare, ptype="unsubscribed"
+        )
+
     def chat_state(self, state: str):
         msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, mtype="chat")
         msg["chat_state"] = state
@@ -419,6 +427,9 @@ class LegacyRoster(Generic[LegacyContactType]):
         self.session = session
         self.contacts_by_bare_jid: Dict[str, LegacyContactType] = {}
         self.contacts_by_legacy_id: Dict[Any, LegacyContactType] = {}
+
+    def __iter__(self):
+        return iter(self.contacts_by_legacy_id.values())
 
     def by_jid(self, contact_jid: JID) -> LegacyContactType:
         """

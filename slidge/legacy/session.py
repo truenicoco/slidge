@@ -81,6 +81,22 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
     def from_jid(cls, jid: JID):
         return cls._from_user_or_none(user_store.get_by_jid(jid))
 
+    @classmethod
+    async def kill_by_jid(cls, jid: JID):
+        log.debug("Killing session of %s", jid)
+        for user, session in _sessions.items():
+            if user.jid == jid.bare:
+                break
+        else:
+            log.debug("Did not find a session for %s", jid)
+            return
+        for c in session.contacts:
+            c.unsubscribe()
+        await session.logout(None)
+        del _sessions[user]
+        del user
+        del session
+
     async def login(self, p: Presence):
         """
         Login the gateway user to the legacy network.
@@ -92,7 +108,7 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
         """
         raise NotImplementedError
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         """
         Logout the gateway user from the legacy network.
 
