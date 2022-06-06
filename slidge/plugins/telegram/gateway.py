@@ -386,7 +386,7 @@ async def on_contact_edit_msg(tg: TelegramClient, action: tgapi.UpdateMessageCon
 
 async def on_user_update(tg: TelegramClient, action: tgapi.UpdateUser):
     u = action.user
-    if u.id == tg.get_my_id():
+    if u.id == await tg.get_my_id():
         return
     await tg.request(
         query=tgapi.ImportContacts(
