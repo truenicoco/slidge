@@ -98,6 +98,16 @@ COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.signal"]
 
+FROM slidge-base AS slidge-facebook
+
+COPY --from=builder /slidge/requirements-facebook.txt /r.txt
+RUN --mount=type=cache,id=pip-slidge-facebook,target=/root/.cache/pip \
+    pip install -r /r.txt
+
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+
+ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.facebook"]
+
 FROM slidge-telegram AS slidge-dev
 
 COPY --from=builder /slidge/*.txt /slidge/
