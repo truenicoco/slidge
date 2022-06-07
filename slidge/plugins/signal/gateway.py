@@ -28,13 +28,11 @@ class Gateway(BaseGateway):
     ROSTER_GROUP = "Signal"
 
     def config(self, argv: List[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--socket", default="/signald/signald.sock")
-        args = parser.parse_args(argv)
+        args = get_parser().parse_args(argv)
 
         global signald_socket
         signald_socket = args.socket
-        self.add_event_handler("session_start", self.connect_signal)
+        self.loop.create_task(self.connect_signal())
 
     async def connect_signal(self, *_):
         """
@@ -242,52 +240,53 @@ class Session(BaseSession):
             self.logged = True
             await self.add_contacts_to_roster()
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         pass
 
     async def link_or_register(self):
         """
         Finish the registration (or linking) process, using direct messages from the gateway to the user
         """
-        choice = await self.xmpp.input(self.user, "[link] or [register]?")
-        if choice == "link":
-            uri = await signal.generate_linking_uri()
-            self.xmpp.send_message(mto=self.user.jid, mbody=f"{uri.uri}")
-            try:
-                await signal.finish_link(
-                    device_name="slidge", session_id=uri.session_id
-                )
-                await self.login()
-            except SignaldException as e:
-                self.xmpp.send_message(
-                    mto=self.user.jid, mbody=f"Something went wrong: {e}"
-                )
-                return
-
-        elif choice == "register":
-            try:
-                await signal.register(self.phone)
-            except SignaldException as e:
-                if e.type == "CaptchaRequiredError":
-                    captcha = await self.xmpp.input(
-                        self.user,
-                        "1.Go to https://signalcaptchas.org/registration/generate.html\n"
-                        "2.Copy after signalcaptcha://",
+        while True:
+            choice = await self.xmpp.input(self.user, "[link] or [register]?")
+            if choice == "link":
+                uri = await signal.generate_linking_uri()
+                self.xmpp.send_message(mto=self.user.jid, mbody=f"{uri.uri}")
+                try:
+                    await signal.finish_link(
+                        device_name="slidge", session_id=uri.session_id
                     )
-                    try:
-                        await signal.register(self.phone, captcha=captcha)
-                    except SignaldException as e:
-                        self.xmpp.send_message(
-                            mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                    await self.login()
+                    break
+                except SignaldException as e:
+                    self.xmpp.send_message(
+                        mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                    )
+            elif choice == "register":
+                try:
+                    await signal.register(self.phone)
+                except SignaldException as e:
+                    if e.type == "CaptchaRequiredError":
+                        captcha = await self.xmpp.input(
+                            self.user,
+                            "1.Go to https://signalcaptchas.org/registration/generate.html\n"
+                            "2.Copy after signalcaptcha://",
                         )
-                        return
-            sms_code = await self.xmpp.input(self.user, "Enter the SMS code")
-            await signal.verify(account=self.phone, code=sms_code)
-            name = await self.xmpp.input(self.user, "Enter your name")
-            await signal.set_profile(account=self.phone, name=name)
-            await self.login()
-        else:
-            raise LegacyError(choice)
+                        try:
+                            await signal.register(self.phone, captcha=captcha)
+                        except SignaldException as e:
+                            self.xmpp.send_message(
+                                mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                            )
+                            return
+                sms_code = await self.xmpp.input(self.user, "Enter the SMS code")
+                await signal.verify(account=self.phone, code=sms_code)
+                name = await self.xmpp.input(self.user, "Enter your name")
+                await signal.set_profile(account=self.phone, name=name)
+                await self.login()
+                break
+            else:
+                raise XMPPError(text="Please choose between [link] and [register]")
 
     async def add_contacts_to_roster(self):
         """
@@ -389,6 +388,12 @@ class Session(BaseSession):
             to=c.signal_address,
             timestamps=[legacy_msg_id],
         )
+
+
+def get_parser():
+    parser = ArgumentParser()
+    parser.add_argument("--socket", default="/signald/signald.sock")
+    return parser
 
 
 log = logging.getLogger(__name__)
