@@ -151,7 +151,7 @@ class XEP_0077(BasePlugin):
         if iq["type"] == "get":
             await self._send_form(iq)
         elif iq["type"] == "set":
-            extended_form = iq["register"]["form"]
+            extended_form = "form" in iq["register"]
 
             if extended_form:
                 form_dict = iq["register"]["form"].get_values()

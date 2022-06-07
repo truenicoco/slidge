@@ -7,7 +7,7 @@ import logging
 from argparse import ArgumentParser
 from typing import Dict, Optional, Hashable, List, Any
 
-from slixmpp import Message, Presence
+from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from pysignald_async import SignaldAPI, SignaldException
@@ -69,6 +69,21 @@ class Gateway(BaseGateway):
             self.send_message(mto=user.jid, mbody=f"Problem: {e}", mtype="chat")
         else:
             self.send_message(mto=user.jid, mbody=f"Linking OK", mtype="chat")
+
+    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+        phone = registration_form.get("phone")
+        for u in user_store.get_all():
+            if u.registration_form.get("phone") == phone:
+                raise XMPPError(
+                    "not-allowed",
+                    text="Someone is already using this phone number on this server.\n",
+                )
+
+    async def unregister(self, user: GatewayUser):
+        answer = await signal.delete_account(
+            account=user.registration_form.get("phone"), server=False
+        )
+        log.info("Removed user: %s", answer)
 
 
 # noinspection PyPep8Naming

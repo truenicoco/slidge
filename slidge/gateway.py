@@ -225,6 +225,16 @@ class BaseGateway(ComponentXMPP, ABC):
         """
         pass
 
+    async def unregister(self, user: GatewayUser):
+        """
+        Optionally override this if you need to clean additional
+        stuff after a user has been removed from the user_store.
+
+        :param user:
+        :return:
+        """
+        pass
+
     async def on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
         # prevents XMPP clients from considering the gateway as an HTTP upload

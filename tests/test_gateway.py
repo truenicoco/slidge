@@ -15,6 +15,8 @@ from slidge import *
 
 
 class GatewayTest(BaseGateway):
+    unregistered = []
+
     def __init__(self, jid, password, server, port, plugin_config):
         class C:
             pass
@@ -26,6 +28,9 @@ class GatewayTest(BaseGateway):
         C.upload_service = "upload.test"
         C.home_dir = Path(tempfile.mkdtemp())
         super().__init__(C)
+
+    def unregister(self, user: GatewayUser):
+        self.unregistered.append(user)
 
 
 class Roster(LegacyRoster):
@@ -57,7 +62,7 @@ class Session(BaseSession):
         self.received_presences.append(p)
         pass
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         self.received_presences.append(p)
         pass
 
@@ -194,6 +199,30 @@ class TestAimShakespeareBase(SlixTest):
         assert msg["from"] == f"juliet@aim.shakespeare.lit/{LegacyContact.RESOURCE}"
         assert msg["to"] == "romeo@montague.lit"
         assert msg["body"] == "What what?"
+
+    def test_unregister(self):
+        assert len(GatewayTest.unregistered) == 0
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit'
+                     from='romeo@montague.lit'>
+                <composing xmlns='http://jabber.org/protocol/chatstates'/>
+            </message>
+            """
+        )  # this creates a session
+        self.recv(
+            """
+            <iq from='romeo@montague.lit' type='set' to='aim.shakespeare.lit'>
+              <query xmlns='jabber:iq:register'>
+                <remove />
+              </query>
+            </iq>
+            """
+        )
+        # self.send(None)
+        assert len(GatewayTest.unregistered) == 1
+        assert GatewayTest.unregistered[0].jid == "romeo@montague.lit"
 
 
 log = logging.getLogger(__name__)

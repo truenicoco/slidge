@@ -54,7 +54,7 @@ class Gateway(BaseGateway):
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         pass
 
-    async def unregister(self, user: GatewayUser, iq: Iq):
+    async def unregister(self, user):
         pass
 
 

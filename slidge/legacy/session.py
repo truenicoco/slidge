@@ -93,6 +93,7 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
         for c in session.contacts:
             c.unsubscribe()
         await session.logout(None)
+        await cls.xmpp.unregister(user)
         del _sessions[user]
         del user
         del session
