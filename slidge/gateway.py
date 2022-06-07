@@ -11,7 +11,7 @@ from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
 
 from .db import user_store, RosterBackend, GatewayUser
-from .util import get_unique_subclass, FormField, SearchResult
+from .util import get_latest_subclass, FormField, SearchResult
 from .legacy.session import BaseSession
 
 
@@ -77,7 +77,7 @@ class BaseGateway(ComponentXMPP, ABC):
         )
         self.home_dir = Path(args.home_dir)
 
-        self._session_cls = get_unique_subclass(BaseSession)
+        self._session_cls = get_latest_subclass(BaseSession)
         self._session_cls.xmpp = self
 
         self.register_plugins()

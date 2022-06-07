@@ -17,7 +17,7 @@ from typing import (
 
 from slixmpp import JID, Iq, Message
 
-from ..util import get_unique_subclass
+from ..util import get_latest_subclass
 
 if TYPE_CHECKING:
     from .session import BaseSession
@@ -421,7 +421,7 @@ class LegacyRoster(Generic[LegacyContactType]):
     """
 
     def __init__(self, session: "BaseSession"):
-        self._contact_cls: Type[LegacyContactType] = get_unique_subclass(LegacyContact)
+        self._contact_cls: Type[LegacyContactType] = get_latest_subclass(LegacyContact)
         self._contact_cls.xmpp = session.xmpp
 
         self.session = session

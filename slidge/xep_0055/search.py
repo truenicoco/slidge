@@ -19,16 +19,18 @@ class XEP_0055(BasePlugin):
     }
 
     def plugin_init(self):
-        self.xmpp["xep_0030"].add_feature(stanza.Search.namespace)
         register_stanza_plugin(Iq, stanza.Search)
         register_stanza_plugin(stanza.Search, self.xmpp["xep_0004"].stanza.Form)
-        self.xmpp.register_handler(
-            CoroutineCallback(
-                "search",
-                StanzaPath("/iq/search"),
-                self._handle_search,
+
+        if self.xmpp.is_component:
+            self.xmpp["xep_0030"].add_feature(stanza.Search.namespace)
+            self.xmpp.register_handler(
+                CoroutineCallback(
+                    "search",
+                    StanzaPath("/iq/search"),
+                    self._handle_search,
+                )
             )
-        )
         self.api.register(self._get_form, "search_get_form")
         self.api.register(self._get_results, "search_query")
 
@@ -36,11 +38,11 @@ class XEP_0055(BasePlugin):
         if iq["search"]["form"].get_values():
             reply = await self.api["search_query"](None, None, iq.get_from(), iq)
             reply["search"]["form"]["type"] = "result"
-            reply["search"]["form"].add_field(
-                "FORM_TYPE", value=stanza.Search.namespace, ftype="hidden"
-            )
         else:
             reply = await self.api["search_get_form"](None, None, iq.get_from(), iq)
+        reply["search"]["form"].add_field(
+            "FORM_TYPE", value=stanza.Search.namespace, ftype="hidden"
+        )
         reply.send()
 
     async def _get_form(self, jid, node, ifrom, iq):
@@ -60,6 +62,14 @@ class XEP_0055(BasePlugin):
         for field in self.form_fields:
             form.add_reported(field)
         return reply
+
+    def make_search_iq(self, **kwargs):
+        iq = self.xmpp.make_iq(itype="set", **kwargs)
+        iq["search"]["form"].set_type("submit")
+        iq["search"]["form"].add_field(
+            "FORM_TYPE", value=stanza.Search.namespace, ftype="hidden"
+        )
+        return iq
 
 
 log = logging.getLogger(__name__)

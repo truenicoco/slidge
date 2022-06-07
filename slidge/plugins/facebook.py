@@ -5,14 +5,14 @@ import shelve
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Hashable, Dict, List, Union, Deque, Optional
+from typing import Hashable, Dict, Union, Deque, Optional
 
 import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
 
-from slixmpp import Presence, Iq, JID
+from slixmpp import Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -31,9 +31,6 @@ class Gateway(BaseGateway):
     COMPONENT_TYPE = "facebook"
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        pass
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
         pass
 
 
@@ -182,7 +179,7 @@ class Session(BaseSession):
             if f"app_id:{self.mqtt.state.application.client_id}" in meta.tags:
                 log.debug("Ignoring self message")
             else:
-                c = self.contacts.by_legacy_id(meta.thread.other_user_id)
+                c: Contact = self.contacts.by_legacy_id(meta.thread.other_user_id)
                 t = get_now_ms()
                 c.carbon(body=evt.text, legacy_id=t)
                 self.sent_messages.add(c.legacy_id, t)
@@ -214,7 +211,7 @@ class Session(BaseSession):
     async def on_fb_user_read(self, receipt: mqtt_t.OwnReadReceipt):
         when = receipt.read_to
         for thread in receipt.threads:
-            c = self.contacts.by_legacy_id(thread.other_user_id)
+            c: Contact = self.contacts.by_legacy_id(thread.other_user_id)
             try:
                 timestamp = self.received_messages.find_closest(c.legacy_id, when)
             except KeyError:

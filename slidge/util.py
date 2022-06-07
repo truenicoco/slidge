@@ -1,17 +1,17 @@
 import dataclasses
+import logging
 from typing import Literal, Optional, Iterable, Dict
 
 
-def get_unique_subclass(cls):
+def get_latest_subclass(cls):
     classes = cls.__subclasses__()
     if len(classes) == 0:
         return cls
-    elif len(classes) == 1:
-        return classes[0]
     elif len(classes) > 1:
-        raise RuntimeError(
-            "This class should only be subclassed once by plugin!", cls, classes
+        log.warning(
+            "%s should only be subclassed once by plugin, and I found %s", cls, classes
         )
+    return classes[-1]
 
 
 @dataclasses.dataclass
@@ -58,3 +58,6 @@ class BiDict(dict):
 class SearchResult:
     fields: Iterable[FormField]
     items: Iterable[Dict[str, str]]
+
+
+log = logging.getLogger(__name__)

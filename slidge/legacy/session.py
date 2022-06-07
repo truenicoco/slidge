@@ -6,7 +6,7 @@ from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from ..db import GatewayUser, user_store
-from ..util import get_unique_subclass, BiDict
+from ..util import get_latest_subclass, BiDict
 from .contact import LegacyContactType, LegacyRosterType, LegacyRoster
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
     xmpp: "BaseGateway"
 
     def __init__(self, user: GatewayUser):
-        self._roster_cls: Type[LegacyRosterType] = get_unique_subclass(LegacyRoster)
+        self._roster_cls: Type[LegacyRosterType] = get_latest_subclass(LegacyRoster)
 
         self.user = user
         if self.store_sent:

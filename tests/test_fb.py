@@ -3,11 +3,17 @@ import pytest
 
 @pytest.fixture
 def Messages():
-    from slidge.plugins.facebook import Messages
+    import slidge.plugins.facebook
+    import gc
 
-    yield Messages
+    yield slidge.plugins.facebook.Messages
 
-    del Messages
+    del slidge.plugins.facebook.Session
+    del slidge.plugins.facebook.Roster
+    del slidge.plugins.facebook.Contact
+
+    # https://stackoverflow.com/a/14422979/5902284
+    gc.collect()
 
 
 def test_find_closest_timestamp(Messages):

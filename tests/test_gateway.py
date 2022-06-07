@@ -1,14 +1,11 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict, Hashable, Optional
+from typing import Hashable, Optional
 
-import pytest
-
-import slixmpp.test.slixtest
-from slixmpp import Iq, JID, Presence
+from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
-from slixmpp.test import SlixTest
+from slixmpp.test import SlixTest, TestTransport
 
 from slidge.gateway import SLIXMPP_PLUGINS
 from slidge import *
@@ -92,15 +89,90 @@ class Session(BaseSession):
         pass
 
 
-slixmpp.test.slixtest.ComponentXMPP = GatewayTest
+class SlidgeTest(SlixTest):
+    def stream_start(
+        self,
+        mode="client",
+        skip=True,
+        header=None,
+        socket="mock",
+        jid="tester@localhost/resource",
+        password="test",
+        server="localhost",
+        port=5222,
+        sasl_mech=None,
+        plugins=None,
+        plugin_config={},
+    ):
+        """
+        Initialize an XMPP client or component using a dummy XML stream.
 
-# FIXME: This test must be run before others because it messes up
-#        slidge.BaseSession.__subclasses__ and I did not find
-#        a way to avoid this side-effect. Any help about that is welcome.
+        Arguments:
+            mode     -- Either 'client' or 'component'. Defaults to 'client'.
+            skip     -- Indicates if the first item in the sent queue (the
+                        stream header) should be removed. Tests that wish
+                        to test initializing the stream should set this to
+                        False. Otherwise, the default of True should be used.
+            socket   -- Either 'mock' or 'live' to indicate if the socket
+                        should be a dummy, mock socket or a live, functioning
+                        socket. Defaults to 'mock'.
+            jid      -- The JID to use for the connection.
+                        Defaults to 'tester@localhost/resource'.
+            password -- The password to use for the connection.
+                        Defaults to 'test'.
+            server   -- The name of the XMPP server. Defaults to 'localhost'.
+            port     -- The port to use when connecting to the server.
+                        Defaults to 5222.
+            plugins  -- List of plugins to register. By default, all plugins
+                        are loaded.
+        """
+        if not plugin_config:
+            plugin_config = {}
+
+        self.xmpp = GatewayTest(
+            jid, password, server, port, plugin_config=plugin_config
+        )
+        self.xmpp._always_send_everything = True
+
+        self.xmpp.connection_made(TestTransport(self.xmpp))
+        self.xmpp.session_bind_event.set()
+        # Remove unique ID prefix to make it easier to test
+        self.xmpp._id_prefix = ""
+        self.xmpp.default_lang = None
+        self.xmpp.peer_default_lang = None
+
+        def new_id():
+            self.xmpp._id += 1
+            return str(self.xmpp._id)
+
+        self.xmpp._id = 0
+        self.xmpp.new_id = new_id
+
+        # Must have the stream header ready for xmpp.process() to work.
+        if not header:
+            header = self.xmpp.stream_header
+
+        self.xmpp.data_received(header)
+        self.wait_for_send_queue()
+
+        if skip:
+            self.xmpp.socket.next_sent()
+            if mode == "component":
+                self.xmpp.socket.next_sent()
+
+        if plugins is None:
+            self.xmpp.register_plugins()
+        else:
+            for plugin in plugins:
+                self.xmpp.register_plugin(plugin)
+
+        # Some plugins require messages to have ID values. Set
+        # this to True in tests related to those plugins.
+        self.xmpp.use_message_ids = False
+        self.xmpp.use_presence_ids = False
 
 
-@pytest.mark.order(1)
-class TestAimShakespeareBase(SlixTest):
+class TestAimShakespeareBase(SlidgeTest):
     def setUp(self):
         self.stream_start(
             mode="component",
@@ -119,6 +191,7 @@ class TestAimShakespeareBase(SlixTest):
 
     def tearDown(self):
         user_store._users = None
+        # slixmpp.test.slixtest.ComponentXMPP = ComponentXMPP
 
     def next_sent(self):
         self.wait_for_send_queue()
