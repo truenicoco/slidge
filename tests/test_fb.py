@@ -3,7 +3,7 @@ import pytest
 
 @pytest.fixture
 def Messages():
-    from slidge.plugins.messenger import Messages
+    from slidge.plugins.facebook import Messages
 
     yield Messages
 

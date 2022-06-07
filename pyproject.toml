@@ -29,7 +29,7 @@ Pygments = "^2.8.0"
 sphinx-rtd-theme = "^1.0.0"
 sphinx-argparse = "^0.3.1"
 sphinx-autoapi = "^1.8.4"
-mypy = "^0.950"
+mypy = "^0.961"
 pytest-order = "^1.0.1"
 
 [build-system]
@@ -49,3 +49,6 @@ slidge = 'slidge.__main__:main'
 [tool.mypy]
 exclude = "slixpatch.py"
 ignore_missing_imports = true
+
+[tool.black]
+exclude = "xep_*"

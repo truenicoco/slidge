@@ -24,6 +24,7 @@ class GatewayTest(BaseGateway):
         C.server = server
         C.port = port
         C.upload_service = "upload.test"
+        C.home_dir = Path(tempfile.mkdtemp())
         super().__init__(C)
 
 

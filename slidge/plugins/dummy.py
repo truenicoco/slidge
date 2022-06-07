@@ -5,12 +5,12 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Optional, Hashable
+from typing import Dict, Optional, Hashable, Any
 
-from slixmpp import JID, Presence, Iq
-from slixmpp.plugins.xep_0100 import LegacyError
+from slixmpp import JID, Presence
 
 from slidge import *
+from slidge.legacy.contact import LegacyContactType
 
 
 class Gateway(BaseGateway):
@@ -30,10 +30,7 @@ class Gateway(BaseGateway):
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         if registration_form["username"] != "n":
-            raise LegacyError("Y a que N!")
-
-    async def unregister(self, user: GatewayUser, iq: Iq):
-        log.debug("User has unregistered from the gateway", user)
+            raise ValueError("Y a que N!")
 
 
 class Session(BaseSession):
@@ -41,7 +38,14 @@ class Session(BaseSession):
         super(Session, self).__init__(user)
         self.counter = 0
 
+    async def paused(self, c: LegacyContactType):
+        pass
+
+    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+        pass
+
     async def login(self, p: Presence):
+        log.debug("Logging in user: %s", p)
         for b, a in zip(BUDDIES, AVATARS):
             c = self.contacts.by_legacy_id(b.lower())
             c.name = b.title()
@@ -49,7 +53,7 @@ class Session(BaseSession):
             await c.add_to_roster()
             c.online()
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         log.debug("User has disconnected")
 
     async def send_text(self, t: str, c: LegacyContact):

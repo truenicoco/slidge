@@ -141,7 +141,7 @@ class Session(BaseSession):
             log.debug("Contact: %s", c)
             c.online()
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         pass
 
     async def send_text(self, t: str, c: Contact) -> int:

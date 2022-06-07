@@ -5,16 +5,16 @@ Linking to an existing account will be implemented once file upload works.
 import datetime
 import logging
 from argparse import ArgumentParser
-from typing import Dict, Optional, Hashable, List
+from typing import Dict, Optional, Hashable, List, Any
 
 from slixmpp import Message, Presence
 from slixmpp.exceptions import XMPPError
-from slixmpp.plugins.xep_0100 import LegacyError
 
 from pysignald_async import SignaldAPI, SignaldException
 import pysignald_async.generated as sigapi
 
 from slidge import *
+from slidge.legacy.contact import LegacyContactType
 
 
 class Gateway(BaseGateway):
@@ -224,6 +224,15 @@ class Session(BaseSession):
             return int(i)
         except ValueError:
             raise NotImplementedError
+
+    async def paused(self, c: LegacyContactType):
+        pass
+
+    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+        pass
+
+    async def search(self, form_values: Dict[str, str]):
+        pass
 
     async def login(self, p: Presence = None):
         """
