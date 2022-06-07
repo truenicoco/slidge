@@ -30,8 +30,16 @@ RUN --mount=type=cache,id=slidge-poetry,target=/root/.cache/pip \
 
 FROM poetry AS builder
 
+RUN --mount=type=cache,id=slidge-apt-builder,target=/var/cache/apt \
+    DEBIAN_FRONTEND=noninteractive apt update && \
+    apt install libidn11-dev python3-dev -y && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN python3 -m venv /venv/
 ENV PATH /venv/bin:$PATH
+
+RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
+    pip install cython
 
 WORKDIR slidge
 COPY poetry.lock pyproject.toml /slidge/
@@ -44,7 +52,15 @@ RUN poetry export --without-hashes --extras facebook > /slidge/requirements-face
 RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
     pip install -r ./requirements.txt
 
+RUN pip uninstall cython -y
+RUN test -f /venv/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-x86_64-linux-gnu.so
+
 FROM python:3.9-slim AS slidge-base
+
+RUN --mount=type=cache,id=slidge-apt-base,target=/var/cache/apt \
+    DEBIAN_FRONTEND=noninteractive apt update && \
+    apt install libidn11 -y && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /venv /venv
 ENV PATH /venv/bin:$PATH
