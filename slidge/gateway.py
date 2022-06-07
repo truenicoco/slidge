@@ -307,7 +307,9 @@ class BaseGateway(ComponentXMPP, ABC):
         try:
             f = self._input_futures.pop(user.bare_jid)
         except KeyError:
-            self.send(msg.reply(body="I got that, but I'm not doing anything with it"))
+            r = msg.reply(body="I got that, but I'm not doing anything with it")
+            r["type"] = "chat"
+            self.send(r)
         else:
             f.set_result(msg["body"])
 
@@ -320,7 +322,7 @@ class BaseGateway(ComponentXMPP, ABC):
         :return:
         """
         if text is not None:
-            self.send_message(mto=user.jid, mbody=text)
+            self.send_message(mto=user.jid, mbody=text, mtype="chat")
         f = self.loop.create_future()
         self._input_futures[user.bare_jid] = f
         await f

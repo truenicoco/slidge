@@ -57,7 +57,7 @@ class Gateway(BaseGateway):
             if cmd == "add_device":
                 await self.add_device(user)
             else:
-                self.send_message(mto=msg.get_from(), mbody="Come again?")
+                self.send_message(mto=msg.get_from(), mbody="Come again?", mtype="chat")
         else:
             f.set_result(msg["body"])
 
@@ -68,9 +68,9 @@ class Gateway(BaseGateway):
         try:
             await signal.add_device(account=session.phone, uri=uri)
         except SignaldException as e:
-            self.send_message(mto=user.jid, mbody=f"Problem: {e}")
+            self.send_message(mto=user.jid, mbody=f"Problem: {e}", mtype="chat")
         else:
-            self.send_message(mto=user.jid, mbody=f"Linking OK")
+            self.send_message(mto=user.jid, mbody=f"Linking OK", mtype="chat")
 
 
 # noinspection PyPep8Naming
