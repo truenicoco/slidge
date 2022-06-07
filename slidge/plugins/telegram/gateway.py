@@ -101,7 +101,7 @@ class Session(BaseSession):
             await self.add_contacts_to_roster()
             await tg.idle()
 
-    async def logout(self, p: Presence):
+    async def logout(self, p: Optional[Presence]):
         pass
 
     async def send_text(self, t: str, c: Contact) -> int:
@@ -158,6 +158,9 @@ class Session(BaseSession):
         res = await self.tg.request(action)
         log.debug("Send composing res: %s", res)
 
+    async def paused(self, c: Contact):
+        pass
+
     async def displayed(self, tg_id: int, c: Contact):
         query = tgapi.ViewMessages.construct(
             chat_id=c.legacy_id,
@@ -173,7 +176,6 @@ class Session(BaseSession):
         for chat in chats:
             if not isinstance(chat.type_, tgapi.ChatTypePrivate):
                 log.debug("Skipping %s as it is of type %s", chat.title, chat.type_)
-            log.debug("Photo: %s - %s", chat.photo, type(chat.photo))
             if isinstance(chat.photo, tgapi.ChatPhotoInfo):
                 query = tgapi.DownloadFile.construct(
                     file_id=chat.photo.big.id, synchronous=True, priority=32
@@ -260,7 +262,7 @@ class TelegramClient(aiotdlib.Client):
 
 
 async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage):
-    log.debug("Telegram update: %s", update)
+    log.debug("Received message update")
     msg: tgapi.Message = update.message
     session = tg.session
 

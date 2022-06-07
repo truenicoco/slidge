@@ -53,8 +53,6 @@ class XEP_0100(BasePlugin):
         "needs_registration": True,
     }
 
-    log.warning("Initializing slidge 100")
-
     def plugin_init(self):
         if not self.xmpp.is_component:
             log.error("Only components can be gateways, aborting plugin load")

@@ -145,6 +145,7 @@ class BaseGateway(ComponentXMPP, ABC):
     ):
         log.debug("User validate: %s", ifrom.bare)
         await self._validate_form(ifrom, form_dict)
+        log.info("New user: %s", ifrom.bare)
         user_store.add(ifrom, form_dict)
 
     async def _legacy_login(self, p: Presence):
@@ -157,6 +158,7 @@ class BaseGateway(ComponentXMPP, ABC):
         if not session.logged:
             session.logged = True
             await session.login(p)
+            log.info("User logged in: %s", p.get_from().bare)
 
     async def _user_modify(
         self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
@@ -232,6 +234,7 @@ class BaseGateway(ComponentXMPP, ABC):
         for user in user_store.get_all():
             # We need to see which registered users are online, this will trigger legacy_login in return
             self["xep_0100"].send_presence(ptype="probe", pto=user.jid)
+        log.info("Slidge has successfully started")
 
     def shutdown(self):
         log.debug("Shutting down")
