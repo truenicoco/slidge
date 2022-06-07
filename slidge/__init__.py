@@ -1,6 +1,7 @@
 from . import xep_0055
 from . import xep_0077
 from . import xep_0100
+from . import xep_0115
 from . import xep_0333
 from . import xep_0356
 
