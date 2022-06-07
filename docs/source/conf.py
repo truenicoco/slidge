@@ -49,6 +49,7 @@ autoapi_python_class_content = "both"
 autoapi_type = "python"
 autoapi_dirs = ["../../slidge"]
 autoapi_ignore = ["*slixpatch*"]
+autoapi_add_toctree_entry = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

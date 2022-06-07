@@ -1,5 +1,5 @@
-Implementing a plugin
-=====================
+Tutorial: implementing a plugin
+===============================
 
 Wanna write a new "legacy chat network" slidge plugin? You've come to the right place.
 

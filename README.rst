@@ -13,19 +13,19 @@ Slidge 🛷
 Pythonic XMPP gateways made easy.
 
 An XMPP component that attempts to follow good practices to provide an generic
-way to write XMPP/*legacy network* gateways, leveraging on the power of
+way to write XMPP ⟷ **legacy network** gateways, leveraging on the power of
 `SliXMPP <https://slixmpp.readthedocs.io>`_.
 
 Status
 ------
 
 Slidge is not ready for production yet! Right now, only direct messages are implemented,
-for Telegram and Signal. Please test it locally and report bugs.
+for Telegram, Signal and Facebook messenger. Please test it locally and report bugs.
 
 Installation
 ------------
 
-The easiest way to try it out slidge is with docker-compose.
+The easiest way to try out slidge is with docker-compose.
 Clone the repo, run ``docker-compose up`` and you should have:
 
 - an XMPP server (prosody) exposed on port 5222 with a registered user test@localhost (password: password)

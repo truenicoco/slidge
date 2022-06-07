@@ -6,9 +6,9 @@ Slidge
    :maxdepth: 2
 
    readme
-   config
-   tutorial
-   features
+   user/index
+   admin/index
+   dev/index
    glossary
 
 
