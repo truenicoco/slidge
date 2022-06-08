@@ -6,15 +6,14 @@ import logging
 import ssl
 from typing import Dict
 
+from slixmpp.plugins import BasePlugin
 from slixmpp.stanza import StreamFeatures, Iq
 from slixmpp.xmlstream import register_stanza_plugin, JID, StanzaBase
 from slixmpp.xmlstream.handler import CoroutineCallback
 from slixmpp.xmlstream.matcher import StanzaPath
-from slixmpp.plugins import BasePlugin
 
 from . import stanza
 from .stanza import Register, RegisterFeature
-
 
 log = logging.getLogger(__name__)
 
@@ -151,16 +150,9 @@ class XEP_0077(BasePlugin):
         if iq["type"] == "get":
             await self._send_form(iq)
         elif iq["type"] == "set":
-            extended_form = "form" in iq["register"]
+            form_dict = iq["register"]["form"].get_values() or iq["register"]
 
-            if extended_form:
-                form_dict = iq["register"]["form"].get_values()
-                remove = bool(form_dict.get("remove"))
-            else:
-                form_dict = iq["register"]
-                remove = iq["register"]["remove"]
-
-            if remove:
+            if form_dict.get("remove"):
                 try:
                     await self.api["user_remove"](None, None, iq["from"], iq)
                 except KeyError:
