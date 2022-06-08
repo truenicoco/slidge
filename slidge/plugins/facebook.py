@@ -34,19 +34,17 @@ class Gateway(BaseGateway):
         pass
 
 
-class Roster(LegacyRoster):
-    contacts_by_legacy_id: Dict[int, LegacyContact]
+class Contact(LegacyContact):
+    legacy_id: int
 
+
+class Roster(LegacyRoster[Contact]):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
         return int(jid_username)
 
 
-class Contact(LegacyContact):
-    legacy_id: int
-
-
-class Session(BaseSession):
+class Session(BaseSession[Contact, Roster]):
     fb_state: AndroidState
 
     shelf_path: Path
@@ -179,7 +177,7 @@ class Session(BaseSession):
             if f"app_id:{self.mqtt.state.application.client_id}" in meta.tags:
                 log.debug("Ignoring self message")
             else:
-                c: Contact = self.contacts.by_legacy_id(meta.thread.other_user_id)
+                c = self.contacts.by_legacy_id(meta.thread.other_user_id)
                 t = get_now_ms()
                 c.carbon(body=evt.text, legacy_id=t)
                 self.sent_messages.add(c.legacy_id, t)
@@ -211,7 +209,7 @@ class Session(BaseSession):
     async def on_fb_user_read(self, receipt: mqtt_t.OwnReadReceipt):
         when = receipt.read_to
         for thread in receipt.threads:
-            c: Contact = self.contacts.by_legacy_id(thread.other_user_id)
+            c = self.contacts.by_legacy_id(thread.other_user_id)
             try:
                 timestamp = self.received_messages.find_closest(c.legacy_id, when)
             except KeyError:
