@@ -17,13 +17,13 @@ from typing import (
 
 from slixmpp import JID, Iq, Message
 
-from ..util import get_latest_subclass
+from ..util import SubclassableOnce
 
 if TYPE_CHECKING:
     from .session import BaseSession
 
 
-class LegacyContact:
+class LegacyContact(metaclass=SubclassableOnce):
     """
     This class represents a contact a gateway user can interact with.
     """
@@ -411,7 +411,7 @@ class LegacyContact:
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
 
 
-class LegacyRoster(Generic[LegacyContactType]):
+class LegacyRoster(Generic[LegacyContactType], metaclass=SubclassableOnce):
     """
     Virtual roster of a gateway user, that allows to represent all
     of their contacts as singleton instances (if used properly and not too bugged).
@@ -421,7 +421,7 @@ class LegacyRoster(Generic[LegacyContactType]):
     """
 
     def __init__(self, session: "BaseSession"):
-        self._contact_cls: Type[LegacyContactType] = get_latest_subclass(LegacyContact)
+        self._contact_cls: Type[LegacyContactType] = LegacyContact.get_self_or_unique_subclass()
         self._contact_cls.xmpp = session.xmpp
 
         self.session = session

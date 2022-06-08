@@ -1,17 +1,7 @@
+from abc import ABCMeta
 import dataclasses
 import logging
 from typing import Literal, Optional, Iterable, Dict
-
-
-def get_latest_subclass(cls):
-    classes = cls.__subclasses__()
-    if len(classes) == 0:
-        return cls
-    elif len(classes) > 1:
-        log.warning(
-            "%s should only be subclassed once by plugin, and I found %s", cls, classes
-        )
-    return classes[-1]
 
 
 @dataclasses.dataclass
@@ -58,6 +48,41 @@ class BiDict(dict):
 class SearchResult:
     fields: Iterable[FormField]
     items: Iterable[Dict[str, str]]
+
+
+class SubclassableOnce(type):
+    def __init__(cls, name, bases, dct):
+        for b in bases:
+            if type(b) in (SubclassableOnce, ABCSubclassableOnceAtMost):
+                if hasattr(b, "_subclass"):
+                    raise RuntimeError(
+                        "This class must be subclassed once at most!",
+                        cls,
+                        name,
+                        bases,
+                        dct,
+                    )
+                else:
+                    log.debug("Setting %s as subclass for %s", cls, b)
+                    b._subclass = cls
+
+        super().__init__(name, bases, dct)
+
+    def get_self_or_unique_subclass(cls):
+        r = getattr(cls, "_subclass", cls)
+        log.debug("Returning %s for %s", r, cls)
+        return r
+
+    def reset_subclass(cls):
+        try:
+            log.debug("Resetting subclass of %s", cls)
+            delattr(cls, "_subclass")
+        except AttributeError:
+            log.debug("No subclass were registered for %s", cls)
+
+
+class ABCSubclassableOnceAtMost(ABCMeta, SubclassableOnce):
+    pass
 
 
 log = logging.getLogger(__name__)

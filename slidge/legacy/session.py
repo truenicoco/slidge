@@ -6,14 +6,16 @@ from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
 from ..db import GatewayUser, user_store
-from ..util import get_latest_subclass, BiDict
+from ..util import BiDict, ABCSubclassableOnceAtMost
 from .contact import LegacyContactType, LegacyRosterType, LegacyRoster
 
 if TYPE_CHECKING:
     from ..gateway import BaseGateway
 
 
-class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
+class BaseSession(
+    Generic[LegacyContactType, LegacyRosterType], metaclass=ABCSubclassableOnceAtMost
+):
     """
     Represents a gateway user logged in to the network and performing actions.
 
@@ -29,7 +31,9 @@ class BaseSession(ABC, Generic[LegacyContactType, LegacyRosterType]):
     xmpp: "BaseGateway"
 
     def __init__(self, user: GatewayUser):
-        self._roster_cls: Type[LegacyRosterType] = get_latest_subclass(LegacyRoster)
+        self._roster_cls: Type[
+            LegacyRosterType
+        ] = LegacyRoster.get_self_or_unique_subclass()
 
         self.user = user
         if self.store_sent:

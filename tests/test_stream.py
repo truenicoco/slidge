@@ -3,90 +3,13 @@ import tempfile
 from pathlib import Path
 from typing import Hashable, Optional
 
+import pytest
 from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.test import SlixTest, TestTransport
 
 from slidge.gateway import SLIXMPP_PLUGINS
 from slidge import *
-
-
-class GatewayTest(BaseGateway):
-    unregistered = []
-
-    def __init__(self, jid, password, server, port, plugin_config):
-        class C:
-            pass
-
-        C.jid = jid
-        C.secret = password
-        C.server = server
-        C.port = port
-        C.upload_service = "upload.test"
-        C.home_dir = Path(tempfile.mkdtemp())
-        super().__init__(C)
-
-    def unregister(self, user: GatewayUser):
-        self.unregistered.append(user)
-
-
-class Roster(LegacyRoster):
-    @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> int:
-        log.debug("Requested JID to legacy: %s", jid_username)
-        if jid_username == "juliet":
-            return 123
-        else:
-            raise XMPPError(text="Not found", condition="item-not-found")
-
-    @staticmethod
-    def legacy_id_to_jid_username(legacy_id: int) -> str:
-        if legacy_id == 123:
-            return "juliet"
-        else:
-            raise RuntimeError
-
-
-class Session(BaseSession):
-    received_presences = []
-    text_received_by_juliet = []
-    composing_chat_states_received_by_juliet = []
-
-    def __init__(self, user):
-        super().__init__(user)
-
-    async def login(self, p: Presence):
-        self.received_presences.append(p)
-        pass
-
-    async def logout(self, p: Optional[Presence]):
-        self.received_presences.append(p)
-        pass
-
-    async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
-        self.text_received_by_juliet.append((t, c))
-        assert self.user.bare_jid == "romeo@montague.lit"
-        assert self.user.jid == JID("romeo@montague.lit")
-        if c.jid_username != "juliet":
-            raise XMPPError(text="Not found", condition="item-not-found")
-        else:
-            c.send_text("I love you")
-            return 0
-
-    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
-        pass
-
-    async def active(self, c: LegacyContact):
-        pass
-
-    async def inactive(self, c: LegacyContact):
-        pass
-
-    async def composing(self, c: LegacyContact):
-        self.composing_chat_states_received_by_juliet.append(c)
-
-    async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
-        pass
 
 
 class SlidgeTest(SlixTest):
@@ -128,6 +51,26 @@ class SlidgeTest(SlixTest):
         """
         if not plugin_config:
             plugin_config = {}
+
+        class GatewayTest(BaseGateway):
+            unregistered = []
+
+            def __init__(self, jid, password, server, port, plugin_config):
+                class C:
+                    pass
+
+                C.jid = jid
+                C.secret = password
+                C.server = server
+                C.port = port
+                C.upload_service = "upload.test"
+                C.home_dir = Path(tempfile.mkdtemp())
+                super().__init__(C)
+
+            def unregister(self, user: GatewayUser):
+                self.unregistered.append(user)
+
+        self.GatewayTest = GatewayTest
 
         self.xmpp = GatewayTest(
             jid, password, server, port, plugin_config=plugin_config
@@ -172,8 +115,82 @@ class SlidgeTest(SlixTest):
         self.xmpp.use_presence_ids = False
 
 
+received_presences = []
+text_received_by_juliet = []
+composing_chat_states_received_by_juliet = []
+
+user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
+
+
 class TestAimShakespeareBase(SlidgeTest):
+    @pytest.fixture(autouse=True, scope="module")
+    def roster(self):
+        class Roster(LegacyRoster):
+            @staticmethod
+            def jid_username_to_legacy_id(jid_username: str) -> int:
+                log.debug("Requested JID to legacy: %s", jid_username)
+                if jid_username == "juliet":
+                    return 123
+                else:
+                    raise XMPPError(text="Not found", condition="item-not-found")
+
+            @staticmethod
+            def legacy_id_to_jid_username(legacy_id: int) -> str:
+                if legacy_id == 123:
+                    return "juliet"
+                else:
+                    raise RuntimeError
+
+        yield Roster
+
+        LegacyRoster.reset_subclass()
+
+    @pytest.fixture(autouse=True, scope="module")
+    def session(self):
+        class Session(BaseSession):
+            def __init__(self, user):
+                super().__init__(user)
+
+            async def login(self, p: Presence):
+                received_presences.append(p)
+
+            async def logout(self, p: Optional[Presence]):
+                received_presences.append(p)
+
+            async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
+                text_received_by_juliet.append((t, c))
+                assert self.user.bare_jid == "romeo@montague.lit"
+                assert self.user.jid == JID("romeo@montague.lit")
+                if c.jid_username != "juliet":
+                    raise XMPPError(text="Not found", condition="item-not-found")
+                else:
+                    c.send_text("I love you")
+                    return 0
+
+            async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+                pass
+
+            async def active(self, c: LegacyContact):
+                pass
+
+            async def inactive(self, c: LegacyContact):
+                pass
+
+            async def composing(self, c: LegacyContact):
+                composing_chat_states_received_by_juliet.append(c)
+
+            async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+                pass
+
+        # self.Session = Session
+        yield Session
+        Session.reset_subclass()
+
     def setUp(self):
+        user_store.add(
+            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+        BaseGateway.reset_subclass()
         self.stream_start(
             mode="component",
             plugins=SLIXMPP_PLUGINS,
@@ -183,15 +200,11 @@ class TestAimShakespeareBase(SlidgeTest):
                 "xep_0100": {"component_name": "AIM Gateway", "type": "aim"}
             },
         )
-        self.shelf_path = Path(tempfile.mkdtemp()) / "test.db"
-        user_store.set_file(self.shelf_path)
-        user_store.add(
-            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
-        )
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
+        BaseGateway.reset_subclass()
         user_store._users = None
-        # slixmpp.test.slixtest.ComponentXMPP = ComponentXMPP
 
     def next_sent(self):
         self.wait_for_send_queue()
@@ -226,8 +239,8 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        assert len(Session.text_received_by_juliet) == 1
-        text, contact = Session.text_received_by_juliet[-1]
+        assert len(text_received_by_juliet) == 1
+        text, contact = text_received_by_juliet[-1]
         assert text == "Art thou not Romeo, and a Montague?"
         assert contact.legacy_id == 123
         m = self.next_sent()
@@ -244,8 +257,8 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        assert len(Session.composing_chat_states_received_by_juliet) == 1
-        assert Session.composing_chat_states_received_by_juliet[0].legacy_id == 123
+        assert len(composing_chat_states_received_by_juliet) == 1
+        assert composing_chat_states_received_by_juliet[0].legacy_id == 123
 
     def test_from_eve_to_juliet(self):
         # just ignore messages from unregistered users
@@ -261,7 +274,7 @@ class TestAimShakespeareBase(SlidgeTest):
         self.send(None)
 
     def test_juliet_sends_text(self):
-        session = Session.from_jid(JID("romeo@montague.lit"))
+        session = BaseSession.get_self_or_unique_subclass().from_jid(JID("romeo@montague.lit"))
         juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         msg = juliet.send_text(body="What what?")
 
@@ -274,7 +287,7 @@ class TestAimShakespeareBase(SlidgeTest):
         assert msg["body"] == "What what?"
 
     def test_unregister(self):
-        assert len(GatewayTest.unregistered) == 0
+        assert len(self.GatewayTest.unregistered) == 0
         self.recv(
             """
             <message type='chat'
@@ -294,8 +307,8 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         # self.send(None)
-        assert len(GatewayTest.unregistered) == 1
-        assert GatewayTest.unregistered[0].jid == "romeo@montague.lit"
+        assert len(self.GatewayTest.unregistered) == 1
+        assert self.GatewayTest.unregistered[0].jid == "romeo@montague.lit"
 
 
 log = logging.getLogger(__name__)

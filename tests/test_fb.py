@@ -2,23 +2,23 @@ import pytest
 
 
 @pytest.fixture
-def Messages():
+def facebook():
     import slidge.plugins.facebook
-    import gc
+    import slidge
 
-    yield slidge.plugins.facebook.Messages
-
-    del slidge.plugins.facebook.Session
-    del slidge.plugins.facebook.Roster
-    del slidge.plugins.facebook.Contact
+    yield slidge.plugins.facebook
 
     # https://stackoverflow.com/a/14422979/5902284
-    gc.collect()
+
+    slidge.BaseGateway.reset_subclass()
+    slidge.BaseSession.reset_subclass()
+    slidge.LegacyRoster.reset_subclass()
+    slidge.LegacyContact.reset_subclass()
 
 
-def test_find_closest_timestamp(Messages):
+def test_find_closest_timestamp(facebook):
     contact_id = 123
-    sent = Messages()
+    sent = facebook.Messages()
     sent.add(contact_id, 2)
     sent.add(contact_id, 5)
     sent.add(contact_id, 10)

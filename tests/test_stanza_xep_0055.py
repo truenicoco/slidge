@@ -9,7 +9,7 @@ from slidge.xep_0055 import stanza
 class TestJabberSearch(SlixTest):
     def setUp(self):
         register_stanza_plugin(Iq, stanza.Search)
-        self.stream_start()
+        self.stream_start(plugins={"xep_0055"})
 
     def testRequestSearchFields(self):
         iq = self.Iq()
@@ -52,7 +52,7 @@ class TestJabberSearch(SlixTest):
               </query>
             </iq>
             """,
-            use_values=False
+            use_values=False,
         )
 
 

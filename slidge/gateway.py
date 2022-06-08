@@ -11,11 +11,11 @@ from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
 
 from .db import user_store, RosterBackend, GatewayUser
-from .util import get_latest_subclass, FormField, SearchResult
+from .util import FormField, SearchResult, ABCSubclassableOnceAtMost
 from .legacy.session import BaseSession
 
 
-class BaseGateway(ComponentXMPP, ABC):
+class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     """
     Class responsible for interacting with the gateway user ((un)registration) and dispatching
     messages from the user (or any slixmpp event) to the appropriate handlers.
@@ -77,7 +77,7 @@ class BaseGateway(ComponentXMPP, ABC):
         )
         self.home_dir = Path(args.home_dir)
 
-        self._session_cls = get_latest_subclass(BaseSession)
+        self._session_cls = BaseSession.get_self_or_unique_subclass()
         self._session_cls.xmpp = self
 
         self.register_plugins()
