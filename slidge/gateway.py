@@ -2,17 +2,16 @@
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
 import logging
-from abc import ABC
 from asyncio import Future
 from pathlib import Path
-from typing import Dict, Iterable, Optional, List
+from typing import Dict, Iterable, Optional, List, Any
 
 from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
 
 from .db import user_store, RosterBackend, GatewayUser
-from .util import FormField, SearchResult, ABCSubclassableOnceAtMost
 from .legacy.session import BaseSession
+from .util import FormField, SearchResult, ABCSubclassableOnceAtMost
 
 
 class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
@@ -76,6 +75,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             },
         )
         self.home_dir = Path(args.home_dir)
+        self._config = args
 
         self._session_cls = BaseSession.get_self_or_unique_subclass()
         self._session_cls.xmpp = self
@@ -109,6 +109,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     def _register_handlers(self):
         self.add_event_handler("session_start", self.on_session_start)
         self.add_event_handler("gateway_message", self.on_gateway_message)
+        self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
         self.add_event_handler("legacy_login", self._legacy_login)
         get_session = self._session_cls.from_stanza
@@ -132,6 +133,26 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.add_event_handler("chatstate_composing", composing)
         self.add_event_handler("chatstate_paused", paused)
         self.add_event_handler("message_correction", correct)
+
+    def _add_commands(self):
+        self["xep_0050"].add_command(
+            node="info", name="Server Information", handler=self._handle_info
+        )
+
+    def _handle_info(self, iq: Iq, session: Dict[str, Any]):
+        if iq.get_from().bare not in self._config.admins:
+            raise XMPPError("not-authorized")
+        form = self["xep_0004"].make_form("result", "Component info")
+        form.add_field(
+            ftype="jid-multi",
+            label="Users",
+            value=[u.bare_jid for u in user_store.get_all()],
+        )
+
+        session["payload"] = form
+        session["has_next"] = False
+
+        return session
 
     async def _validate_form(self, ifrom, form_dict):
         for field in self.REGISTRATION_FIELDS:
@@ -170,6 +191,12 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
     async def _on_user_unregister(self, iq: Iq):
         await self._session_cls.kill_by_jid(iq.get_from())
+
+    async def _on_user_register(self, iq: Iq):
+        for jid in self._config.admins:
+            self.send_message(
+                mto=jid, mbody=f"{iq.get_from()} has registered", mtype="headline"
+            )
 
     async def _search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         user = user_store.get_by_jid(ifrom)
@@ -244,6 +271,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         for user in user_store.get_all():
             # We need to see which registered users are online, this will trigger legacy_login in return
             self["xep_0100"].send_presence(ptype="probe", pto=user.jid)
+        self._add_commands()
         log.info("Slidge has successfully started")
 
     def shutdown(self):

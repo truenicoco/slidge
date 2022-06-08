@@ -63,6 +63,12 @@ def get_parser():
         help="Shelve file used to store persistent user data. "
         "Defaults to /var/lib/slidge/${SLIDGE_JID}",
     )
+    p.add(
+        "--admins",
+        env_var="SLIDGE_ADMINS",
+        nargs="*",
+        help="JID of the gateway admins",
+    )
     p.add_argument(
         "-q",
         "--quiet",

@@ -17,6 +17,7 @@ services:
       - --legacy-module=slidge.plugins.dummy
       - --server=localhost
       - --jid=dummy.localhost
+      - --admins=test@localhost
       - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
@@ -33,6 +34,7 @@ services:
       - --legacy-module=slidge.plugins.telegram
       - --server=localhost
       - --jid=telegram.localhost
+      - --admins=test@localhost
       - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
@@ -49,6 +51,7 @@ services:
       - --legacy-module=slidge.plugins.signal
       - --server=localhost
       - --jid=signal.localhost
+      - --admins=test@localhost
       - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
@@ -67,6 +70,7 @@ services:
       - --legacy-module=slidge.plugins.facebook
       - --server=localhost
       - --jid=facebook.localhost
+      - --admins=test@localhost
       - --debug
     volumes:
       - ./slidge:/slidge/slidge
@@ -75,22 +79,7 @@ services:
       - prosody
     network_mode: "service:prosody"
 
-  slidge-mattermost:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --legacy-module=slidge.plugins.mattermost
-      - --server=localhost
-      - --jid=mattermost.localhost
-    volumes:
-      - ./slidge:/slidge/slidge
-      - ./persistent/slidge/mattermost:/var/lib/slidge
-    depends_on:
-      - prosody
-    network_mode: "service:prosody"
-
   signald:
-    image: signald/signald:latest
+    image: signald/signald:0.19.1
     volumes:
       - ./persistent/signald:/signald

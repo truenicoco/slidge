@@ -421,7 +421,9 @@ class LegacyRoster(Generic[LegacyContactType], metaclass=SubclassableOnce):
     """
 
     def __init__(self, session: "BaseSession"):
-        self._contact_cls: Type[LegacyContactType] = LegacyContact.get_self_or_unique_subclass()
+        self._contact_cls: Type[
+            LegacyContactType
+        ] = LegacyContact.get_self_or_unique_subclass()
         self._contact_cls.xmpp = session.xmpp
 
         self.session = session
