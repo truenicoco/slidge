@@ -67,7 +67,14 @@ def get_parser():
         "--admins",
         env_var="SLIDGE_ADMINS",
         nargs="*",
-        help="JID of the gateway admins",
+        help="JIDs of the gateway admins",
+    )
+    p.add(
+        "--user-jid-validator",
+        env_var="SLIDGE_RESTRICT",
+        help="Regular expression to restrict user that can register to the gateway by JID. "
+        "Defaults to .*@${SLIDGE_SERVER}, forbidden the gateway to JIDs "
+        "not using the same XMPP server as the gateway",
     )
     p.add_argument(
         "-q",
@@ -102,6 +109,9 @@ def main():
         if not args.home_dir.exists():
             logging.info("Making directory '%s'", args.home_dir)
             args.home_dir.mkdir()
+
+    if args.user_jid_validator is None:
+        args.user_jid_validator = ".*@" + args.server
 
     db_file = Path(args.home_dir) / "slidge.db"
     user_store.set_file(db_file)

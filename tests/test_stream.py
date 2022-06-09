@@ -8,8 +8,8 @@ from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.test import SlixTest, TestTransport
 
-from slidge.gateway import SLIXMPP_PLUGINS
 from slidge import *
+from slidge.gateway import SLIXMPP_PLUGINS
 
 
 class SlidgeTest(SlixTest):
@@ -65,6 +65,7 @@ class SlidgeTest(SlixTest):
                 C.port = port
                 C.upload_service = "upload.test"
                 C.home_dir = Path(tempfile.mkdtemp())
+                C.user_jid_validator = ".*@shakespeare.lit"
                 super().__init__(C)
 
             def unregister(self, user: GatewayUser):
@@ -274,7 +275,9 @@ class TestAimShakespeareBase(SlidgeTest):
         self.send(None)
 
     def test_juliet_sends_text(self):
-        session = BaseSession.get_self_or_unique_subclass().from_jid(JID("romeo@montague.lit"))
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
         juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         msg = juliet.send_text(body="What what?")
 
@@ -309,6 +312,28 @@ class TestAimShakespeareBase(SlidgeTest):
         # self.send(None)
         assert len(self.GatewayTest.unregistered) == 1
         assert self.GatewayTest.unregistered[0].jid == "romeo@montague.lit"
+
+    def test_jid_validator(self):
+        self.recv(
+            """
+            <iq from='eve@nothingshakespearian' type='get' to='aim.shakespeare.lit'>
+              <query xmlns='jabber:iq:register'>
+              </query>
+            </iq>
+            """
+        )
+        assert self.next_sent()["error"]["condition"] == "not-allowed"
+        self.recv(
+            """
+            <iq from='eve@nothingshakespearian' type='set' to='aim.shakespeare.lit'>
+              <query xmlns='jabber:iq:register'>
+                <username>bill</username>
+                <password>Calliope</password>
+               </query>
+            </iq>
+            """
+        )
+        assert self.next_sent()["error"]["condition"] == "not-allowed"
 
 
 log = logging.getLogger(__name__)

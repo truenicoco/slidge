@@ -2,6 +2,7 @@
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
 import logging
+import re
 from asyncio import Future
 from pathlib import Path
 from typing import Dict, Iterable, Optional, List, Any
@@ -75,6 +76,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             },
         )
         self.home_dir = Path(args.home_dir)
+        self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
 
         self._session_cls = BaseSession.get_self_or_unique_subclass()
@@ -165,6 +167,8 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
     ):
         log.debug("User validate: %s", ifrom.bare)
+        if not self._jid_validator.match(ifrom.bare):
+            raise XMPPError(condition="not-allowed")
         await self._validate_form(ifrom, form_dict)
         log.info("New user: %s", ifrom.bare)
         user_store.add(ifrom, form_dict)
@@ -283,6 +287,9 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             self["xep_0100"].send_presence(ptype="unavailable", pto=user.jid)
 
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
+        if not self._jid_validator.match(iq.get_from().bare):
+            raise XMPPError(condition="not-allowed")
+
         reg = iq["register"]
         user = user_store.get_by_stanza(iq)
         log.debug("User found: %s", user)
