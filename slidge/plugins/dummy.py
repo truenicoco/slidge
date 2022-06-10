@@ -46,6 +46,9 @@ class Session(BaseSession):
 
     async def login(self, p: Presence):
         log.debug("Logging in user: %s", p)
+        self.send_gateway_status("Connecting...", show="dnd")
+        await asyncio.sleep(1)
+        self.send_gateway_status("Connected")
         for b, a in zip(BUDDIES, AVATARS):
             c = self.contacts.by_legacy_id(b.lower())
             c.name = b.title()

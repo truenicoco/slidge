@@ -1,6 +1,5 @@
 import logging
-from abc import ABC
-from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING, Generic
+from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING, Generic, Literal
 
 from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
@@ -256,6 +255,25 @@ class BaseSession(
 
     async def search(self, form_values: Dict[str, str]):
         raise NotImplementedError
+
+    def send_gateway_status(
+        self,
+        status: Optional[str] = None,
+        show=Optional[Literal["away", "chat", "dnd", "xa"]],
+        **kwargs
+    ):
+        """
+        Send a presence from the gateway to the user.
+
+        Can be used to indicate the user session status, ie "SMS code required", "connected", …
+
+        :param status: A status message
+        :param show: Presence stanza 'show' element. I suggest using "dnd" to show
+            that the gateway is not fully functional
+        """
+        self.xmpp.send_presence(
+            pto=self.user.bare_jid, pstatus=status, pshow=show, **kwargs
+        )
 
 
 _sessions: Dict[GatewayUser, BaseSession] = {}
