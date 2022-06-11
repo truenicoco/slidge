@@ -1,7 +1,9 @@
 from abc import ABCMeta
 import dataclasses
 import logging
-from typing import Literal, Optional, Iterable, Dict
+from typing import Literal, Optional, Iterable, Dict, List
+
+field_type = Literal["boolean", "fixed", "text-single", "jid-single", "list-single", "list-multi"]
 
 
 @dataclasses.dataclass
@@ -11,7 +13,7 @@ class FormField:
     via their XMPP client.
     """
 
-    var: str
+    var: str = ""
     """
     Internal name of the field, will be used to retrieve via :py:attr:`slidge.GatewayUser.registration_form`
     """
@@ -21,10 +23,11 @@ class FormField:
     """Whether this field is mandatory or not"""
     private: bool = False
     """For sensitive info that should not be displayed on screen while the user types."""
-    type: Literal["boolean", "fixed", "text-single", "jid-single"] = "text-single"
+    type: field_type = "text-single"
     """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
     """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
+    options: Optional[List[Dict[str, str]]] = None
 
     def dict(self):
         return dataclasses.asdict(self)

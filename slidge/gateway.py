@@ -332,6 +332,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
                 label=field.label,
                 required=field.required,
                 ftype=field.type,
+                options=field.options,
                 value=field.value if user is None else user.get(field.var, field.value),
             )
 
