@@ -3,12 +3,15 @@ This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easi
 """
 import logging
 import re
+import tempfile
 from asyncio import Future
 from pathlib import Path
 from typing import Dict, Iterable, Optional, List, Any
 
+import qrcode
 from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
+from slixmpp.types import MessageTypes
 
 from .db import user_store, RosterBackend, GatewayUser
 from .legacy.session import BaseSession
@@ -358,20 +361,36 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         else:
             f.set_result(msg["body"])
 
-    async def input(self, user: GatewayUser, text=None):
+    async def input(
+        self, user: GatewayUser, text=None, mtype: MessageTypes = "chat", **msg_kwargs
+    ):
         """
         Request arbitrary user input using simple message stanzas, and await the result.
 
         :param user: The (registered) user we want input from
         :param text: A prompt to display for the user
+        :param mtype:
         :return:
         """
         if text is not None:
-            self.send_message(mto=user.jid, mbody=text, mtype="chat")
+            self.send_message(mto=user.jid, mbody=text, mtype=mtype, **msg_kwargs)
         f = self.loop.create_future()
         self._input_futures[user.bare_jid] = f
         await f
         return f.result()
+
+    async def send_file(self, filename: str, **msg_kwargs):
+        url = await self["xep_0363"].upload_file(filename=filename)
+        msg = self.make_message(**msg_kwargs)
+        msg["oob"]["url"] = url
+        msg["body"] = url
+        msg.send()
+
+    async def send_qr(self, text: str, **msg_kwargs):
+        qr = qrcode.make(text)
+        with tempfile.NamedTemporaryFile(suffix=".png") as f:
+            qr.save(f.name)
+            await self.send_file(f.name, **msg_kwargs)
 
 
 SLIXMPP_PLUGINS = [

@@ -275,6 +275,15 @@ class BaseSession(
             pto=self.user.bare_jid, pstatus=status, pshow=show, **kwargs
         )
 
+    def send_gateway_message(self, text, **msg_kwargs):
+        self.xmpp.send_message(mto=self.user.jid, mbody=text, **msg_kwargs)
+
+    async def input(self, text: str, **msg_kwargs):
+        return await self.xmpp.input(self.user, text, **msg_kwargs)
+
+    async def send_qr(self, text: str):
+        await self.xmpp.send_qr(text, mto=self.user.jid)
+
 
 _sessions: Dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)
