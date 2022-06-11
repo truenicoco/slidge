@@ -10,20 +10,21 @@ from typing import Dict, Optional, Hashable, List, Any
 from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
-from pysignald_async import SignaldAPI, SignaldException
-import pysignald_async.generated as sigapi
+from aiosignald import SignaldAPI
+import aiosignald.generated as sigapi
+import aiosignald.exc as sigexc
 
 from slidge import *
 from slidge.legacy.contact import LegacyContactType
 
+from . import txt
+
 
 class Gateway(BaseGateway):
-    COMPONENT_NAME = "Signal"
+    COMPONENT_NAME = "Signal (slidge)"
     COMPONENT_TYPE = "signal"
-    REGISTRATION_INSTRUCTIONS = "Enter your phone number, starting with +"
-    REGISTRATION_FIELDS = [
-        FormField(var="phone", label="Phone number (ex: +123456789)", required=True)
-    ]
+    REGISTRATION_INSTRUCTIONS = txt.REGISTRATION_INSTRUCTIONS
+    REGISTRATION_FIELDS = txt.REGISTRATION_FIELDS
 
     ROSTER_GROUP = "Signal"
 
@@ -65,7 +66,7 @@ class Gateway(BaseGateway):
 
         try:
             await signal.add_device(account=session.phone, uri=uri)
-        except SignaldException as e:
+        except sigexc.SignaldException as e:
             self.send_message(mto=user.jid, mbody=f"Problem: {e}", mtype="chat")
         else:
             self.send_message(mto=user.jid, mbody=f"Linking OK", mtype="chat")
@@ -78,12 +79,20 @@ class Gateway(BaseGateway):
                     "not-allowed",
                     text="Someone is already using this phone number on this server.\n",
                 )
+        if registration_form["device"] == "primary" and not registration_form["name"]:
+            raise ValueError(txt.NAME_REQUIRED)
 
     async def unregister(self, user: GatewayUser):
-        answer = await signal.delete_account(
-            account=user.registration_form.get("phone"), server=False
-        )
-        log.info("Removed user: %s", answer)
+        try:
+            await signal.delete_account(
+                account=user.registration_form.get("phone"), server=False
+            )
+        except sigexc.NoSuchAccountError:
+            # if user unregisters before completing the registration process,
+            # NoSuchAccountError is raised by signald
+            pass
+
+        log.info("Removed user: %s", user)
 
 
 # noinspection PyPep8Naming
@@ -117,7 +126,7 @@ class Signal(SignaldAPI):
         Can be a lot of other things than an actual message, still need to figure
         things out to cover all cases.
 
-        :param msg:
+        :param msg: the data!
         :param _payload:
         """
         session = Signal.sessions_by_phone[msg.account]
@@ -252,65 +261,87 @@ class Session(BaseSession):
     async def login(self, p: Presence = None):
         """
         Attempt to listen to incoming events for this account,
-        and offer to pursue the registration process
-        if this is not automatically possible.
+        or pursue the registration process if needed.
         """
+        self.send_gateway_status("Connecting...", show="dnd")
         try:
             await signal.subscribe(account=self.phone)
-        except SignaldException as e:
-            log.exception(e)
-            await self.link_or_register()
-        else:
-            self.logged = True
-            await self.add_contacts_to_roster()
+        except sigexc.NoSuchAccountError:
+            device = self.user.registration_form["device"]
+            try:
+                if device == "primary":
+                    await self.register()
+                elif device == "secondary":
+                    await self.link()
+                else:
+                    # This should never happen
+                    self.send_gateway_status("Disconnected", show="dnd")
+                    raise TypeError("Unknown device type", device)
+            except sigexc.SignaldException as e:
+                self.xmpp.send_message(
+                    mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                )
+                raise
+            await signal.subscribe(account=self.phone)
+
+        self.send_gateway_status(f"Connected as {self.phone}")
+        await self.add_contacts_to_roster()
+
+    async def register(self):
+        self.send_gateway_status("Registering…", show="dnd")
+        try:
+            await signal.register(self.phone)
+        except sigexc.CaptchaRequiredError:
+            self.send_gateway_status("Captcha required", show="dnd")
+            captcha = await self.xmpp.input(self.user, txt.CAPTCHA_REQUIRED)
+            await signal.register(self.phone, captcha=captcha)
+        sms_code = await self.xmpp.input(
+            self.user,
+            f"Reply to this message with the SMS code you have received at {self.phone}.",
+        )
+        await signal.verify(account=self.phone, code=sms_code)
+        await signal.set_profile(
+            account=self.phone, name=self.user.registration_form["name"]
+        )
+
+    async def send_linking_qrcode(self):
+        self.send_gateway_status("QR scan needed", show="dnd")
+        resp = await signal.generate_linking_uri()
+        await self.send_qr(resp.uri)
+        self.xmpp.send_message(
+            mto=self.user.jid,
+            mbody=f"Use this URI or QR code on another signal device to "
+            f"finish linking your XMPP account\n{resp.uri}",
+        )
+        return resp
+
+    async def link(self):
+        resp = await self.send_linking_qrcode()
+        try:
+            await signal.finish_link(
+                device_name=self.user.registration_form["device_name"],
+                session_id=resp.session_id,
+            )
+        except sigexc.ScanTimeoutError:
+            while True:
+                r = await self.input(txt.LINK_TIMEOUT)
+                if r in ("cancel", "link"):
+                    break
+                else:
+                    self.send_gateway_message("Please reply either 'link' or 'cancel'")
+            if r == "cancel":
+                raise
+            elif r == "link":
+                await self.link()  # TODO: set a max number of attempts
+        except sigexc.SignaldException as e:
+            self.xmpp.send_message(
+                mto=self.user.jid,
+                mbody=f"Something went wrong during the linking process: {e}.",
+            )
+            raise
 
     async def logout(self, p: Optional[Presence]):
         pass
-
-    async def link_or_register(self):
-        """
-        Finish the registration (or linking) process, using direct messages from the gateway to the user
-        """
-        while True:
-            choice = await self.xmpp.input(self.user, "[link] or [register]?")
-            if choice == "link":
-                uri = await signal.generate_linking_uri()
-                self.xmpp.send_message(mto=self.user.jid, mbody=f"{uri.uri}")
-                try:
-                    await signal.finish_link(
-                        device_name="slidge", session_id=uri.session_id
-                    )
-                    await self.login()
-                    break
-                except SignaldException as e:
-                    self.xmpp.send_message(
-                        mto=self.user.jid, mbody=f"Something went wrong: {e}"
-                    )
-            elif choice == "register":
-                try:
-                    await signal.register(self.phone)
-                except SignaldException as e:
-                    if e.type == "CaptchaRequiredError":
-                        captcha = await self.xmpp.input(
-                            self.user,
-                            "1.Go to https://signalcaptchas.org/registration/generate.html\n"
-                            "2.Copy after signalcaptcha://",
-                        )
-                        try:
-                            await signal.register(self.phone, captcha=captcha)
-                        except SignaldException as e:
-                            self.xmpp.send_message(
-                                mto=self.user.jid, mbody=f"Something went wrong: {e}"
-                            )
-                            return
-                sms_code = await self.xmpp.input(self.user, "Enter the SMS code")
-                await signal.verify(account=self.phone, code=sms_code)
-                name = await self.xmpp.input(self.user, "Enter your name")
-                await signal.set_profile(account=self.phone, name=name)
-                await self.login()
-                break
-            else:
-                raise XMPPError(text="Please choose between [link] and [register]")
 
     async def add_contacts_to_roster(self):
         """
