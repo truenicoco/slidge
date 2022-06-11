@@ -97,7 +97,9 @@ class Session(BaseSession):
             raise NotImplementedError
 
     async def login(self, p: Presence):
+        self.send_gateway_status("Connecting", show="dnd")
         async with self.tg as tg:
+            self.send_gateway_status(f"Connected as {self.tg.get_my_id()}")
             await self.add_contacts_to_roster()
             await tg.idle()
 
@@ -236,6 +238,7 @@ class TelegramClient(aiotdlib.Client):
         self.session = session
 
         async def input_(prompt):
+            self.session.send_gateway_status(f"Action required: {prompt}")
             return await xmpp.input(session.user, prompt)
 
         self.input = input_

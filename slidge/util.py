@@ -3,7 +3,9 @@ import dataclasses
 import logging
 from typing import Literal, Optional, Iterable, Dict, List
 
-field_type = Literal["boolean", "fixed", "text-single", "jid-single", "list-single", "list-multi"]
+field_type = Literal[
+    "boolean", "fixed", "text-single", "jid-single", "list-single", "list-multi"
+]
 
 
 @dataclasses.dataclass
