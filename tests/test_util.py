@@ -1,9 +1,8 @@
-from abc import ABC
-
 from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost
 
 
 def test_subclass():
+    SubclassableOnce.TEST_MODE = False
     # fmt: off
     class A(metaclass=SubclassableOnce): pass
     assert A.get_self_or_unique_subclass() is A
@@ -27,3 +26,4 @@ def test_subclass():
     class D(metaclass=ABCSubclassableOnceAtMost): pass
 
     # fmt: on
+    SubclassableOnce.TEST_MODE = True

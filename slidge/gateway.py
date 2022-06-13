@@ -82,7 +82,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
 
-        self._session_cls = BaseSession.get_self_or_unique_subclass()
+        self._session_cls = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
 
         self.register_plugins()

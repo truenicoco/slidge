@@ -79,7 +79,9 @@ class Gateway(BaseGateway):
                     "not-allowed",
                     text="Someone is already using this phone number on this server.\n",
                 )
-        if registration_form["device"] == "primary" and not registration_form["name"]:
+        if registration_form.get("device") == "primary" and not registration_form.get(
+            "name"
+        ):
             raise ValueError(txt.NAME_REQUIRED)
 
     async def unregister(self, user: GatewayUser):

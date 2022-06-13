@@ -56,10 +56,12 @@ class SearchResult:
 
 
 class SubclassableOnce(type):
+    TEST_MODE = False  # To allow importing everything, including plugins, during tests
+
     def __init__(cls, name, bases, dct):
         for b in bases:
             if type(b) in (SubclassableOnce, ABCSubclassableOnceAtMost):
-                if hasattr(b, "_subclass"):
+                if hasattr(b, "_subclass") and not cls.TEST_MODE:
                     raise RuntimeError(
                         "This class must be subclassed once at most!",
                         cls,
@@ -74,8 +76,15 @@ class SubclassableOnce(type):
         super().__init__(name, bases, dct)
 
     def get_self_or_unique_subclass(cls):
-        r = getattr(cls, "_subclass", cls)
-        log.debug("Returning %s for %s", r, cls)
+        try:
+            return cls.get_unique_subclass()
+        except AttributeError:
+            return cls
+
+    def get_unique_subclass(cls):
+        r = getattr(cls, "_subclass", None)
+        if r is None:
+            raise AttributeError("Could not find any subclass", cls)
         return r
 
     def reset_subclass(cls):

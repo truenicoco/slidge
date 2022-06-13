@@ -116,8 +116,8 @@ def main():
     db_file = Path(args.home_dir) / "slidge.db"
     user_store.set_file(db_file)
 
-    module = importlib.import_module(args.legacy_module)
-    gateway: BaseGateway = module.Gateway(args)
+    importlib.import_module(args.legacy_module)
+    gateway = BaseGateway.get_unique_subclass()(args)
     gateway.config(argv)
     gateway.connect()
 
