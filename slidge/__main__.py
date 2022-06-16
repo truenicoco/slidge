@@ -18,17 +18,23 @@ def get_parser():
         default_config_files=["/etc/slidge/conf.d/*.conf"], description=__doc__
     )
     p.add(
+        "-c",
+        "--config",
+        help="Path to a INI config file.",
+        env_var="SLIDGE_CONFIG",
+        is_config_file=True,
+    )
+    p.add(
         "--legacy-module",
         help="Importable python module containing (at least) "
         "a BaseGateway and a LegacySession subclass",
         env_var="SLIDGE_LEGACY_MODULE",
     )
-    p.add("-c", "--configuration", help="Path to a INI file", env_var="SLIDGE_CONFIG")
     p.add(
         "-s",
         "--server",
         env_var="SLIDGE_SERVER",
-        default="localhost",
+        required=True,
         help="The XMPP server's host name.",
     )
     p.add(
@@ -40,14 +46,14 @@ def get_parser():
     )
     p.add(
         "--secret",
-        default="secret",
+        required=True,
         env_var="SLIDGE_SECRET",
         help="The gateway component's secret (required to connect to the XMPP server)",
     )
     p.add(
         "-j",
         "--jid",
-        default="slidge.localhost",
+        required=True,
         env_var="SLIDGE_JID",
         help="The gateway component's JID",
     )
@@ -73,7 +79,7 @@ def get_parser():
         "--user-jid-validator",
         env_var="SLIDGE_RESTRICT",
         help="Regular expression to restrict user that can register to the gateway by JID. "
-        "Defaults to .*@${SLIDGE_SERVER}, forbidden the gateway to JIDs "
+        "Defaults to .*@${SLIDGE_SERVER}, forbids the gateway to JIDs "
         "not using the same XMPP server as the gateway",
     )
     p.add_argument(
@@ -84,6 +90,7 @@ def get_parser():
         dest="loglevel",
         const=logging.WARNING,
         default=logging.INFO,
+        env_var="SLIDGE_QUIET",
     )
     p.add_argument(
         "-d",
@@ -92,6 +99,7 @@ def get_parser():
         action="store_const",
         dest="loglevel",
         const=logging.DEBUG,
+        env_var="SLIDGE_DEBUG",
     )
 
     return p

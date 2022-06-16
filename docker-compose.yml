@@ -14,14 +14,13 @@ services:
       context: .
       target: slidge-dev
     command:
+      - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.dummy
-      - --server=localhost
       - --jid=dummy.localhost
-      - --admins=test@localhost
-      - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: "service:prosody"
@@ -31,14 +30,13 @@ services:
       context: .
       target: slidge-dev
     command:
+      - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.telegram
-      - --server=localhost
       - --jid=telegram.localhost
-      - --admins=test@localhost
-      - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: "service:prosody"
@@ -48,15 +46,14 @@ services:
       context: .
       target: slidge-dev
     command:
+      - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.signal
-      - --server=localhost
       - --jid=signal.localhost
-      - --admins=test@localhost
-      - --debug
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/signald:/signald
+      - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
       - signald
@@ -67,14 +64,13 @@ services:
       context: .
       target: slidge-dev
     command:
+      - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.facebook
-      - --server=localhost
       - --jid=facebook.localhost
-      - --admins=test@localhost
-      - --debug
     volumes:
       - ./slidge:/slidge/slidge
       - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: "service:prosody"
