@@ -9,7 +9,7 @@ Configure the XMPP server
 To keep this guide generic, we'll talk about running the slidge plugin
 ``superduper`` that connects to the fictional legacy network "Super Duper Chat Network".
 
-Slidge requires a running and configure XMPP server running and accepting
+Slidge requires a running and properly configured XMPP server running and accepting
 component connections.
 
 Prosody
@@ -149,6 +149,16 @@ Enable lingering for this user so that its systemd user services start on startu
 
     loginctl enable-linger $(id -u slidge)
 
+Create slidge conf files, to avoid passing everything as CLI arguments (as root):
+
+.. code-block:: bash
+
+    mkdir -p /etc/slidge/conf.d/
+    echo "admins=admin@example.com" > /etc/slidge/conf.d/common.conf
+    echo "jid=superduper.example.com" > /etc/slidge/conf.d/superduper.conf
+    echo "secret=a_real_secret" >> /etc/slidge/conf.d/superduper.conf
+
+
 Temporarily login as the system user (as root):
 
 .. code-block:: bash
@@ -160,12 +170,14 @@ Create the podman container (as the slidge user):
 .. code-block:: bash
 
     podman run --rm --detach \
-       --name superduper \
-       --volume /var/lib/slidge:/var/lib/slidge \
-       --network=host \
+       --name superduper \                          # friendly name of the conainter
+       --volume /var/lib/slidge:/var/lib/slidge \   # persistent data
+       --volume /etc/slidge:/etc/slidge \           # config files
+       --log-driver journald \                      # logs in journalctl
+       --label "io.containers.autoupdate=image" \   # auto-update via podman dedicated mechanism
+       --network=host \                             # make localhost available
        docker.io/nicocool84/slidge-superduper:latest \
-       --secret=secret \
-       --jid=superduper.example.com
+       --config=/etc/slidge/superduper.conf         # specific config file for this gateway
 
 Create, launch and enable automatic launch of the container as a systemd service (as the slidge user):
 
@@ -176,11 +188,6 @@ Create, launch and enable automatic launch of the container as a systemd service
     systemctl --user daemon-reload
     systemctl --user enable --now superduper
 
-.. warning::
-    Passing secrets via CLI args is not the most secure way to do it. It is OK
-    if your XMPP server only listens to localhost for component connections (which is
-    prosody's default behaviour); but using a configuration file and/or the ``SLIDGE_SECRET``
-    environment variable (passed to the container via an env file) is recommended.
 
 Configuration
 =============
