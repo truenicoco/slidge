@@ -12,9 +12,12 @@ from slixmpp import JID, Presence
 from slidge import *
 from slidge.legacy.contact import LegacyContactType
 
+ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
+
 
 class Gateway(BaseGateway):
     COMPONENT_NAME = "The great legacy network (slidge)"
+    COMPONENT_AVATAR = ASSETS_DIR / "gateway.png"
     REGISTRATION_INSTRUCTIONS = (
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."
@@ -108,8 +111,6 @@ class Session(BaseSession):
                 items=[{"first": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
             )
 
-
-ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
 BUDDIES = ["baba", "bibi"]
 AVATARS = []

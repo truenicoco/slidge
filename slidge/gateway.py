@@ -1,6 +1,7 @@
 """
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
+import hashlib
 import logging
 import re
 import tempfile
@@ -8,6 +9,7 @@ from asyncio import Future
 from pathlib import Path
 from typing import Dict, Iterable, Optional, List, Any
 
+import aiohttp
 import qrcode
 from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
@@ -16,6 +18,7 @@ from slixmpp.types import MessageTypes
 from .db import user_store, RosterBackend, GatewayUser
 from .legacy.session import BaseSession
 from .util import FormField, SearchResult, ABCSubclassableOnceAtMost
+from .types import AvatarType
 
 
 class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
@@ -38,6 +41,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     """Name of the component, as seen in service discovery"""
     COMPONENT_TYPE: Optional[str] = ""
     """Type of the gateway, should ideally follow https://xmpp.org/registrar/disco-categories.html"""
+    COMPONENT_AVATAR: Optional[AvatarType] = None
 
     ROSTER_GROUP: str = "slidge"
 
@@ -279,7 +283,34 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             # We need to see which registered users are online, this will trigger legacy_login in return
             self["xep_0100"].send_presence(ptype="probe", pto=user.jid)
         self._add_commands()
+        await self.make_vcard(self.boundjid.bare, self.COMPONENT_AVATAR)
         log.info("Slidge has successfully started")
+
+    async def make_vcard(self, jid: JID, avatar: bytes):
+        """
+        Configure slixmpp to correctly set this contact's vcard (in fact only its avatar ATM)
+        """
+        vcard = self["xep_0054"].make_vcard()
+        if avatar is not None:
+            if isinstance(avatar, bytes):
+                avatar_bytes = avatar
+            elif isinstance(avatar, Path):
+                with avatar.open("rb") as f:
+                    avatar_bytes = f.read()
+            elif isinstance(avatar, str):
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(avatar) as response:
+                        avatar_bytes = await response.read()
+            else:
+                raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
+            vcard["PHOTO"]["BINVAL"] = avatar_bytes
+            await self["xep_0153"].api["set_hash"](
+                jid=jid, args=hashlib.sha1(avatar_bytes).hexdigest()
+            )
+        await self["xep_0054"].api["set_vcard"](
+            jid=jid,
+            args=vcard,
+        )
 
     def shutdown(self):
         log.debug("Shutting down")

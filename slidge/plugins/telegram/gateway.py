@@ -39,6 +39,7 @@ class Gateway(BaseGateway):
     ROSTER_GROUP = "Telegram"
     COMPONENT_NAME = "Telegram (slidge)"
     COMPONENT_TYPE = "telegram"
+    COMPONENT_AVATAR = "https://web.telegram.org/img/logo_share.png"
 
     SEARCH_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),

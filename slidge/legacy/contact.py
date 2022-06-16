@@ -17,6 +17,7 @@ from typing import (
 
 from slixmpp import JID, Iq, Message
 
+from ..types import AvatarType
 from ..util import SubclassableOnce
 
 if TYPE_CHECKING:
@@ -62,7 +63,7 @@ class LegacyContact(metaclass=SubclassableOnce):
         self.jid_username = jid_username
 
         self._name: Optional[str] = None
-        self._avatar: Optional[bytes] = None
+        self._avatar: Optional[AvatarType] = None
 
         self.xmpp = session.xmpp
         self.xmpp.loop.create_task(self.make_caps())
@@ -99,7 +100,7 @@ class LegacyContact(metaclass=SubclassableOnce):
         return self._avatar
 
     @avatar.setter
-    def avatar(self, a: bytes):
+    def avatar(self, a: Optional[AvatarType]):
         self._avatar = a
         self.xmpp.loop.create_task(self.make_vcard())
 
@@ -131,16 +132,7 @@ class LegacyContact(metaclass=SubclassableOnce):
         """
         Configure slixmpp to correctly set this contact's vcard (in fact only its avatar ATM)
         """
-        vcard = self.xmpp["xep_0054"].make_vcard()
-        if self.avatar is not None:
-            vcard["PHOTO"]["BINVAL"] = self.avatar
-            await self.xmpp["xep_0153"].api["set_hash"](
-                jid=self.jid, args=hashlib.sha1(self.avatar).hexdigest()
-            )
-        await self.xmpp["xep_0054"].api["set_vcard"](
-            jid=self.jid,
-            args=vcard,
-        )
+        await self.xmpp.make_vcard(jid=self.jid, avatar=self.avatar)
 
     async def add_to_roster(self):
         """

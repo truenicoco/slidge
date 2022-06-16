@@ -29,6 +29,7 @@ class Gateway(BaseGateway):
 
     COMPONENT_NAME = "Facebook (slidge)"
     COMPONENT_TYPE = "facebook"
+    COMPONENT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         pass

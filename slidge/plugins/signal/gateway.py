@@ -23,6 +23,9 @@ from . import txt
 class Gateway(BaseGateway):
     COMPONENT_NAME = "Signal (slidge)"
     COMPONENT_TYPE = "signal"
+    COMPONENT_AVATAR = (
+        "https://upload.wikimedia.org/wikipedia/commons/5/56/Logo_Signal..png"
+    )
     REGISTRATION_INSTRUCTIONS = txt.REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = txt.REGISTRATION_FIELDS
 
