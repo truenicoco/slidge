@@ -1,4 +1,4 @@
-FROM debian:stable AS prosody
+FROM docker.io/library/debian:stable AS prosody
 
 RUN --mount=type=cache,id=slidge-apt-prosody,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
@@ -23,7 +23,7 @@ FROM prosody AS prosody-dev
 
 RUN prosodyctl register test localhost password
 
-FROM python:3.9-bullseye AS poetry
+FROM docker.io/library/python:3.9-slim AS poetry
 
 RUN --mount=type=cache,id=slidge-poetry,target=/root/.cache/pip \
     pip install "poetry==1.1.13" wheel
@@ -32,7 +32,7 @@ FROM poetry AS builder
 
 RUN --mount=type=cache,id=slidge-apt-builder,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
-    apt install libidn11-dev python3-dev -y && \
+    apt install libidn11-dev python3-dev gcc -y && \
     rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /venv/
@@ -55,7 +55,7 @@ RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
 RUN pip uninstall cython -y
 RUN test -f /venv/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-x86_64-linux-gnu.so
 
-FROM python:3.9-slim AS slidge-base
+FROM docker.io/library/python:3.9-slim AS slidge-base
 
 RUN --mount=type=cache,id=slidge-apt-base,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
@@ -73,20 +73,20 @@ STOPSIGNAL SIGINT
 FROM poetry AS builder-tdlib
 
 RUN --mount=type=cache,id=slidge-apt-tdlib,target=/var/cache/apt \
-    apt update && apt install git -y
+    apt update && apt install wget -y
 WORKDIR /
-RUN git clone https://github.com/pylakey/aiotdlib.git
-WORKDIR /aiotdlib
-RUN git checkout tags/0.18.0
+RUN wget https://github.com/pylakey/aiotdlib/archive/refs/tags/0.18.0.tar.gz
+RUN tar xf 0.18.0.tar.gz
+WORKDIR /aiotdlib-0.18.0
 RUN poetry install
 RUN poetry run aiotdlib_generator
-RUN poetry build
+RUN poetry build -f wheel
 
 COPY --from=builder /venv /venv
 ENV PATH /venv/bin:$PATH
 
 RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
-    pip install /aiotdlib/dist/*.whl
+    pip install /aiotdlib-0.18.0/dist/*.whl
 
 COPY --from=builder /slidge/requirements-telegram.txt /r.txt
 RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
