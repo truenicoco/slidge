@@ -4,6 +4,7 @@ from . import xep_0100
 from . import xep_0115
 from . import xep_0333
 from . import xep_0356
+from . import xep_0363
 
 import slixmpp.plugins
 

@@ -61,7 +61,7 @@ def get_parser():
         "--upload-service",
         env_var="SLIDGE_UPLOAD",
         help="JID of an HTTP upload service the gateway can use. "
-        "Defaults to 'upload.${SLIDGE_SERVER}'",
+        "This is optional, as it should be automatically determined via service discovery",
     )
     p.add(
         "--home-dir",
@@ -108,9 +108,6 @@ def get_parser():
 def main():
     args, argv = get_parser().parse_known_args()
     logging.basicConfig(level=args.loglevel)
-
-    if args.upload_service is None:
-        args.upload_service = "upload." + args.server
 
     if args.home_dir is None:
         args.home_dir = Path("/var/lib/slidge") / args.jid

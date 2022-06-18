@@ -10,7 +10,8 @@ To keep this guide generic, we'll talk about running the slidge plugin
 ``superduper`` that connects to the fictional legacy network "Super Duper Chat Network".
 
 Slidge requires a running and properly configured XMPP server running and accepting
-component connections.
+component connections. An upload (XEP:`0363`) component is also required to exchange files
+(eg. QR codes) with the gateway and the legacy contacts.
 
 Prosody
 -------
@@ -187,6 +188,8 @@ Create, launch and enable automatic launch of the container as a systemd service
     podman generate systemd --new --name superduper > $HOME/.config/systemd/user/superduper.service
     systemctl --user daemon-reload
     systemctl --user enable --now superduper
+
+Logs can be examined with ``journalctl CONTAINER_NAME=superduper``
 
 
 Configuration
