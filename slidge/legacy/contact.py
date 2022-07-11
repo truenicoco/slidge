@@ -364,8 +364,9 @@ class LegacyContact(metaclass=SubclassableOnce):
         msg["type"] = "chat"
         msg["body"] = body
         if legacy_id:
-            msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id))
-            self.session.sent[legacy_id] = legacy_id
+            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
+            msg.set_id(xmpp_id)
+            self.session.sent[legacy_id] = xmpp_id
         if date:
             msg["delay"].set_stamp(date)
 
