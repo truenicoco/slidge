@@ -29,6 +29,7 @@ class XEP_0356(BasePlugin):
     stanza = stanza
 
     granted_privileges = {"roster": "none", "message": "none", "presence": "none"}
+    server_real_host = None
 
     def plugin_init(self):
         if not self.xmpp.is_component:
@@ -57,6 +58,7 @@ class XEP_0356(BasePlugin):
         """
         for perm in msg["privilege"]["perms"]:
             self.granted_privileges[perm["access"]] = perm["type"]
+        self.server_real_host = msg.get_from()
         log.debug(f"Privileges: {self.granted_privileges}")
         self.xmpp.event("privileges_advertised")
 
@@ -70,7 +72,7 @@ class XEP_0356(BasePlugin):
 
     def _make_privileged_message(self, msg: Message):
         stanza = self.xmpp.make_message(
-            mto=self.xmpp.server_host, mfrom=self.xmpp.boundjid.bare
+            mto=self.server_real_host, mfrom=self.xmpp.boundjid.bare
         )
         stanza["privilege"]["forwarded"].append(msg)
         return stanza
