@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from mimetypes import guess_type
 
 import aiohttp
-from slixmpp import JID, Presence, Iq
+from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
 
 import aiotdlib
@@ -72,20 +72,27 @@ class Roster(LegacyRoster):
 class Session(BaseSession):
     tdlib_path: Optional[Path] = None
     tg: "TelegramClient"
+    sent_read_marks: set[int]
 
     def post_init(self):
         registration_form = {
             k: v if v != "" else None for k, v in self.user.registration_form.items()
         }
+        self.sent_read_marks = set()
+
+        i = registration_form.get("api_id")
+        if i is not None:
+            i = int(i)  # makes testing easier to make api_id optional...
+
         self.tg = TelegramClient(
             self.xmpp,
             self,
-            api_id=int(registration_form["api_id"]),
-            api_hash=registration_form["api_hash"],
+            api_id=i,
+            api_hash=registration_form.get("api_hash"),
             phone_number=registration_form["phone"],
-            bot_token=registration_form["bot_token"],
-            first_name=registration_form["first"],
-            last_name=registration_form["last"],
+            bot_token=registration_form.get("bot_token"),
+            first_name=registration_form.get("first"),
+            last_name=registration_form.get("last"),
             database_encryption_key=Gateway.args.tdlib_key,
             files_directory=Gateway.args.tdlib_path,
         )
@@ -95,7 +102,7 @@ class Session(BaseSession):
         try:
             return int(i)
         except ValueError:
-            raise NotImplementedError
+            raise NotImplementedError("This is not a valid telegram msg ID")
 
     async def login(self, p: Presence):
         self.send_gateway_status("Connecting", show="dnd")
@@ -323,8 +330,9 @@ async def on_telegram_message(tg: TelegramClient, update: tgapi.UpdateNewMessage
 
 
 async def on_message_success(
-    _tg: TelegramClient, update: tgapi.UpdateMessageSendSucceeded
+    tg: TelegramClient, update: tgapi.UpdateMessageSendSucceeded
 ):
+    tg.session.sent_read_marks.add(update.message.id)
     for _ in range(10):
         try:
             future = ack_futures.pop(update.message.id)
@@ -377,8 +385,14 @@ async def on_user_read_from_other_device(
     tg: TelegramClient, action: tgapi.UpdateChatReadInbox
 ):
     session = tg.session
-    contact = session.contacts.by_legacy_id(action.chat_id)
-    contact.carbon_read(action.last_read_inbox_message_id)
+    msg_id = action.last_read_inbox_message_id
+    log.debug("Self read mark for %s and we sent %s", msg_id, session.sent_read_marks)
+    try:
+        session.sent_read_marks.remove(msg_id)
+    except KeyError:
+        # slidge didn't send this read mark, so it comes from the official tg client
+        contact = session.contacts.by_legacy_id(action.chat_id)
+        contact.carbon_read(msg_id)
 
 
 async def on_contact_edit_msg(tg: TelegramClient, action: tgapi.UpdateMessageContent):
