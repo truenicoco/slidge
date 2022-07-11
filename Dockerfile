@@ -70,35 +70,15 @@ RUN mkdir -p /var/lib/slidge
 
 STOPSIGNAL SIGINT
 
-FROM poetry AS builder-tdlib
-
-RUN --mount=type=cache,id=slidge-apt-tdlib,target=/var/cache/apt \
-    apt update && apt install wget -y
-WORKDIR /
-RUN wget https://github.com/pylakey/aiotdlib/archive/refs/tags/0.18.0.tar.gz
-RUN tar xf 0.18.0.tar.gz
-WORKDIR /aiotdlib-0.18.0
-RUN poetry install
-RUN poetry run aiotdlib_generator
-RUN poetry build -f wheel
-
-COPY --from=builder /venv /venv
-ENV PATH /venv/bin:$PATH
-
-RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
-    pip install /aiotdlib-0.18.0/dist/*.whl
-
-COPY --from=builder /slidge/requirements-telegram.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-tdlib,target=/root/.cache/pip \
-    pip install -r /r.txt
-
 FROM slidge-base AS slidge-telegram
 
 RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
     apt install libc++1 -y
 
-COPY --from=builder-tdlib /venv /venv
+COPY --from=builder /slidge/requirements-telegram.txt /r.txt
+RUN --mount=type=cache,id=pip-slidge-telegram,target=/root/.cache/pip \
+    pip install -r /r.txt
 
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
