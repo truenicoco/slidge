@@ -1,4 +1,4 @@
-import hashlib
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -66,8 +66,8 @@ class LegacyContact(metaclass=SubclassableOnce):
         self._avatar: Optional[AvatarType] = None
 
         self.xmpp = session.xmpp
-        self.xmpp.loop.create_task(self.make_caps())
-        self.xmpp.loop.create_task(self.make_vcard())
+        asyncio.create_task(self.make_caps())
+        asyncio.create_task(self.make_vcard())
 
     def __repr__(self):
         return f"<LegacyContact '{self.jid}' - '{self.name}' - {self.user}>"
