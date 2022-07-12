@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import functools
 import logging
+import re
 import tempfile
 from argparse import Namespace
 from pathlib import Path
@@ -115,6 +116,7 @@ class Session(BaseSession):
         pass
 
     async def send_text(self, t: str, c: Contact) -> int:
+        t = escape(t)
         try:
             result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
         except tgapi.BadRequest as e:
@@ -242,7 +244,7 @@ class Session(BaseSession):
 
 class TelegramClient(aiotdlib.Client):
     def __init__(self, xmpp: BaseGateway, session: Session, **kw):
-        super().__init__(**kw)
+        super().__init__(parse_mode=aiotdlib.ClientParseMode.MARKDOWN, **kw)
         self.session = session
 
         async def input_(prompt):
@@ -251,12 +253,8 @@ class TelegramClient(aiotdlib.Client):
 
         self.input = input_
         self._auth_get_code = functools.partial(input_, "Enter code")
-        self._auth_get_password = functools.partial(
-            input_, "Enter 2FA password:"
-        )
-        self._auth_get_first_name = functools.partial(
-            input_, "Enter first name:"
-        )
+        self._auth_get_password = functools.partial(input_, "Enter 2FA password:")
+        self._auth_get_first_name = functools.partial(input_, "Enter first name:")
         self._auth_get_last_name = functools.partial(input_, "Enter last name:")
 
         for h, t in [
@@ -424,6 +422,14 @@ async def on_user_update(tg: TelegramClient, action: tgapi.UpdateUser):
     contact: Contact = tg.session.contacts.by_legacy_id(u.id)
     contact.name = u.first_name
     await contact.add_to_roster()
+
+
+def escape(t: str):
+    return re.sub(ESCAPE_PATTERN, r"\\\1", t)
+
+
+RESERVED_CHARS = "_*[]()~`>#+-=|{}.!"
+ESCAPE_PATTERN = re.compile(f"([{re.escape(RESERVED_CHARS)}])")
 
 
 ack_futures: Dict[int, asyncio.Future] = {}
