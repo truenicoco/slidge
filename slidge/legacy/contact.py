@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from datetime import datetime
+from copy import copy
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import (
     Hashable,
@@ -336,11 +337,17 @@ class LegacyContact(metaclass=SubclassableOnce):
     def _carbon(self, msg: Message):
         carbon = Message()
         carbon["from"] = self.user.jid
-        carbon["to"] = self.user.jid
         carbon["type"] = "chat"
         carbon["carbon_sent"] = msg
-        carbon.enable("no-copy")
-        self.xmpp["xep_0356"].send_privileged_message(carbon)
+
+        from_ = copy(self.user.jid)
+        from_.resource = "slidge"
+        msg["from"] = from_
+        for resource in self.xmpp.client_roster.presence(self.user.jid):
+            to = copy(self.user.jid)
+            to.resource = resource
+            carbon["to"] = str(to)
+            self.xmpp["xep_0356"].send_privileged_message(copy(carbon))
 
     def carbon(
         self,
@@ -359,7 +366,6 @@ class LegacyContact(metaclass=SubclassableOnce):
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
-        msg["from"] = self.user.jid.bare
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["body"] = body
@@ -368,6 +374,8 @@ class LegacyContact(metaclass=SubclassableOnce):
             msg.set_id(xmpp_id)
             self.session.sent[legacy_id] = xmpp_id
         if date:
+            if date.tzinfo is None:
+                date = date.astimezone(timezone.utc)
             msg["delay"].set_stamp(date)
 
         self._carbon(msg)
@@ -381,15 +389,15 @@ class LegacyContact(metaclass=SubclassableOnce):
         :param str date:
         """
         # we use Message() directly because we need xmlns="jabber:client"
-        log.debug("%s - %s", self.user.jid, self.jid)
         msg = Message()
-        msg["from"] = self.user.jid.bare
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["displayed"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
             legacy_msg_id
         )
         if date is not None:
+            if date.tzinfo is None:
+                date = date.astimezone(timezone.utc)
             msg["delay"].set_stamp(date)
 
         self._carbon(msg)
