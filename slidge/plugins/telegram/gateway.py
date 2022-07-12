@@ -250,14 +250,14 @@ class TelegramClient(aiotdlib.Client):
             return await xmpp.input(session.user, prompt)
 
         self.input = input_
-        self._Client__auth_get_code = functools.partial(input_, "Enter code")
-        self._Client__auth_get_password = functools.partial(
+        self._auth_get_code = functools.partial(input_, "Enter code")
+        self._auth_get_password = functools.partial(
             input_, "Enter 2FA password:"
         )
-        self._Client__auth_get_first_name = functools.partial(
+        self._auth_get_first_name = functools.partial(
             input_, "Enter first name:"
         )
-        self._Client__auth_get_last_name = functools.partial(input_, "Enter last name:")
+        self._auth_get_last_name = functools.partial(input_, "Enter last name:")
 
         for h, t in [
             (on_telegram_message, tgapi.API.Types.UPDATE_NEW_MESSAGE),
