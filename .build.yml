@@ -1,0 +1,63 @@
+image: alpine/edge
+packages:
+  - python3-dev
+  - python3
+  - poetry
+  - docker
+sources:
+  - https://git.sr.ht/~nicoco/slidge
+secrets:
+  - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
+  - 173244e1-c233-43de-969f-65965c5487e1
+  - 600fb955-af99-4541-a28e-44879f4b2cfc
+environment:
+  REGISTRY_PREFIX: docker.io/nicocool84/slidge
+  RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
+  DOCKER_BUILDKIT: "1"
+tasks:
+  - setup-poetry: |
+      cd slidge
+      poetry install -E telegram -E signal -E facebook
+  - mypy: |
+      cd slidge
+      poetry run mypy slidge
+  - pytest: |
+      cd slidge
+      poetry run pytest tests
+  - black: |
+      cd slidge
+      poetry run black --check slidge
+  - docs: |
+      set +x
+      curl -X POST -d "branches=master" -d "token=$(cat .rtd-slidge)" $RTD_URL
+      set -x
+  - docker-setup: |
+      sudo service docker start
+      sudo addgroup build docker
+  - container: |
+      cd slidge
+      while ! test -e /var/run/docker.sock; do sleep 1; done
+      for LEGACY in facebook signal telegram; do
+        docker build --target slidge-$LEGACY -t $REGISTRY_PREFIX-$LEGACY:latest .
+        docker push $REGISTRY_PREFIX-$LEGACY:latest
+      done
+  - publish: |
+      cd slidge
+      for TAG in $(git tag --points-at HEAD); do
+        if [[ $TAG == v* ]] ; then
+          VER=$(echo $TAG | cut -c2-)
+      
+          set +x
+          export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
+          set -x
+          
+          sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
+          poetry build
+          poetry publish
+      
+          for LEGACY in facebook signal telegram; do
+            docker tag $REGISTRY_PREFIX-$LEGACY:latest $REGISTRY_PREFIX-$LEGACY:$VER
+            docker push $REGISTRY_PREFIX-$LEGACY:$VER
+          done
+        fi
+      done

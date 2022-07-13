@@ -1,8 +1,10 @@
 [tool.poetry]
 name = "slidge"
-version = "0.1.0"
-description = ""
+version = "0.0.0-dev"
+description = "XMPP bridging framework"
 authors = ["Nicolas Cedilnik <nicoco@nicoco.fr>"]
+readme = "README.md"
+license = "AGPL-3.0-or-later"
 
 [tool.poetry.dependencies]
 python = "^3.9"

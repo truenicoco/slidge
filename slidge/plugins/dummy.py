@@ -69,7 +69,11 @@ class Session(BaseSession):
         return i
 
     async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
-        pass
+        i = self.counter
+        self.counter = i + 1
+        c.send_text(u)
+        await c.send_file(ASSETS_DIR / "buddy1.png")
+        return i
 
     async def later(self, c: LegacyContact):
         i = self.counter - 1

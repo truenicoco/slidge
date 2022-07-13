@@ -5,7 +5,6 @@ Slidge
 .. toctree::
    :maxdepth: 2
 
-   readme
    user/index
    admin/index
    dev/index
