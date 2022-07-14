@@ -39,9 +39,10 @@ tasks:
       while ! test -e /var/run/docker.sock; do sleep 1; done
       for LEGACY in facebook signal telegram; do
         docker build --target slidge-$LEGACY -t $REGISTRY_PREFIX-$LEGACY:latest .
-        docker push $REGISTRY_PREFIX-$LEGACY:latest
+        [ $(git branch --show-current) = "master" ] && docker push $REGISTRY_PREFIX-$LEGACY:latest
       done
   - publish: |
+      [ $(git branch --show-current) = "master" ] || exit 0
       cd slidge
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
