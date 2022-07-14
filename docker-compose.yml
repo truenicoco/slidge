@@ -76,6 +76,6 @@ services:
     network_mode: "service:prosody"
 
   signald:
-    image: signald/signald:0.19.1
+    image: signald/signald:0.20.0
     volumes:
       - ./persistent/signald:/signald
