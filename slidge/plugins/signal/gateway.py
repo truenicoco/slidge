@@ -302,12 +302,13 @@ class Session(BaseSession):
             await signal.register(self.phone, captcha=captcha)
         sms_code = await self.xmpp.input(
             self.user,
-            f"Reply to this message with the SMS code you have received at {self.phone}.",
+            f"Reply to this message with the code you have received by SMS at {self.phone}.",
         )
         await signal.verify(account=self.phone, code=sms_code)
         await signal.set_profile(
             account=self.phone, name=self.user.registration_form["name"]
         )
+        self.send_gateway_message(txt.REGISTER_SUCCESS)
 
     async def send_linking_qrcode(self):
         self.send_gateway_status("QR scan needed", show="dnd")
@@ -344,6 +345,8 @@ class Session(BaseSession):
                 mbody=f"Something went wrong during the linking process: {e}.",
             )
             raise
+        else:
+            self.send_gateway_message(txt.LINK_SUCCESS)
 
     async def logout(self, p: Optional[Presence]):
         pass

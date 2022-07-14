@@ -44,3 +44,10 @@ LINK_TIMEOUT = (
     "Reply to this message with 'link' once you're ready or 'cancel' "
     "to remove your gateway registration"
 )
+
+LINK_SUCCESS = (
+    "It looks like everything's all set up. You should now send and "
+    "receive signal messages via XMPP."
+)
+
+REGISTER_SUCCESS = "This XMPP bridge is now your 'primary' signal device. Congrats!"
