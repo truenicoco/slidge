@@ -74,15 +74,27 @@ class Session(BaseSession[Contact, Roster]):
                 self.api = api = AndroidAPI(state=s)
                 s.generate(random.randbytes(30))  # type: ignore
                 await api.mobile_config_sessionless()
-                login = await api.login(
-                    email=self.user.registration_form["email"],
-                    password=self.user.registration_form["password"],
-                )
+                try:
+                    login = await api.login(
+                        email=self.user.registration_form["email"],
+                        password=self.user.registration_form["password"],
+                    )
+                except maufbapi.http.errors.IncorrectPassword:
+                    self.send_gateway_message("Incorrect password")
+                    raise
+                except maufbapi.http.errors.TwoFactorRequired:
+                    code = await self.input(
+                        "Reply to this message with your 2 factor authentication code"
+                    )
+                    login = await api.login_2fa(
+                        email=self.user.registration_form["email"], code=code
+                    )
                 log.debug(login)
                 self.fb_state = shelf["state"] = api.state
             else:
                 # noinspection PyTypeCheckers
                 self.api = api = AndroidAPI(state=s)
+        self.send_gateway_message("Login successful")
         self.mqtt = AndroidMQTT(api.state)
         self.me = await self.api.get_self()
         await self.add_friends()
