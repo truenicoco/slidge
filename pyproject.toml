@@ -20,6 +20,7 @@ nextcord = { version = "^2.0.0-alpha.10", optional = true }
 aiosignald = { version = "^0.2.1", optional = true }
 mautrix-facebook = { version = "^0.4.0", optional = true }
 mattermostdriver = { version = "^7.3.2", optional = true }
+SkPy = { version =  "^0.10.4", optional = true }
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
@@ -42,6 +43,7 @@ discord = ["nextcord"]
 signal = ["aiosignald"]
 facebook = ["mautrix-facebook"]
 mattermost = ["mattermostdriver"]
+skype = ["SkPy"]
 
 [tool.poetry.scripts]
 slidge = 'slidge.__main__:main'

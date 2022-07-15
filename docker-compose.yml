@@ -68,7 +68,23 @@ services:
       - --legacy-module=slidge.plugins.facebook
       - --jid=facebook.localhost
     volumes:
-      - ./slidge:/slidge/slidge
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
+    depends_on:
+      - prosody
+    network_mode: "service:prosody"
+
+  slidge-skype:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --config=/slidge-example.ini
+      - --legacy-module=slidge.plugins.skype
+      - --jid=skype.localhost
+    volumes:
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:

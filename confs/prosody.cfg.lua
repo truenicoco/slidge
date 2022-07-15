@@ -72,6 +72,10 @@ VirtualHost "localhost"
            roster = "both";
            message = "outgoing";
      },
+     ["skype.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
   }
 
 Component "muc.localhost" "muc"
@@ -94,6 +98,10 @@ Component "mattermost.localhost"
   modules_enabled = {"privilege"}
 
 Component "facebook.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "skype.localhost"
   component_secret = "secret"
   modules_enabled = {"privilege"}
 
