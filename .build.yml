@@ -13,11 +13,14 @@ secrets:
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
+  PLUGINS: facebook signal telegram skype
   DOCKER_BUILDKIT: "1"
 tasks:
   - setup-poetry: |
       cd slidge
-      poetry install -E telegram -E signal -E facebook
+      for LEGACY in $PLUGINS; do
+        poetry install -E $LEGACY
+      done
   - mypy: |
       cd slidge
       poetry run mypy slidge
@@ -37,13 +40,14 @@ tasks:
   - container: |
       cd slidge
       while ! test -e /var/run/docker.sock; do sleep 1; done
-      for LEGACY in facebook signal telegram; do
+      for LEGACY in $PLUGINS; do
+        docker pull $REGISTRY_PREFIX-$LEGACY:latest || true
         docker build --target slidge-$LEGACY -t $REGISTRY_PREFIX-$LEGACY:latest .
-        [ $(git branch --show-current) = "master" ] && docker push $REGISTRY_PREFIX-$LEGACY:latest
+        [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ] && docker push $REGISTRY_PREFIX-$LEGACY:latest
       done
   - publish: |
-      [ $(git branch --show-current) = "master" ] || exit 0
       cd slidge
+      [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ] || exit 0
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           VER=$(echo $TAG | cut -c2-)
@@ -56,7 +60,7 @@ tasks:
           poetry build
           poetry publish
       
-          for LEGACY in facebook signal telegram; do
+          for LEGACY in $PLUGINS; do
             docker tag $REGISTRY_PREFIX-$LEGACY:latest $REGISTRY_PREFIX-$LEGACY:$VER
             docker push $REGISTRY_PREFIX-$LEGACY:$VER
           done
