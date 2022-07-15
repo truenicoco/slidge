@@ -1,8 +1,11 @@
 import asyncio
+import concurrent.futures
 import logging
+import pprint
+import io
 from pathlib import Path
 from threading import Thread
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import aiohttp
 import skpy
@@ -30,23 +33,63 @@ class Gateway(BaseGateway):
         pass
 
 
-class Session(BaseSession[LegacyContact, LegacyRoster]):
+class Roster(LegacyRoster):
+    # ':' is forbidden in the username part of a JID
+
+    @staticmethod
+    def legacy_id_to_jid_username(legacy_id: str) -> str:
+        if legacy_id.startswith("live:"):
+            return legacy_id.replace("live:", "__live__")
+        else:
+            return legacy_id
+
+    @staticmethod
+    def jid_username_to_legacy_id(jid_username: str) -> str:
+        if jid_username.startswith("__live__"):
+            return jid_username.replace("__live__", "live:")
+        else:
+            return jid_username
+
+
+class Contact(LegacyContact):
+    pass
+
+
+class Session(BaseSession[Contact, Roster]):
     skype_token_path: Path
     sk: skpy.Skype
     thread: Optional[Thread]
+    sent_by_user_to_ack: dict[int, asyncio.Future]
+    unread_by_user: dict[int, skpy.SkypeMsg]
 
     def post_init(self):
         self.skype_token_path = self.xmpp.home_dir / self.user.bare_jid
         self.thread = None
+        self.sent_by_user_to_ack = {}
+        self.unread_by_user = {}
+
+    async def async_wrap(self, func, *args):
+        return await self.xmpp.loop.run_in_executor(executor, func, *args)
 
     async def login(self, p: Presence):
         f = self.user.registration_form
-        self.sk = skpy.Skype(f["username"], f["password"], str(self.skype_token_path))
+        self.sk = await self.async_wrap(
+            skpy.Skype,
+            f["username"],
+            f["password"],
+            str(self.skype_token_path),
+        )
+        # self.sk.subscribePresence()
         for contact in self.sk.contacts:
-            if ":" in contact.id:
-                log.debug("Ignoring contact: %s", contact)
-                continue
             c = self.contacts.by_legacy_id(contact.id)
+            first = contact.name.first
+            last = contact.name.last
+            if first is not None and last is not None:
+                c.name = f"{first} {last}"
+            elif first is not None:
+                c.name = first
+            elif last is not None:
+                c.name = last
             if contact.avatar is not None:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(contact.avatar) as response:
@@ -54,6 +97,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
                 c.avatar = avatar_bytes
             await c.add_to_roster()
             c.online()
+        # TODO: close this gracefully on exit
         self.thread = thread = Thread(target=self.skype_blocking)
         thread.start()
 
@@ -61,34 +105,105 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
         while True:
             for event in self.sk.getEvents():
                 # no need to sleep since getEvents blocks for 30 seconds already
-                log.debug("New skype event")
                 asyncio.run_coroutine_threadsafe(
                     self.on_skype_event(event), self.xmpp.loop
                 )
 
     async def on_skype_event(self, event: skpy.SkypeEvent):
         log.debug("Skype event: %s", event)
-        event.ack()
         if isinstance(event, skpy.SkypeNewMessageEvent):
             msg = event.msg
             chat = event.msg.chat
-            log.debug("new msg: %s in chat: %s", msg, chat)
             if isinstance(chat, skpy.SkypeSingleChat):
                 log.debug("this is a single chat with user: %s", chat.userIds[0])
                 contact = self.contacts.by_legacy_id(chat.userIds[0])
                 if msg.userId == self.sk.userId:
-                    contact.carbon(msg.plain)
+                    try:
+                        fut = self.sent_by_user_to_ack.pop(msg.id)
+                    except KeyError:
+                        contact.carbon(msg.plain)
+                    else:
+                        fut.set_result(msg)
                 else:
-                    contact.send_text(msg.plain)
-
+                    if isinstance(msg, skpy.SkypeTextMsg):
+                        contact.send_text(msg.plain, legacy_msg_id=msg.id)
+                        self.unread_by_user[msg.id] = msg
+                    elif isinstance(msg, skpy.SkypeFileMsg):
+                        file = io.BytesIO(
+                            await self.async_wrap(lambda: msg.fileContent)
+                        )  # non-blocking download / lambda because fileContent = property
+                        await contact.send_file(filename=msg.file.name, input_file=file)
+        elif isinstance(event, skpy.SkypeTypingEvent):
+            contact = self.contacts.by_legacy_id(event.userId)
+            if event.active:
+                contact.composing()
+            else:
+                contact.paused()
         elif isinstance(event, skpy.SkypeChatUpdateEvent):
-            log.debug("chat update: %s", event.ChatId)
+            log.debug("chat update: %s", pprint.pformat(vars(event)))
+        # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
+        await self.async_wrap(event.ack)
 
     async def send_text(self, t: str, c: LegacyContact):
         chat = self.sk.contacts[c.legacy_id].chat
-        log.debug("Skype chat: %s", chat)
-        msg = chat.sendMsg(t)
-        log.debug("Sent msg %s", msg)
+        # log.debug("Skype chat: %s", chat)
+        msg = await self.async_wrap(chat.sendMsg, t)
+        # log.debug("Sent msg %s", msg)
+        future = asyncio.Future[skpy.SkypeMsg]()
+        self.sent_by_user_to_ack[msg.id] = future
+        skype_msg = await future
+        return skype_msg.id
 
+    async def logout(self, p: Optional[Presence]):
+        pass
+
+    async def send_file(self, u: str, c: LegacyContact):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(u) as response:
+                file_bytes = await response.read()
+        fname = u.split("/")[-1]
+        fname_lower = fname.lower()
+        await self.async_wrap(
+            self.sk.contacts[c.legacy_id].chat.sendFile,
+            io.BytesIO(file_bytes),
+            fname,
+            any(fname_lower.endswith(x) for x in (".png", ".jpg", ".gif", ".jpeg")),
+        )
+
+    async def active(self, c: LegacyContact):
+        pass
+
+    async def inactive(self, c: LegacyContact):
+        pass
+
+    async def composing(self, c: LegacyContact):
+        executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, True)
+
+    async def paused(self, c: LegacyContact):
+        executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, False)
+
+    async def displayed(self, legacy_msg_id: int, c: LegacyContact):
+        try:
+            skype_msg = self.unread_by_user.pop(legacy_msg_id)
+        except KeyError:
+            log.debug(
+                "We did not transmit: %s (%s)", legacy_msg_id, self.unread_by_user
+            )
+        else:
+            # FIXME: this raises HTTP 400 and does not mark the message as read
+            # https://github.com/Terrance/SkPy/issues/207
+            log.debug("Calling read on %s", skype_msg)
+            await self.async_wrap(skype_msg.read)
+
+    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
+        pass
+
+    async def search(self, form_values: Dict[str, str]):
+        pass
+
+
+executor = (
+    concurrent.futures.ThreadPoolExecutor()
+)  # TODO: close this gracefully on exit
 
 log = logging.getLogger(__name__)
