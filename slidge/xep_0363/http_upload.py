@@ -141,7 +141,7 @@ class XEP_0363(BasePlugin):
         request['content-type'] = content_type or self.default_content_type
         return iq.send(**iqkwargs)
 
-    async def upload_file(self, filename: Path, size: Optional[int] = None,
+    async def upload_file(self, filename: Union[Path, str], size: Optional[int] = None,
                           content_type: Optional[str] = None, *,
                           input_file: Optional[IO[bytes]]=None,
                           domain: Optional[JID] = None,

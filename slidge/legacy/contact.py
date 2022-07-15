@@ -14,6 +14,7 @@ from typing import (
     Type,
     Generic,
     TypeVar,
+    Union,
 )
 
 from slixmpp import JID, Iq, Message
@@ -315,7 +316,7 @@ class LegacyContact(metaclass=SubclassableOnce):
 
     async def send_file(
         self,
-        filename: Optional[Path] = None,
+        filename: Union[Path, str],
         content_type: Optional[str] = None,
         input_file: Optional[IO[bytes]] = None,
     ):
