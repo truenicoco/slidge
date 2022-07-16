@@ -19,7 +19,7 @@ tasks:
   - setup-poetry: |
       cd slidge
       for LEGACY in $PLUGINS; do
-        poetry install -E $LEGACY
+        poetry install -E $LEGACY || true  # some plugins do not have extras
       done
   - mypy: |
       cd slidge

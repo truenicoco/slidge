@@ -4,7 +4,7 @@ import logging
 import pprint
 import io
 from pathlib import Path
-from threading import Thread
+from threading import Thread, Lock
 from typing import Optional, Dict, Any
 
 import aiohttp
@@ -61,12 +61,14 @@ class Session(BaseSession[Contact, Roster]):
     thread: Optional[Thread]
     sent_by_user_to_ack: dict[int, asyncio.Future]
     unread_by_user: dict[int, skpy.SkypeMsg]
+    send_lock: Lock
 
     def post_init(self):
         self.skype_token_path = self.xmpp.home_dir / self.user.bare_jid
         self.thread = None
         self.sent_by_user_to_ack = {}
         self.unread_by_user = {}
+        self.send_lock = Lock()
 
     async def async_wrap(self, func, *args):
         return await self.xmpp.loop.run_in_executor(executor, func, *args)
@@ -81,6 +83,7 @@ class Session(BaseSession[Contact, Roster]):
         )
         # self.sk.subscribePresence()
         for contact in self.sk.contacts:
+            break
             c = self.contacts.by_legacy_id(contact.id)
             first = contact.name.first
             last = contact.name.last
@@ -112,6 +115,8 @@ class Session(BaseSession[Contact, Roster]):
     async def on_skype_event(self, event: skpy.SkypeEvent):
         log.debug("Skype event: %s", event)
         if isinstance(event, skpy.SkypeNewMessageEvent):
+            while self.send_lock.locked():
+                await asyncio.sleep(0.1)
             msg = event.msg
             chat = event.msg.chat
             if isinstance(chat, skpy.SkypeSingleChat):
@@ -121,6 +126,8 @@ class Session(BaseSession[Contact, Roster]):
                     try:
                         fut = self.sent_by_user_to_ack.pop(msg.id)
                     except KeyError:
+                        if log.isEnabledFor(logging.DEBUG):
+                            log.debug("Slidge did not send this message: %s", pprint.pformat(vars(event)))
                         contact.carbon(msg.plain)
                     else:
                         fut.set_result(msg)
@@ -140,17 +147,20 @@ class Session(BaseSession[Contact, Roster]):
             else:
                 contact.paused()
         elif isinstance(event, skpy.SkypeChatUpdateEvent):
-            log.debug("chat update: %s", pprint.pformat(vars(event)))
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("chat update: %s", pprint.pformat(vars(event)))
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await self.async_wrap(event.ack)
 
     async def send_text(self, t: str, c: LegacyContact):
         chat = self.sk.contacts[c.legacy_id].chat
-        # log.debug("Skype chat: %s", chat)
+        self.send_lock.acquire()
         msg = await self.async_wrap(chat.sendMsg, t)
-        # log.debug("Sent msg %s", msg)
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("Sent msg: %s", pprint.pformat(vars(msg)))
         future = asyncio.Future[skpy.SkypeMsg]()
         self.sent_by_user_to_ack[msg.id] = future
+        self.send_lock.release()
         skype_msg = await future
         return skype_msg.id
 
