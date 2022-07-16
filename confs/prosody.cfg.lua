@@ -76,6 +76,10 @@ VirtualHost "localhost"
            roster = "both";
            message = "outgoing";
      },
+     ["hackernews.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
   }
 
 Component "muc.localhost" "muc"
@@ -102,6 +106,10 @@ Component "facebook.localhost"
   modules_enabled = {"privilege"}
 
 Component "skype.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "hackernews.localhost"
   component_secret = "secret"
   modules_enabled = {"privilege"}
 
