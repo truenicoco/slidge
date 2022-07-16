@@ -127,7 +127,10 @@ class Session(BaseSession[Contact, Roster]):
                         fut = self.sent_by_user_to_ack.pop(msg.id)
                     except KeyError:
                         if log.isEnabledFor(logging.DEBUG):
-                            log.debug("Slidge did not send this message: %s", pprint.pformat(vars(event)))
+                            log.debug(
+                                "Slidge did not send this message: %s",
+                                pprint.pformat(vars(event)),
+                            )
                         contact.carbon(msg.plain)
                     else:
                         fut.set_result(msg)
