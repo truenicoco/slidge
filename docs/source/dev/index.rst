@@ -3,8 +3,9 @@ For devs
 ========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 8
 
    general
    tutorial
-   api
+   plugin
+   api/slidge/index

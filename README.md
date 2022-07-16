@@ -1,13 +1,13 @@
 Slidge 🛷
 ========
 
-[![Documentation status](https://readthedocs.org/projects/slidge/badge/?version=latest)](https://slidge.readthedocs.io/)
-[![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml?)
-
 Pythonic XMPP gateways.
 
-An XMPP component that provides a generic way to write XMPP ⟷ **legacy network**
-gateways, based on [SliXMPP](https://slixmpp.readthedocs.io).
+[![Documentation status](https://readthedocs.org/projects/slidge/badge/?version=latest)](https://slidge.readthedocs.io/)
+[![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml?)
+[![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
+
+Slidge is a general purpose XMPP gateway framework using the python
 
 Homepage: [sourcehut](https://sr.hr/~nicoco/slidge)
 
@@ -19,9 +19,15 @@ Issue tracker: https://todo.sr.ht/~nicoco/slidge
 Status
 ------
 
-Slidge is not ready for production yet! Right now, only direct messages
-are implemented, for Telegram, Signal and Facebook messenger. Please
-test it locally and report bugs.
+Slidge is alpha-grade software!
+Right now, only direct messages are implemented, no group chat stuff at all.
+Direct messaging does (more or less) work for the 5 plugins included in this repo though:
+Telegram, Signal, Facebook messenger, Skype and Hackernews.
+
+Testing locally should be fairly easy, so please go ahead and give me some
+feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
+[issue tracker](https://todo.sr.ht/~nicoco/slidge) or in my
+[public inbox](https://lists.sr.ht/~nicoco/public-inbox).
 
 Installation
 ------------

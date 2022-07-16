@@ -50,6 +50,8 @@ autoapi_type = "python"
 autoapi_dirs = ["../../slidge"]
 autoapi_ignore = ["*slixpatch*"]
 autoapi_add_toctree_entry = False
+autoapi_keep_files = False
+autoapi_root = "dev/api"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -71,7 +73,7 @@ intersphinx_mapping = {
         None,
     ),
     "slixmpp": ("https://slixmpp.readthedocs.io/en/latest/", None),
-    "pysignald_async": ("https://pysignald-async.readthedocs.io/en/latest/", None),
+    "aiosignald": ("https://aiosignald.readthedocs.io/en/latest/", None),
 }
 
 extlinks = {

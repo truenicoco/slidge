@@ -3,7 +3,7 @@ Slidge
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 8
 
    user/index
    admin/index
