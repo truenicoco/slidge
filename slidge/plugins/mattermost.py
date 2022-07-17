@@ -59,9 +59,13 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
         teams = await self.async_wrap(self.mm.teams.get_user_teams, me["id"])
         # self.log.debug("My teams: %s", teams)
         for t in teams:
-            channels = await self.async_wrap(self.mm.channels.get_channels_for_user, me["id"], t["id"])
+            channels = await self.async_wrap(
+                self.mm.channels.get_channels_for_user, me["id"], t["id"]
+            )
             for channel in channels:
-                members = await self.async_wrap(self.mm.channels.get_channel_members, channel["id"])
+                members = await self.async_wrap(
+                    self.mm.channels.get_channel_members, channel["id"]
+                )
                 if len(members) == 2:
                     me_found = False
                     contact_mm = None
@@ -80,9 +84,13 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
                     if contact_mm["nickname"]:
                         contact.name = contact_mm["nickname"]
                     else:
-                        contact.name = contact_mm["first_name"] + " " + contact_mm["last_name"]
+                        contact.name = (
+                            contact_mm["first_name"] + " " + contact_mm["last_name"]
+                        )
                     await contact.add_to_roster()
-                    img_url: requests.Response = self.mm.users.get_user_profile_image(contact_mm["id"])
+                    img_url: requests.Response = self.mm.users.get_user_profile_image(
+                        contact_mm["id"]
+                    )
 
                     contact.avatar = img_url.content
 

@@ -84,7 +84,7 @@ parser = ArgumentParser()
 parser.add_argument("-m", "--muc")
 args = parser.parse_args()
 
-ROOM = "slidge-test@conference.nicoco.fr"
+ROOM = "slidge@conference.nicoco.fr"
 REPO = "slidge"
 BOT_PASS_FILE = "~/.c3p0"
 BOT_JID = "c3p0@slidge.im"
