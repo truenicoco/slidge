@@ -10,6 +10,7 @@ secrets:
   - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
   - 173244e1-c233-43de-969f-65965c5487e1
   - 600fb955-af99-4541-a28e-44879f4b2cfc
+  - dc710d9d-8043-4e1d-9837-b35bfa02800a
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
@@ -21,6 +22,9 @@ tasks:
       for LEGACY in $PLUGINS; do
         poetry install -E $LEGACY || true  # some plugins do not have extras
       done
+  - muc-bot: |
+      cd slidge
+      poetry run python .muc_bot.py || true  # let's not block if this fails
   - mypy: |
       cd slidge
       poetry run mypy slidge
