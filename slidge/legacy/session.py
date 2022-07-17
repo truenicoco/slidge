@@ -34,6 +34,8 @@ class BaseSession(
             LegacyRosterType
         ] = LegacyRoster.get_self_or_unique_subclass()
 
+        self.log = logging.getLogger(user.bare_jid)
+
         self.user = user
         if self.store_sent:
             self.sent: BiDict = BiDict()  # TODO: set a max size for this
