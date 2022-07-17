@@ -362,7 +362,7 @@ class Session(BaseSession):
             )
             contact = self.contacts.by_phone(profile.address.number)
             contact.uuid = profile.address.uuid
-            contact.name = profile.name or profile.profile_name
+            contact.name = profile.name.replace("\u0000", " ") or profile.profile_name.replace("\u0000", " ")
             if full_profile.avatar is not None:
                 with open(full_profile.avatar, "rb") as f:
                     contact.avatar = f.read()
