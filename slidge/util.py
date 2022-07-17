@@ -4,7 +4,13 @@ import logging
 from typing import Literal, Optional, Iterable, Dict, List
 
 field_type = Literal[
-    "boolean", "fixed", "text-single", "jid-single", "list-single", "list-multi"
+    "boolean",
+    "fixed",
+    "text-single",
+    "jid-single",
+    "list-single",
+    "list-multi",
+    "text-private",
 ]
 
 
@@ -24,7 +30,10 @@ class FormField:
     required: bool = False
     """Whether this field is mandatory or not"""
     private: bool = False
-    """For sensitive info that should not be displayed on screen while the user types."""
+    """
+    For sensitive info that should not be displayed on screen while the user types.
+    Forces field_type to "text-private"
+    """
     type: field_type = "text-single"
     """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
@@ -33,6 +42,10 @@ class FormField:
 
     def dict(self):
         return dataclasses.asdict(self)
+
+    def __post_init__(self):
+        if self.private:
+            self.type = "text-private"
 
 
 class BiDict(dict):
