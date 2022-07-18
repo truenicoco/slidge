@@ -45,17 +45,24 @@ class CommitBot(ClientXMPP):
         last_commit_published = await self.retrieve(REPO)
         await self["xep_0045"].join_muc(ROOM, BOT_JID.split("@")[0])
 
-        commits = get_commits()
-        for commit in commits:
+        commits = list(reversed(get_commits()))
+        for i, commit in enumerate(commits):
             if commit == last_commit_published:
                 break
+        else:
+            print("Apparently we don't have anything to publish")
+            await self.disconnect()
+            return
+
+        for commit in commits[i + 1]:
+            print("Notifying about", commit)
             self.send_message(
                 mto=JID(ROOM),
                 mbody=f"{URL}{commit[:HASH_LEN]} - {get_commit_msg(commit)}",
                 mtype="groupchat",
             )
 
-        await self.store(REPO, commits[0])
+        await self.store(REPO, commits[-1])
         await self.disconnect()
 
     async def retrieve(self, key):
@@ -70,8 +77,6 @@ class CommitBot(ClientXMPP):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
-
     with open(os.path.expanduser(BOT_PASS_FILE)) as f:
         password = f.read().strip()
 
