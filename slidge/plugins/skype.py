@@ -93,10 +93,7 @@ class Session(BaseSession[Contact, Roster]):
             elif last is not None:
                 c.name = last
             if contact.avatar is not None:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(contact.avatar) as response:
-                        avatar_bytes = await response.read()
-                c.avatar = avatar_bytes
+                c.avatar = contact.avatar
             await c.add_to_roster()
             c.online()
         # TODO: close this gracefully on exit
