@@ -1,16 +1,19 @@
+"""
+Non functionnal yet
+"""
+
 import asyncio
 import concurrent.futures
 import json
 import pprint
-from typing import Dict, Any, Optional, Hashable
+from typing import Dict, Any, Optional
 
 import requests
 from mattermostdriver import Driver, Websocket
 
-from slixmpp import JID, Presence
+from slixmpp import Presence
 
 from slidge import *
-from slidge.legacy.contact import LegacyContact
 
 
 class Gateway(BaseGateway):
@@ -39,6 +42,7 @@ class Gateway(BaseGateway):
 
 class Session(BaseSession[LegacyContact, LegacyRoster]):
     mm: Driver
+    mm_id: Optional[int] = None
     ws: Optional[Websocket]
 
     def post_init(self):
@@ -55,6 +59,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
         self.log.debug("Login")
 
         me = await self.async_wrap(self.mm.login)
+        self.mm_id = me["id"]
         self.log.debug("Me: %s", me)
         teams = await self.async_wrap(self.mm.teams.get_user_teams, me["id"])
         # self.log.debug("My teams: %s", teams)
@@ -114,7 +119,15 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
         pass
 
     async def send_text(self, t: str, c: LegacyContact):
-        pass
+        other = await self.async_wrap(self.mm.users.get_user_by_username, c.legacy_id)
+        direct_channel = await self.async_wrap(
+            self.mm.channels.create_direct_message_channel, [self.mm_id, other["id"]]
+        )  # this should probably be cached somewhere instead of getting the thread id everytime...
+        msg = await self.async_wrap(
+            self.mm.posts.create_post,
+            {"channel_id": direct_channel["id"], "message": t},
+        )
+        return msg["id"]
 
     async def send_file(self, u: str, c: LegacyContact):
         pass
