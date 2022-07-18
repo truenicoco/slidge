@@ -83,7 +83,6 @@ class Session(BaseSession[Contact, Roster]):
         )
         # self.sk.subscribePresence()
         for contact in self.sk.contacts:
-            break
             c = self.contacts.by_legacy_id(contact.id)
             first = contact.name.first
             last = contact.name.last
