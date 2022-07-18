@@ -117,6 +117,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
     def _register_handlers(self):
         self.add_event_handler("session_start", self.on_session_start)
+        self.add_event_handler("disconnected", self.connect)
         self.add_event_handler("gateway_message", self.on_gateway_message)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
