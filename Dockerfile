@@ -121,6 +121,12 @@ COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.hackernews"]
 
+FROM slidge-base AS slidge-mattermost
+
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+
+ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.mattermost"]
+
 FROM slidge-telegram AS slidge-dev
 
 COPY --from=builder /slidge/*.txt /slidge/
