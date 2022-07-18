@@ -80,6 +80,10 @@ VirtualHost "localhost"
            roster = "both";
            message = "outgoing";
      },
+     ["steam.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
   }
 
 Component "muc.localhost" "muc"
@@ -110,6 +114,10 @@ Component "skype.localhost"
   modules_enabled = {"privilege"}
 
 Component "hackernews.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "steam.localhost"
   component_secret = "secret"
   modules_enabled = {"privilege"}
 

@@ -14,7 +14,7 @@ secrets:
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
-  PLUGINS: facebook signal telegram skype hackernews mattermost
+  PLUGINS: facebook signal telegram skype hackernews mattermost steam
   DOCKER_BUILDKIT: "1"
 tasks:
   - setup-poetry: |

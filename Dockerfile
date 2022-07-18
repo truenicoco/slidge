@@ -49,6 +49,7 @@ RUN poetry export --without-hashes --extras signal > /slidge/requirements-signal
 RUN poetry export --without-hashes --extras mattermost > /slidge/requirements-mattermost.txt
 RUN poetry export --without-hashes --extras facebook > /slidge/requirements-facebook.txt
 RUN poetry export --without-hashes --extras skype > /slidge/requirements-skype.txt
+RUN poetry export --without-hashes --extras steam > /slidge/requirements-steam.txt
 
 RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
     pip install -r ./requirements.txt
@@ -126,6 +127,12 @@ FROM slidge-base AS slidge-mattermost
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.mattermost"]
+
+FROM slidge-base AS slidge-steam
+
+COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+
+ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.steam"]
 
 FROM slidge-telegram AS slidge-dev
 
