@@ -287,7 +287,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         await self.make_vcard(self.boundjid.bare, self.COMPONENT_AVATAR)
         log.info("Slidge has successfully started")
 
-    async def make_vcard(self, jid: JID, avatar: bytes):
+    async def make_vcard(self, jid: JID, avatar: AvatarType):
         """
         Configure slixmpp to correctly set this contact's vcard (in fact only its avatar ATM)
         """
