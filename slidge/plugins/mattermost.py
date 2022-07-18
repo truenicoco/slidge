@@ -78,7 +78,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
                         if m["user_id"] == me["id"]:
                             me_found = True
                         else:
-                            contact_mm = self.mm.users.get_user(m["user_id"])
+                            contact_mm = await self.async_wrap(
+                                self.mm.users.get_user, m["user_id"]
+                            )
                     if not me_found or contact_mm is None:
                         self.log.debug("Weird 2 person channel: %s", members)
                         continue
@@ -93,8 +95,8 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
                             contact_mm["first_name"] + " " + contact_mm["last_name"]
                         )
                     await contact.add_to_roster()
-                    img_url: requests.Response = self.mm.users.get_user_profile_image(
-                        contact_mm["id"]
+                    img_url: requests.Response = await self.async_wrap(
+                        self.mm.users.get_user_profile_image, contact_mm["id"]
                     )
 
                     contact.avatar = img_url.content
