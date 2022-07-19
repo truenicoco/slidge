@@ -89,7 +89,7 @@ class Session(BaseSession[Contact, Roster]):
     async def login(self, p: Presence):
         await self.mm_client.login()
 
-        # await self.add_contacts()
+        await self.add_contacts()
         await self.ws.connect(self.on_mm_event)
 
     async def add_contacts(self):
