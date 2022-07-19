@@ -1,28 +1,45 @@
 Slidge 🛷
 ========
 
-Pythonic XMPP gateways.
+[Home](https://sr.ht/~nicoco/slidge) |
+[Source](https://sr.ht/~nicoco/slidge/sources) |
+[Issues](https://sr.ht/~nicoco/slidge/trackers) |
+[Patches](https://lists.sr.ht/~nicoco/public-inbox) |
+[Chat](xmpp:slidge@conference.nicoco.fr?join)
+
+Turn any XMPP client into that fancy multiprotocol chat app that every cool kid want.
 
 [![Documentation status](https://readthedocs.org/projects/slidge/badge/?version=latest)](https://slidge.readthedocs.io/)
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
 
-Slidge is a general purpose XMPP gateway framework in python
+Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
+It's a work in progress, but it should make
+[writing gateways to other chat networks](https://slidge.readthedocs.io/en/latest/dev/tutorial.html)
+(*plugins*) as frictionless as possible.
 
-Homepage: [sourcehut](https://sr.ht/~nicoco/slidge)
+It comes with a few plugins included.
 
-Chat room:
-[slidge\@conference.nicoco.fr](xmpp:slidge@conference.nicoco.fr?join)
+|            | Direct messages | Presences | Typing | Marks | Upload |
+|------------|-----------------|-----------|--------|-------|--------|
+| Signal     | ✓               | N/A       | ✓      | ✓     | ✗      |
+| Telegram   | ✓               | ✗         | ✓      | ✓     | ✓      |
+| Mattermost | ✓               | ✗         | ✗      | ✗     | ✗      |
+| Facebook   | ✓               | ✗         | ✗      | ✓     | ✗      |
+| Skype      | ✓               | ✗         | ✗      | ✗     | ~      |
+| Steam      | ✗               | ✗         | ✗      | ✗     | ✗      |
 
-Issue tracker: https://todo.sr.ht/~nicoco/slidge
+(this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
+
 
 Status
 ------
 
-Slidge is alpha-grade software!
+Slidge is alpha-grade software.
 Right now, only direct messages are implemented, no group chat stuff at all.
-Direct messaging does (more or less) work for the 5 plugins included in this repo though:
-Telegram, Signal, Facebook messenger, Skype and Hackernews.
+Direct messaging does (more or less) work though.
+Any contribution whatsoever (testing, patches, suggestions, beer, …) is more than welcome.
+Don't be shy!
 
 Testing locally should be fairly easy, so please go ahead and give me some
 feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
@@ -32,20 +49,37 @@ feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
 Installation
 ------------
 
-Clone the repo and turn it up using:
+#### docker-compose
 
-```bash
-git clone https://git.sr.ht/~nicoco/slidge
-cd slidge
-docker-compose up
+Docker-compose spins up a local XMPP server preconfigured for you. 
+
+```
+docker-compose up # or poetry install && poetry run `python -m slidge`
 ```
 
-Open [gajim](https://gajim.org) and connect add an account ``test@localhost`` with the ``password``
-password.
-Go to "Accounts"→"Discover services".
-You
+For the other options, you need a
+[configured](https://slidge.readthedocs.io/en/latest/admin/general.html#configure-the-xmpp-server)
+XMPP server.
 
-You can also install slidge from [pypi](https://pypi.org/project/slidge/).
+#### poetry
+
+```
+poetry install
+poetry run `python -m slidge`
+```
+
+#### pip
+
+```bash
+pip install slidge[signal]  # you can replace signal with any network listed in the table above
+python -m slidge --legacy-module=slidge.plugins.signal
+```
+
+### XMPP client
+
+Open [gajim](https://gajim.org) (or another one) and add the account ``test@localhost`` with the ``password``password.
+Go to "Accounts"→"Discover services" (or equivalent).
+You should see the slidge gateways as server components.
 
 About privacy
 -------------
@@ -67,4 +101,3 @@ Related projects
 -   [Mautrix](https://github.com/mautrix)
 -   [matterbridge](https://github.com/42wim/matterbridge)
 -   [XMPP-discord-bridge](https://git.polynom.me/PapaTutuWawa/xmpp-discord-bridge)
-
