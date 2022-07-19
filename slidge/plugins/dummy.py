@@ -10,7 +10,7 @@ from typing import Dict, Optional, Hashable, Any
 from slixmpp import JID, Presence
 
 from slidge import *
-from slidge.legacy.contact import LegacyContactType
+from slidge.core.contact import LegacyContactType
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 

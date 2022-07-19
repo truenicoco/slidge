@@ -4,7 +4,7 @@ from aiosignald import exc
 
 import slidge.plugins.signal as plugin
 import slidge.plugins.signal.gateway
-from slidge.test import SlidgeTest
+from slidge.util.test import SlidgeTest
 from slidge import *
 
 

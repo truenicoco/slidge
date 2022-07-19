@@ -48,7 +48,6 @@ autoapi_python_class_content = "both"
 
 autoapi_type = "python"
 autoapi_dirs = ["../../slidge"]
-autoapi_ignore = ["*slixpatch*"]
 autoapi_add_toctree_entry = False
 autoapi_keep_files = False
 autoapi_root = "dev/api"

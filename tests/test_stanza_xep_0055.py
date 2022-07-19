@@ -3,7 +3,7 @@ import unittest
 from slixmpp import register_stanza_plugin, Iq
 from slixmpp.test import SlixTest
 
-from slidge.xep_0055 import stanza
+from slidge.util.xep_0055 import stanza
 
 
 class TestJabberSearch(SlixTest):

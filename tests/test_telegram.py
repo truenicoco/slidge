@@ -5,7 +5,7 @@ from slixmpp import JID
 
 import slidge.plugins.telegram as plugin
 import slidge.plugins.telegram.gateway
-from slidge.test import SlidgeTest
+from slidge.util.test import SlidgeTest
 from slidge import *
 
 

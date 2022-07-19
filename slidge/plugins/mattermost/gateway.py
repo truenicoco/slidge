@@ -1,6 +1,3 @@
-"""
-Non-functional yet
-"""
 import json
 import pprint
 import re

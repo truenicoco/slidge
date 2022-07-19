@@ -1,7 +1,3 @@
-"""
-Gateway to the signal network, using signald. Only supports registering a new number currently.
-Linking to an existing account will be implemented once file upload works.
-"""
 import datetime
 import logging
 from argparse import ArgumentParser
@@ -15,7 +11,6 @@ import aiosignald.generated as sigapi
 import aiosignald.exc as sigexc
 
 from slidge import *
-from slidge.legacy.contact import LegacyContactType
 
 from . import txt
 
@@ -254,10 +249,10 @@ class Session(BaseSession):
         except ValueError:
             raise NotImplementedError
 
-    async def paused(self, c: LegacyContactType):
+    async def paused(self, c: Contact):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+    async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
         pass
 
     async def search(self, form_values: Dict[str, str]):

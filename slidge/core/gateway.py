@@ -15,10 +15,10 @@ from slixmpp import ComponentXMPP, Message, Iq, JID, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import MessageTypes
 
-from .db import user_store, RosterBackend, GatewayUser
-from .legacy.session import BaseSession
-from .util import FormField, SearchResult, ABCSubclassableOnceAtMost
-from .types import AvatarType
+from slidge.core.session import BaseSession
+from slidge.util import FormField, SearchResult, ABCSubclassableOnceAtMost
+from slidge.util.db import user_store, RosterBackend, GatewayUser
+from slidge.util.types import AvatarType
 
 
 class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):

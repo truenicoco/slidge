@@ -4,12 +4,12 @@ from typing import Type, Dict, Any, Optional, Hashable, TYPE_CHECKING, Generic, 
 from slixmpp import Message, Presence, JID
 from slixmpp.exceptions import XMPPError
 
-from ..db import GatewayUser, user_store
-from ..util import BiDict, ABCSubclassableOnceAtMost
-from .contact import LegacyContactType, LegacyRosterType, LegacyRoster
+from slidge.core.contact import LegacyContactType, LegacyRosterType, LegacyRoster
+from slidge.util import BiDict, ABCSubclassableOnceAtMost
+from slidge.util.db import GatewayUser, user_store
 
 if TYPE_CHECKING:
-    from ..gateway import BaseGateway
+    from slidge.core.gateway import BaseGateway
 
 
 class BaseSession(

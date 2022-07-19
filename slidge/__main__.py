@@ -10,7 +10,7 @@ from pathlib import Path
 import configargparse
 
 from slidge import BaseGateway
-from .db import user_store
+from slidge.util.db import user_store
 
 
 # noinspection PyUnresolvedReferences

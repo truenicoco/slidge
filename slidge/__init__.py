@@ -1,18 +1,20 @@
-from . import xep_0055
-from . import xep_0077
-from . import xep_0100
-from . import xep_0115
-from . import xep_0333
-from . import xep_0356
-from . import xep_0363
-
 import slixmpp.plugins
 
-from .db import user_store, GatewayUser
-from .gateway import BaseGateway
-from .util import FormField, SearchResult
-from .legacy.session import BaseSession
-from .legacy.contact import LegacyContact, LegacyRoster
+from slidge.util.db import user_store, GatewayUser
+from slidge.core.gateway import BaseGateway
+from slidge.core.session import BaseSession
+from slidge.core.contact import LegacyContact, LegacyRoster
+from .util import (
+    FormField,
+    SearchResult,
+    xep_0055,
+    xep_0077,
+    xep_0100,
+    xep_0115,
+    xep_0333,
+    xep_0356,
+    xep_0363,
+)
 
 slixmpp.plugins.__all__.extend(["xep_0055", "xep_0356"])
 

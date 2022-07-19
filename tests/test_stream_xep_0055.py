@@ -1,8 +1,6 @@
 import unittest
 from slixmpp.test import SlixTest
 
-from slidge import xep_0055
-
 
 class TestJabberSearch(SlixTest):
     def setUp(self):

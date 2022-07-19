@@ -19,11 +19,11 @@ from typing import (
 
 from slixmpp import JID, Iq, Message
 
-from ..types import AvatarType
+from ..util.types import AvatarType
 from ..util import SubclassableOnce
 
 if TYPE_CHECKING:
-    from .session import BaseSession
+    from .. import BaseSession
 
 
 class LegacyContact(metaclass=SubclassableOnce):

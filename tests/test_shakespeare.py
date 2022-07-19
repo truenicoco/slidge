@@ -6,8 +6,8 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-from slidge.test import SlidgeTest
-from slidge.legacy.contact import LegacyContactType
+from slidge.util.test import SlidgeTest
+from slidge.core.contact import LegacyContactType
 
 received_presences: list[Optional[Presence]] = []
 text_received_by_juliet = []
