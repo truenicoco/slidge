@@ -3,7 +3,6 @@ Commit bot for the slidge MUC.
 """
 
 import asyncio
-import logging
 import os
 import subprocess
 from argparse import ArgumentParser
@@ -53,8 +52,7 @@ class CommitBot(ClientXMPP):
             print("Apparently we don't have anything to publish")
             await self.disconnect()
             return
-
-        for commit in commits[i + 1]:
+        for commit in commits[i + 1:]:
             print("Notifying about", commit)
             self.send_message(
                 mto=JID(ROOM),
