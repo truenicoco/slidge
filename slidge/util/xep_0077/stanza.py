@@ -4,7 +4,7 @@
 # See the file LICENSE for copying permission.
 from __future__ import unicode_literals
 
-from typing import Set, ClassVar
+from typing import ClassVar, Set
 
 from slixmpp.xmlstream import ElementBase
 

@@ -5,17 +5,15 @@ import shelve
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Hashable, Dict, Union, Deque, Optional
+from typing import Deque, Dict, Hashable, Optional, Union
 
 import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
-
-from slixmpp import Presence, JID
-from slixmpp.exceptions import XMPPError
-
 from slidge import *
+from slixmpp import JID, Presence
+from slixmpp.exceptions import XMPPError
 
 
 class Gateway(BaseGateway):

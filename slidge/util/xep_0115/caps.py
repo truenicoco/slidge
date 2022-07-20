@@ -2,24 +2,23 @@
 # Copyright (C) 2011 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
 # See the file LICENSE for copying permission.
-import logging
-import hashlib
 import base64
-
+import hashlib
+import logging
 from asyncio import Future
 from typing import Optional
 
 from slixmpp import __version__
-from slixmpp.stanza import StreamFeatures, Presence, Iq
-from slixmpp.xmlstream import register_stanza_plugin, JID
-from slixmpp.xmlstream.handler import Callback
-from slixmpp.xmlstream.matcher import StanzaPath
-from slixmpp.util import MemoryCache
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import BasePlugin
-from . import stanza, StaticCaps
+from slixmpp.stanza import Iq, Presence, StreamFeatures
 from slixmpp.types import OptJidStr
+from slixmpp.util import MemoryCache
+from slixmpp.xmlstream import JID, register_stanza_plugin
+from slixmpp.xmlstream.handler import Callback
+from slixmpp.xmlstream.matcher import StanzaPath
 
+from . import StaticCaps, stanza
 
 log = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 import logging
 
-from slixmpp import CoroutineCallback, StanzaPath, Iq, register_stanza_plugin
+from slixmpp import CoroutineCallback, Iq, StanzaPath, register_stanza_plugin
 from slixmpp.plugins import BasePlugin
 from slixmpp.xmlstream import StanzaBase
 

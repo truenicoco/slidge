@@ -1,13 +1,12 @@
 import logging
 import typing
 
-from slixmpp import Message, JID, Iq
+from slixmpp import JID, Iq, Message
 from slixmpp.plugins.base import BasePlugin
-from slixmpp.xmlstream.matcher import StanzaPath
 from slixmpp.xmlstream.handler import Callback
+from slixmpp.xmlstream.matcher import StanzaPath
 
 from . import stanza
-
 
 log = logging.getLogger(__name__)
 

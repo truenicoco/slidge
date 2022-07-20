@@ -1,25 +1,25 @@
 import logging
 
-from mattermost_api_reference_client.models import User, Status
-from mattermost_api_reference_client.types import Unset
-from mattermost_api_reference_client.client import AuthenticatedClient
-from mattermost_api_reference_client.api.users import (
-    get_user,
-    get_users_by_ids,
-    get_profile_image,
-    get_user_by_username,
-)
-from mattermost_api_reference_client.api.status import get_users_statuses_by_ids
 from mattermost_api_reference_client.api.channels import (
-    get_channel_members,
     create_direct_channel,
+    get_channel_members,
     get_channels_for_team_for_user,
 )
 from mattermost_api_reference_client.api.posts import create_post
+from mattermost_api_reference_client.api.status import get_users_statuses_by_ids
 from mattermost_api_reference_client.api.teams import get_teams_for_user
+from mattermost_api_reference_client.api.users import (
+    get_profile_image,
+    get_user,
+    get_user_by_username,
+    get_users_by_ids,
+)
+from mattermost_api_reference_client.client import AuthenticatedClient
+from mattermost_api_reference_client.models import Status, User
 from mattermost_api_reference_client.models.create_post_json_body import (
     CreatePostJsonBody,
 )
+from mattermost_api_reference_client.types import Unset
 
 
 class MattermostClient:

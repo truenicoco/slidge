@@ -4,7 +4,7 @@
 # See the file LICENSE for copying permission.
 from slixmpp.plugins.base import register_plugin
 
-from .stanza import Markable, Received, Displayed, Acknowledged
 from .markers import XEP_0333
+from .stanza import Acknowledged, Displayed, Markable, Received
 
 register_plugin(XEP_0333)

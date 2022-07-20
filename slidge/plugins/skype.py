@@ -1,18 +1,16 @@
 import asyncio
 import concurrent.futures
+import io
 import logging
 import pprint
-import io
 from pathlib import Path
-from threading import Thread, Lock
-from typing import Optional, Dict, Any
+from threading import Lock, Thread
+from typing import Any, Dict, Optional
 
 import aiohttp
 import skpy
-
-from slixmpp import JID, Presence
-
 from slidge import *
+from slixmpp import JID, Presence
 
 
 class Gateway(BaseGateway):

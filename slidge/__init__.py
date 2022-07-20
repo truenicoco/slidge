@@ -1,9 +1,9 @@
 import slixmpp.plugins
-
-from slidge.util.db import user_store, GatewayUser
+from slidge.core.contact import LegacyContact, LegacyRoster
 from slidge.core.gateway import BaseGateway
 from slidge.core.session import BaseSession
-from slidge.core.contact import LegacyContact, LegacyRoster
+from slidge.util.db import GatewayUser, user_store
+
 from .util import (
     FormField,
     SearchResult,

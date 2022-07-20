@@ -39,6 +39,6 @@ Extras
 from .config import get_parser
 
 try:
-    from .gateway import Gateway, Session, Roster, Contact
+    from .gateway import Contact, Gateway, Roster, Session
 except ImportError:
     pass

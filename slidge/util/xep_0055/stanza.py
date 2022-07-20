@@ -1,4 +1,4 @@
-from typing import Set, ClassVar
+from typing import ClassVar, Set
 
 from slixmpp.xmlstream import ElementBase
 

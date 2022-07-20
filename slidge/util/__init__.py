@@ -1,9 +1,9 @@
 from .util import (
-    BiDict,
-    SearchResult,
-    FormField,
-    SubclassableOnce,
     ABCSubclassableOnceAtMost,
+    BiDict,
+    FormField,
+    SearchResult,
+    SubclassableOnce,
 )
 
 __all__ = [

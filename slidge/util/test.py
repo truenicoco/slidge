@@ -5,7 +5,7 @@ from typing import Union
 
 from slixmpp.test import SlixTest, TestTransport
 
-from slidge import user_store, BaseGateway, BaseSession, LegacyRoster, LegacyContact
+from .. import BaseGateway, BaseSession, LegacyContact, LegacyRoster, user_store
 
 
 class SlidgeTest(SlixTest):

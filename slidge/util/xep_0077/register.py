@@ -7,8 +7,8 @@ import ssl
 from typing import Dict
 
 from slixmpp.plugins import BasePlugin
-from slixmpp.stanza import StreamFeatures, Iq
-from slixmpp.xmlstream import register_stanza_plugin, JID, StanzaBase
+from slixmpp.stanza import Iq, StreamFeatures
+from slixmpp.xmlstream import JID, StanzaBase, register_stanza_plugin
 from slixmpp.xmlstream.handler import CoroutineCallback
 from slixmpp.xmlstream.matcher import StanzaPath
 

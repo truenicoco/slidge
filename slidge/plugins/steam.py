@@ -14,15 +14,13 @@ login process seem a little too exotic for my taste.
 """
 
 import pprint
-from typing import Dict, Any, Optional
-
-from steam.client import SteamClient
-from steam.core.msg import MsgProto
-from steam.enums.common import EResult, EPersonaState
-
-from slixmpp import Presence
+from typing import Any, Dict, Optional
 
 from slidge import *
+from slixmpp import Presence
+from steam.client import SteamClient
+from steam.core.msg import MsgProto
+from steam.enums.common import EPersonaState, EResult
 
 
 class Gateway(BaseGateway):
@@ -43,14 +41,6 @@ class Gateway(BaseGateway):
 class Roster(LegacyRoster):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
-        """
-        Convert a JID user part to a legacy ID.
-
-        Should be overridden in case legacy IDs are not strings, for instance
-
-        :param jid_username:
-        :return:
-        """
         return int(jid_username)
 
 

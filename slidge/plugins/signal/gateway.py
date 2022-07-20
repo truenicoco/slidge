@@ -1,16 +1,14 @@
 import datetime
 import logging
 from argparse import ArgumentParser
-from typing import Dict, Optional, Hashable, List, Any
+from typing import Any, Dict, List, Optional
 
-from slixmpp import Message, Presence, JID
-from slixmpp.exceptions import XMPPError
-
-from aiosignald import SignaldAPI
-import aiosignald.generated as sigapi
 import aiosignald.exc as sigexc
-
+import aiosignald.generated as sigapi
+from aiosignald import SignaldAPI
 from slidge import *
+from slixmpp import JID, Message, Presence
+from slixmpp.exceptions import XMPPError
 
 from . import txt
 
@@ -42,9 +40,8 @@ class Gateway(BaseGateway):
         _, signal = await self.loop.create_unix_connection(Signal, signald_socket)
         signal.xmpp = self
 
-    async def on_gateway_message(self, msg: Message):
+    async def on_gateway_message(self, msg, user=None):
         log.debug("Gateway msg: %s", msg)
-        user = user_store.get_by_stanza(msg)
         if user is None:
             raise XMPPError("Please register to the gateway first")
         try:
@@ -175,7 +172,7 @@ class Contact(LegacyContact):
 
 class Roster(LegacyRoster):
     session: "Session"
-    contacts_by_legacy_id: Dict[str, Contact]
+    # _contacts_by_legacy_id: Dict[str, Contact]
 
     def __init__(self, session):
         super().__init__(session)
@@ -204,7 +201,7 @@ class Roster(LegacyRoster):
         if phone is None:
             return self.by_uuid(uuid)
 
-        contact_phone = self.contacts_by_legacy_id.get(phone)
+        contact_phone = self._contacts_by_legacy_id.get(phone)
         contact_uuid = self.contacts_by_uuid.get(uuid)
 
         if contact_phone is None and contact_uuid is None:
@@ -426,7 +423,7 @@ class Session(BaseSession):
             raise XMPPError(str(result))
         return response.timestamp
 
-    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_file(self, u: str, c: LegacyContact):
         pass
 
     async def active(self, c: LegacyContact):

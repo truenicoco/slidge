@@ -1,7 +1,7 @@
 import logging
 import typing
 
-from slixmpp import Message, Iq, Presence, JID
+from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins import BasePlugin
 
 log = logging.getLogger(__name__)

@@ -4,8 +4,7 @@
 # See the file LICENSE for copying permission.
 from slixmpp.plugins.base import register_plugin
 
-from .stanza import Register, RegisterFeature
 from .register import XEP_0077
-
+from .stanza import Register, RegisterFeature
 
 register_plugin(XEP_0077)

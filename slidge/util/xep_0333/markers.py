@@ -5,12 +5,13 @@
 import logging
 from typing import Optional
 
-from slixmpp import Message, JID
+from slixmpp import JID, Message
 from slixmpp.plugins import BasePlugin
+from slixmpp.plugins.xep_0333 import (Acknowledged, Displayed, Markable,
+                                      Received, stanza)
 from slixmpp.xmlstream import register_stanza_plugin
 from slixmpp.xmlstream.handler import Callback
 from slixmpp.xmlstream.matcher import StanzaPath
-from slixmpp.plugins.xep_0333 import stanza, Markable, Received, Displayed, Acknowledged
 
 log = logging.getLogger(__name__)
 

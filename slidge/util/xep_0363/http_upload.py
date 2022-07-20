@@ -5,24 +5,19 @@
 
 import logging
 import os.path
-
-from aiohttp import ClientSession
 from asyncio import Future
 from mimetypes import guess_type
-from typing import (
-    Optional,
-    IO, Union,
-)
-
 from pathlib import Path
+from typing import IO, Optional, Union
 
+from aiohttp import ClientSession
 from slixmpp import JID, __version__
-from slixmpp.stanza import Iq
 from slixmpp.plugins import BasePlugin
+from slixmpp.plugins.xep_0363 import Get, Header, Put, Request, Slot, stanza
+from slixmpp.stanza import Iq
 from slixmpp.xmlstream import register_stanza_plugin
 from slixmpp.xmlstream.handler import Callback
 from slixmpp.xmlstream.matcher import StanzaPath
-from slixmpp.plugins.xep_0363 import stanza, Request, Slot, Put, Get, Header
 
 log = logging.getLogger(__name__)
 

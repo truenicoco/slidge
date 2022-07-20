@@ -5,18 +5,17 @@ import logging
 import re
 import tempfile
 from argparse import Namespace
+from mimetypes import guess_type
 from pathlib import Path
 from typing import Dict, List, Optional
-from mimetypes import guess_type
 
 import aiohttp
+import aiotdlib
+import aiotdlib.api as tgapi
+from slidge import *
 from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
 
-import aiotdlib
-import aiotdlib.api as tgapi
-
-from slidge import *
 from .config import get_parser
 
 REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH

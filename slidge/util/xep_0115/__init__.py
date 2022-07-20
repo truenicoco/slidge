@@ -1,3 +1,4 @@
+# isort: skip_file
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2011 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -7,6 +8,5 @@ from slixmpp.plugins.base import register_plugin
 from .stanza import Capabilities
 from .static import StaticCaps
 from .caps import XEP_0115
-
 
 register_plugin(XEP_0115)

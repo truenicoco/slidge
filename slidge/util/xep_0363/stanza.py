@@ -5,6 +5,7 @@
 # See the file LICENSE for copying permission.
 from slixmpp.xmlstream import ElementBase
 
+
 class Request(ElementBase):
     plugin_attrib = 'http_upload_request'
     name = 'request'

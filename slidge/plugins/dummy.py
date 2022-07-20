@@ -5,12 +5,10 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Optional, Hashable, Any
-
-from slixmpp import JID, Presence
+from typing import Any, Dict, Hashable, Optional
 
 from slidge import *
-from slidge.core.contact import LegacyContactType
+from slixmpp import JID, Presence
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
@@ -41,10 +39,10 @@ class Session(BaseSession):
         super(Session, self).__init__(user)
         self.counter = 0
 
-    async def paused(self, c: LegacyContactType):
+    async def paused(self, c: LegacyContact):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
     async def login(self, p: Presence):
@@ -68,7 +66,7 @@ class Session(BaseSession):
         self.xmpp.loop.create_task(self.later(c))
         return i
 
-    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_file(self, u: str, c: LegacyContact) -> int:
         i = self.counter
         self.counter = i + 1
         c.send_text(u)

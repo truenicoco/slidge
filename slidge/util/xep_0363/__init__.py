@@ -4,13 +4,8 @@
 # See the file LICENSE for copying permission.
 from slixmpp.plugins.base import register_plugin
 
-from .stanza import Request, Slot, Put, Get, Header
-from .http_upload import (
-    XEP_0363,
-    UploadServiceNotFound,
-    FileTooBig,
-    HTTPError,
-    FileUploadError,
-)
+from .http_upload import (XEP_0363, FileTooBig, FileUploadError, HTTPError,
+                          UploadServiceNotFound)
+from .stanza import Get, Header, Put, Request, Slot
 
 register_plugin(XEP_0363)

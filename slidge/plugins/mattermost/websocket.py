@@ -1,8 +1,8 @@
+import asyncio
 import json
+import logging
 import pprint
 import ssl
-import asyncio
-import logging
 import time
 from dataclasses import dataclass
 from enum import Enum

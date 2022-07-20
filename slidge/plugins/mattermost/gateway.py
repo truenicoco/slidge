@@ -2,16 +2,15 @@ import json
 import pprint
 import re
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
+from slidge import *
 from slixmpp import Presence
 
-from slidge import *
-
-from .websocket import Websocket, MattermostEvent, EventType
 from .api import MattermostClient
+from .websocket import EventType, MattermostEvent, Websocket
 
 
 class Gateway(BaseGateway):

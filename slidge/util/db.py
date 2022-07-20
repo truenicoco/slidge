@@ -7,9 +7,9 @@ import dataclasses
 import logging
 import shelve
 from os import PathLike
-from typing import Dict, Iterable, Union, Optional
+from typing import Dict, Iterable, Optional, Union
 
-from slixmpp import JID, Presence, Message, Iq
+from slixmpp import JID, Iq, Message, Presence
 
 
 @dataclasses.dataclass
@@ -25,6 +25,9 @@ class GatewayUser:
 
     def __hash__(self):
         return hash(self.bare_jid)
+
+    def __repr__(self):
+        return f"<User {self.bare_jid}>"
 
     @property
     def jid(self) -> JID:

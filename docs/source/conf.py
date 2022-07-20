@@ -51,6 +51,7 @@ autoapi_dirs = ["../../slidge"]
 autoapi_add_toctree_entry = False
 autoapi_keep_files = False
 autoapi_root = "dev/api"
+autoapi_ignore = ["*xep_*"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

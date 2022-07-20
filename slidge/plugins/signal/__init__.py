@@ -36,4 +36,4 @@ Extras
 - File uploads: no
 """
 
-from .gateway import Gateway, Session, Contact, Roster
+from .gateway import Contact, Gateway, Roster, Session

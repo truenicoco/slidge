@@ -1,9 +1,6 @@
-from slixmpp.stanza import Message
-from slixmpp.xmlstream import (
-    ElementBase,
-    register_stanza_plugin,
-)
 from slixmpp.plugins.xep_0297 import Forwarded
+from slixmpp.stanza import Message
+from slixmpp.xmlstream import ElementBase, register_stanza_plugin
 
 
 class Privilege(ElementBase):

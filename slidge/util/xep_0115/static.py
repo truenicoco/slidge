@@ -4,9 +4,8 @@
 # See the file LICENSE for copying permission.
 import logging
 
-from slixmpp.xmlstream import JID
 from slixmpp.exceptions import IqError, IqTimeout
-
+from slixmpp.xmlstream import JID
 
 log = logging.getLogger(__name__)
 

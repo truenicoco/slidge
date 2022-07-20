@@ -11,13 +11,12 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import aiohttp
+from slidge import *
 from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
-
-from slidge import *
 
 
 class Gateway(BaseGateway):
