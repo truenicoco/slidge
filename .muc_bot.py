@@ -56,7 +56,7 @@ class CommitBot(ClientXMPP):
             print("Notifying about", commit)
             self.send_message(
                 mto=JID(ROOM),
-                mbody=f"{URL}{commit[:HASH_LEN]} - {get_commit_msg(commit)}",
+                mbody=f"{URL}{commit[:HASH_LEN]} - {get_commit_msg(commit.strip())}",
                 mtype="groupchat",
             )
 
