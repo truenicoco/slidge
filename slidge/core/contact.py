@@ -281,7 +281,7 @@ class LegacyContact(metaclass=SubclassableOnce):
                 receipt["receipt"] = xmpp_id
                 receipt["from"] = self.jid
                 receipt.send()
-            self.xmpp["xep_0333"].__send_marker(
+            self.xmpp["xep_0333"].send_marker(
                 mto=self.user.jid,
                 id=xmpp_id,
                 marker=marker,
