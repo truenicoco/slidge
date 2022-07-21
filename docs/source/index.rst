@@ -5,7 +5,7 @@ Slidge
   :alt: PyPI package
   :target: https://pypi.org/project/slidge/
 
-Slidge is a general purpose XMPP gateway framework using in python.
+Slidge is a general purpose XMPP gateway framework in python.
 
 Homepage: `sourcehut <https://sr.hr/~nicoco/slidge>`_
 
