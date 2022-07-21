@@ -1,8 +1,7 @@
 import logging
-import typing
 
 from slixmpp import JID, Iq, Message, Presence
-from slixmpp.plugins import BasePlugin
+from slixmpp.plugins.base import BasePlugin
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +44,7 @@ class XEP_0100(BasePlugin):
     dependencies = {
         "xep_0030",  # Service discovery
         "xep_0077",  # In band registration
+        "xep_0356",  # Privileged entities
     }
 
     default_config = {
@@ -65,7 +65,7 @@ class XEP_0100(BasePlugin):
         self.api.register(self._legacy_contact_remove, "legacy_contact_remove")
         self.api.register(self._legacy_contact_add, "legacy_contact_add")
 
-        # Without that BaseXMPP sends unsub/unavailable on sub requests and we don't want that
+        # Without that BaseXMPP sends unsub/unavailable on sub requests, and we don't want that
         self.xmpp.client_roster.auto_authorize = False
         self.xmpp.client_roster.auto_subscribe = False
 
@@ -77,6 +77,7 @@ class XEP_0100(BasePlugin):
         )
         self.xmpp.add_event_handler("presence_subscribe", self.on_presence_subscribe)
         self.xmpp.add_event_handler("presence_subscribed", self.on_presence_subscribed)
+        self.xmpp.add_event_handler("presence_probe", self.on_presence_probe)
 
         self.xmpp.add_event_handler(
             "presence_unsubscribe", self.on_presence_unsubscribe
@@ -98,6 +99,7 @@ class XEP_0100(BasePlugin):
         self.xmpp.del_event_handler(
             "presence_unsubscribe", self.on_presence_unsubscribe
         )
+        self.xmpp.del_event_handler("presence_probe", self.on_presence_probe)
 
     async def get_user(self, stanza):
         return await self.xmpp["xep_0077"].api["user_get"](None, None, None, stanza)
@@ -111,20 +113,31 @@ class XEP_0100(BasePlugin):
         )
 
     async def on_user_register(self, iq: Iq):
-        user_jid = iq["from"]
+        user_jid = iq["from"].bare
         user = await self.get_user(iq)
         if user is None:  # This should not happen
             log.warning(f"{user_jid} has registered but cannot find them in user store")
         else:
-            log.debug(f"Sending subscription request to {user_jid}")
-            self.xmpp.client_roster.subscribe(user_jid)
+            log.debug(f"Forcing our way into the roster of {user_jid}")
+            await self.xmpp["xep_0356"].set_roster(
+                jid=user_jid,
+                roster_items={
+                    self.xmpp.boundjid.bare: {
+                        "name": self.component_name,
+                        "subscription": "both",
+                        "groups": ["Slidge"],
+                    }
+                },
+            )
+            # this will update slixmpp internal roster to reflect the fact that the component
+            # and the user both have "subscription": "both"'
+            # this will also trigger a 'legacy_login' event
+            self.xmpp.send_presence(pto=user_jid, ptype="probe")
 
     def on_user_unregister(self, iq: Iq):
         user_jid = iq.get_from().bare
         log.debug(f"Remove {user_jid} from roster")
-        # self.xmpp.event("legacy_logout", iq)
         self.xmpp.client_roster.unsubscribe(user_jid)
-        #
         self.send_presence(pto=user_jid, ptype="unsubscribed")
         log.debug(f"roster: {self.xmpp.client_roster}")
 
@@ -158,6 +171,9 @@ class XEP_0100(BasePlugin):
 
     async def on_presence_subscribed(self, p: Presence):
         log.debug("User subscribe to gateway. Roster: %s", self.xmpp.roster)
+
+    async def on_presence_probe(self, p: Presence):
+        log.debug("User probe to gateway. Roster: %s", self.xmpp.roster)
 
     async def _legacy_contact_add(self, jid, node, ifrom, contact_jid: JID):
         pass
@@ -200,7 +216,13 @@ class XEP_0100(BasePlugin):
 
     async def on_presence_unsubscribe(self, presence: Presence):
         if presence["to"] == self.xmpp.boundjid.bare:
-            # should we trigger unregistering here?
+            self.xmpp.event("user_unregister", presence)
+            self.xmpp["xep_0077"].api["user_remove"](
+                None,
+                None,
+                presence.get_from(),
+                presence,
+            )
             return
 
         user_jid = presence["from"]
