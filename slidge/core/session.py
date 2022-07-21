@@ -1,3 +1,4 @@
+import functools
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Generic, Literal, Optional, Type
 
@@ -12,6 +13,16 @@ from ..util.types import LegacyMessageType
 if TYPE_CHECKING:
     from slidge import SearchResult
     from slidge.core.gateway import BaseGateway
+
+
+def ignore_message_to_component(func):
+    @functools.wraps(func)
+    async def wrapped(self: "BaseSession", msg: Message):
+        log.debug("In wrap: %s %s", self, msg)
+        if msg.get_to() != self.xmpp.boundjid.bare:
+            return await func(self, msg)
+
+    return wrapped
 
 
 class BaseSession(
@@ -142,6 +153,7 @@ class BaseSession(
         del user
         del session
 
+    @ignore_message_to_component
     async def send_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -164,6 +176,7 @@ class BaseSession(
             return
         self.sent[legacy_msg_id] = m.get_id()
 
+    @ignore_message_to_component
     async def active_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -174,6 +187,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.active(self.contacts.by_stanza(m))
 
+    @ignore_message_to_component
     async def inactive_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -184,6 +198,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.inactive(self.contacts.by_stanza(m))
 
+    @ignore_message_to_component
     async def composing_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -194,6 +209,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.composing(self.contacts.by_stanza(m))
 
+    @ignore_message_to_component
     async def paused_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -204,6 +220,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.paused(self.contacts.by_stanza(m))
 
+    @ignore_message_to_component
     async def displayed_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -220,6 +237,7 @@ class BaseSession(
 
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
+    @ignore_message_to_component
     async def correct_from_msg(self, m: Message):
         xmpp_id = m["replace"]["id"]
         legacy_id = self.sent.inverse.get(xmpp_id)
@@ -271,6 +289,12 @@ class BaseSession(
         return await self.xmpp.input(self.user, text, **msg_kwargs)
 
     async def send_qr(self, text: str):
+        """
+        Sends a QR code generated from 'text' via HTTP Upload and send the URL to
+        ``self.user``
+
+        :param text: Text to encode as a QR code
+        """
         await self.xmpp.send_qr(text, mto=self.user.jid)
 
     def post_init(self):
