@@ -5,7 +5,7 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Dict, Hashable, Optional
+from typing import Any, Dict, Optional
 
 from slidge import *
 from slixmpp import JID, Presence
@@ -34,7 +34,7 @@ class Gateway(BaseGateway):
             raise ValueError("Y a que N!")
 
 
-class Session(BaseSession):
+class Session(BaseSession[LegacyContact, LegacyRoster]):
     def __init__(self, user):
         super(Session, self).__init__(user)
         self.counter = 0
@@ -45,8 +45,8 @@ class Session(BaseSession):
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
-    async def login(self, p: Presence):
-        log.debug("Logging in user: %s", p)
+    async def login(self):
+        log.debug("Logging in user: %s", self.user)
         self.send_gateway_status("Connecting...", show="dnd")
         await asyncio.sleep(1)
         self.send_gateway_status("Connected")
@@ -55,7 +55,7 @@ class Session(BaseSession):
             c.name = b.title()
             c.avatar = a
             await c.add_to_roster()
-            c.online()
+            c.online("I am not a real person, so what?")
 
     async def logout(self, p: Optional[Presence]):
         log.debug("User has disconnected")

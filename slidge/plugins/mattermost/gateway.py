@@ -85,7 +85,7 @@ class Session(BaseSession[Contact, Roster]):
             f["token"],
         )
 
-    async def login(self, p: Presence):
+    async def login(self):
         await self.mm_client.login()
 
         await self.add_contacts()

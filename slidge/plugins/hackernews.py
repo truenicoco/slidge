@@ -58,7 +58,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
         self.highest_handled_submission_id = 0
         self.hn_username = self.user.registration_form["cookie"].split("&")[0]
 
-    async def login(self, p: Presence):
+    async def login(self):
         kid_ids: list[int] = []
         for submission_id in await self.get_user_submissions():
             user_submission = await self.get_item(submission_id)

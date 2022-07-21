@@ -55,7 +55,6 @@ class BaseSession(
         self.user = user
         if self.store_sent:
             self.sent: BiDict = BiDict()  # TODO: set a max size for this
-        self.logged = False
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.post_init()
@@ -103,6 +102,10 @@ class BaseSession(
         if session is None:
             _sessions[user] = session = cls(user)
         return session
+
+    @classmethod
+    def from_user(cls, user):
+        return cls._from_user_or_none(user)
 
     @classmethod
     def from_stanza(cls, s) -> "BaseSession":
@@ -306,14 +309,11 @@ class BaseSession(
         """
         pass
 
-    async def login(self, p: Presence):
+    async def login(self):
         """
         Login the gateway user to the legacy network.
 
-        Triggered when the gateway receives an online presence from the user, so the legacy client
-        should keep a list of logged-in users to avoid useless calls to the login process.
-
-        :param p:
+        Triggered when the gateway start and on user registration
         """
         raise NotImplementedError
 

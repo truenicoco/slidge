@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import aiohttp
 import qrcode
-from slixmpp import JID, ComponentXMPP, Iq, Message, Presence
+from slixmpp import JID, ComponentXMPP, Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import MessageTypes
 
@@ -163,11 +163,9 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.add_event_handler("gateway_message", self._on_gateway_message_private)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
-        self.add_event_handler("legacy_login", self._on_legacy_login)
         get_session = self._session_cls.from_stanza
 
         # fmt: off
-        async def logout(p): await get_session(p).logout(p)
         async def msg(m): await get_session(m).send_from_msg(m)
         async def disp(m): await get_session(m).displayed_from_msg(m)
         async def active(m): await get_session(m).active_from_msg(m)
@@ -177,7 +175,6 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         async def correct(m): await get_session(m).correct_from_msg(m)
         # fmt: on
 
-        self.add_event_handler("legacy_logout", logout)
         self.add_event_handler("legacy_message", msg)
         self.add_event_handler("marker_displayed", disp)
         self.add_event_handler("chatstate_active", active)
@@ -188,15 +185,19 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
+
         # prevents XMPP clients from considering the gateway as an HTTP upload
         await self["xep_0030"].del_feature(
             feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
         )
-        for user in user_store.get_all():
-            # We need to see which registered users are online, this will trigger legacy_login in return
-            self["xep_0100"].send_presence(ptype="probe", pto=user.jid)
+
         self._add_commands()
         await self.set_vcard_avatar(self.boundjid.bare, self.COMPONENT_AVATAR)
+
+        for user in user_store.get_all():
+            session = self._session_cls.from_user(user)
+            self.loop.create_task(session.login())
+
         log.info("Slidge has successfully started")
 
     def _add_commands(self):
@@ -308,24 +309,13 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         await self._user_prevalidate(ifrom, form_dict)
         user_store.add(ifrom, form_dict)
 
-    async def _on_legacy_login(self, p: Presence):
-        """
-        Logs a user, instantiating the :class:`slidge.BaseSession` instance to the legacy network
-
-        :param p: Presence from a :class:`slidge.GatewayUser` directed at the gateway's own JID
-        """
-        session = self._session_cls.from_stanza(p)
-        if not session.logged:
-            # To avoid constant re-login on all available presences stanzas emitted by the user
-            session.logged = True
-            await session.login(p)
-            log.info("User logged in: %s", p.get_from().bare)
-
     async def _on_user_register(self, iq: Iq):
+        session = self._session_cls.from_stanza(iq)
         for jid in self._config.admins:
             self.send_message(
                 mto=jid, mbody=f"{iq.get_from()} has registered", mtype="headline"
             )
+        await session.login()
 
     async def _on_user_unregister(self, iq: Iq):
         await self._session_cls.kill_by_jid(iq.get_from())
@@ -537,7 +527,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             session = self._session_cls.from_jid(user.jid)
             for c in session.contacts:
                 c.offline()
-            self["xep_0100"].send_presence(ptype="unavailable", pto=user.jid)
+            self.send_presence(ptype="unavailable", pto=user.jid)
 
 
 SLIXMPP_PLUGINS = [

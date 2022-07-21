@@ -61,7 +61,7 @@ class Session(BaseSession[Contact, Roster]):
         self.sent_messages = Messages()
         self.received_messages = Messages()
 
-    async def login(self, p: Presence):
+    async def login(self):
         shelf: shelve.Shelf[AndroidState]
         with shelve.open(str(self.shelf_path)) as shelf:
             try:

@@ -56,7 +56,7 @@ class Session(BaseSession[LegacyContact, Roster]):
         self.steam.username = self.user.registration_form["username"]
         self.steam.on(SteamClient.EVENT_CHAT_MESSAGE, self.on_steam_msg)
 
-    async def login(self, p: Presence):
+    async def login(self):
         username = self.user.registration_form["username"]
         password = self.user.registration_form["password"]
 
@@ -94,7 +94,7 @@ class Session(BaseSession[LegacyContact, Roster]):
             elif f.state == EPersonaState.Offline:
                 c.offline()
             else:
-                c.status(repr(f.state))
+                self.log.warning("Unknown status: %s", f.state)
 
     def on_steam_msg(self, msg: MsgProto):
         self.log.debug("New message event: %s", vars(pprint.pformat(msg)))

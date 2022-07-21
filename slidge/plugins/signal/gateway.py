@@ -255,7 +255,7 @@ class Session(BaseSession):
     async def search(self, form_values: Dict[str, str]):
         pass
 
-    async def login(self, p: Presence = None):
+    async def login(self):
         """
         Attempt to listen to incoming events for this account,
         or pursue the registration process if needed.

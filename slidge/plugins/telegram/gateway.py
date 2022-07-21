@@ -104,7 +104,7 @@ class Session(BaseSession):
         except ValueError:
             raise NotImplementedError("This is not a valid telegram msg ID")
 
-    async def login(self, p: Presence):
+    async def login(self):
         self.send_gateway_status("Connecting", show="dnd")
         async with self.tg as tg:
             self.send_gateway_status(f"Connected as {self.tg.get_my_id()}")

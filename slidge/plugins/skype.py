@@ -71,7 +71,7 @@ class Session(BaseSession[Contact, Roster]):
     async def async_wrap(self, func, *args):
         return await self.xmpp.loop.run_in_executor(executor, func, *args)
 
-    async def login(self, p: Presence):
+    async def login(self):
         f = self.user.registration_form
         self.sk = await self.async_wrap(
             skpy.Skype,
