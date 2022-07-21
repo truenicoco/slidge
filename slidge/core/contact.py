@@ -173,29 +173,36 @@ class LegacyContact(metaclass=SubclassableOnce):
             },
         )
 
-    def online(self):
+    def online(self, status: Optional[str] = None):
         """
         Send an "online" presence from this contact to the user.
-        """
-        self.xmpp.send_presence(
-            pfrom=self.jid,
-            pto=self.user.jid.bare,
-        )
 
-    def away(self):
+        :param status: Arbitrary text, details of the status, eg: "Listening to Britney Spears"
+        """
+        self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pstatus=status)
+
+    def away(self, status: Optional[str] = None):
         """
         Send an "away" presence from this contact to the user.
 
-        Does not make much sense in the context of mobile, "always connected" network where
-        :meth:`slidge.LegacyContact.inactive` is probably more relevant.
-        """
-        self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pshow="away")
+        This is a global status, as opposed to :meth:`.LegacyContact.inactive`
+        which concerns a specific conversation, ie a specific "chat window"
 
-    def busy(self):
+        :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
         """
-        Send a "busy" presence from this contact to the user.
+        self.xmpp.send_presence(
+            pfrom=self.jid, pto=self.user.jid.bare, pshow="away", pstatus=status
+        )
+
+    def busy(self, status: Optional[str] = None):
         """
-        self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pshow="busy")
+        Send a "busy" presence from this contact to the user,
+
+        :param status: eg: "Trying to make sense of XEP-0100"
+        """
+        self.xmpp.send_presence(
+            pfrom=self.jid, pto=self.user.jid.bare, pshow="busy", pstatus=status
+        )
 
     def offline(self):
         """
