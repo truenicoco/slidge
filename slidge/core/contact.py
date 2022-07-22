@@ -88,6 +88,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.legacy_id = legacy_id
         self.jid_username = jid_username
 
+        self.added_to_roster = False
+
         self._name: Optional[str] = None
         self._avatar: Optional[AvatarType] = None
 
@@ -174,6 +176,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 }
             },
         )
+        self.added_to_roster = True
 
     def online(self, status: Optional[str] = None):
         """

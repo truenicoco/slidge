@@ -11,8 +11,10 @@ import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
+from maufbapi.types.graphql import Thread, ParticipantNode, Participant
+
 from slidge import *
-from slixmpp import JID, Presence
+from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 
 from slidge.core.contact import LegacyContactType
@@ -31,19 +33,56 @@ class Gateway(BaseGateway):
     COMPONENT_TYPE = "facebook"
     COMPONENT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
-        pass
+    SEARCH_TITLE = "Search in your facebook friends"
+    SEARCH_INSTRUCTIONS = "Enter something that can be used to search for one of your friends, eg, a first name"
+    SEARCH_FIELDS = [FormField(var="query", label="Term(s)")]
 
 
 class Contact(LegacyContact["Session"]):
     legacy_id: int
 
+    async def populate_from_participant(
+        self, participant: ParticipantNode, update_avatar=True
+    ):
+        if self.legacy_id != int(participant.id):
+            raise RuntimeError(
+                "Attempted to populate a contact with a non-corresponding participant"
+            )
+        self.name = participant.messaging_actor.name
+        if self.avatar is None or update_avatar:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    participant.messaging_actor.profile_pic_large.uri
+                ) as response:
+                    response.raise_for_status()
+                    self.avatar = await response.read()
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
         return int(jid_username)
+
+    async def from_thread(self, t: Thread):
+        if t.is_group_thread:
+            raise RuntimeError("Tried to populate a user from a group chat")
+
+        if len(t.all_participants.nodes) != 2:
+            raise RuntimeError(
+                "Tried is not a group chat but doesn't have 2 participants ‽"
+            )
+
+        for participant in t.all_participants.nodes:
+            if participant.id != self.session.me.id:
+                break
+        else:
+            raise RuntimeError(
+                "Couldn't find friend in thread participants", t.all_participants
+            )
+
+        contact = self.by_legacy_id(int(participant.id))
+        await contact.populate_from_participant(participant)
+        return contact
 
 
 class Session(BaseSession[Contact, Roster]):
@@ -68,7 +107,6 @@ class Session(BaseSession[Contact, Roster]):
         shelf: shelve.Shelf[AndroidState]
         with shelve.open(str(self.shelf_path)) as shelf:
             try:
-                # noinspection PyTypeChecker
                 self.fb_state = s = shelf["state"]
             except KeyError:
                 s = AndroidState()
@@ -124,30 +162,14 @@ class Session(BaseSession[Contact, Roster]):
         thread_list = await self.api.fetch_thread_list(msg_count=0)
         self.mqtt.seq_id = int(thread_list.sync_sequence_id)
         log.debug("SEQ ID: %s", self.mqtt.seq_id)
+        self.log.debug("Thread list: %s", thread_list)
+        self.log.debug("Thread list page info: %s", thread_list.page_info)
         for t in thread_list.nodes:
             if t.is_group_thread:
                 log.debug("Skipping group: %s", t)
                 continue
-
-            if len(t.all_participants.nodes) != 2:
-                raise RuntimeError(t.all_participants)
-
-            for participant in t.all_participants.nodes:
-                if participant.id != self.me.id:
-                    break
-            else:
-                raise RuntimeError(t.all_participants)
-
-            c = self.contacts.by_legacy_id(int(participant.id))
-            c.name = participant.messaging_actor.name
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    participant.messaging_actor.profile_pic_large.uri
-                ) as response:
-                    response.raise_for_status()
-                    c.avatar = await response.read()
+            c = await self.contacts.from_thread(t)
             await c.add_to_roster()
-            log.debug("Contact: %s", c)
             c.online()
 
     async def logout(self, p: Optional[Presence]):
@@ -186,21 +208,27 @@ class Session(BaseSession[Contact, Roster]):
 
     async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
         meta = evt.metadata
+        thread = (await self.api.fetch_thread_info(meta.thread.id))[0]
+        if thread.is_group_thread:
+            return
+        contact = await self.contacts.from_thread(thread)
+
+        if not contact.added_to_roster:
+            await contact.add_to_roster()
+
         log.debug("Facebook message: %s", evt)
         if str(meta.sender) == self.me.id:
             if f"app_id:{self.mqtt.state.application.client_id}" in meta.tags:
                 log.debug("Ignoring self message")
-            else:
-                c = self.contacts.by_legacy_id(meta.thread.other_user_id)
-                t = get_now_ms()
-                c.carbon(body=evt.text, legacy_id=t)
-                self.sent_messages.add(c.legacy_id, t)
-            return
+                return
 
-        t = get_now_ms()
-        c = self.contacts.by_legacy_id(meta.sender)
-        self.received_messages.add(c.legacy_id, t)
-        c.send_text(evt.text, legacy_msg_id=t)
+            t = get_now_ms()
+            contact.carbon(body=evt.text, legacy_id=t)
+            self.sent_messages.add(contact.legacy_id, t)
+        else:
+            t = get_now_ms()
+            self.received_messages.add(contact.legacy_id, t)
+            contact.send_text(evt.text, legacy_msg_id=t)
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
         log.debug("Facebook read: %s", receipt)
@@ -230,6 +258,31 @@ class Session(BaseSession[Contact, Roster]):
                 log.debug("Cannot find message to carbon read, ignoring")
                 continue
             c.carbon_read(timestamp)
+
+    async def correct(self, text: str, legacy_msg_id: int, c: LegacyContactType):
+        pass
+
+    async def search(self, form_values: Dict[str, str]) -> SearchResult:
+        results = await self.api.search(form_values["query"], entity_types=["user"])
+        log.debug("Search results: %s", results)
+        items = []
+        for search_result in results.search_results.edges:
+            result = search_result.node
+            if isinstance(result, Participant):
+                items.append(
+                    {
+                        "name": result.name,
+                        "jid": f"{result.id}@{self.xmpp.boundjid.bare}",
+                    }
+                )
+
+        return SearchResult(
+            fields=[
+                FormField(var="name", label="Name"),
+                FormField(var="jid", label="JID", type="jid-single"),
+            ],
+            items=items,
+        )
 
     @staticmethod
     async def on_fb_event(evt):
