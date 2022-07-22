@@ -7,7 +7,7 @@ Slidge
 
 Slidge is a general purpose XMPP gateway framework in python.
 
-Homepage: `sourcehut <https://sr.hr/~nicoco/slidge>`_
+Homepage: `sourcehut <https://sr.ht/~nicoco/slidge>`_
 
 Chat room:
 `slidge@conference.nicoco.fr <xmpp:slidge@conference.nicoco.fr?join>`_

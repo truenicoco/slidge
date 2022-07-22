@@ -15,6 +15,8 @@ from slidge import *
 from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
 
+from slidge.core.contact import LegacyContactType
+
 
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter facebook credentials"
@@ -33,11 +35,12 @@ class Gateway(BaseGateway):
         pass
 
 
-class Contact(LegacyContact):
+class Contact(LegacyContact["Session"]):
     legacy_id: int
 
 
-class Roster(LegacyRoster[Contact]):
+
+class Roster(LegacyRoster[Contact, "Session"]):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
         return int(jid_username)

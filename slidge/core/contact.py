@@ -22,10 +22,12 @@ from ..util import SubclassableOnce
 from ..util.types import AvatarType, LegacyMessageType, LegacyUserIdType
 
 if TYPE_CHECKING:
-    from .. import BaseSession
+    from .session import SessionType
+else:
+    SessionType = TypeVar("SessionType")
 
 
-class LegacyContact(metaclass=SubclassableOnce):
+class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     """
     This class centralizes actions in relation to a specific legacy contact.
 
@@ -71,7 +73,7 @@ class LegacyContact(metaclass=SubclassableOnce):
 
     def __init__(
         self,
-        session: "BaseSession",
+        session: "SessionType",
         legacy_id: LegacyMessageType,
         jid_username: str,
     ):
@@ -462,7 +464,7 @@ class LegacyContact(metaclass=SubclassableOnce):
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
 
 
-class LegacyRoster(Generic[LegacyContactType], metaclass=SubclassableOnce):
+class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=SubclassableOnce):
     """
     Virtual roster of a gateway user, that allows to represent all
     of their contacts as singleton instances (if used properly and not too bugged).
@@ -478,7 +480,7 @@ class LegacyRoster(Generic[LegacyContactType], metaclass=SubclassableOnce):
     if you need some characters when translation JID user parts and legacy IDs.
     """
 
-    def __init__(self, session: "BaseSession"):
+    def __init__(self, session: "SessionType"):
         self._contact_cls: Type[
             LegacyContactType
         ] = LegacyContact.get_self_or_unique_subclass()

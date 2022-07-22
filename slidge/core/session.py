@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Generic, Literal, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Generic, Literal, Optional, Type, TypeVar
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
@@ -289,7 +289,7 @@ class BaseSession(
         :param msg_kwargs: Extra attributes
         :return:
         """
-        return await self.xmpp.input(self.user, text, **msg_kwargs)
+        return await self.xmpp.input(self.user.jid, text, **msg_kwargs)
 
     async def send_qr(self, text: str):
         """
@@ -427,6 +427,8 @@ class BaseSession(
         """
         raise NotImplementedError
 
+
+SessionType = TypeVar("SessionType", bound=BaseSession)
 
 _sessions: Dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)

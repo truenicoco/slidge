@@ -9,3 +9,4 @@ docs/build
 persistent/
 .idea
 .mypy_cache
+.old

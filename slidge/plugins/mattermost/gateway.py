@@ -49,7 +49,8 @@ class Contact(LegacyContact):
     legacy_id: str
 
 
-class Roster(LegacyRoster[Contact]):
+
+class Roster(LegacyRoster[Contact, "Session"]):
     user_id_to_username: dict[str, str] = {}
     channel_id_to_username: dict[str, str] = {}
     session: "Session"

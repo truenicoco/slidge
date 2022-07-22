@@ -7,7 +7,7 @@ import re
 import tempfile
 from asyncio import Future
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Type
 
 import aiohttp
 import qrcode
@@ -18,7 +18,7 @@ from slixmpp.types import MessageTypes
 from ..util import ABCSubclassableOnceAtMost, FormField, SearchResult
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
-from .session import BaseSession
+from .session import BaseSession, SessionType
 
 
 class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
@@ -94,6 +94,8 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     Instructions of the search form.
     """
 
+    CHAT_COMMANDS = {"find": "_chat_command_search", "help": "_chat_command_help"}
+
     def __init__(self, args):
         """
 
@@ -128,9 +130,11 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
 
-        self._session_cls = BaseSession.get_unique_subclass()
+        self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
 
+        self._get_session_from_stanza = self._session_cls.from_stanza
+        self._get_session_from_user = self._session_cls.from_user
         self.register_plugins()
         self.__register_slixmpp_api()
         self.__register_handlers()
@@ -163,7 +167,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.add_event_handler("gateway_message", self._on_gateway_message_private)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
-        get_session = self._session_cls.from_stanza
+        get_session = self._get_session_from_stanza
 
         # fmt: off
         async def msg(m): await get_session(m).send_from_msg(m)
@@ -310,7 +314,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         user_store.add(ifrom, form_dict)
 
     async def _on_user_register(self, iq: Iq):
-        session = self._session_cls.from_stanza(iq)
+        session = self._get_session_from_stanza(iq)
         for jid in self._config.admins:
             self.send_message(
                 mto=jid, mbody=f"{iq.get_from()} has registered", mtype="headline"
@@ -318,7 +322,10 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         await session.login()
 
     async def _on_user_unregister(self, iq: Iq):
-        await self._session_cls.kill_by_jid(iq.get_from())
+        # Mypy: "Type[SessionType?]" has no attribute "kill_by_jid"
+        # I don't understand why ^ this question mark...
+        kill = self._session_cls.kill_by_jid  # type: ignore
+        await kill(iq.get_from())
 
     async def _search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         """
@@ -344,7 +351,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
-        result: SearchResult = await self._session_cls.from_stanza(iq).search(
+        result: SearchResult = await self._get_session_from_stanza(iq).search(
             iq["search"]["form"].get_values()
         )
 
@@ -358,6 +365,48 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         for item in result.items:
             form.add_item(item)
         return reply
+
+    async def _chat_command_search(
+        self, *args, msg: Message, session: Optional[SessionType] = None
+    ):
+        if session is None:
+            msg.reply("Register to the gateway first!")
+            return
+
+        search_form = {}
+        if len(args) == 0:
+            for field in self.SEARCH_FIELDS:
+                search_form[field.var] = await session.input(
+                    (field.label or field.var) + "?"
+                )
+        else:
+            for field, arg in zip(self.SEARCH_FIELDS, args):
+                search_form[field.var] = arg
+
+        results = await session.search(search_form)
+        if results is None:
+            session.send_gateway_message("No results!")
+            return
+
+        result_fields = results.fields
+        for result in results.items:
+            text = ""
+            for f in result_fields:
+                if f.type == "jid-single":
+                    text += f"xmpp:{result[f.var]}\n"
+                else:
+                    text += f"{f.label}: {result[f.var]}\n"
+            session.send_gateway_message(text)
+
+    async def _chat_command_help(
+        self, *_args, msg: Message, session: Optional[SessionType]
+    ):
+        if session is None:
+            msg.reply("Register to the gateway first!").send()
+        else:
+            t = "|".join(self.CHAT_COMMANDS.keys())
+            log.debug("In help: %s", t)
+            msg.reply(f"Available commands: {t}").send()
 
     def config(self, argv: List[str]):
         """
@@ -432,21 +481,30 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
         :param msg: Message sent by the XMPP user
         """
-        log.debug("Gateway msg: %s", msg)
-        user = user_store.get_by_stanza(msg)
-        if user is None:
-            await self.on_gateway_message(msg, None)
-        else:
-            try:
-                f = self._input_futures.pop(user.bare_jid)
-            except KeyError:
-                await self.on_gateway_message(msg, user)
-            else:
-                f.set_result(msg["body"])
+        try:
+            f = self._input_futures.pop(msg.get_from().bare)
+        except KeyError:
+            text = msg["body"]
+            command, *rest = text.split(" ")
 
-    async def on_gateway_message(
-        self, msg: Message, user: Optional[GatewayUser] = None
-    ):
+            user = user_store.get_by_stanza(msg)
+            if user is None:
+                session = None
+            else:
+                session = self._get_session_from_user(user)
+
+            handler_name = self.CHAT_COMMANDS.get(command)
+            if handler_name is None:
+                await self.on_gateway_message(msg, session=session)
+            else:
+                handler = getattr(self, handler_name)
+                log.debug("Handler: %s", handler)
+                await handler(*rest, msg=msg, session=session)
+        else:
+            f.set_result(msg["body"])
+
+    @staticmethod
+    async def on_gateway_message(msg: Message, session: Optional[SessionType] = None):
         """
         Called when the gateway component receives a direct gateway message.
 
@@ -454,16 +512,20 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         :meth:`.BaseGateway.input`
 
         :param msg:
-        :param user: If the message comes from a registered gateway user, their :.GatewayUser:
-            including their registration form. None if sender is not registered.
+        :param session: If the message comes from a registered gateway user, their :.BaseSession:
         """
-        r = msg.reply(body="I got that, but I'm not doing anything with it.")
+        if session is None:
+            r = msg.reply(
+                body="I got that, but I'm not doing anything with it. I don't even know you!"
+            )
+        else:
+            r = msg.reply(body="What? Type 'help' for the list of available commands.")
         r["type"] = "chat"
-        self.send(r)
+        r.send()
 
     async def input(
-        self, user: GatewayUser, text=None, mtype: MessageTypes = "chat", **msg_kwargs
-    ) -> Message:
+        self, jid: JID, text=None, mtype: MessageTypes = "chat", **msg_kwargs
+    ) -> str:
         """
         Request arbitrary user input using a simple chat message, and await the result.
 
@@ -474,15 +536,15 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         not be transmitted to :meth:`.BaseGateway.on_gateway_message`, but rather intercepted.
         Await the coroutine to get its content.
 
-        :param user: The (registered) user we want input from
+        :param jid: The JID we want input from
         :param text: A prompt to display for the user
         :param mtype: Message type
         :return: The user's reply
         """
         if text is not None:
-            self.send_message(mto=user.jid, mbody=text, mtype=mtype, **msg_kwargs)
+            self.send_message(mto=jid, mbody=text, mtype=mtype, **msg_kwargs)
         f = self.loop.create_future()
-        self._input_futures[user.bare_jid] = f
+        self._input_futures[jid.bare] = f
         await f
         return f.result()
 

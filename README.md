@@ -25,7 +25,7 @@ It comes with a few plugins included.
 | Signal     | ✓               | N/A       | ✓      | ✓     | ✗      |
 | Telegram   | ✓               | ✗         | ✓      | ✓     | ✓      |
 | Mattermost | ✓               | ✗         | ✗      | ✗     | ✗      |
-| Facebook   | ✓               | ✗         | ✗      | ✓     | ✗      |
+| Facebook   | ✓               | ✗         | ✓      | ✓     | ✗      |
 | Skype      | ✓               | ✗         | ✗      | ✗     | ~      |
 | Steam      | ✗               | ✗         | ✗      | ✗     | ✗      |
 

@@ -109,8 +109,11 @@ class Session(BaseSession[LegacyContact, LegacyRoster]):
     async def search(self, form_values: Dict[str, str]):
         if form_values["first"] == "bubu":
             return SearchResult(
-                fields=[FormField("first"), FormField("jid", type="jid-single")],
-                items=[{"first": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
+                fields=[
+                    FormField("name", label="Name"),
+                    FormField("jid", type="jid-single"),
+                ],
+                items=[{"name": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
             )
 
 

@@ -40,31 +40,20 @@ class Gateway(BaseGateway):
         _, signal = await self.loop.create_unix_connection(Signal, signald_socket)
         signal.xmpp = self
 
-    async def on_gateway_message(self, msg, user=None):
-        log.debug("Gateway msg: %s", msg)
-        if user is None:
-            raise XMPPError("Please register to the gateway first")
-        try:
-            f = self._input_futures.pop(user.bare_jid)
-        except KeyError:
-            cmd = msg["body"]
-            if cmd == "add_device":
-                await self.add_device(user)
-            else:
-                self.send_message(mto=msg.get_from(), mbody="Come again?", mtype="chat")
+    @staticmethod
+    async def _chat_command_add_device(
+        *args, msg: Message, session: Optional["Session"] = None
+    ):
+        if session is None:
+            return
+        if len(args) == 0:
+            uri = await session.input("URI?")
+        elif len(args) > 1:
+            session.send_gateway_message("Syntax error! Use 'search LINKING_URI'")
+            return
         else:
-            f.set_result(msg["body"])
-
-    async def add_device(self, user: GatewayUser):
-        uri = await self.input(user, "URI?")
-        session = Signal.sessions_by_phone[user.registration_form["phone"]]
-
-        try:
-            await signal.add_device(account=session.phone, uri=uri)
-        except sigexc.SignaldException as e:
-            self.send_message(mto=user.jid, mbody=f"Problem: {e}", mtype="chat")
-        else:
-            self.send_message(mto=user.jid, mbody=f"Linking OK", mtype="chat")
+            uri = args[0]
+        await session.add_device(uri)
 
     async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
         phone = registration_form.get("phone")
@@ -445,6 +434,14 @@ class Session(BaseSession):
             to=c.signal_address,
             timestamps=[legacy_msg_id],
         )
+
+    async def add_device(self, uri: str):
+        try:
+            await signal.add_device(account=self.phone, uri=uri)
+        except sigexc.SignaldException as e:
+            self.send_gateway_message(f"Problem: {e}")
+        else:
+            self.send_gateway_message("Linking OK")
 
 
 def get_parser():
