@@ -48,6 +48,23 @@ class Gateway(BaseGateway):
 class Contact(LegacyContact):
     legacy_id: str
 
+    def update_status(self, status: Optional[str]):
+        if status is None:  # custom status
+            self.session.log.debug("Status is None: %s", status)
+            self.online()
+        elif status == "online":
+            self.online()
+        elif status == "offline":
+            self.offline()
+        elif status == "away":
+            self.away()
+        elif status == "dnd":
+            self.busy()
+        else:
+            self.session.log.warning(
+                "Unknown status for '%s':",
+                status,
+            )
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
@@ -111,23 +128,7 @@ class Session(BaseSession[Contact, Roster]):
             contact.avatar = await self.mm_client.get_profile_image(user.id)
 
             await contact.add_to_roster()
-            if status.status is None:  # custom status
-                self.log.debug("Weird status: %s", status)
-                contact.online()
-            elif status.status == "online":
-                contact.online()
-            elif status.status == "offline":
-                contact.offline()
-            elif status.status == "away":
-                contact.away()
-            elif status.status == "dnd":
-                contact.busy()
-            else:
-                self.log.warning(
-                    "Unknown status for '%s': '%s'",
-                    user.username,
-                    status.status,
-                )
+            contact.update_status(status.status)
 
     async def on_mm_event(self, event: MattermostEvent):
         self.log.debug("Event: %s", event)
@@ -169,9 +170,16 @@ class Session(BaseSession[Contact, Roster]):
             elif event.data["channel_type"] == "P":
                 # private channel
                 pass
-
         elif event.type == EventType.ChannelViewed:
             pass
+        elif event.type == EventType.StatusChange:
+            user_id = event.data["user_id"]
+            if user_id == self.mm_client.mm_id:
+                self.log.debug("Own status change")
+            else:
+
+                contact = await self.contacts.by_mm_user_id(user_id)
+                contact.update_status(event.data["status"])
 
     async def logout(self, p: Optional[Presence]):
         pass
