@@ -1,0 +1,250 @@
+import logging
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Optional
+
+import aiosignald.exc as sigexc
+import aiosignald.generated as sigapi
+from slixmpp import Presence
+from slixmpp.exceptions import XMPPError
+
+from slidge import *
+
+if TYPE_CHECKING:
+    from .contact import Contact, Roster
+    from .gateway import Gateway
+
+from . import txt
+
+
+class Session(BaseSession["Contact", "Roster", "Gateway"]):
+    """
+    Represents a signal account
+    """
+
+    # contacts: Roster
+
+    def __init__(self, user: GatewayUser):
+        """
+
+        :param user:
+        """
+        super().__init__(user)
+        self.phone: str = self.user.registration_form["phone"]
+        self.signal = self.xmpp.signal
+        self.xmpp.sessions_by_phone[self.phone] = self
+
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
+        try:
+            return int(i)
+        except ValueError:
+            raise NotImplementedError
+
+    async def paused(self, c: "Contact"):
+        pass
+
+    async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
+        pass
+
+    async def search(self, form_values: dict[str, str]):
+        pass
+
+    async def login(self):
+        """
+        Attempt to listen to incoming events for this account,
+        or pursue the registration process if needed.
+        """
+        self.send_gateway_status("Connecting...", show="dnd")
+        try:
+            await (await self.signal).subscribe(account=self.phone)
+        except sigexc.NoSuchAccountError:
+            device = self.user.registration_form["device"]
+            try:
+                if device == "primary":
+                    await self.register()
+                elif device == "secondary":
+                    await self.link()
+                else:
+                    # This should never happen
+                    self.send_gateway_status("Disconnected", show="dnd")
+                    raise TypeError("Unknown device type", device)
+            except sigexc.SignaldException as e:
+                self.xmpp.send_message(
+                    mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                )
+                raise
+            await (await self.signal).subscribe(account=self.phone)
+
+        self.send_gateway_status(f"Connected as {self.phone}")
+        await self.add_contacts_to_roster()
+
+    async def register(self):
+        self.send_gateway_status("Registering…", show="dnd")
+        try:
+            await (await self.signal).register(self.phone)
+        except sigexc.CaptchaRequiredError:
+            self.send_gateway_status("Captcha required", show="dnd")
+            captcha = await self.input(txt.CAPTCHA_REQUIRED)
+            await (await self.signal).register(self.phone, captcha=captcha)
+        sms_code = await self.input(
+            f"Reply to this message with the code you have received by SMS at {self.phone}.",
+        )
+        await (await self.signal).verify(account=self.phone, code=sms_code)
+        await (await self.signal).set_profile(
+            account=self.phone, name=self.user.registration_form["name"]
+        )
+        self.send_gateway_message(txt.REGISTER_SUCCESS)
+
+    async def send_linking_qrcode(self):
+        self.send_gateway_status("QR scan needed", show="dnd")
+        resp = await (await self.signal).generate_linking_uri()
+        await self.send_qr(resp.uri)
+        self.xmpp.send_message(
+            mto=self.user.jid,
+            mbody=f"Use this URI or QR code on another signal device to "
+            f"finish linking your XMPP account\n{resp.uri}",
+        )
+        return resp
+
+    async def link(self):
+        resp = await self.send_linking_qrcode()
+        try:
+            await (await self.signal).finish_link(
+                device_name=self.user.registration_form["device_name"],
+                session_id=resp.session_id,
+            )
+        except sigexc.ScanTimeoutError:
+            while True:
+                r = await self.input(txt.LINK_TIMEOUT)
+                if r in ("cancel", "link"):
+                    break
+                else:
+                    self.send_gateway_message("Please reply either 'link' or 'cancel'")
+            if r == "cancel":
+                raise
+            elif r == "link":
+                await self.link()  # TODO: set a max number of attempts
+        except sigexc.SignaldException as e:
+            self.xmpp.send_message(
+                mto=self.user.jid,
+                mbody=f"Something went wrong during the linking process: {e}.",
+            )
+            raise
+        else:
+            self.send_gateway_message(txt.LINK_SUCCESS)
+
+    async def logout(self, p: Optional[Presence]):
+        pass
+
+    async def add_contacts_to_roster(self):
+        """
+        Populate a user's roster
+        """
+        profiles = await (await self.signal).list_contacts(account=self.phone)
+        for profile in profiles.profiles:
+            full_profile = await (await self.signal).get_profile(
+                account=self.phone, address=profile.address
+            )
+            contact = self.contacts.by_phone(profile.address.number)
+            contact.uuid = profile.address.uuid
+            contact.name = profile.name.replace(
+                "\u0000", " "
+            ) or profile.profile_name.replace("\u0000", " ")
+            if full_profile.avatar is not None:
+                with open(full_profile.avatar, "rb") as f:
+                    contact.avatar = f.read()
+            await contact.add_to_roster()
+            contact.online()
+
+    async def on_signal_message(self, msg: sigapi.IncomingMessagev1):
+        """
+        User has received 'something' from signal
+
+        :param msg:
+        """
+        if msg.sync_message is not None:
+            if msg.sync_message.sent is None:
+                log.debug("Ignoring %s", msg)  # Probably a 'message read' marker
+                return
+            destination = msg.sync_message.sent.destination
+            contact = self.contacts.by_json_address(destination)
+            sent_msg = msg.sync_message.sent.message
+            contact.carbon(
+                body=sent_msg.body,
+                date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
+            )
+
+        contact = self.contacts.by_json_address(msg.source)
+
+        if msg.data_message is not None:
+            contact.send_text(
+                body=msg.data_message.body,
+                legacy_msg_id=msg.data_message.timestamp,
+            )
+
+        if msg.typing_message is not None:
+            action = msg.typing_message.action
+            if action == "STARTED":
+                contact.active()
+                contact.composing()
+            elif action == "STOPPED":
+                contact.paused()
+
+        if msg.receipt_message is not None:
+            type_ = msg.receipt_message.type
+            if type_ == "DELIVERY":
+                for t in msg.receipt_message.timestamps:
+                    contact.received(t)
+            elif type_ == "READ":
+                for t in msg.receipt_message.timestamps:
+                    contact.displayed(t)
+
+    async def send_text(self, t: str, c: "Contact") -> int:
+        response = await (await self.signal).send(
+            account=self.phone,
+            recipientAddress=c.signal_address,
+            messageBody=t,
+        )
+        result = response.results[0]
+        log.debug("Result: %s", result)
+        if (
+            result.networkFailure
+            or result.identityFailure
+            or result.proof_required_failure
+        ):
+            raise XMPPError(str(result))
+        return response.timestamp
+
+    async def send_file(self, u: str, c: "Contact"):
+        pass
+
+    async def active(self, c: "Contact"):
+        pass
+
+    async def inactive(self, c: "Contact"):
+        pass
+
+    async def composing(self, c: "Contact"):
+        await (await self.signal).typing(
+            account=self.phone,
+            address=c.signal_address,
+            typing=True,
+        )
+
+    async def displayed(self, legacy_msg_id: int, c: "Contact"):
+        await (await self.signal).mark_read(
+            account=self.phone,
+            to=c.signal_address,
+            timestamps=[legacy_msg_id],
+        )
+
+    async def add_device(self, uri: str):
+        try:
+            await (await self.signal).add_device(account=self.phone, uri=uri)
+        except sigexc.SignaldException as e:
+            self.send_gateway_message(f"Problem: {e}")
+        else:
+            self.send_gateway_message("Linking OK")
+
+
+log = logging.getLogger(__name__)
