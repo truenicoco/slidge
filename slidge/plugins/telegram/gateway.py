@@ -12,9 +12,10 @@ from typing import Dict, List, Optional
 import aiohttp
 import aiotdlib
 import aiotdlib.api as tgapi
-from slidge import *
 from slixmpp import JID, Presence
 from slixmpp.exceptions import XMPPError
+
+from slidge import *
 
 from .config import get_parser
 

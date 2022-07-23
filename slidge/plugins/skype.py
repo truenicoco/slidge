@@ -9,8 +9,9 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 import skpy
-from slidge import *
 from slixmpp import JID, Presence
+
+from slidge import *
 
 
 class Gateway(BaseGateway):

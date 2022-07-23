@@ -7,8 +7,10 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from slidge import *
 from slixmpp import JID, Presence
+
+from slidge import *
+
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 

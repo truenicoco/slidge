@@ -1,5 +1,7 @@
 """
-Commit bot for the slidge MUC.
+Commit bot for the slidge MUC
+
+Come say hi! xmpp:slidge@conference.nicoco.fr?join
 """
 
 import asyncio

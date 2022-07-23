@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 
 import configargparse
+
 from slidge import BaseGateway
 from slidge.util.db import user_store
 

@@ -11,13 +11,11 @@ import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
-from maufbapi.types.graphql import Thread, ParticipantNode, Participant
-
-from slidge import *
+from maufbapi.types.graphql import Participant, ParticipantNode, Thread
 from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 
-from slidge.core.contact import LegacyContactType
+from slidge import *
 
 
 class Gateway(BaseGateway):
@@ -259,7 +257,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 continue
             c.carbon_read(timestamp)
 
-    async def correct(self, text: str, legacy_msg_id: int, c: LegacyContactType):
+    async def correct(self, text: str, legacy_msg_id: int, c: Contact):
         pass
 
     async def search(self, form_values: Dict[str, str]) -> SearchResult:

@@ -16,11 +16,12 @@ login process seem a little too exotic for my taste.
 import pprint
 from typing import Any, Dict, Optional
 
-from slidge import *
 from slixmpp import Presence
 from steam.client import SteamClient
 from steam.core.msg import MsgProto
 from steam.enums.common import EPersonaState, EResult
+
+from slidge import *
 
 
 class Gateway(BaseGateway):

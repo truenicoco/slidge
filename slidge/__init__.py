@@ -1,4 +1,5 @@
 import slixmpp.plugins
+
 from slidge.core.contact import LegacyContact, LegacyRoster
 from slidge.core.gateway import BaseGateway
 from slidge.core.session import BaseSession
