@@ -7,7 +7,7 @@ import re
 import tempfile
 from asyncio import Future
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Type
+from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar
 
 import aiohttp
 import qrcode
@@ -590,6 +590,9 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             for c in session.contacts:
                 c.offline()
             self.send_presence(ptype="unavailable", pto=user.jid)
+
+
+GatewayType = TypeVar("GatewayType", bound=BaseGateway)
 
 
 SLIXMPP_PLUGINS = [

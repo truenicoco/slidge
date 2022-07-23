@@ -69,7 +69,7 @@ class Roster(LegacyRoster):
         return int(jid_username)
 
 
-class Session(BaseSession):
+class Session(BaseSession[Contact, Roster, Gateway]):
     tdlib_path: Optional[Path] = None
     tg: "TelegramClient"
     sent_read_marks: set[int]

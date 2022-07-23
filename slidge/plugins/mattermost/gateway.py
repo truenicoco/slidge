@@ -83,7 +83,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
         return self.by_legacy_id(legacy_id)
 
 
-class Session(BaseSession[Contact, Roster]):
+class Session(BaseSession[Contact, Roster, Gateway]):
     mm_client: MattermostClient
     ws: Websocket
     messages_waiting_for_echo: set[str]

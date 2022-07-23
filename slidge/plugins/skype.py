@@ -53,7 +53,7 @@ class Contact(LegacyContact):
     pass
 
 
-class Session(BaseSession[Contact, Roster]):
+class Session(BaseSession[Contact, Roster, Gateway]):
     skype_token_path: Path
     sk: skpy.Skype
     thread: Optional[Thread]

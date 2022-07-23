@@ -44,7 +44,7 @@ class Roster(LegacyRoster):
         return int(jid_username)
 
 
-class Session(BaseSession[LegacyContact, Roster]):
+class Session(BaseSession[LegacyContact, Roster, Gateway]):
     steam: SteamClient
 
     def post_init(self):

@@ -85,7 +85,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
         return contact
 
 
-class Session(BaseSession[Contact, Roster]):
+class Session(BaseSession[Contact, Roster, Gateway]):
     fb_state: AndroidState
 
     shelf_path: Path

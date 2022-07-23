@@ -12,7 +12,9 @@ from ..util.types import LegacyMessageType
 
 if TYPE_CHECKING:
     from slidge import SearchResult
-    from slidge.core.gateway import BaseGateway
+    from slidge.core.gateway import GatewayType
+else:
+    GatewayType = TypeVar("GatewayType")
 
 
 def ignore_message_to_component(func):
@@ -26,7 +28,8 @@ def ignore_message_to_component(func):
 
 
 class BaseSession(
-    Generic[LegacyContactType, LegacyRosterType], metaclass=ABCSubclassableOnceAtMost
+    Generic[LegacyContactType, LegacyRosterType, GatewayType],
+    metaclass=ABCSubclassableOnceAtMost,
 ):
     """
     Represents a gateway user logged in to the network and performing actions.
@@ -43,7 +46,7 @@ class BaseSession(
     with a read mark from the recipient
     """
 
-    xmpp: "BaseGateway"
+    xmpp: "GatewayType"
 
     def __init__(self, user: GatewayUser):
         self._roster_cls: Type[

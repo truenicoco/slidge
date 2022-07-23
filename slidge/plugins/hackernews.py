@@ -46,7 +46,7 @@ class Gateway(BaseGateway):
                     raise ValueError("Cookie does not seem valid")
 
 
-class Session(BaseSession[LegacyContact, LegacyRoster]):
+class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     http_session: aiohttp.ClientSession
     highest_handled_submission_id: int
     hn_username: str
