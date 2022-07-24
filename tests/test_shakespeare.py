@@ -35,13 +35,13 @@ class Session(BaseSession):
     def __init__(self, user):
         super().__init__(user)
 
-    async def login(self, p: Presence):
-        received_presences.append(p)
+    async def login(self):
+        pass
 
-    async def logout(self, p: Optional[Presence]):
-        received_presences.append(p)
+    async def logout(self):
+        pass
 
-    async def send_text(self, t: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_text(self, t: str, c: LegacyContact):
         text_received_by_juliet.append((t, c))
         assert self.user.bare_jid == "romeo@montague.lit"
         assert self.user.jid == JID("romeo@montague.lit")
@@ -51,7 +51,7 @@ class Session(BaseSession):
             c.send_text("I love you")
             return 0
 
-    async def send_file(self, u: str, c: LegacyContact) -> Optional[Hashable]:
+    async def send_file(self, u: str, c: LegacyContact):
         pass
 
     async def active(self, c: LegacyContact):

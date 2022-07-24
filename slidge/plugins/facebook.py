@@ -129,9 +129,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 log.debug(login)
                 self.fb_state = shelf["state"] = api.state
             else:
-                # noinspection PyTypeCheckers
                 self.api = api = AndroidAPI(state=s)
-        self.send_gateway_message("Login successful")
         self.mqtt = AndroidMQTT(api.state)
         self.me = await self.api.get_self()
         await self.add_friends()
@@ -154,7 +152,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.mqtt.add_event_handler(mqtt_t.ForcedFetch, self.on_fb_event)
         # self.mqtt.add_event_handler(Connect, self.on_connect)
         # self.mqtt.add_event_handler(Disconnect, self.on_disconnect)
-        await self.mqtt.listen(self.mqtt.seq_id)
+        self.xmpp.loop.create_task(self.mqtt.listen(self.mqtt.seq_id))
+        return f"Connected as '{self.me.name} <{self.me.email}>'"
 
     async def add_friends(self):
         thread_list = await self.api.fetch_thread_list(msg_count=0)
@@ -170,7 +169,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             await c.add_to_roster()
             c.online()
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def send_text(self, t: str, c: Contact) -> int:

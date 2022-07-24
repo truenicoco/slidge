@@ -54,7 +54,6 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         Attempt to listen to incoming events for this account,
         or pursue the registration process if needed.
         """
-        self.send_gateway_status("Connecting...", show="dnd")
         try:
             await (await self.signal).subscribe(account=self.phone)
         except sigexc.NoSuchAccountError:
@@ -75,8 +74,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 raise
             await (await self.signal).subscribe(account=self.phone)
 
-        self.send_gateway_status(f"Connected as {self.phone}")
         await self.add_contacts_to_roster()
+        return f"Connected as {self.phone}"
 
     async def register(self):
         self.send_gateway_status("Registering…", show="dnd")
@@ -133,7 +132,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         else:
             self.send_gateway_message(txt.LINK_SUCCESS)
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def add_contacts_to_roster(self):

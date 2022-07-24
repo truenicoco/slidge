@@ -100,7 +100,7 @@ class Session(BaseSession[LegacyContact, Roster, Gateway]):
     def on_steam_msg(self, msg: MsgProto):
         self.log.debug("New message event: %s", vars(pprint.pformat(msg)))
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def send_text(self, t: str, c: LegacyContact):

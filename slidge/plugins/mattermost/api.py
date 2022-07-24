@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
@@ -25,13 +26,15 @@ from mattermost_api_reference_client.types import Unset
 class MattermostClient:
     def __init__(self, *args, **kwargs):
         self.http = AuthenticatedClient(*args, **kwargs)
-        self.mm_id = None
+        self.mm_id: Optional[str] = None
+        self.me: Optional[User] = None
 
     async def login(self):
         log.debug("Login")
         me = await get_user.asyncio("me", client=self.http)
         if me is None:
             raise RuntimeError("Could not login")
+        self.me = me
         self.mm_id = my_id = me.id
         if isinstance(my_id, Unset):
             raise RuntimeError("Could not login")
@@ -117,6 +120,9 @@ class MattermostClient:
         other = await get_user_by_username.asyncio(user_id, client=mm)
         if other is None or isinstance(other.id, Unset):
             raise RuntimeError("Contact not found")
+
+        if self.mm_id is None:
+            raise RuntimeError("Not logged?")
 
         direct_channel = await create_direct_channel.asyncio(
             json_body=[self.mm_id, other.id], client=mm

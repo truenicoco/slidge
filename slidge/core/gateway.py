@@ -200,9 +200,20 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
         for user in user_store.get_all():
             session = self._session_cls.from_user(user)
-            self.loop.create_task(session.login())
+            self.loop.create_task(self._login_wrap(session))
 
         log.info("Slidge has successfully started")
+
+    @staticmethod
+    async def _login_wrap(session: "SessionType"):
+        session.send_gateway_status("Logging in…", show="dnd")
+        try:
+            status = await session.login()
+        except Exception as e:
+            session.send_gateway_status(f"Could not login: {e}")
+        else:
+            if status is None:
+                session.send_gateway_status("Logged in", show="chat")
 
     def _add_commands(self):
         self["xep_0050"].add_command(
@@ -589,6 +600,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             session = self._session_cls.from_jid(user.jid)
             for c in session.contacts:
                 c.offline()
+            self.loop.create_task(session.logout())
             self.send_presence(ptype="unavailable", pto=user.jid)
 
 

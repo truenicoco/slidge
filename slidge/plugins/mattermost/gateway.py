@@ -108,7 +108,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         await self.mm_client.login()
 
         await self.add_contacts()
-        await self.ws.connect(self.on_mm_event)
+        self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
+        if self.mm_client.me is None:
+            raise RuntimeError
+
+        return f"Connected as '{self.mm_client.me.username}'"
 
     async def add_contacts(self):
         user_ids = await self.mm_client.get_contacts()
@@ -182,7 +186,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 contact = await self.contacts.by_mm_user_id(user_id)
                 contact.update_status(event.data["status"])
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def send_text(self, t: str, c: Contact):

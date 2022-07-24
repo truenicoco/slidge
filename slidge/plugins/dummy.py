@@ -58,8 +58,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
             c.avatar = a
             await c.add_to_roster()
             c.online("I am not a real person, so what?")
+        return "You can talk to your fake friends now"
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         log.debug("User has disconnected")
 
     async def send_text(self, t: str, c: LegacyContact):

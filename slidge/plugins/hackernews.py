@@ -69,6 +69,11 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         if kid_ids:
             self.highest_handled_submission_id = max(kid_ids)
 
+        self.xmpp.loop.create_task(self.main_loop())
+        return f"Logged as {self.hn_username}"
+
+    async def main_loop(self):
+        kid_ids: list[int] = []
         while True:
             kid_ids.clear()
             for submission_id in await self.get_user_submissions():
@@ -106,7 +111,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         async with self.http_session.get(f"{API_URL}/item/{item_id}.json") as r:
             return await r.json()
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def send_text(self, t: str, c: LegacyContact):

@@ -86,7 +86,6 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             i = int(i)  # makes testing easier to make api_id optional...
 
         self.tg = TelegramClient(
-            self.xmpp,
             self,
             api_id=i,
             api_hash=registration_form.get("api_hash"),
@@ -106,14 +105,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             raise NotImplementedError("This is not a valid telegram msg ID")
 
     async def login(self):
-        self.send_gateway_status("Connecting", show="dnd")
-        async with self.tg as tg:
-            self.send_gateway_status(f"Connected as {self.tg.get_my_id()}")
-            await self.add_contacts_to_roster()
-            await tg.idle()
+        await self.tg.start()
+        await self.add_contacts_to_roster()
+        return f"Connected as {self.tg.get_my_id()}"
 
-    async def logout(self, p: Optional[Presence]):
-        pass
+    async def logout(self):
+        await self.tg.stop()
 
     async def send_text(self, t: str, c: Contact) -> int:
         t = escape(t)
@@ -243,13 +240,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
 
 class TelegramClient(aiotdlib.Client):
-    def __init__(self, xmpp: BaseGateway, session: Session, **kw):
+    def __init__(self, session: Session, **kw):
         super().__init__(parse_mode=aiotdlib.ClientParseMode.MARKDOWN, **kw)
         self.session = session
 
         async def input_(prompt):
             self.session.send_gateway_status(f"Action required: {prompt}")
-            return await xmpp.input(session.user, prompt)
+            return await session.input(prompt)
 
         self.input = input_
         self._auth_get_code = functools.partial(input_, "Enter code")

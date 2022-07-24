@@ -153,7 +153,7 @@ class BaseSession(
             return
         for c in session.contacts:
             c.unsubscribe()
-        await session.logout(None)
+        await session.logout()
         await cls.xmpp.unregister(user)
         del _sessions[user]
         del user
@@ -312,22 +312,24 @@ class BaseSession(
         """
         pass
 
-    async def login(self):
+    async def login(self) -> Optional[str]:
         """
         Login the gateway user to the legacy network.
 
-        Triggered when the gateway start and on user registration
+        Triggered when the gateway start and on user registration.
+        It is recommended that this function returns once the user is logged in,
+        so if you need to await forever (for instance to listen to incoming events),
+        it's a good idea to wrap your listener in an asyncio.Task.
+
+        :return: Optionally, a text to use as the gateway status, e.g., "Connected as 'dude@legacy.network'"
         """
         raise NotImplementedError
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         """
         Logout the gateway user from the legacy network.
 
-        Triggered when the gateway receives an offline presence from the user.
-        Just override this and ``pass`` to implement a bouncer-like ("always connected") functionality.
-
-        :param p:
+        Called on user unregistration and gateway shutdown.
         """
         raise NotImplementedError
 

@@ -98,6 +98,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         # TODO: close this gracefully on exit
         self.thread = thread = Thread(target=self.skype_blocking)
         thread.start()
+        return f"Connected as '{self.sk.userId}'"
 
     def skype_blocking(self):
         while True:
@@ -162,7 +163,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         skype_msg = await future
         return skype_msg.id
 
-    async def logout(self, p: Optional[Presence]):
+    async def logout(self):
         pass
 
     async def send_file(self, u: str, c: LegacyContact):
