@@ -41,7 +41,9 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             raise NotImplementedError
 
     async def paused(self, c: "Contact"):
-        pass
+        await (await self.signal).typing(
+            account=self.phone, typing=False, address=c.signal_address
+        )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
         pass
