@@ -30,13 +30,14 @@ class Gateway(BaseGateway):
     ROSTER_GROUP = "Signal"
 
     signal: asyncio.Future["Signal"]
+    signal_socket: str
     sessions_by_phone: Dict[str, "Session"] = {}
 
     def config(self, argv: List[str]):
         args = get_parser().parse_args(argv)
-
+        self.signal_socket = socket = args.socket
         self.signal = self.loop.create_future()
-        self.loop.create_task(self.connect_signal(args.socket))
+        self.loop.create_task(self.connect_signal(socket))
 
     async def connect_signal(self, socket: str):
         """

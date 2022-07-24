@@ -1,10 +1,13 @@
 import logging
+import os
+import tempfile
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
+import aiohttp
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
-from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -135,7 +138,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             self.send_gateway_message(txt.LINK_SUCCESS)
 
     async def logout(self):
-        pass
+        await (await self.signal).unsubscribe(account=self.phone)
 
     async def add_contacts_to_roster(self):
         """
@@ -178,6 +181,14 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         contact = self.contacts.by_json_address(msg.source)
 
         if msg.data_message is not None:
+            for attachment in msg.data_message.attachments:
+                with open(attachment.storedFilename, "rb") as f:
+                    await contact.send_file(
+                        filename=attachment.customFilename,
+                        input_file=f,
+                        content_type=attachment.contentType,
+                        legacy_msg_id=msg.data_message.timestamp
+                    )
             contact.send_text(
                 body=msg.data_message.body,
                 legacy_msg_id=msg.data_message.timestamp,
@@ -217,7 +228,24 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         return response.timestamp
 
     async def send_file(self, u: str, c: "Contact"):
-        pass
+        s = await self.signal
+        async with aiohttp.ClientSession() as client:
+            async with client.get(url=u) as r:
+                with tempfile.TemporaryDirectory(
+                    dir=Path(self.xmpp.signal_socket).parent,
+                ) as d:
+                    os.chmod(d, 0o777)
+                    with open(Path(d) / r.url.name, "wb") as f:
+                        f.write(await r.content.read())
+                        os.chmod(
+                            f.name, 0o666
+                        )  # temp file is 0600 https://stackoverflow.com/a/10541972/5902284
+                        signal_r = await s.send(
+                            account=self.phone,
+                            recipientAddress=c.signal_address,
+                            attachments=[dict(filename=f.name)],
+                        )
+                        return signal_r.timestamp
 
     async def active(self, c: "Contact"):
         pass

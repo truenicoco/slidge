@@ -20,14 +20,14 @@ It's a work in progress, but it should make
 
 It comes with a few plugins included.
 
-|            | Direct messages | Presences | Typing | Marks | Upload |
-|------------|-----------------|-----------|--------|-------|--------|
-| Signal     | ✓               | N/A       | ✓      | ✓     | ✗      |
-| Telegram   | ✓               | ✗         | ✓      | ✓     | ✓      |
-| Mattermost | ✓               | ✗         | ✗      | ✗     | ✗      |
-| Facebook   | ✓               | ✗         | ✓      | ✓     | ✗      |
-| Skype      | ✓               | ✗         | ✗      | ✗     | ~      |
-| Steam      | ✗               | ✗         | ✗      | ✗     | ✗      |
+|            | Direct messages | Presences | Typing | Marks | Upload | Correction |
+|------------|-----------------|-----------|--------|-------|--------|------------|
+| Signal     | ✓               | N/A       | ✓      | ✓     | ✓      | N/A        |
+| Telegram   | ✓               | ~         | ✓      | ✓     | ✓      | ✗          |
+| Mattermost | ✓               | ✓         | ✗      | ✗     | ✗      | ✗          |
+| Facebook   | ✓               | ✗         | ✓      | ✓     | ✗      | ✗          |
+| Skype      | ✓               | ✗         | ✗      | ✗     | ~      | ✗          |
+| Steam      | ✗               | ✗         | ✗      | ✗     | ✗      | ✗          |
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
 
