@@ -355,7 +355,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         filename: Union[Path, str],
         content_type: Optional[str] = None,
         input_file: Optional[IO[bytes]] = None,
-    ):
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+    ) -> Message:
         """
         Send a file using HTTP upload (:xep:`0363`)
 
@@ -363,21 +364,20 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param content_type: MIME type, inferred from filename if not given
         :param input_file: Optionally, a file like object instead of a file on disk.
             filename will still be used to give the uploaded file a name
+        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
+            user to the legacy network, specify this
         """
-        try:
-            log.debug("HOST: %s", self.xmpp.server_host)
-            url = await self.xmpp["xep_0363"].upload_file(
-                filename=filename,
-                content_type=content_type,
-                input_file=input_file,
-            )
-        except Exception as e:
-            log.exception(e)
-        else:
-            msg = self.__make_message()
-            msg["oob"]["url"] = url
-            msg["body"] = url
-            self.__send_message(msg)
+        log.debug("HOST: %s", self.xmpp.server_host)
+        url = await self.xmpp["xep_0363"].upload_file(
+            filename=filename,
+            content_type=content_type,
+            input_file=input_file,
+        )
+        msg = self.__make_message()
+        msg["oob"]["url"] = url
+        msg["body"] = url
+        self.__send_message(msg, legacy_msg_id)
+        return msg
 
     def __carbon(self, msg: Message):
         carbon = Message()
