@@ -180,7 +180,8 @@ class BaseSession(
         else:
             log.debug("Ignoring %s", m)
             return
-        self.sent[legacy_msg_id] = m.get_id()
+        if legacy_msg_id is not None:
+            self.sent[legacy_msg_id] = m.get_id()
 
     @ignore_message_to_component
     async def active_from_msg(self, m: Message):
