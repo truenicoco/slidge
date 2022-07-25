@@ -135,7 +135,7 @@ class XEP_0115(BasePlugin):
 
         self.xmpp.event("entity_caps", p)
 
-    async def _process_caps(self, pres):
+    async def _process_caps(self, pres: Presence):
         if not pres["caps"]["hash"]:
             log.debug(
                 "Received unsupported legacy caps: %s, %s, %s",
@@ -144,6 +144,10 @@ class XEP_0115(BasePlugin):
                 pres["caps"]["ext"],
             )
             self.xmpp.event("entity_caps_legacy", pres)
+            return
+
+        if self.xmpp.is_component and pres.get_to() != self.xmpp.boundjid.bare:
+            log.debug("Not attempting to update caps for presence not directed at the component JID")
             return
 
         ver = pres["caps"]["ver"]
