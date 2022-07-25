@@ -187,7 +187,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                         filename=attachment.customFilename,
                         input_file=f,
                         content_type=attachment.contentType,
-                        legacy_msg_id=msg.data_message.timestamp
+                        legacy_msg_id=msg.data_message.timestamp,
                     )
             contact.send_text(
                 body=msg.data_message.body,

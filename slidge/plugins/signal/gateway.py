@@ -33,6 +33,8 @@ class Gateway(BaseGateway):
     signal_socket: str
     sessions_by_phone: Dict[str, "Session"] = {}
 
+    CHAT_COMMANDS = {"add_device": "_chat_command_add_device"}
+
     def config(self, argv: List[str]):
         args = get_parser().parse_args(argv)
         self.signal_socket = socket = args.socket
