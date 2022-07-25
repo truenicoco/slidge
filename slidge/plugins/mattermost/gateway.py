@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pprint
 import re
@@ -6,7 +7,6 @@ from typing import Any, Dict, Optional
 
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
-from slixmpp import Presence
 
 from slidge import *
 
@@ -88,9 +88,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     mm_client: MattermostClient
     ws: Websocket
     messages_waiting_for_echo: set[str]
+    send_lock: asyncio.Lock
 
     def post_init(self):
         self.messages_waiting_for_echo = set()
+        self.send_lock = asyncio.Lock()
         f = self.user.registration_form
         url = f["url"] + f["basepath"]
         self.mm_client = MattermostClient(
@@ -152,7 +154,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             if event.data["channel_type"] == "D":  # Direct messages?
                 if user_id == self.mm_client.mm_id:
                     try:
-                        self.messages_waiting_for_echo.remove(post_id)
+                        async with self.send_lock:
+                            self.messages_waiting_for_echo.remove(post_id)
                     except KeyError:
                         members = await self.mm_client.get_channel_members(channel_id)
                         if len(members) > 2:
@@ -190,9 +193,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def send_text(self, t: str, c: Contact):
-        msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
-        self.messages_waiting_for_echo.add(msg_id)
-        return msg_id
+        async with self.send_lock:
+            msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
+            self.messages_waiting_for_echo.add(msg_id)
+            return msg_id
 
     async def send_file(self, u: str, c: LegacyContact):
         pass
