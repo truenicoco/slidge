@@ -1,4 +1,4 @@
-from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost
+from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost, BiDict
 
 
 def test_subclass():
@@ -27,3 +27,23 @@ def test_subclass():
 
     # fmt: on
     SubclassableOnce.TEST_MODE = True
+
+
+def test_bidict():
+    d: BiDict[int, str] = BiDict()
+    d[1] = "a"
+    d[2] = "b"
+    d[1] = 8
+
+    d.inverse[8] = 1
+
+    assert d.inverse["a"] == 1
+    assert d.inverse["b"] == 2
+    assert 1 in d
+    assert 2 in d
+
+    d[2] = "c"
+    assert d[2] == "c"
+    assert d.inverse["c"] == 2
+    assert "b" not in d
+    assert len(d.inverse.values()) == 2

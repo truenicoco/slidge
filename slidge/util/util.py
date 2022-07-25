@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 from abc import ABCMeta
-from typing import Dict, Iterable, List, Literal, Optional
+from typing import Dict, Iterable, List, Literal, Optional, Generic, TypeVar
 
 field_type = Literal[
     "boolean",
@@ -48,16 +48,20 @@ class FormField:
             self.type = "text-private"
 
 
-class BiDict(dict):
+KeyType = TypeVar("KeyType")  # FIXME: mypy does not correctly infer types with this...
+ValueType = TypeVar("ValueType")
+
+
+class BiDict(Generic[KeyType, ValueType], dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.inverse = {}
+        self.inverse: dict[ValueType, KeyType] = {}
         for key, value in self.items():
             self.inverse[value] = key
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: KeyType, value: ValueType):
         if key in self:
-            self.inverse[self[key]].remove(key)
+            del self.inverse[self[key]]
         super().__setitem__(key, value)
         self.inverse[value] = key
 
