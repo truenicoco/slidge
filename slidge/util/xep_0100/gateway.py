@@ -69,6 +69,7 @@ class XEP_0100(BasePlugin):
         if p.get_to() == self.xmpp.boundjid.bare:
             log.debug("REMOVE: Our roster: %s", self.xmpp.client_roster)
             self.xmpp["xep_0077"].api["user_remove"](None, None, p["from"], p)
+            self.xmpp.event("user_unregister", p)
 
     async def on_message(self, msg: Message):
         if msg["type"] == "groupchat":
