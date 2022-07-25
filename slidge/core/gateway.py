@@ -94,7 +94,25 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     Instructions of the search form.
     """
 
-    CHAT_COMMANDS = {"find": "_chat_command_search", "help": "_chat_command_help"}
+    _BASE_CHAT_COMMANDS = {"find": "_chat_command_search", "help": "_chat_command_help"}
+    CHAT_COMMANDS: dict[str, str] = {}
+    """
+    Keys of this dict can be used to trigger a command by a simple chat message to the gateway
+    component. Extra words after the key are passed as *args to the handler. Values of the dict
+    are strings, and handlers are resolved using ``getattr()`` on the :class:`.BaseGateway`
+    instance.
+    
+    Handlers are coroutines with following signature:
+    
+    .. code-block::python
+    
+        async def _chat_command_xxx(*args, msg: Message, session: Optional[Session] = None)
+            ...
+    
+    The original :class:`slixmpp.stanza.Message` is also passed to the handler as the
+    msg kwarg. If the command comes from a registered gateway user, its session attribute is also
+    passed to the handler.
+    """
 
     def __init__(self, args):
         """
@@ -139,6 +157,11 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.__register_slixmpp_api()
         self.__register_handlers()
         self._input_futures: Dict[str, Future] = {}
+
+        self._chat_commands = {
+            k: getattr(self, v)
+            for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
+        }
 
     def __register_slixmpp_api(self):
         self["xep_0077"].api.register(
@@ -415,7 +438,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         if session is None:
             msg.reply("Register to the gateway first!").send()
         else:
-            t = "|".join(self.CHAT_COMMANDS.keys())
+            t = "|".join(self._chat_commands.keys())
             log.debug("In help: %s", t)
             msg.reply(f"Available commands: {t}").send()
 
@@ -504,12 +527,11 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             else:
                 session = self._get_session_from_user(user)
 
-            handler_name = self.CHAT_COMMANDS.get(command)
-            if handler_name is None:
+            handler = self._chat_commands.get(command)
+            if handler is None:
                 await self.on_gateway_message(msg, session=session)
             else:
-                handler = getattr(self, handler_name)
-                log.debug("Handler: %s", handler)
+                log.debug("Chat command handler: %s", handler)
                 await handler(*rest, msg=msg, session=session)
         else:
             f.set_result(msg["body"])
