@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 from abc import ABCMeta
-from typing import Dict, Iterable, List, Literal, Optional, Generic, TypeVar
+from typing import Dict, Generic, Iterable, List, Literal, Optional, TypeVar
 
 field_type = Literal[
     "boolean",

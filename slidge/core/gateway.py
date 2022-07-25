@@ -385,7 +385,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
-        result: SearchResult = await self._get_session_from_stanza(iq).search(
+        result = await self._get_session_from_stanza(iq).search(
             iq["search"]["form"].get_values()
         )
 

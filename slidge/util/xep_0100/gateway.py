@@ -44,7 +44,13 @@ class XEP_0100(BasePlugin):
 
     def plugin_end(self):
         if not self.xmpp.is_component:
-            return
+            self.xmpp.remove_event_handler("user_register", self.on_user_register)
+            self.xmpp.remove_event_handler("user_unregister", self.on_user_unregister)
+            self.xmpp.remove_event_handler(
+                "presence_unsubscribe", self.on_presence_unsubscribe
+            )
+
+            self.xmpp.remove_event_handler("message", self.on_message)
 
     async def get_user(self, stanza):
         return await self.xmpp["xep_0077"].api["user_get"](None, None, None, stanza)

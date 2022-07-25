@@ -5,12 +5,11 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from slixmpp import JID, Presence
+from slixmpp import JID
 
 from slidge import *
-
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 

@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 import skpy
-from slixmpp import JID, Presence
+from slixmpp import JID
 
 from slidge import *
 
