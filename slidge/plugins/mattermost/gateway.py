@@ -174,6 +174,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                         )
                 else:
                     contact = await self.contacts.by_mm_user_id(user_id)
+                    if event.data.get("set_online"):
+                        contact.online()
                     contact.send_text(message)
             elif event.data["channel_type"] == "P":
                 # private channel
