@@ -2,8 +2,10 @@ from argparse import Namespace
 
 import pytest
 from slixmpp import JID
+from aiotdlib import api as tgapi
 
 import slidge.plugins.telegram as plugin
+import slidge.plugins.telegram.client
 import slidge.plugins.telegram.gateway
 from slidge.util.test import SlidgeTest
 from slidge import *
@@ -34,7 +36,7 @@ class TestTelegramBase(SlidgeTest):
 
 class TestTelegram(TestTelegramBase):
     def setUp(self):
-        slidge.plugins.telegram.gateway.TelegramClient = MockTdlib
+        slidge.plugins.telegram.client.TelegramClient = MockTdlib
         slidge.plugins.telegram.gateway.Gateway.args = Namespace(
             tdlib_key="", tdlib_path=""
         )
@@ -64,14 +66,14 @@ class TestTelegram(TestTelegramBase):
 
         req = tg.calls[0][1]["args"][0]
 
-        assert isinstance(req, slidge.plugins.telegram.gateway.tgapi.ViewMessages)
+        assert isinstance(req, tgapi.ViewMessages)
         assert req.chat_id == tg_chat_id
         assert tg_msg_id in req.message_ids
 
 
 @pytest.mark.asyncio
 async def test_ignore_read_marks_confirmation():
-    action = slidge.plugins.telegram.gateway.tgapi.UpdateChatReadInbox(
+    action = tgapi.UpdateChatReadInbox(
         ID=123,
         chat_id=12345,
         last_read_inbox_message_id=123456789,
@@ -97,12 +99,12 @@ async def test_ignore_read_marks_confirmation():
     tg.session = MockSession()
     tg.session.contacts = Contacts()
 
-    await slidge.plugins.telegram.gateway.on_user_read_from_other_device(tg, action)
+    await slidge.plugins.telegram.contact.on_user_read_from_other_device(tg, action)
     assert len(tg.session.sent_read_marks) == 0
     assert tg.session.contacts.by_legacy_id(12345).carbons[0] == 123456789
 
     tg.session.contacts.by_legacy_id(12345).carbons = []
     tg.session.sent_read_marks.add(123456789)
-    await slidge.plugins.telegram.gateway.on_user_read_from_other_device(tg, action)
+    await slidge.plugins.telegram.contact.on_user_read_from_other_device(tg, action)
     assert len(tg.session.sent_read_marks) == 0
     assert len(tg.session.contacts.by_legacy_id(12345).carbons) == 0

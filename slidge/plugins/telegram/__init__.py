@@ -36,9 +36,8 @@ Extras
 - File uploads: yes
 """
 
+from .client import TelegramClient
 from .config import get_parser
-
-try:
-    from .gateway import Contact, Gateway, Roster, Session
-except ImportError:
-    pass
+from .contact import Contact, Roster
+from .gateway import Gateway
+from .session import Session
