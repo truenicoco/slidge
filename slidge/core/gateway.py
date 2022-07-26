@@ -246,6 +246,8 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         else:
             if status is None:
                 session.send_gateway_status("Logged in", show="chat")
+            else:
+                session.send_gateway_status(status, show="chat")
 
     def __add_adhoc_commands(self):
         # TODO: this should only be advertised to admins
