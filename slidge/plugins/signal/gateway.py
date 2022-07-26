@@ -203,9 +203,7 @@ class Signal(SignaldAPI):
         super().__init__()
         self.sessions_by_phone = xmpp.sessions_by_phone
 
-    async def handle_WebSocketConnectionState(
-        self, state: sigapi.WebSocketConnectionStatev1, payload
-    ):
+    async def handle_ListenerState(self, state: sigapi.ListenerStatev1, payload):
         """
         Connection state for an account.
 
@@ -214,7 +212,7 @@ class Signal(SignaldAPI):
         """
 
         phone = payload["account"]
-        if state.state == "CONNECTED":
+        if state.connected:
             session = self.sessions_by_phone[phone]
             await session.add_contacts_to_roster()
 

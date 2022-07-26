@@ -79,7 +79,6 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 raise
             await (await self.signal).subscribe(account=self.phone)
 
-        await self.add_contacts_to_roster()
         return f"Connected as {self.phone}"
 
     async def register(self):
