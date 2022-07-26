@@ -33,9 +33,6 @@ def test_bidict():
     d: BiDict[int, str] = BiDict()
     d[1] = "a"
     d[2] = "b"
-    d[1] = 8
-
-    d.inverse[8] = 1
 
     assert d.inverse["a"] == 1
     assert d.inverse["b"] == 2
