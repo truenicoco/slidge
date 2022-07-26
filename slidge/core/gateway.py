@@ -15,7 +15,7 @@ from slixmpp import JID, ComponentXMPP, Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import MessageTypes
 
-from ..util import ABCSubclassableOnceAtMost, FormField, SearchResult
+from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from .session import BaseSession, SessionType
@@ -94,7 +94,11 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
     Instructions of the search form.
     """
 
-    _BASE_CHAT_COMMANDS = {"find": "_chat_command_search", "help": "_chat_command_help"}
+    _BASE_CHAT_COMMANDS = {
+        "find": "_chat_command_search",
+        "help": "_chat_command_help",
+        "register": "_chat_command_register",
+    }
     CHAT_COMMANDS: dict[str, str] = {}
     """
     Keys of this dict can be used to trigger a command by a simple chat message to the gateway
@@ -222,6 +226,10 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         await self.set_vcard_avatar(self.boundjid.bare, self.COMPONENT_AVATAR)
 
         for user in user_store.get_all():
+            # TODO: before this, we should check if the user has removed us from their roster
+            #       while we were offline and trigger unregister from there. Presence probe does not seem
+            #       to work in this case, there must be another way. privileged entity could be used
+            #       as last resort.
             session = self._session_cls.from_user(user)
             self.loop.create_task(self._login_wrap(session))
 
@@ -441,6 +449,36 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             t = "|".join(self._chat_commands.keys())
             log.debug("In help: %s", t)
             msg.reply(f"Available commands: {t}").send()
+
+    async def _chat_command_register(
+        self, *args, msg: Message, session: Optional[SessionType]
+    ):
+        if session is not None:
+            msg.reply("You are already registered to this gateway").send()
+            return
+
+        jid = msg.get_from()
+
+        if not self._jid_validator.match(jid.bare):
+            msg.reply("You are not allowed to register to this gateway").send()
+            return
+
+        form = {}
+        for field in self.REGISTRATION_FIELDS:
+            text = field.label or field.var
+            if field.value == "":
+                text += f" (default: '{field.value}')"
+            if not field.required:
+                text += " (optional, reply with '.' to skip)"
+            form[field.var] = await self.input(jid, text + "?")
+
+        try:
+            await self["xep_0077"].api["user_validate"](None, None, jid, form)
+        except ValueError as e:
+            msg.reply(f"Something went wrong: {e}").send()
+        else:
+            self.event("user_register", msg)
+            msg.reply(f"Success!").send()
 
     def config(self, argv: List[str]):
         """
