@@ -2,13 +2,15 @@ import asyncio
 import functools
 import logging
 from argparse import ArgumentParser
-from typing import TYPE_CHECKING, Dict, List, Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 from aiosignald import SignaldAPI
-from slixmpp import JID, Message
+from slixmpp import JID, Iq, Message
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0004 import Form
 
 from slidge import *
 
@@ -50,6 +52,104 @@ class Gateway(BaseGateway):
             functools.partial(Signal, self), socket
         )
         self.signal.set_result(signal)
+
+    def add_adhoc_commands(self):
+        self["xep_0050"].add_command(
+            node="linked_devices",
+            name="Get linked devices",
+            handler=self._handle_linked_devices,
+        )
+        self["xep_0050"].add_command(
+            node="add_device",
+            name="Link a new device",
+            handler=self._handle_add_device1,
+        )
+
+    async def _handle_linked_devices(self, iq: Iq, adhoc_session: dict[str, Any]):
+        user = user_store.get_by_stanza(iq)
+        if user is None:
+            raise XMPPError("subscription-required")
+
+        devices = await (await self.signal).get_linked_devices(
+            account=user.registration_form["phone"]
+        )
+
+        # TODO: uncomment this when https://dev.gajim.org/gajim/gajim/-/issues/10857 is fixed
+        # There are probably other clients that handle this just fine and this would make more sense
+        # to use this, but I think targeting gajim compatibility when there are easy workarounds
+        # is OK
+        # form = self["xep_0004"].make_form("result", "Linked devices")
+        # form.add_reported("id", label="ID", type="fixed")
+        # form.add_reported("name", label="Name", type="fixed")
+        # form.add_reported("created", label="Created", type="fixed")
+        # form.add_reported("last_seen", label="Last seen", type="fixed")
+        # for d in devices.devices:
+        #     form.add_item(
+        #         {
+        #             "name": d.name,
+        #             "id": str(d.id),
+        #             "created": datetime.fromtimestamp(d.created / 1000).isoformat(),
+        #             "last_seen": datetime.fromtimestamp(d.lastSeen / 1000).isoformat(),
+        #         }
+        #     )
+        #
+        # adhoc_session["payload"] = form
+        adhoc_session["notes"] = [
+            (
+                "info",
+                f"Name: {d.name} / "
+                f"ID: {d.id} / "
+                f"Created: {datetime.fromtimestamp(d.created / 1000).isoformat()} / "
+                f"Last seen: {datetime.fromtimestamp(d.lastSeen / 1000).isoformat()}",
+            )
+            for d in devices.devices
+        ]
+        adhoc_session["has_next"] = False
+
+        return adhoc_session
+
+    async def _handle_add_device1(self, iq: Iq, adhoc_session: dict[str, Any]):
+        user = user_store.get_by_stanza(iq)
+        if user is None:
+            raise XMPPError("subscription-required")
+
+        form = self["xep_0004"].make_form(
+            "form", "Link a new device to your signal account"
+        )
+        form.add_field(
+            var="uri",
+            ftype="text-single",
+            label="Linking URI. Use a QR code reader app to get it from official signal clients.",
+            required=True,
+        )
+
+        adhoc_session["payload"] = form
+        adhoc_session["has_next"] = True
+        adhoc_session["next"] = self._handle_add_device2
+
+        return adhoc_session
+
+    async def _handle_add_device2(self, stanza: Form, adhoc_session: dict[str, Any]):
+        user = user_store.get_by_jid(adhoc_session["from"])
+        if user is None:
+            raise XMPPError("subscription-required")
+
+        values = stanza.get_values()
+        uri = values.get("uri")
+
+        await (await self.signal).add_device(
+            account=user.registration_form["phone"], uri=uri
+        )
+
+        adhoc_session["notes"] = [
+            (
+                "info",
+                "Your new device is now correctly linked to your signal account",
+            )
+        ]
+        adhoc_session["has_next"] = False
+
+        return adhoc_session
 
     @staticmethod
     async def _chat_command_add_device(

@@ -222,7 +222,8 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
         )
 
-        self._add_commands()
+        self.__add_adhoc_commands()
+        self.add_adhoc_commands()
         await self.set_vcard_avatar(self.boundjid.bare, self.COMPONENT_AVATAR)
 
         for user in user_store.get_all():
@@ -246,9 +247,13 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             if status is None:
                 session.send_gateway_status("Logged in", show="chat")
 
-    def _add_commands(self):
+    def __add_adhoc_commands(self):
+        # TODO: this should only be advertised to admins
+        # Not a big deal since we need to check if 'from' is an admin in the handler
+        # anyway, BUT it would be nice if this simply does not show up in the list
+        # of available commands for regular users.
         self["xep_0050"].add_command(
-            node="info", name="Server Information", handler=self._handle_info
+            node="info", name="List registered users", handler=self._handle_info
         )
 
     def _handle_info(self, iq: Iq, session: Dict[str, Any]):
@@ -479,6 +484,42 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         else:
             self.event("user_register", msg)
             msg.reply(f"Success!").send()
+
+    def add_adhoc_commands(self):
+        """
+        Override this if you want to provide custom adhoc commands (:xep:`0050`)
+        for your plugin, using :class:`slixmpp.plugins.xep_0050.XEP_0050`
+
+        Basic example:
+
+        .. code-block:python
+
+            def add_adhoc_commands(self):
+                self["xep_0050"].add_command(
+                    node="account_info",
+                    name="Account Information",
+                    handler=self.handle_account_info
+                )
+
+            async def handle_account_info(self, iq: Iq, adhoc_session: Dict[str, Any]):
+                # beware, 'adhoc_session' is not a slidge session!
+                user = user_store.get_by_stanza(iq)
+
+                if user is None:
+                    raise XMPPError("subscription-required")
+
+                form = self["xep_0004"].make_form("result", "Account info")
+                form.add_field(
+                    label="Credits",
+                    value=await FakeLegacyClient.get_credits(user.registration_form['username']),
+                )
+
+                adhoc_session["payload"] = form
+                adhoc_session["has_next"] = False
+
+                return session
+        """
+        pass
 
     def config(self, argv: List[str]):
         """
