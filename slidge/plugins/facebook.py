@@ -239,6 +239,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             self.contacts.by_legacy_id(receipt.user_id).displayed(real_timestamp)
 
     async def on_fb_typing(self, notification: mqtt_t.TypingNotification):
+        log.debug("Facebook typing: %s", notification)
         c = self.contacts.by_legacy_id(notification.user_id)
         if notification.typing_status:
             c.composing()
@@ -246,6 +247,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             c.paused()
 
     async def on_fb_user_read(self, receipt: mqtt_t.OwnReadReceipt):
+        log.debug("Facebook own read: %s", receipt)
         when = receipt.read_to
         for thread in receipt.threads:
             c = self.contacts.by_legacy_id(thread.other_user_id)
@@ -300,6 +302,7 @@ class Messages:
     def find_closest(self, contact_id: int, approx_timestamp_ms: int) -> int:
         messages = self._messages[contact_id]
         t: Optional[int] = None
+        log.debug("Looking for %s in %s", approx_timestamp_ms, messages)
         while True:
             if len(messages) == 0:
                 if t is None:

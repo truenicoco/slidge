@@ -20,9 +20,9 @@ else:
 def ignore_message_to_component(func):
     @functools.wraps(func)
     async def wrapped(self: "BaseSession", msg: Message):
-        log.debug("In wrap: %s %s", self, msg)
         if msg.get_to() != self.xmpp.boundjid.bare:
             return await func(self, msg)
+        log.debug("Ignoring message to component: %s %s", self, msg)
 
     return wrapped
 
