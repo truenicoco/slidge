@@ -1,7 +1,8 @@
 import logging
+from copy import copy
 from typing import Hashable, Optional, Dict, Any
 
-from slixmpp import JID, Presence
+from slixmpp import JID, Presence, Message
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -18,7 +19,7 @@ unregistered = []
 class Gateway(BaseGateway):
     COMPONENT_NAME = "SLIDGE TEST"
 
-    def unregister(self, user: GatewayUser):
+    async def unregister(self, user: GatewayUser):
         unregistered.append(user)
 
 
@@ -120,9 +121,12 @@ class TestAimShakespeareBase(SlidgeTest):
         text, contact = text_received_by_juliet[-1]
         assert text == "Art thou not Romeo, and a Montague?"
         assert contact.legacy_id == 123
-        m = self.next_sent()
+        m: Message = self.next_sent()
         assert m.get_from() == "juliet@aim.shakespeare.lit/slidge"
         assert m["body"] == "I love you"
+        m2 = copy(m)  # there must be a better way to check for the presence of the markable thing
+        m2.enable("markable")
+        assert m == m2
 
     def test_romeo_composing(self):
         self.recv(

@@ -319,8 +319,10 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         self.__send_marker(legacy_msg_id, "displayed")
 
-    def __make_message(self, **kwargs):
-        return self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)
+    def __make_message(self, **kwargs) -> Message:
+        m = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)
+        m.enable("markable")
+        return m
 
     def __send_message(self, msg: Message, legacy_msg_id: Optional[Any] = None):
         if legacy_msg_id is not None:
