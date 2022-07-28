@@ -55,7 +55,7 @@ RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
     pip install -r ./requirements.txt
 
 RUN pip uninstall cython -y
-RUN test -f /venv/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-x86_64-linux-gnu.so
+RUN test -f /venv/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-*-linux-gnu.so
 
 FROM docker.io/library/python:3.9-slim AS slidge-base
 
