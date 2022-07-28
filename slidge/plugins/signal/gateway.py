@@ -37,10 +37,13 @@ class Gateway(BaseGateway):
 
     CHAT_COMMANDS = {"add_device": "_chat_command_add_device"}
 
+    def __init__(self, args):
+        super(Gateway, self).__init__(args)
+        self.signal = self.loop.create_future()
+
     def config(self, argv: List[str]):
         args = get_parser().parse_args(argv)
         self.signal_socket = socket = args.socket
-        self.signal = self.loop.create_future()
         self.loop.create_task(self.connect_signal(socket))
 
     async def connect_signal(self, socket: str):

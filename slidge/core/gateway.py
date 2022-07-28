@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar
 import aiohttp
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
-from slixmpp.exceptions import XMPPError
+from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.types import MessageTypes
 
 from ..util import ABCSubclassableOnceAtMost, FormField
@@ -166,6 +166,33 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             k: getattr(self, v)
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
+
+    def exception(self, exception: Exception):
+        """
+        Stop the event loop and exit on unhandled exception.
+
+        The default :class:slixmpp.basexmpp.BaseXMPP` behaviour is just to
+        log the exception, but we want to avoid undefined behaviour.
+
+        :param exception: An unhandled :class:`Exception` object.
+        """
+        if isinstance(exception, IqError):
+            iq = exception.iq
+            log.error("%s: %s", iq["error"]["condition"], iq["error"]["text"])
+            log.warning("You should catch IqError exceptions")
+        elif isinstance(exception, IqTimeout):
+            iq = exception.iq
+            log.error("Request timed out: %s", iq)
+            log.warning("You should catch IqTimeout exceptions")
+        elif isinstance(exception, SyntaxError):
+            # Hide stream parsing errors that occur when the
+            # stream is disconnected (they've been handled, we
+            # don't need to make a mess in the logs).
+            pass
+        else:
+            log.exception(exception)
+            self.loop.stop()
+            exit(1)
 
     def __register_slixmpp_api(self):
         self["xep_0077"].api.register(

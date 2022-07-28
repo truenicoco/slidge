@@ -66,6 +66,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         i = self.counter
         self.counter = i + 1
         self.xmpp.loop.create_task(self.later(c))
+
+        if t == "crash":
+            raise RuntimeError("PANIC!!!")
         return i
 
     async def send_file(self, u: str, c: LegacyContact) -> int:
