@@ -5,14 +5,13 @@ import shelve
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Deque, Dict, Hashable, Optional, Union
+from typing import Deque, Hashable, Optional, Union
 
 import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant, ParticipantNode, Thread
-from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -261,7 +260,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def correct(self, text: str, legacy_msg_id: int, c: Contact):
         pass
 
-    async def search(self, form_values: Dict[str, str]) -> SearchResult:
+    async def search(self, form_values: dict[str, str]) -> SearchResult:
         results = await self.api.search(form_values["query"], entity_types=["user"])
         log.debug("Search results: %s", results)
         items = []
@@ -292,7 +291,7 @@ class Messages:
     MAX_LENGTH = 500
 
     def __init__(self):
-        self._messages: Dict[int, Deque[int]] = defaultdict(
+        self._messages: dict[int, Deque[int]] = defaultdict(
             functools.partial(deque, maxlen=self.MAX_LENGTH)
         )
 

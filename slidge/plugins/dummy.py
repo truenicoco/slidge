@@ -5,7 +5,7 @@ A pseudo legacy network, to easily test things
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from slixmpp import JID
 
@@ -30,7 +30,7 @@ class Gateway(BaseGateway):
         )
     ]
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
         if registration_form["username"] != "n":
             raise ValueError("Y a que N!")
 
@@ -111,7 +111,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def displayed(self, legacy_msg_id: int, c: LegacyContact):
         log.debug("Message #%s was read by the user", legacy_msg_id)
 
-    async def search(self, form_values: Dict[str, str]):
+    async def search(self, form_values: dict[str, str]):
         if form_values["first"] == "bubu":
             return SearchResult(
                 fields=[

@@ -7,7 +7,7 @@ import re
 import tempfile
 from asyncio import Future
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar
+from typing import Any, Iterable, Optional, Type, TypeVar
 
 import aiohttp
 import qrcode
@@ -160,7 +160,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.register_plugins()
         self.__register_slixmpp_api()
         self.__register_handlers()
-        self._input_futures: Dict[str, Future] = {}
+        self._input_futures: dict[str, Future] = {}
 
         self._chat_commands = {
             k: getattr(self, v)
@@ -285,7 +285,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             node="info", name="List registered users", handler=self._handle_info
         )
 
-    def _handle_info(self, iq: Iq, session: Dict[str, Any]):
+    def _handle_info(self, iq: Iq, session: dict[str, Any]):
         """
         List registered users for admins
         """
@@ -354,7 +354,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         reply.set_payload(reg)
         return reply
 
-    async def _user_prevalidate(self, ifrom: JID, form_dict: Dict[str, str]):
+    async def _user_prevalidate(self, ifrom: JID, form_dict: dict[str, str]):
         """
         Pre validate a registration form using the content of self.REGISTRATION_FIELDS
         before passing it to the plugin custom validation logic.
@@ -366,7 +366,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         await self.validate(ifrom, form_dict)
 
     async def _user_validate(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
+        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, str]
     ):
         """
         SliXMPP internal API stuff
@@ -379,7 +379,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         user_store.add(ifrom, form_dict)
 
     async def _user_modify(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: Dict[str, str]
+        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, str]
     ):
         """
         SliXMPP internal API stuff
@@ -530,7 +530,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
                     handler=self.handle_account_info
                 )
 
-            async def handle_account_info(self, iq: Iq, adhoc_session: Dict[str, Any]):
+            async def handle_account_info(self, iq: Iq, adhoc_session: dict[str, Any]):
                 # beware, 'adhoc_session' is not a slidge session!
                 user = user_store.get_by_stanza(iq)
 
@@ -550,7 +550,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         """
         pass
 
-    def config(self, argv: List[str]):
+    def config(self, argv: list[str]):
         """
         Override this to access CLI args to configure the slidge plugin
 
@@ -559,7 +559,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         """
         pass
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
         """
         Validate a registration form from a user.
 

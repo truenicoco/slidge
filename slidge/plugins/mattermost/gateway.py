@@ -3,7 +3,7 @@ import json
 import pprint
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
@@ -221,5 +221,5 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
-    async def search(self, form_values: Dict[str, str]):
+    async def search(self, form_values: dict[str, str]):
         pass

@@ -5,7 +5,7 @@ import logging
 import pprint
 from pathlib import Path
 from threading import Lock, Thread
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import aiohttp
 import skpy
@@ -207,7 +207,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
-    async def search(self, form_values: Dict[str, str]):
+    async def search(self, form_values: dict[str, str]):
         pass
 
 

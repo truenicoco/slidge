@@ -11,10 +11,10 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import aiohttp
-from slixmpp import JID, Presence
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -182,7 +182,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
-    async def search(self, form_values: Dict[str, str]):
+    async def search(self, form_values: dict[str, str]):
         pass
 
 

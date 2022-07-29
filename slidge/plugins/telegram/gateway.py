@@ -1,6 +1,5 @@
 import logging
 from argparse import Namespace
-from typing import Dict, List
 
 from slixmpp import JID
 
@@ -37,12 +36,12 @@ class Gateway(BaseGateway):
 
     args: Namespace
 
-    def config(self, argv: List[str]):
+    def config(self, argv: list[str]):
         Gateway.args = args = get_parser().parse_args(argv)
         if args.tdlib_path is None:
             args.tdlib_path = self.home_dir / "tdlib"
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
         pass
 
     async def unregister(self, user):

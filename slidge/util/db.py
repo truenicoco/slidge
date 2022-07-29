@@ -7,7 +7,7 @@ import dataclasses
 import logging
 import shelve
 from os import PathLike
-from typing import Dict, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 from slixmpp import JID, Iq, Message, Presence
 
@@ -20,7 +20,7 @@ class GatewayUser:
 
     bare_jid: str
     """Bare JID of the user"""
-    registration_form: Dict[str, str]
+    registration_form: dict[str, str]
     """Content of the registration form, as a dict"""
 
     def __hash__(self):
@@ -79,7 +79,7 @@ class UserStore:
         """
         return self._users.values()
 
-    def add(self, jid: JID, registration_form: Dict[str, str]):
+    def add(self, jid: JID, registration_form: dict[str, str]):
         """
         Add a user to the store.
 

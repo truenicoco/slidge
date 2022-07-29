@@ -7,7 +7,6 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    Dict,
     Generic,
     Literal,
     Optional,
@@ -19,7 +18,12 @@ from typing import (
 from slixmpp import JID, Iq, Message
 
 from ..util import SubclassableOnce
-from ..util.types import AvatarType, LegacyMessageType, LegacyUserIdType
+from ..util.types import (
+    AvatarType,
+    LegacyContactIdType,
+    LegacyMessageType,
+    LegacyUserIdType,
+)
 
 if TYPE_CHECKING:
     from .session import SessionType
@@ -74,7 +78,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     def __init__(
         self,
         session: "SessionType",
-        legacy_id: LegacyMessageType,
+        legacy_id: LegacyContactIdType,
         jid_username: str,
     ):
         """
@@ -492,8 +496,8 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         self._contact_cls.xmpp = session.xmpp
 
         self.session = session
-        self._contacts_by_bare_jid: Dict[str, LegacyContactType] = {}
-        self._contacts_by_legacy_id: Dict[Any, LegacyContactType] = {}
+        self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
+        self._contacts_by_legacy_id: dict[LegacyContactIdType, LegacyContactType] = {}
 
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())

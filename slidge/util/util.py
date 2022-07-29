@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 from abc import ABCMeta
-from typing import Dict, Generic, Iterable, List, Literal, Optional, TypeVar
+from typing import Generic, Iterable, Literal, Optional, TypeVar
 
 field_type = Literal[
     "boolean",
@@ -38,7 +38,7 @@ class FormField:
     """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
     """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
-    options: Optional[List[Dict[str, str]]] = None
+    options: Optional[list[dict[str, str]]] = None
 
     def dict(self):
         return dataclasses.asdict(self)
@@ -69,7 +69,7 @@ class BiDict(Generic[KeyType, ValueType], dict):
 @dataclasses.dataclass
 class SearchResult:
     fields: Iterable[FormField]
-    items: Iterable[Dict[str, str]]
+    items: Iterable[dict[str, str]]
 
 
 class SubclassableOnce(type):

@@ -14,7 +14,7 @@ login process seem a little too exotic for my taste.
 """
 
 import pprint
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from slixmpp import Presence
 from steam.client import SteamClient
@@ -129,5 +129,5 @@ class Session(BaseSession[LegacyContact, Roster, Gateway]):
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
 
-    async def search(self, form_values: Dict[str, str]):
+    async def search(self, form_values: dict[str, str]):
         pass

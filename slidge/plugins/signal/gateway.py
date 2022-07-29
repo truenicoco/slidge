@@ -3,7 +3,7 @@ import functools
 import logging
 from argparse import ArgumentParser
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
@@ -33,7 +33,7 @@ class Gateway(BaseGateway):
 
     signal: asyncio.Future["Signal"]
     signal_socket: str
-    sessions_by_phone: Dict[str, "Session"] = {}
+    sessions_by_phone: dict[str, "Session"] = {}
 
     CHAT_COMMANDS = {"add_device": "_chat_command_add_device"}
 
@@ -41,7 +41,7 @@ class Gateway(BaseGateway):
         super(Gateway, self).__init__(args)
         self.signal = self.loop.create_future()
 
-    def config(self, argv: List[str]):
+    def config(self, argv: list[str]):
         args = get_parser().parse_args(argv)
         self.signal_socket = socket = args.socket
         self.loop.create_task(self.connect_signal(socket))
@@ -170,7 +170,7 @@ class Gateway(BaseGateway):
             uri = args[0]
         await session.add_device(uri)
 
-    async def validate(self, user_jid: JID, registration_form: Dict[str, str]):
+    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
         phone = registration_form.get("phone")
         for u in user_store.get_all():
             if u.registration_form.get("phone") == phone:

@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Generic, Literal, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Type, TypeVar
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
@@ -57,7 +57,9 @@ class BaseSession(
 
         self.user = user
         if self.store_sent:
-            self.sent: BiDict = BiDict()  # TODO: set a max size for this
+            self.sent: BiDict[
+                LegacyMessageType, str
+            ] = BiDict()  # TODO: set a max size for this
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.post_init()
@@ -421,7 +423,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def search(self, form_values: Dict[str, str]) -> "SearchResult":
+    async def search(self, form_values: dict[str, str]) -> "SearchResult":
         """
         Triggered when the user uses Jabber Search (:xep:`0055`) on the component
 
@@ -436,5 +438,5 @@ class BaseSession(
 
 SessionType = TypeVar("SessionType", bound=BaseSession)
 
-_sessions: Dict[GatewayUser, BaseSession] = {}
+_sessions: dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)
