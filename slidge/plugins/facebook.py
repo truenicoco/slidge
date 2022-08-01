@@ -1,11 +1,11 @@
-import functools
+import asyncio
 import logging
 import random
 import shelve
-import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Deque, Hashable, Optional, Union
+from typing import Union
 
 import aiohttp
 import maufbapi.types.graphql
@@ -90,15 +90,21 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     api: AndroidAPI
 
     me: maufbapi.types.graphql.OwnInfo
-    sent_messages: "Messages"
-    received_messages: "Messages"
+
+    sent_messages: defaultdict[int, "Messages"]
+    received_messages: defaultdict[int, "Messages"]
+    # keys = "contact ID"
+
+    ack_futures: dict[int, asyncio.Future["FacebookMessage"]]
+    # keys = "offline thread ID"
 
     contacts: Roster
 
     def post_init(self):
         self.shelf_path = self.xmpp.home_dir / self.user.bare_jid
-        self.sent_messages = Messages()
-        self.received_messages = Messages()
+        self.ack_futures = {}
+        self.sent_messages = defaultdict(Messages)
+        self.received_messages = defaultdict(Messages)
 
     async def login(self):
         shelf: shelve.Shelf[AndroidState]
@@ -154,8 +160,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.xmpp.loop.create_task(self.mqtt.listen(self.mqtt.seq_id))
         return f"Connected as '{self.me.name} <{self.me.email}>'"
 
-    async def add_friends(self):
-        thread_list = await self.api.fetch_thread_list(msg_count=0)
+    async def add_friends(self, n=2):
+        thread_list = await self.api.fetch_thread_list(msg_count=0, thread_count=n)
         self.mqtt.seq_id = int(thread_list.sync_sequence_id)
         log.debug("SEQ ID: %s", self.mqtt.seq_id)
         self.log.debug("Thread list: %s", thread_list)
@@ -171,16 +177,17 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact) -> int:
+    async def send_text(self, t: str, c: Contact) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
             target=c.legacy_id, message=t, is_group=False
         )
-        timestamp = get_now_ms()
+        self.ack_futures[resp.offline_threading_id] = self.xmpp.loop.create_future()
         log.debug("Send message response: %s", resp)
         if not resp.success:
             raise XMPPError(resp.error_message)
-        self.sent_messages.add(c.legacy_id, timestamp)
-        return timestamp
+        fb_msg = await self.ack_futures[resp.offline_threading_id]
+        self.sent_messages[c.legacy_id].add(fb_msg)
+        return fb_msg.mid
 
     async def send_file(self, u: str, c: Contact) -> int:
         pass
@@ -197,10 +204,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def paused(self, c: Contact):
         await self.mqtt.set_typing(target=c.legacy_id, typing=False)
 
-    async def displayed(self, legacy_msg_id: Hashable, c: Contact):
-        await self.mqtt.mark_read(
-            target=c.legacy_id, read_to=get_now_ms(), is_group=False
-        )
+    async def displayed(self, legacy_msg_id: str, c: Contact):
+        try:
+            t = self.sent_messages[c.legacy_id].by_mid[legacy_msg_id].timestamp_ms
+        except KeyError:
+            log.debug("Cannot find the timestamp of %s", legacy_msg_id)
+        else:
+            await self.mqtt.mark_read(target=c.legacy_id, read_to=t, is_group=False)
 
     async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
         meta = evt.metadata
@@ -213,29 +223,30 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             await contact.add_to_roster()
 
         log.debug("Facebook message: %s", evt)
+        fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
         if str(meta.sender) == self.me.id:
-            if f"app_id:{self.mqtt.state.application.client_id}" in meta.tags:
-                log.debug("Ignoring self message")
-                return
-
-            t = get_now_ms()
-            contact.carbon(body=evt.text, legacy_id=t)
-            self.sent_messages.add(contact.legacy_id, t)
+            try:
+                fut = self.ack_futures.pop(meta.offline_threading_id)
+            except KeyError:
+                log.debug("Received carbon %s - %s", meta.id, evt.text)
+                contact.carbon(body=evt.text, legacy_id=meta.id)
+                log.debug("Sent carbon")
+                self.sent_messages[contact.legacy_id].add(fb_msg)
+            else:
+                log.debug("Received echo of %s", meta.offline_threading_id)
+                fut.set_result(fb_msg)
         else:
-            t = get_now_ms()
-            self.received_messages.add(contact.legacy_id, t)
-            contact.send_text(evt.text, legacy_msg_id=t)
+            contact.send_text(evt.text, legacy_msg_id=meta.id)
+            self.received_messages[contact.legacy_id].add(fb_msg)
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
         log.debug("Facebook read: %s", receipt)
         try:
-            real_timestamp = self.sent_messages.find_closest(
-                receipt.user_id, receipt.read_to
-            )
+            mid = self.sent_messages[receipt.user_id].pop_up_to(receipt.read_to).mid
         except KeyError:
-            log.debug("Could not find message with corresponding timestamp, ignoring")
+            log.debug("Cannot find MID of %s", receipt.read_to)
         else:
-            self.contacts.by_legacy_id(receipt.user_id).displayed(real_timestamp)
+            self.contacts.by_legacy_id(receipt.user_id).displayed(mid)
 
     async def on_fb_typing(self, notification: mqtt_t.TypingNotification):
         log.debug("Facebook typing: %s", notification)
@@ -251,14 +262,15 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         for thread in receipt.threads:
             c = self.contacts.by_legacy_id(thread.other_user_id)
             try:
-                timestamp = self.received_messages.find_closest(c.legacy_id, when)
+                mid = self.received_messages[c.legacy_id].pop_up_to(when).mid
             except KeyError:
-                log.debug("Cannot find message to carbon read, ignoring")
+                log.debug("Cannot find mid of %s", when)
                 continue
-            c.carbon_read(timestamp)
+            c.carbon_read(mid)
 
-    async def correct(self, text: str, legacy_msg_id: int, c: Contact):
-        pass
+    async def correct(self, text: str, legacy_msg_id: str, c: Contact):
+        await self.api.unsend(legacy_msg_id)
+        return await self.send_text(text, c)
 
     async def search(self, form_values: dict[str, str]) -> SearchResult:
         results = await self.api.search(form_values["query"], entity_types=["user"])
@@ -287,38 +299,37 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         log.debug("Facebook event: %s", evt)
 
 
+@dataclass
+class FacebookMessage:
+    mid: str
+    timestamp_ms: int
+
+
 class Messages:
-    MAX_LENGTH = 500
-
     def __init__(self):
-        self._messages: dict[int, Deque[int]] = defaultdict(
-            functools.partial(deque, maxlen=self.MAX_LENGTH)
-        )
+        self.by_mid: OrderedDict[str, FacebookMessage] = OrderedDict()
+        self.by_timestamp_ms: OrderedDict[int, FacebookMessage] = OrderedDict()
 
-    def add(self, contact_id: int, timestamp_ms: int):
-        self._messages[contact_id].append(timestamp_ms)
+    def __len__(self):
+        return len(self.by_mid)
 
-    def find_closest(self, contact_id: int, approx_timestamp_ms: int) -> int:
-        messages = self._messages[contact_id]
-        t: Optional[int] = None
-        log.debug("Looking for %s in %s", approx_timestamp_ms, messages)
-        while True:
-            if len(messages) == 0:
-                if t is None:
-                    raise KeyError(contact_id, approx_timestamp_ms)
-                else:
-                    return t
-            peek = messages[0]
-            if peek < approx_timestamp_ms:
-                t = messages.popleft()
-            else:
-                if t is None:
-                    raise KeyError(contact_id, approx_timestamp_ms)
-                return t
+    def add(self, m: FacebookMessage):
+        self.by_mid[m.mid] = m
+        self.by_timestamp_ms[m.timestamp_ms] = m
 
-
-def get_now_ms():
-    return time.time_ns() // 1_000_000
+    def pop_up_to(self, approx_t: int) -> FacebookMessage:
+        i = 0
+        for i, t in enumerate(self.by_timestamp_ms.keys()):
+            if t > approx_t:
+                i -= 1
+                break
+        for j, t in enumerate(list(self.by_timestamp_ms.keys())):
+            msg = self.by_timestamp_ms.pop(t)
+            self.by_mid.pop(msg.mid)
+            if j == i:
+                return msg
+        else:
+            raise KeyError(approx_t)
 
 
 log = logging.getLogger(__name__)

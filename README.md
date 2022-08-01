@@ -23,9 +23,9 @@ It comes with a few plugins included.
 |            | Direct messages | Presences | Typing | Marks | Upload | Correction |
 |------------|-----------------|-----------|--------|-------|--------|------------|
 | Signal     | ✓               | N/A       | ✓      | ✓     | ✓      | N/A        |
-| Telegram   | ✓               | ~         | ✓      | ✓     | ✓      | ✗          |
+| Telegram   | ✓               | ~         | ✓      | ✓     | ✓      | ✓          |
 | Mattermost | ✓               | ✓         | ✗      | ✗     | ✗      | ✗          |
-| Facebook   | ✓               | ✗         | ✓      | ✓     | ✗      | ✗          |
+| Facebook   | ✓               | ✗         | ✓      | ✓     | ✗      | ✓          |
 | Skype      | ✓               | ✗         | ✗      | ✗     | ~      | ✗          |
 | Steam      | ✗               | ✗         | ✗      | ✗     | ✗      | ✗          |
 
@@ -65,7 +65,7 @@ XMPP server.
 
 ```
 poetry install
-poetry run `python -m slidge`
+poetry run python -m slidge
 ```
 
 #### pip
@@ -77,7 +77,8 @@ python -m slidge --legacy-module=slidge.plugins.signal
 
 ### XMPP client
 
-Open [gajim](https://gajim.org) (or another one) and add the account ``test@localhost`` with the ``password``password.
+Open [gajim](https://gajim.org) (or another XMPP client),
+and add your account (``test@localhost`` / ``password`` if you use the server provided with docker-compose).
 Go to "Accounts"→"Discover services" (or equivalent).
 You should see the slidge gateways as server components.
 
@@ -85,13 +86,13 @@ About privacy
 -------------
 
 Slidge (and most if not all XMPP gateway that I know of) will break
-end-to-end encryption, or more precisely one of the \'ends\' become the
+end-to-end encryption, or more precisely one of the 'ends' become the
 gateway itself. If privacy is a major concern for you, my advice would
 be to:
 
 -   use XMPP + OMEMO
 -   self-host your gateways
--   have your gateways hosted by someone you know AFK
+-   have your gateways hosted by someone you know AFK and trust
 
 Related projects
 ----------------
