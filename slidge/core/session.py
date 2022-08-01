@@ -252,9 +252,15 @@ class BaseSession(
         legacy_id = self.sent.inverse.get(xmpp_id)
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            await self.send_text(m["body"], self.contacts.by_stanza(m))
+            new_legacy_msg_id = await self.send_text(
+                m["body"], self.contacts.by_stanza(m)
+            )
         else:
-            await self.correct(m["body"], legacy_id, self.contacts.by_stanza(m))
+            new_legacy_msg_id = await self.correct(
+                m["body"], legacy_id, self.contacts.by_stanza(m)
+            )
+        if new_legacy_msg_id is not None:
+            self.sent[new_legacy_msg_id] = m.get_id()
 
     def send_gateway_status(
         self,
@@ -410,7 +416,9 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+    async def correct(
+        self, text: str, legacy_msg_id: Any, c: LegacyContactType
+    ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
 
