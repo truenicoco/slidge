@@ -24,12 +24,16 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     tdlib_path: Optional[Path] = None
     tg: "TelegramClient"
     sent_read_marks: set[int]
+    ack_futures: dict[int, asyncio.Future]
+    user_correction_futures: dict[int, asyncio.Future]
 
     def post_init(self):
         registration_form = {
             k: v if v != "" else None for k, v in self.user.registration_form.items()
         }
         self.sent_read_marks = set()
+        self.ack_futures = {}
+        self.user_correction_futures = {}
 
         i = registration_form.get("api_id")
         if i is not None:
@@ -66,6 +70,11 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     async def logout(self):
         await self.tg.stop()
 
+    async def wait_for_tdlib_success(self, result_id: int):
+        fut = self.xmpp.loop.create_future()
+        self.ack_futures[result_id] = fut
+        return await fut
+
     async def send_text(self, t: str, c: "Contact") -> int:
         t = escape(t)
         try:
@@ -75,9 +84,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 raise XMPPError(condition="item-not-found", text="No such contact")
             else:
                 raise
-        fut = self.xmpp.loop.create_future()
-        ack_futures[result.id] = fut
-        new_message_id = await fut
+        new_message_id = await self.wait_for_tdlib_success(result.id)
         self.log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
 
@@ -157,6 +164,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             contact.online()
 
     async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
+        f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         query = tgapi.EditMessageText.construct(
             chat_id=c.legacy_id,
             message_id=legacy_msg_id,
@@ -165,6 +173,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             ),
         )
         await self.tg.request(query)
+        await f
 
     async def search(self, form_values: dict[str, str]):
         phone = form_values["phone"]
@@ -201,7 +210,7 @@ async def on_message_success(
     tg.session.sent_read_marks.add(update.message.id)
     for _ in range(10):
         try:
-            future = ack_futures.pop(update.message.id)
+            future = tg.session.ack_futures.pop(update.message.id)
         except KeyError:
             await asyncio.sleep(0.5)
         else:
@@ -217,5 +226,4 @@ def escape(t: str):
 RESERVED_CHARS = "_*[]()~`>#+-=|{}.!"
 ESCAPE_PATTERN = re.compile(f"([{re.escape(RESERVED_CHARS)}])")
 
-ack_futures: dict[int, asyncio.Future] = {}
 log = logging.getLogger(__name__)

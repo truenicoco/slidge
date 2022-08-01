@@ -132,8 +132,14 @@ async def on_contact_edit_msg(tg: "TelegramClient", action: tgapi.UpdateMessageC
     if not isinstance(new, tgapi.MessageText):
         raise NotImplementedError(new)
     session = tg.session
-    contact = session.contacts.by_legacy_id(action.chat_id)
-    contact.correct(action.message_id, new.text.text)
+    try:
+        fut = session.user_correction_futures.pop(action.message_id)
+    except KeyError:
+        contact = session.contacts.by_legacy_id(action.chat_id)
+        contact.correct(action.message_id, new.text.text)
+    else:
+        log.debug("User correction confirmation received")
+        fut.set_result(None)
 
 
 async def on_user_update(tg: "TelegramClient", action: tgapi.UpdateUser):
