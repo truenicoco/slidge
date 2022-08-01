@@ -1,9 +1,11 @@
 import asyncio
+import io
 import logging
 import random
 import shelve
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
+from mimetypes import guess_type
 from pathlib import Path
 from typing import Union
 
@@ -189,8 +191,23 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.sent_messages[c.legacy_id].add(fb_msg)
         return fb_msg.mid
 
-    async def send_file(self, u: str, c: Contact) -> int:
-        pass
+    async def send_file(self, u: str, c: Contact):
+        async with aiohttp.ClientSession() as s:
+            async with s.get(u) as r:
+                data = await r.read()
+        oti = self.mqtt.generate_offline_threading_id()
+        self.ack_futures[oti] = self.xmpp.loop.create_future()
+        resp = await self.api.send_media(
+            data=data,
+            file_name=u.split("/")[-1],
+            mimetype=guess_type(u)[0] or "application/octet-stream",
+            offline_threading_id=oti,
+            chat_id=c.legacy_id,
+            is_group=False,
+        )
+        ack = await self.ack_futures[oti]
+        log.debug("Upload ack: %s", ack)
+        return resp.media_id
 
     async def active(self, c: Contact):
         pass
@@ -237,6 +254,22 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 fut.set_result(fb_msg)
         else:
             contact.send_text(evt.text, legacy_msg_id=meta.id)
+            if evt.attachments:
+                async with aiohttp.ClientSession() as c:
+                    for a in evt.attachments:
+                        url = (
+                            a.image_info.uri_map.get(0)
+                            or a.audio_info.url
+                            or a.video_info.download_url
+                        )
+                        if url is None:
+                            continue
+                        async with c.get(url) as r:
+                            await contact.send_file(
+                                filename=a.file_name,
+                                content_type=a.mime_type,
+                                input_file=io.BytesIO(await r.read()),
+                            )
             self.received_messages[contact.legacy_id].add(fb_msg)
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
