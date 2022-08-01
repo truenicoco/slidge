@@ -258,6 +258,9 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             #       while we were offline and trigger unregister from there. Presence probe does not seem
             #       to work in this case, there must be another way. privileged entity could be used
             #       as last resort.
+            self.send_presence(
+                pto=user.bare_jid, ptype="probe"
+            )  # ensure we get all resources for user
             session = self._session_cls.from_user(user)
             self.loop.create_task(self._login_wrap(session))
 
