@@ -65,7 +65,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     async def login(self):
         await self.tg.start()
         await self.add_contacts_to_roster()
-        return f"Connected as {self.tg.get_my_id()}"
+        return f"Connected as {await self.tg.get_my_id()}"
 
     async def logout(self):
         await self.tg.stop()
