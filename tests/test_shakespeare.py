@@ -9,11 +9,13 @@ from slidge import *
 
 from slidge.util.test import SlidgeTest
 from slidge.core.contact import LegacyContactType
+from slidge.util.types import LegacyMessageType
 
 received_presences: list[Optional[Presence]] = []
 text_received_by_juliet = []
 composing_chat_states_received_by_juliet = []
 unregistered = []
+reactions_received_by_juliet = []
 
 
 class Gateway(BaseGateway):
@@ -66,6 +68,9 @@ class Session(BaseSession):
 
     async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
         pass
+
+    async def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
+        reactions_received_by_juliet.append([legacy_msg_id, emoji])
 
 
 class Roster(LegacyRoster):
@@ -213,6 +218,36 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         assert self.next_sent()["error"]["condition"] == "not-allowed"
+
+    def test_reactions(self):
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit'
+                     from='romeo@montague.lit'>
+              <reactions id='xmpp-id1' xmlns='urn:xmpp:reactions:0'>
+                <reaction>👋</reaction>
+                <reaction>🐢</reaction>
+              </reactions>
+            </message>
+            """
+        )
+        assert len(reactions_received_by_juliet) == 2
+        msg_id, emoji = reactions_received_by_juliet[0]
+        assert msg_id == "xmpp-id1"
+        assert emoji == "👋"
+        msg_id, emoji = reactions_received_by_juliet[1]
+        assert msg_id == "xmpp-id1"
+        assert emoji == "🐢"
+
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        msg = juliet.react("legacy1", "👋")
+        assert msg["reactions"]["id"] == "legacy1"
+        for r in msg["reactions"]:
+            assert r["value"] == "👋"
 
 
 log = logging.getLogger(__name__)

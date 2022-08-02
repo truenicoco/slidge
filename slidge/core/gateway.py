@@ -231,6 +231,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         async def composing(m): await get_session(m).composing_from_msg(m)
         async def paused(m): await get_session(m).paused_from_msg(m)
         async def correct(m): await get_session(m).correct_from_msg(m)
+        async def react(m): await get_session(m).react_from_msg(m)
         # fmt: on
 
         self.add_event_handler("legacy_message", msg)
@@ -240,6 +241,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
         self.add_event_handler("chatstate_composing", composing)
         self.add_event_handler("chatstate_paused", paused)
         self.add_event_handler("message_correction", correct)
+        self.add_event_handler("reactions", react)
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
@@ -757,5 +759,6 @@ SLIXMPP_PLUGINS = [
     "xep_0334",  # Message Processing Hints
     "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__
     "xep_0363",  # HTTP file upload
+    "xep_0444",  # Message reactions
 ]
 log = logging.getLogger(__name__)

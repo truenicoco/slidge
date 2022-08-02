@@ -262,6 +262,12 @@ class BaseSession(
         if new_legacy_msg_id is not None:
             self.sent[new_legacy_msg_id] = m.get_id()
 
+    @ignore_message_to_component
+    async def react_from_msg(self, m: Message):
+        legacy_id = self.xmpp_msg_id_to_legacy_msg_id(m["reactions"]["id"])
+        for reaction in m["reactions"]:
+            await self.react(legacy_id, reaction["value"])
+
     def send_gateway_status(
         self,
         status: Optional[str] = None,
@@ -440,6 +446,17 @@ class BaseSession(
         :param form_values: search query, defined for a specific plugin by overriding
             in :attr:`.BaseGateway.SEARCH_FIELDS`
         :return:
+        """
+        raise NotImplementedError
+
+    async def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
+        """
+        Triggered when the user sends message reactions (:xep:`0444`).
+
+        Will be called once by reaction, and on reaction updates.
+
+        :param legacy_msg_id: ID of the message the user reacts to
+        :param emoji: Unicode character representing a reaction
         """
         raise NotImplementedError
 

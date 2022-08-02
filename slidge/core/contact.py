@@ -70,6 +70,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         "vcard-temp",
         "jabber:x:oob",
         "urn:xmpp:message-correct:0",
+        "urn:xmpp:reactions:0",
     }
     """
     A list of features advertised through service discovery and client capabilities.
@@ -468,6 +469,16 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["replace"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
         msg["body"] = new_text
         self.__send_message(msg)
+
+    def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
+        msg = self.__make_message()
+        self.xmpp["xep_0444"].set_reactions(
+            msg,
+            to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
+            reactions=[emoji],
+        )
+        self.__send_message(msg)
+        return msg
 
 
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)

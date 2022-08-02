@@ -16,7 +16,7 @@ Just subclass await, and launch your plugin with
 
 .. autoclass:: slidge.BaseSession
   :members:
-  :exclude-members: [from_stanza, from_jid, kill_by_jid, send_from_msg, active_from_msg, inactive_from_msg, composing_from_msg, paused_from_msg, displayed_from_msg, correct_from_msg]
+  :exclude-members: [from_stanza, from_jid, kill_by_jid, react_from_msg, send_from_msg, active_from_msg, inactive_from_msg, composing_from_msg, paused_from_msg, displayed_from_msg, correct_from_msg]
 
 You may get away with the generic versions of these twos, but depending on
 how users are identified on a legacy network, you might need to subclass
