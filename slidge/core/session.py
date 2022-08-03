@@ -2,7 +2,7 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Type, TypeVar
 
-from slixmpp import JID, Message, Presence
+from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
 from ..core.contact import LegacyContactType, LegacyRoster, LegacyRosterType
@@ -264,9 +264,13 @@ class BaseSession(
 
     @ignore_message_to_component
     async def react_from_msg(self, m: Message):
-        legacy_id = self.xmpp_msg_id_to_legacy_msg_id(m["reactions"]["id"])
-        for reaction in m["reactions"]:
-            await self.react(legacy_id, reaction["value"])
+        react_to = m["reactions"]["id"]
+        if (legacy_id := self.sent.inverse.get(react_to)) is None:
+            log.debug("Cannot find the XMPP ID of this msg: %s", react_to)
+            legacy_id = self.xmpp_msg_id_to_legacy_msg_id(react_to)
+        await self.react(
+            legacy_id, [r["value"] for r in m["reactions"]], self.contacts.by_stanza(m)
+        )
 
     def send_gateway_status(
         self,
@@ -429,7 +433,7 @@ class BaseSession(
         Triggered when the user corrected a message using :xep:`0308`
 
         This is only possible if a valid ``legacy_msg_id`` was passed when transmitting a message
-        from a contact to the user in :meth:`.LegacyContact.sent_text` or :meth:`slidge.LegacyContact.send_file`.
+        from a contact to the user in :meth:`.LegacyContact.send_text` or :meth:`slidge.LegacyContact.send_file`.
 
         :param text:
         :param legacy_msg_id:
@@ -449,14 +453,16 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
+    async def react(self, legacy_msg_id: Any, emojis: list[str], c: LegacyContactType):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
 
         Will be called once by reaction, and on reaction updates.
 
         :param legacy_msg_id: ID of the message the user reacts to
-        :param emoji: Unicode character representing a reaction
+        :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
+            An empty string means "no reaction", ie, remove all reactions if any were present before
+        :param c: Contact the reaction refers to
         """
         raise NotImplementedError
 

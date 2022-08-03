@@ -69,8 +69,10 @@ class Session(BaseSession):
     async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
         pass
 
-    async def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
-        reactions_received_by_juliet.append([legacy_msg_id, emoji])
+    async def react(self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: LegacyContact):
+        if c.jid_username == "juliet":
+            for e in emojis:
+                reactions_received_by_juliet.append([legacy_msg_id, e])
 
 
 class Roster(LegacyRoster):

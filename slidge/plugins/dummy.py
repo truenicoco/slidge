@@ -121,6 +121,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
                 items=[{"name": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
             )
 
+    async def react(self, legacy_msg_id, emojis, c):
+        c.react(legacy_msg_id, "♥")
+
 
 BUDDIES = ["baba", "bibi"]
 AVATARS = []

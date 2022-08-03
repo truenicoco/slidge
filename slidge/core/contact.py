@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Generic,
+    Iterable,
     Literal,
     Optional,
     Type,
@@ -456,6 +457,28 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         self.__carbon(msg)
 
+    def carbon_react(
+        self, legacy_msg_id: LegacyMessageType, reactions: Iterable[str] = ()
+    ):
+        """
+        Call this to modify the user's own reactions (:xep:`0444`) about a message.
+
+        Can be called when the user reacts from the official client, or to modify a user's
+        reaction when the legacy network has constraints about acceptable reactions.
+
+        :param legacy_msg_id: Legacy message ID this refers to
+        :param reactions: iterable of emojis
+        """
+        msg = Message()
+        msg["to"] = self.jid.bare
+        msg["type"] = "chat"
+        self.xmpp["xep_0444"].set_reactions(
+            msg,
+            to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
+            reactions=reactions,
+        )
+        self.__carbon(msg)
+
     def correct(self, legacy_msg_id: Any, new_text: str):
         """
         Call this when a legacy contact has modified his last message content.
@@ -470,12 +493,24 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["body"] = new_text
         self.__send_message(msg)
 
-    def react(self, legacy_msg_id: LegacyMessageType, emoji: str):
+    def react(self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str]):
+        """
+        Call this when a legacy contact reacts to a message
+
+        :param legacy_msg_id: The message which the reaction refers to.
+        :param emojis: A iterable of emojis used as reactions
+        :return:
+        """
+        if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
+            log.debug(
+                "Cannot determine which message this reaction refers to, attempting msg ID conversion"
+            )
+            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
         msg = self.__make_message()
         self.xmpp["xep_0444"].set_reactions(
             msg,
-            to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
-            reactions=[emoji],
+            to_id=xmpp_id,
+            reactions=emojis,
         )
         self.__send_message(msg)
         return msg
