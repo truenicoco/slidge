@@ -172,10 +172,16 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             destination = msg.sync_message.sent.destination
             contact = self.contacts.by_json_address(destination)
             sent_msg = msg.sync_message.sent.message
-            contact.carbon(
-                body=sent_msg.body,
-                date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
-            )
+            if (body := sent_msg) is not None:
+                contact.carbon(
+                    body=body,
+                    date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
+                )
+            if (reaction := msg.data_message.reaction) is not None:
+                contact.carbon_react(
+                    reaction.targetSentTimestamp,
+                    () if reaction.remove else reaction.emoji,
+                )
 
         contact = self.contacts.by_json_address(msg.source)
 
@@ -188,10 +194,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                         content_type=attachment.contentType,
                         legacy_msg_id=msg.data_message.timestamp,
                     )
-            contact.send_text(
-                body=msg.data_message.body,
-                legacy_msg_id=msg.data_message.timestamp,
-            )
+            if (body := msg.data_message.body) is not None:
+                contact.send_text(
+                    body=body,
+                    legacy_msg_id=msg.data_message.timestamp,
+                )
+            if (reaction := msg.data_message.reaction) is not None:
+                self.log.debug("Reaction: %s", reaction)
+                if reaction.remove:
+                    contact.react(reaction.targetSentTimestamp)
+                else:
+                    contact.react(reaction.targetSentTimestamp, reaction.emoji)
 
         if msg.typing_message is not None:
             action = msg.typing_message.action
@@ -264,6 +277,28 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             account=self.phone,
             to=c.signal_address,
             timestamps=[legacy_msg_id],
+        )
+
+    async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
+        remove = len(emojis) == 0
+        if len(emojis) == 0:
+            remove = True
+            emoji = ""
+        else:
+            if len(emojis) > 1:
+                self.send_gateway_message("Only one reaction per message on signal")
+                c.carbon_react(legacy_msg_id)
+            emoji = emojis[-1]
+
+        await (await self.signal).react(
+            username=self.phone,
+            recipientAddress=c.signal_address,
+            reaction=sigapi.JsonReactionv1(
+                emoji=emoji,
+                remove=remove,
+                targetAuthor=c.signal_address,
+                targetSentTimestamp=legacy_msg_id,
+            ),
         )
 
     async def add_device(self, uri: str):
