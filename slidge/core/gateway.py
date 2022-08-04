@@ -47,7 +47,7 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
 
     REGISTRATION_FIELDS: Iterable[FormField] = [
         FormField(var="username", label="User name", required=True),
-        FormField(var="password", label="Password", required=True),
+        FormField(var="password", label="Password", required=True, private=True),
     ]
     """
     Iterable of fields presented to the gateway user when registering using :xep:`0077`

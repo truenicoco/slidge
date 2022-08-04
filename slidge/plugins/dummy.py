@@ -26,7 +26,7 @@ class Gateway(BaseGateway):
             var="something_else",
             label="Some optional stuff not covered by jabber:iq:register",
             required=False,
-            private=True,
+            private=False,
         )
     ]
 

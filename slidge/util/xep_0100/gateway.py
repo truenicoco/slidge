@@ -56,7 +56,9 @@ class XEP_0100(BasePlugin):
         return await self.xmpp["xep_0077"].api["user_get"](None, None, None, stanza)
 
     async def on_user_unregister(self, iq: Iq):
-        self.xmpp.send_presence(pto=iq.get_from(), ptype="unsubscribed")
+        self.xmpp.send_presence(pto=iq.get_from().bare, ptype="unavailable")
+        self.xmpp.send_presence(pto=iq.get_from().bare, ptype="unsubscribe")
+        self.xmpp.send_presence(pto=iq.get_from().bare, ptype="unsubscribed")
 
     async def on_user_register(self, iq: Iq):
         self.xmpp.client_roster[iq.get_from()].load()

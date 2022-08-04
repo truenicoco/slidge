@@ -20,14 +20,13 @@ It's a work in progress, but it should make
 
 It comes with a few plugins included.
 
-|            | Direct messages | Presences | Typing | Marks | Upload | Correction |
-|------------|-----------------|-----------|--------|-------|--------|------------|
-| Signal     | ✓               | N/A       | ✓      | ✓     | ✓      | N/A        |
-| Telegram   | ✓               | ~         | ✓      | ✓     | ✓      | ✓          |
-| Mattermost | ✓               | ✓         | ✗      | ✗     | ✗      | ✗          |
-| Facebook   | ✓               | ✗         | ✓      | ✓     | ✓      | ✓          |
-| Skype      | ✓               | ✗         | ✗      | ✗     | ~      | ✗          |
-| Steam      | ✗               | ✗         | ✗      | ✗     | ✗      | ✗          |
+|            | Presences | Typing | Marks | Upload | Correction | Reactions |
+|------------|-----------|--------|-------|--------|------------|-----------|
+| Signal     | N/A       | ✓      | ✓     | ✓      | N/A        | ✓         |
+| Telegram   | ~         | ✓      | ✓     | ✓      | ✓          | ✓         |
+| Mattermost | ✓         | ✗      | ✗     | ✗      | ✗          | ✗         |
+| Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         |
+| Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         |
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
 
@@ -51,7 +50,8 @@ Installation
 
 #### docker-compose
 
-Docker-compose spins up a local XMPP server preconfigured for you. 
+Docker-compose spins up a local XMPP server preconfigured for you., with a ``test@localhost`` / ``password``
+account
 
 ```
 docker-compose up # or poetry install && poetry run `python -m slidge`
@@ -77,8 +77,21 @@ python -m slidge --legacy-module=slidge.plugins.signal
 
 ### XMPP client
 
-Open [gajim](https://gajim.org) (or another XMPP client),
-and add your account (``test@localhost`` / ``password`` if you use the server provided with docker-compose).
+#### movim
+
+If you used docker-compose, you should be able to use the [movim](https://movim.eu) client
+from your browser at http://localhost:8888
+
+Unfortunately, the movim UI thinks that``test@localhost`` is not a valid JID and does not let you click
+on the "Connect" button.
+As a workaround, use your browser dev tools to inspect and modify the ``<input id="username"`` in order to
+remove the ``pattern="^[^...`` attribute.
+
+Then go to the Configuration/Account tab. You should be able to register to the slidge gateways from here.
+
+#### Gajim
+
+Install and launch [gajim](https://gajim.org) and add your XMPP account.
 Go to "Accounts"→"Discover services" (or equivalent).
 You should see the slidge gateways as server components.
 

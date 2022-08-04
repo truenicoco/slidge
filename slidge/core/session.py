@@ -276,7 +276,7 @@ class BaseSession(
         self,
         status: Optional[str] = None,
         show=Optional[Literal["away", "chat", "dnd", "xa"]],
-        **kwargs
+        **kwargs,
     ):
         """
         Send a presence from the gateway to the user.
