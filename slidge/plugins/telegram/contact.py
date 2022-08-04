@@ -164,4 +164,22 @@ async def on_user_update(tg: "TelegramClient", action: tgapi.UpdateUser):
     await contact.add_to_roster()
 
 
+async def on_msg_interaction_info(
+    tg: "TelegramClient", update: tgapi.UpdateMessageInteractionInfo
+):
+    # FIXME: where do we filter out group chat messages here ?!
+    contact = tg.session.contacts.by_legacy_id(update.chat_id)
+    me = await tg.get_my_id()
+    if update.interaction_info is None:
+        contact.react(update.message_id, [])
+    else:
+        for reaction in update.interaction_info.reactions:
+            for sender in reaction.recent_sender_ids:
+                if isinstance(sender, tgapi.MessageSenderUser):
+                    if sender.user_id == contact.legacy_id:
+                        contact.react(update.message_id, [reaction.reaction])
+                    elif sender.user_id == me:
+                        contact.carbon_react(update.message_id, [reaction.reaction])
+
+
 log = logging.getLogger(__name__)
