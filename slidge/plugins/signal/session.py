@@ -242,7 +242,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                         signal_r = await s.send(
                             account=self.phone,
                             recipientAddress=c.signal_address,
-                            attachments=[dict(filename=f.name)],
+                            attachments=[sigapi.JsonAttachmentv1(filename=f.name)],
                         )
                         return signal_r.timestamp
 
