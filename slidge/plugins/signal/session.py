@@ -148,8 +148,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             full_profile = await (await self.signal).get_profile(
                 account=self.phone, address=profile.address
             )
-            contact = self.contacts.by_phone(profile.address.number)
-            contact.uuid = profile.address.uuid
+            contact = self.contacts.by_json_address(profile.address)
             contact.name = profile.name or profile.profile_name
             if contact.name is not None:
                 contact.name = contact.name.replace("\u0000", "")

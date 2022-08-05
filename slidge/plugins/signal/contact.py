@@ -1,3 +1,7 @@
+# FIXME: this part is quite messy because I assumed events can either with a contact UUID
+#        *or* phone as sender, and poorly implemented it. We need to figure out if this is really
+#        necessary
+
 import logging
 from typing import TYPE_CHECKING, Optional
 
@@ -51,7 +55,14 @@ class Roster(LegacyRoster[Contact, "Session"]):
     def __init__(self, session):
         super().__init__(session)
         self.contacts_by_uuid: dict[str, Contact] = {}
-        self.contacts_by_legacy_id: dict[str, Contact] = {}
+        self.contacts_by_legacy_id = self._contacts_by_legacy_id
+        self.contacts_by_bare_jid = self._contacts_by_bare_jid
+
+    def by_jid(self, contact_jid):
+        if (c := self.contacts_by_legacy_id.get(contact_jid.user)) is None:
+            return super().by_jid(contact_jid)
+        else:
+            return c
 
     def by_phone(self, phone: str):
         return self.by_legacy_id(phone)
@@ -89,7 +100,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
             return contact_uuid
 
         if contact_uuid is None and contact_phone is not None:
-            # contact_phone.uuid = uuid
+            contact_phone.uuid = uuid
             return contact_phone
 
         if contact_phone is not contact_uuid:
