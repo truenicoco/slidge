@@ -181,6 +181,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     reaction.targetSentTimestamp,
                     () if reaction.remove else reaction.emoji,
                 )
+            if (delete := sent_msg.remoteDelete) is not None:
+                contact.carbon_retract(delete.target_sent_timestamp)
 
         contact = self.contacts.by_json_address(msg.source)
 
@@ -204,6 +206,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     contact.react(reaction.targetSentTimestamp)
                 else:
                     contact.react(reaction.targetSentTimestamp, reaction.emoji)
+            if (delete := data.remoteDelete) is not None:
+                contact.retract(delete.target_sent_timestamp)
 
         if (typing_message := msg.typing_message) is not None:
             action = typing_message.action
@@ -301,6 +305,14 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 targetSentTimestamp=legacy_msg_id,
             ),
         )
+
+    async def retract(self, legacy_msg_id: int, c: "Contact"):
+        try:
+            await (await self.signal).remote_delete(
+                account=self.phone, address=c.signal_address, timestamp=legacy_msg_id
+            )
+        except sigexc.SignaldException as e:
+            raise XMPPError(text=f"Something went wrong during remote delete: {e}")
 
     async def add_device(self, uri: str):
         try:
