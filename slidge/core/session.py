@@ -467,8 +467,6 @@ class BaseSession(
         """
         Triggered when the user sends message reactions (:xep:`0444`).
 
-        Will be called once by reaction, and on reaction updates.
-
         :param legacy_msg_id: ID of the message the user reacts to
         :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
             An empty string means "no reaction", ie, remove all reactions if any were present before
