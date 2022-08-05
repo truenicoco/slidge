@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import pprint
 import re
@@ -33,7 +34,7 @@ class Gateway(BaseGateway):
             var="strict_ssl",
             label="Strict SSL verification",
             value="1",
-            required=True,
+            required=False,
             type="boolean",
         ),
     ]
@@ -46,8 +47,13 @@ class Gateway(BaseGateway):
     COMPONENT_AVATAR = "https://play-lh.googleusercontent.com/aX7JaAPkmnkeThK4kgb_HHlBnswXF0sPyNI8I8LNmEMMo1vDvMx32tCzgPMsyEXXzZRc"
 
 
-class Contact(LegacyContact):
+class Contact(LegacyContact["Session"]):
     legacy_id: str
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self._direct_channel_id: Optional[str] = None
+        self._mm_id: Optional[str] = None
 
     def update_status(self, status: Optional[str]):
         if status is None:  # custom status
@@ -67,11 +73,33 @@ class Contact(LegacyContact):
                 status,
             )
 
+    async def direct_channel_id(self):
+        if self._direct_channel_id is None:
+            self._direct_channel_id = (
+                await self.session.mm_client.get_direct_channel(await self.mm_id())
+            ).id
+            self.session.contacts.direct_channel_id_to_username[
+                self._direct_channel_id
+            ] = self.legacy_id
+        return self._direct_channel_id
+
+    async def mm_id(self):
+        if self._mm_id is None:
+            self._mm_id = (
+                await self.session.mm_client.get_user_by_username(self.legacy_id)
+            ).id
+            self.session.contacts.user_id_to_username[self._mm_id] = self.legacy_id
+        return self._mm_id
+
 
 class Roster(LegacyRoster[Contact, "Session"]):
-    user_id_to_username: dict[str, str] = {}
-    channel_id_to_username: dict[str, str] = {}
-    session: "Session"
+    user_id_to_username: dict[str, str]
+    direct_channel_id_to_username: dict[str, str]
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.user_id_to_username = {}
+        self.direct_channel_id_to_username = {}
 
     async def by_mm_user_id(self, user_id: str):
         try:
@@ -82,6 +110,14 @@ class Roster(LegacyRoster[Contact, "Session"]):
                 raise RuntimeError
             legacy_id = self.user_id_to_username[user_id] = user.username
         return self.by_legacy_id(legacy_id)
+
+    async def by_direct_channel_id(self, channel_id: str):
+        if (username := self.direct_channel_id_to_username.get(channel_id)) is None:
+            for c in self:
+                if (await c.direct_channel_id()) == channel_id:
+                    return c
+        else:
+            return self.by_legacy_id(username)
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
@@ -176,12 +212,24 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     contact = await self.contacts.by_mm_user_id(user_id)
                     if event.data.get("set_online"):
                         contact.online()
-                    contact.send_text(message)
+                    contact.send_text(message, legacy_msg_id=post_id)
+                    for file_meta in post.get("metadata", {}).get("files", []):
+                        await contact.send_file(
+                            filename=file_meta["name"],
+                            input_file=io.BytesIO(
+                                await self.mm_client.get_file(file_meta["id"])
+                            ),
+                        )
             elif event.data["channel_type"] == "P":
                 # private channel
                 pass
         elif event.type == EventType.ChannelViewed:
-            pass
+            channel_id = event.data["channel_id"]
+            posts = await self.mm_client.get_posts_for_channel(channel_id)
+            last_msg_id = posts.posts.additional_keys[-1]
+            (await self.contacts.by_direct_channel_id(channel_id)).carbon_read(
+                last_msg_id
+            )
         elif event.type == EventType.StatusChange:
             user_id = event.data["user_id"]
             if user_id == self.mm_client.mm_id:
@@ -190,6 +238,21 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
                 contact = await self.contacts.by_mm_user_id(user_id)
                 contact.update_status(event.data["status"])
+        elif event.type == EventType.Typing:
+            contact = await self.contacts.by_mm_user_id(event.data["user_id"])
+            contact.composing()
+        elif event.type == EventType.PostEdited:
+            post = json.loads(
+                event.data["post"]
+            )  # FIXME: this should already be JSON-parsed
+            contact = await self.contacts.by_mm_user_id(post["user_id"])
+            if post["channel_id"] == await contact.direct_channel_id():
+                contact.correct(post["id"], post["message"])
+        elif event.type == EventType.PostDeleted:
+            post = json.loads(event.data["post"])
+            contact = await self.contacts.by_mm_user_id(post["user_id"])
+            if post["channel_id"] == await contact.direct_channel_id():
+                contact.retract(post["id"])
 
     async def logout(self):
         pass
@@ -200,26 +263,33 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, u: str, c: LegacyContact):
+    async def send_file(self, u: str, c: Contact):
+        channel_id = await c.direct_channel_id()
+        file_id = await self.mm_client.upload_file(channel_id, u)
+        return await self.mm_client.send_message_with_file(channel_id, file_id)
+
+    async def active(self, c: Contact):
         pass
 
-    async def active(self, c: LegacyContact):
+    async def inactive(self, c: Contact):
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def composing(self, c: Contact):
+        await self.ws.user_typing(await c.direct_channel_id())
+
+    async def paused(self, c: Contact):
+        # no equivalent in MM, seems to have an automatic timeout in clients
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def displayed(self, legacy_msg_id: Any, c: Contact):
+        # no read marks in MM?
         pass
 
-    async def paused(self, c: LegacyContact):
-        pass
-
-    async def displayed(self, legacy_msg_id: Any, c: LegacyContact):
-        pass
-
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
-        pass
+    async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
+        await self.mm_client.update_post(legacy_msg_id, text)
 
     async def search(self, form_values: dict[str, str]):
         pass
+
+    async def retract(self, legacy_msg_id: Any, c: Contact):
+        await self.mm_client.delete_post(legacy_msg_id)

@@ -90,6 +90,11 @@ class Websocket:
         self.ssl_verify = True
         self.keep_alive = True
         self.keep_alive_delay = 30
+        self.websocket: asyncio.Future[
+            aiohttp.ClientWebSocketResponse
+        ] = asyncio.get_event_loop().create_future()
+        self._futures: dict[int, asyncio.Future[dict]] = {}
+        self._seq_cursor = 0
 
     async def connect(self, event_handler):
         """
@@ -116,6 +121,7 @@ class Websocket:
                         ssl=context,
                         **kw_args,
                     ) as websocket:
+                        self.websocket.set_result(websocket)
                         await self._authenticate_websocket(websocket, event_handler)
                         while self._alive:
                             try:
@@ -142,8 +148,15 @@ class Websocket:
         log.debug("Waiting for messages on websocket")
         while self._alive:
             message = await websocket.receive_str()
+            d = json.loads(message)
             self._last_msg = time.time()
-            await handle_event(message, event_handler)
+            if (seq := d.get("seq_reply")) is None:
+                await handle_event(d, event_handler)
+            else:
+                try:
+                    self._futures.pop(seq).set_result(d)
+                except KeyError:
+                    log.warning("Ignoring %s", d)
         log.debug("cancelling heartbeat task")
         keep_alive.cancel()
         try:
@@ -196,7 +209,7 @@ class Websocket:
             log.debug(status)
             # We want to pass the events to the event_handler already
             # because the hello event could arrive before the authentication ok response
-            await handle_event(message, event_handler)
+            # await handle_event(status, event_handler)
             if ("event" in status and status["event"] == "hello") and (
                 "seq" in status and status["seq"] == 0
             ):
@@ -204,9 +217,24 @@ class Websocket:
                 return True
             log.error("Websocket authentification failed")
 
+    async def user_typing(self, channel_id):
+        seq = self._seq_cursor
+        self._seq_cursor += 1
+        f = self._futures[seq] = asyncio.get_event_loop().create_future()
+        payload = json.dumps(
+            {
+                "seq": seq,
+                "action": "user_typing",
+                "data": {"channel_id": channel_id},
+            }
+        )
+        log.debug("Sending %s", payload)
+        await (await self.websocket).send_str(payload)
+        r = await f
+        log.debug("Confirmation %s", r)
 
-async def handle_event(message, event_handler):
-    d = json.loads(message)
+
+async def handle_event(d, event_handler):
     if "event" in d:
         data = d.pop("data")
         try:
