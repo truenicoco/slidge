@@ -136,7 +136,10 @@ async def on_contact_edit_msg(tg: "TelegramClient", action: tgapi.UpdateMessageC
         fut = session.user_correction_futures.pop(action.message_id)
     except KeyError:
         contact = session.contacts.by_legacy_id(action.chat_id)
-        contact.correct(action.message_id, new.text.text)
+        if action.message_id in tg.session.sent:
+            contact.carbon_correct(action.message_id, new.text.text)
+        else:
+            contact.correct(action.message_id, new.text.text)
     else:
         log.debug("User correction confirmation received")
         fut.set_result(None)

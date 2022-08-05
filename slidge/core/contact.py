@@ -457,6 +457,26 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         self.__carbon(msg)
 
+    def carbon_correct(self, legacy_msg_id: LegacyMessageType, text: str):
+        """
+        Call this when the user corrects their own (last) message from an official client
+
+        :param legacy_msg_id:
+        :param text: The new body of the message
+        """
+        if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
+            log.debug(
+                "Cannot find XMPP ID of msg '%s' corrected from the official client",
+                legacy_msg_id,
+            )
+            return
+        msg = Message()
+        msg.set_to(self.jid.bare)
+        msg.set_type("chat")
+        msg["replace"]["id"] = xmpp_id
+        msg["body"] = text
+        self.__carbon(msg)
+
     def carbon_react(
         self, legacy_msg_id: LegacyMessageType, reactions: Iterable[str] = ()
     ):
@@ -477,6 +497,19 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
             reactions=reactions,
         )
+        self.__carbon(msg)
+
+    def carbon_retract(self, legacy_msg_id):
+        if (xmpp_id := self.session.sent.inverse.get(legacy_msg_id)) is None:
+            if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
+                log.debug("Cannot find XMPP ID of retracted msg: %s", legacy_msg_id)
+                return
+
+        msg = Message()
+        msg.set_to(self.jid.bare)
+        msg.set_type("chat")
+        msg["apply_to"]["id"] = xmpp_id
+        msg["apply_to"].enable("retract")
         self.__carbon(msg)
 
     def correct(self, legacy_msg_id: Any, new_text: str):
