@@ -72,6 +72,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         "jabber:x:oob",
         "urn:xmpp:message-correct:0",
         "urn:xmpp:reactions:0",
+        "urn:xmpp:message-retract:0",
     }
     """
     A list of features advertised through service discovery and client capabilities.
@@ -547,6 +548,21 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         )
         self.__send_message(msg)
         return msg
+
+    def retract(self, legacy_msg_id: LegacyMessageType):
+        """
+        Call this when a legacy contact retracts (:XEP:`0424`) a message
+
+        :param legacy_msg_id: Legacy ID of the message to delete
+        """
+        self.xmpp["xep_0424"].send_retraction(
+            mto=self.user.jid,
+            mfrom=self.jid,
+            include_fallback=True,
+            fallback_text="I have deleted the message %s, but your XMPP client does not support that"
+            % legacy_msg_id,  # https://github.com/movim/movim/issues/1074
+            id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
+        )
 
 
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)

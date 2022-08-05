@@ -272,6 +272,16 @@ class BaseSession(
             legacy_id, [r["value"] for r in m["reactions"]], self.contacts.by_stanza(m)
         )
 
+    @ignore_message_to_component
+    async def retract_from_msg(self, m: Message):
+        xmpp_id = m["apply_to"]["id"]
+        if (legacy_id := self.sent.inverse.get(xmpp_id)) is None:
+            log.debug(
+                "Cannot find the XMPP ID of this msg: %s, cannot retract", xmpp_id
+            )
+            return
+        await self.retract(legacy_id, self.contacts.by_stanza(m))
+
     def send_gateway_status(
         self,
         status: Optional[str] = None,
@@ -463,6 +473,15 @@ class BaseSession(
         :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
             An empty string means "no reaction", ie, remove all reactions if any were present before
         :param c: Contact the reaction refers to
+        """
+        raise NotImplementedError
+
+    async def retract(self, legacy_msg_id: Any, c: LegacyContactType):
+        """
+        Triggered when the user retracts (:xep:`0424`) a message.
+
+        :param legacy_msg_id: Legacy ID of the retracted message
+        :param c: The contact this retraction refers to
         """
         raise NotImplementedError
 

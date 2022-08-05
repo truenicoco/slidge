@@ -97,6 +97,8 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         await asyncio.sleep(1)
         c.send_text("OK", legacy_msg_id=i)
         await asyncio.sleep(1)
+        c.send_text("I will retract this", legacy_msg_id=666)
+        c.retract(666)
         c.inactive()
 
     async def active(self, c: LegacyContact):
@@ -123,6 +125,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
 
     async def react(self, legacy_msg_id, emojis, c):
         c.react(legacy_msg_id, "♥")
+
+    async def retract(self, legacy_msg_id, c):
+        log.debug("User has retracted their msg: '%s' (sent to '%s')", legacy_msg_id, c)
 
 
 BUDDIES = ["baba", "bibi"]
