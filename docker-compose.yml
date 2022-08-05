@@ -7,6 +7,7 @@ services:
       - "127.0.0.1:5222:5222"
       - "127.0.0.1:5281:5281"
       - "127.0.0.1:8888:80"
+      - "127.0.0.1:8065:8065"
     volumes:
       - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
 
@@ -157,7 +158,7 @@ services:
       POSTGRES_PASSWORD: BAD
     image: movim/movim:0.21rc1
     volumes:
-    - ./persistent/movim/html:/var/www/html:rw
+      - ./persistent/movim/html:/var/www/html:rw
     network_mode: "service:prosody"
 
   nginx:
@@ -175,3 +176,7 @@ services:
     image: postgres:14-alpine
     volumes:
       - ./persistent/movim/postgres/data:/var/lib/postgresql/data:rw
+
+  mattermost:
+    image: mattermost/mattermost-preview
+    network_mode: "service:prosody"
