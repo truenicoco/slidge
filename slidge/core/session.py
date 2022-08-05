@@ -40,13 +40,19 @@ class BaseSession(
     Must be subclassed for a functional slidge plugin.
     """
 
-    store_sent = True
+    sent: BiDict[LegacyMessageType, str]
     """
-    Keep track of sent messages. Useful to later update the messages' status, e.g.,
-    with a read mark from the recipient
+    Since we cannot set the XMPP ID of messages sent by XMPP clients, we need to keep a mapping
+    between XMPP IDs and legacy message IDs if we want to further refer to a message that was sent
+    by the user. This also applies to 'carboned' messages, ie, messages sent by the user from
+    the official client of a legacy network.
     """
 
     xmpp: "GatewayType"
+    """
+    The gateway instance singleton. Use it for low-level XMPP calls or custom methods that are not
+    session-specific.
+    """
 
     def __init__(self, user: GatewayUser):
         self._roster_cls: Type[
@@ -56,10 +62,9 @@ class BaseSession(
         self.log = logging.getLogger(user.bare_jid)
 
         self.user = user
-        if self.store_sent:
-            self.sent: BiDict[
-                LegacyMessageType, str
-            ] = BiDict()  # TODO: set a max size for this
+        self.sent: BiDict[
+            LegacyMessageType, str
+        ] = BiDict()  # TODO: set a max size for this
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.post_init()
