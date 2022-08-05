@@ -9,6 +9,7 @@ from .contact import (
     on_contact_edit_msg,
     on_contact_read,
     on_contact_status,
+    on_delete_message,
     on_msg_interaction_info,
     on_telegram_message,
     on_user_read_from_other_device,
@@ -45,5 +46,6 @@ class TelegramClient(aiotdlib.Client):
             (on_contact_edit_msg, tgapi.API.Types.UPDATE_MESSAGE_CONTENT),
             (on_user_update, tgapi.API.Types.UPDATE_USER),
             (on_msg_interaction_info, tgapi.API.Types.UPDATE_MESSAGE_INTERACTION_INFO),
+            (on_delete_message, tgapi.API.Types.UPDATE_DELETE_MESSAGES),
         ]:
             self.add_event_handler(h, t)

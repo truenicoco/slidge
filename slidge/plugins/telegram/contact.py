@@ -185,4 +185,19 @@ async def on_msg_interaction_info(
                         contact.carbon_react(update.message_id, [reaction.reaction])
 
 
+async def on_delete_message(tg: "TelegramClient", update: tgapi.UpdateDeleteMessages):
+    for legacy_msg_id in update.message_ids:
+        try:
+            future = tg.session.delete_futures.pop(legacy_msg_id)
+        except KeyError:
+            # FIXME: where do we filter out group chat messages here ?!
+            contact = tg.session.contacts.by_legacy_id(update.chat_id)
+            if legacy_msg_id in tg.session.sent:
+                contact.carbon_retract(legacy_msg_id)
+            else:
+                contact.retract(legacy_msg_id)
+        else:
+            future.set_result(update)
+
+
 log = logging.getLogger(__name__)

@@ -27,6 +27,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     sent_read_marks: set[int]
     ack_futures: dict[int, asyncio.Future]
     user_correction_futures: dict[int, asyncio.Future]
+    delete_futures: dict[int, asyncio.Future]
 
     def post_init(self):
         registration_form = {
@@ -35,6 +36,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         self.sent_read_marks = set()
         self.ack_futures = {}
         self.user_correction_futures = {}
+        self.delete_futures = {}
 
         i = registration_form.get("api_id")
         if i is not None:
@@ -252,6 +254,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             )  # ignored by movim, unfortunately
         else:
             self.log.debug("Message reaction response: %s", r)
+
+    async def retract(self, legacy_msg_id, c):
+        f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
+        r = await self.tg.request(
+            tgapi.DeleteMessages(
+                chat_id=c.legacy_id, message_ids=[legacy_msg_id], revoke=True
+            )
+        )
+        self.log.debug("Delete message response: %s", r)
+        confirmation = await f
+        self.log.debug("Message delete confirmation: %s", confirmation)
 
 
 async def on_message_success(
