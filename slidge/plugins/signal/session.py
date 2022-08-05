@@ -168,15 +168,15 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if msg.sync_message.sent is None:
                 log.debug("Ignoring %s", msg)  # Probably a 'message read' marker
                 return
-            destination = msg.sync_message.sent.destination
-            contact = self.contacts.by_json_address(destination)
+            contact = self.contacts.by_json_address(msg.sync_message.sent.destination)
             sent_msg = msg.sync_message.sent.message
-            if (body := sent_msg) is not None:
+
+            if (body := sent_msg.body) is not None:
                 contact.carbon(
                     body=body,
                     date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
                 )
-            if (reaction := msg.data_message.reaction) is not None:
+            if (reaction := sent_msg.reaction) is not None:
                 contact.carbon_react(
                     reaction.targetSentTimestamp,
                     () if reaction.remove else reaction.emoji,
@@ -184,8 +184,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
         contact = self.contacts.by_json_address(msg.source)
 
-        if msg.data_message is not None:
-            for attachment in msg.data_message.attachments:
+        if (data := msg.data_message) is not None:
+            for attachment in data.attachments:
                 with open(attachment.storedFilename, "rb") as f:
                     await contact.send_file(
                         filename=attachment.customFilename,
@@ -193,28 +193,28 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                         content_type=attachment.contentType,
                         legacy_msg_id=msg.data_message.timestamp,
                     )
-            if (body := msg.data_message.body) is not None:
+            if (body := data.body) is not None:
                 contact.send_text(
                     body=body,
                     legacy_msg_id=msg.data_message.timestamp,
                 )
-            if (reaction := msg.data_message.reaction) is not None:
+            if (reaction := data.reaction) is not None:
                 self.log.debug("Reaction: %s", reaction)
                 if reaction.remove:
                     contact.react(reaction.targetSentTimestamp)
                 else:
                     contact.react(reaction.targetSentTimestamp, reaction.emoji)
 
-        if msg.typing_message is not None:
-            action = msg.typing_message.action
+        if (typing_message := msg.typing_message) is not None:
+            action = typing_message.action
             if action == "STARTED":
                 contact.active()
                 contact.composing()
             elif action == "STOPPED":
                 contact.paused()
 
-        if msg.receipt_message is not None:
-            type_ = msg.receipt_message.type
+        if (receipt_message := msg.receipt_message) is not None:
+            type_ = receipt_message.type
             if type_ == "DELIVERY":
                 for t in msg.receipt_message.timestamps:
                     contact.received(t)
