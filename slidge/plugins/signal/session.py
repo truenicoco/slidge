@@ -295,7 +295,9 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             reaction=sigapi.JsonReactionv1(
                 emoji=emoji,
                 remove=remove,
-                targetAuthor=c.signal_address,
+                targetAuthor=sigapi.JsonAddressv1(number=self.phone)
+                if legacy_msg_id in self.sent
+                else c.signal_address,
                 targetSentTimestamp=legacy_msg_id,
             ),
         )
