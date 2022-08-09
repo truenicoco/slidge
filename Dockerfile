@@ -74,6 +74,8 @@ STOPSIGNAL SIGINT
 
 FROM slidge-base AS slidge-telegram
 
+ARG TARGETPLATFORM
+
 RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
     DEBIAN_FRONTEND=noninteractive apt update && \
     apt install libc++1 -y
@@ -81,6 +83,19 @@ RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
 COPY --from=builder /slidge/requirements-telegram.txt /r.txt
 RUN --mount=type=cache,id=pip-slidge-telegram,target=/root/.cache/pip \
     pip install -r /r.txt
+
+RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      apt update && \
+      apt install -y git g++ cmake zlib1g-dev gperf libssl-dev && \
+      git clone https://github.com/pylakey/td --depth 1 && \
+      mkdir td/build && cd td/build && \
+      cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/tmp/tdlib/ -DTD_ENABLE_LTO=ON .. && \
+      cmake --build . --target install && \
+      ls -la /tmp/tdlib/lib && \
+      cp -L /tmp/tdlib/lib/libtdjson.so "/venv/lib/python3.9/site-packages/aiotdlib/tdlib/libtdjson_linux_arm64.so" && \
+      apt remove -y git g++ cmake zlib1g-dev gperf libssl-dev && \
+      rm -rf /tmp/tdlib ../td; \
+    fi
 
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
