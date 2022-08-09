@@ -39,7 +39,7 @@ class Gateway(BaseGateway):
 
     def __init__(self, args):
         super(Gateway, self).__init__(args)
-        self.signal = self.loop.create_future()
+        self.signal: asyncio.Future[Signal] = self.loop.create_future()
 
     def config(self, argv: list[str]):
         args = get_parser().parse_args(argv)
@@ -55,6 +55,9 @@ class Gateway(BaseGateway):
             functools.partial(Signal, self), socket
         )
         self.signal.set_result(signal)
+        await signal.on_con_lost
+        log.error("Signald UNIX socket connection lost!")
+        raise RuntimeError("Signald socket connection lost")
 
     def add_adhoc_commands(self):
         self["xep_0050"].add_command(
