@@ -134,9 +134,13 @@ def main():
     except Exception as e:
         logging.exception(e)
     finally:
-        gateway.shutdown()
-        gateway.disconnect()
-        asyncio.get_event_loop().run_until_complete(gateway.disconnected)
+        if gateway.is_connected():
+            logging.debug("Gateway is connected, cleaning up")
+            gateway.shutdown()
+            gateway.disconnect()
+            asyncio.get_event_loop().run_until_complete(gateway.disconnected)
+        else:
+            logging.debug("Gateway is not connected, no need to clean up")
         logging.info("Successful clean shut down")
 
 

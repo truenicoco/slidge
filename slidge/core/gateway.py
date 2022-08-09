@@ -1,6 +1,7 @@
 """
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
+import asyncio
 import hashlib
 import logging
 import re
@@ -148,6 +149,8 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
                 },
             },
         )
+        self.loop.set_exception_handler(self.__exception_handler)
+
         self.home_dir = Path(args.home_dir)
         self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
@@ -166,6 +169,12 @@ class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
             k: getattr(self, v)
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
+
+    @staticmethod
+    def __exception_handler(loop: asyncio.AbstractEventLoop, context):
+        loop.default_exception_handler(context)  # prints a standard python traceback
+        log.exception(context["exception"])
+        loop.stop()
 
     def exception(self, exception: Exception):
         """
