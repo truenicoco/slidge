@@ -31,7 +31,7 @@ def get_commits():
 def get_commit_msg(commit: str):
     return subprocess.check_output(
         ["git", "log", "--format=%B", "-n", "1", commit]
-    ).decode()
+    ).decode().split("\n")[0]
 
 
 class CommitBot(ClientXMPP):
