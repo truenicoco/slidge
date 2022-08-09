@@ -4,7 +4,6 @@ Commit bot for the slidge MUC
 Come say hi! xmpp:slidge@conference.nicoco.fr?join
 """
 
-import asyncio
 import os
 import subprocess
 from argparse import ArgumentParser
@@ -82,7 +81,7 @@ def main():
 
     bot = CommitBot(jid=BOT_JID, password=password)
     bot.connect()
-    asyncio.get_event_loop().run_until_complete(bot.disconnected)
+    bot.loop.run_until_complete(bot.disconnected)
 
 
 parser = ArgumentParser()

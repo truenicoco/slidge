@@ -2,7 +2,6 @@
 Slidge can be configured via CLI args, environment variables and/or INI files.
 To use env vars, use this convention: ``--home-dir`` becomes ``HOME_DIR``.
 """
-import asyncio
 import importlib
 import logging
 from pathlib import Path
@@ -128,7 +127,7 @@ def main():
     gateway.connect()
 
     try:
-        asyncio.get_event_loop().run_forever()
+        gateway.loop.run_forever()
     except KeyboardInterrupt:
         logging.debug("Received SIGINT")
     except Exception as e:
@@ -138,7 +137,7 @@ def main():
             logging.debug("Gateway is connected, cleaning up")
             gateway.shutdown()
             gateway.disconnect()
-            asyncio.get_event_loop().run_until_complete(gateway.disconnected)
+            gateway.loop.run_until_complete(gateway.disconnected)
         else:
             logging.debug("Gateway is not connected, no need to clean up")
         logging.info("Successful clean shut down")
