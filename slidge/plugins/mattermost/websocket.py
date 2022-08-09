@@ -236,7 +236,15 @@ class Websocket:
 
 async def handle_event(d, event_handler):
     if "event" in d:
-        data = d.pop("data")
+        raw_data = d.pop("data")
+        data = {}
+
+        for k, v in raw_data.items():
+            try:
+                data[k] = json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                data[k] = v
+
         try:
             event = EventType(d.pop("event"))
         except ValueError:

@@ -1,6 +1,5 @@
 import asyncio
 import io
-import json
 import pprint
 import re
 from datetime import datetime
@@ -178,7 +177,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         if event.type == EventType.Hello:
             self.log.info("Received hello event: %s", event.data)
         elif event.type == EventType.Posted:
-            post = json.loads(event.data["post"])
+            post = event.data["post"]
             self.log.debug("Post: %s", pprint.pformat(post))
 
             message = post["message"]
@@ -242,14 +241,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             contact = await self.contacts.by_mm_user_id(event.data["user_id"])
             contact.composing()
         elif event.type == EventType.PostEdited:
-            post = json.loads(
-                event.data["post"]
-            )  # FIXME: this should already be JSON-parsed
+            post = event.data["post"]
             contact = await self.contacts.by_mm_user_id(post["user_id"])
             if post["channel_id"] == await contact.direct_channel_id():
                 contact.correct(post["id"], post["message"])
         elif event.type == EventType.PostDeleted:
-            post = json.loads(event.data["post"])
+            post = event.data["post"]
             contact = await self.contacts.by_mm_user_id(post["user_id"])
             if post["channel_id"] == await contact.direct_channel_id():
                 contact.retract(post["id"])
