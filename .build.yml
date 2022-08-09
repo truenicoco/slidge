@@ -47,11 +47,18 @@ tasks:
       for LEGACY in $PLUGINS; do
         docker pull $REGISTRY_PREFIX-$LEGACY:latest || true
         docker build --target slidge-$LEGACY -t $REGISTRY_PREFIX-$LEGACY:latest .
-        [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ] && docker push $REGISTRY_PREFIX-$LEGACY:latest
       done
   - publish: |
+      if ! test -f ~/.pypi-token; then
+        echo "We don't have access to secrets, publishing is not possible, exiting."
+        exit 0
+      fi
       cd slidge
-      [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ] || exit 0
+      if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
+        for LEGACY in $PLUGINS; do
+          docker push $REGISTRY_PREFIX-$LEGACY:latest
+        done
+      fi
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           VER=$(echo $TAG | cut -c2-)
