@@ -149,7 +149,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         if self.mm_client.me is None:
             raise RuntimeError
 
-        return f"Connected as '{self.mm_client.me.username}'"
+        return f"Connected as '{(await self.mm_client.me).username}'"
 
     async def add_contacts(self):
         user_ids = await self.mm_client.get_contacts()
@@ -187,7 +187,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             user_id = post["user_id"]
 
             if event.data["channel_type"] == "D":  # Direct messages?
-                if user_id == self.mm_client.mm_id:
+                if user_id == await self.mm_client.mm_id:
                     try:
                         async with self.send_lock:
                             self.messages_waiting_for_echo.remove(post_id)
@@ -196,7 +196,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                         if len(members) > 2:
                             raise RuntimeError("Not a direct message after all")
                         for m in members:
-                            if m.user_id != self.mm_client.mm_id:
+                            if m.user_id != await self.mm_client.mm_id:
                                 contact = await self.contacts.by_mm_user_id(m.user_id)
                                 break
                         else:
@@ -231,7 +231,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             )
         elif event.type == EventType.StatusChange:
             user_id = event.data["user_id"]
-            if user_id == self.mm_client.mm_id:
+            if user_id == await self.mm_client.mm_id:
                 self.log.debug("Own status change")
             else:
 
