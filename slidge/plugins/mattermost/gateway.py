@@ -164,8 +164,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             self.contacts.user_id_to_username[user.id] = user.username
             if user.nickname:
                 contact.name = user.nickname
-            else:
+            elif user.first_name and user.last_name:
                 contact.name = user.first_name + " " + user.last_name
+            elif user.first_name:
+                contact.name = user.first_name
+            elif user.last_name:
+                contact.name = user.last_name
 
             contact.avatar = await self.mm_client.get_profile_image(user.id)
 
