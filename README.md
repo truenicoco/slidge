@@ -18,13 +18,13 @@ It's a work in progress, but it should make
 [writing gateways to other chat networks](https://slidge.readthedocs.io/en/latest/dev/tutorial.html)
 (*plugins*) as frictionless as possible.
 
-It comes with a few plugins included, implementing at most basic direct messages.
+It comes with a few plugins included, implementing at least basic direct messaging.
 
 |            | Presences | Typing | Marks | Upload | Correction | Reactions | Retractions |
 |------------|-----------|--------|-------|--------|------------|-----------|-------------|
 | Signal     | N/A       | ✓      | ✓     | ✓      | N/A        | ✓         | ✓           |
 | Telegram   | ~         | ✓      | ✓     | ✓      | ✓          | ✓         | ✓           |
-| Mattermost | ~         | ✓      | -     | ✓      | ✓          | ✗         | ✓           |
+| Mattermost | ~         | ✓      | N/A   | ✓      | ✓          | ✓         | ✓           |
 | Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         | ✗           |
 | Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         | ✗           |
 

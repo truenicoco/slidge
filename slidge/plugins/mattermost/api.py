@@ -1,9 +1,9 @@
 import asyncio
 import io
 import logging
-from typing import Optional
 
 import aiohttp
+import emoji
 from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
     get_channel_members,
@@ -16,6 +16,11 @@ from mattermost_api_reference_client.api.posts import (
     get_posts_for_channel,
     update_post,
 )
+from mattermost_api_reference_client.api.reactions import (
+    delete_reaction,
+    get_reactions,
+    save_reaction,
+)
 from mattermost_api_reference_client.api.status import get_users_statuses_by_ids
 from mattermost_api_reference_client.api.teams import get_teams_for_user
 from mattermost_api_reference_client.api.users import (
@@ -25,7 +30,7 @@ from mattermost_api_reference_client.api.users import (
     get_users_by_ids,
 )
 from mattermost_api_reference_client.client import AuthenticatedClient
-from mattermost_api_reference_client.models import Status, User
+from mattermost_api_reference_client.models import Reaction, Status, User
 from mattermost_api_reference_client.models.create_post_json_body import (
     CreatePostJsonBody,
 )
@@ -227,6 +232,31 @@ class MattermostClient:
         ):
             raise RuntimeError(r)
         return r.file_infos[0].id
+
+    async def react(self, post_id: str, emoji_char: str):
+        return await save_reaction.asyncio(
+            client=self.http,
+            json_body=Reaction(
+                user_id=await self.mm_id,
+                post_id=post_id,
+                emoji_name=demojize(emoji_char),
+            ),
+        )
+
+    async def get_reactions(self, post_id: str):
+        try:
+            return await get_reactions.asyncio(post_id, client=self.http)
+        except TypeError:
+            return []
+
+    async def delete_reaction(self, post_id: str, emoji_name: str):
+        await delete_reaction.asyncio(
+            await self.mm_id, post_id, emoji_name=emoji_name, client=self.http
+        )
+
+
+def demojize(emoji_char: str):
+    return emoji.demojize(emoji_char, delimiters=("", ""), language="alias")
 
 
 log = logging.getLogger(__name__)

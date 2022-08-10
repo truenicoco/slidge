@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from typing import Any, Optional
 
+import emoji
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
 
@@ -89,6 +90,17 @@ class Contact(LegacyContact["Session"]):
             ).id
             self.session.contacts.user_id_to_username[self._mm_id] = self.legacy_id
         return self._mm_id
+
+    async def update_reactions(self, legacy_msg_id):
+        self.react(
+            legacy_msg_id,
+            [
+                emoji.emojize(f":{x}:", language="alias")
+                for x in await self.session.get_mm_reactions(
+                    legacy_msg_id, await self.mm_id()
+                )
+            ],
+        )
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
@@ -230,9 +242,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             channel_id = event.data["channel_id"]
             posts = await self.mm_client.get_posts_for_channel(channel_id)
             last_msg_id = posts.posts.additional_keys[-1]
-            (await self.contacts.by_direct_channel_id(channel_id)).carbon_read(
-                last_msg_id
-            )
+            if (c := await self.contacts.by_direct_channel_id(channel_id)) is None:
+                self.log.debug("Ignoring unknown channel")
+            else:
+                c.carbon_read(last_msg_id)
         elif event.type == EventType.StatusChange:
             user_id = event.data["user_id"]
             if user_id == await self.mm_client.mm_id:
@@ -254,6 +267,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             contact = await self.contacts.by_mm_user_id(post["user_id"])
             if post["channel_id"] == await contact.direct_channel_id():
                 contact.retract(post["id"])
+        elif event.type in (EventType.ReactionAdded, EventType.ReactionRemoved):
+            reaction = event.data["reaction"]
+            if (who := reaction["user_id"]) == await self.mm_client.mm_id:
+                pass
+            else:
+                await (await self.contacts.by_mm_user_id(who)).update_reactions(
+                    reaction["post_id"]
+                )
 
     async def logout(self):
         pass
@@ -294,3 +315,24 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def retract(self, legacy_msg_id: Any, c: Contact):
         await self.mm_client.delete_post(legacy_msg_id)
+
+    async def react(self, legacy_msg_id: Any, emojis: list[str], c: Contact):
+        mm_reactions = await self.get_mm_reactions(
+            legacy_msg_id, await self.mm_client.mm_id
+        )
+        xmpp_reactions = {
+            emoji.demojize(x, language="alias", delimiters=("", "")) for x in emojis
+        }
+        self.log.debug("%s vs %s", mm_reactions, xmpp_reactions)
+        for e in xmpp_reactions - mm_reactions:
+            await self.mm_client.react(legacy_msg_id, e)
+        for e in mm_reactions - xmpp_reactions:
+            await self.mm_client.delete_reaction(legacy_msg_id, e)
+
+    async def get_mm_reactions(self, legacy_msg_id: str, user_id: Optional[str]):
+        return {
+            # emoji.emojize(f":{x.emoji_name}:", language='alias')
+            x.emoji_name
+            for x in await self.mm_client.get_reactions(legacy_msg_id)
+            if x.user_id == user_id
+        }
