@@ -288,10 +288,10 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             remove = True
             emoji = ""
         else:
+            emoji = emojis[-1]
             if len(emojis) > 1:
                 self.send_gateway_message("Only one reaction per message on signal")
-                c.carbon_react(legacy_msg_id)
-            emoji = emojis[-1]
+                c.carbon_react(legacy_msg_id, emoji)
 
         await (await self.signal).react(
             username=self.phone,
