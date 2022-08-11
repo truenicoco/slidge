@@ -14,7 +14,11 @@ from slidge import *
 class MockTdlib:
     instances = []
 
-    def __init__(self, *a, **kw):
+    class log:
+        def debug(*_):
+            pass
+
+    def __init__(self, *_a, **_kw):
         self.instances.append(self)
         self.calls = []
 
@@ -36,7 +40,7 @@ class TestTelegramBase(SlidgeTest):
 
 class TestTelegram(TestTelegramBase):
     def setUp(self):
-        slidge.plugins.telegram.client.TelegramClient = MockTdlib
+        slidge.plugins.telegram.session.TelegramClient = MockTdlib
         slidge.plugins.telegram.gateway.Gateway.args = Namespace(
             tdlib_key="", tdlib_path=""
         )
@@ -99,12 +103,12 @@ async def test_ignore_read_marks_confirmation():
     tg.session = MockSession()
     tg.session.contacts = Contacts()
 
-    await slidge.plugins.telegram.contact.on_user_read_from_other_device(tg, action)
+    await slidge.plugins.telegram.client.TelegramClient.handle_ChatReadInbox(tg, action)
     assert len(tg.session.sent_read_marks) == 0
     assert tg.session.contacts.by_legacy_id(12345).carbons[0] == 123456789
 
     tg.session.contacts.by_legacy_id(12345).carbons = []
     tg.session.sent_read_marks.add(123456789)
-    await slidge.plugins.telegram.contact.on_user_read_from_other_device(tg, action)
+    await slidge.plugins.telegram.client.TelegramClient.handle_ChatReadInbox(tg, action)
     assert len(tg.session.sent_read_marks) == 0
     assert len(tg.session.contacts.by_legacy_id(12345).carbons) == 0

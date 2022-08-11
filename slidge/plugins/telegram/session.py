@@ -4,7 +4,7 @@ import re
 import tempfile
 from mimetypes import guess_type
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import aiohttp
 import aiotdlib.api as tgapi
@@ -13,17 +13,14 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-if TYPE_CHECKING:
-    from .client import (
-        TelegramClient,  # FIXME: circular imports, probably bad module/class architecture...
-    )
-    from .contact import Contact, Roster
-    from .gateway import Gateway
+from .client import TelegramClient
+from .contact import Contact, Roster
+from .gateway import Gateway
 
 
-class Session(BaseSession["Contact", "Roster", "Gateway"]):
+class Session(BaseSession[Contact, Roster, Gateway]):
     tdlib_path: Optional[Path] = None
-    tg: "TelegramClient"
+    tg: TelegramClient
     sent_read_marks: set[int]
     ack_futures: dict[int, asyncio.Future]
     user_correction_futures: dict[int, asyncio.Future]
@@ -41,10 +38,6 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         i = registration_form.get("api_id")
         if i is not None:
             i = int(i)  # makes testing easier to make api_id optional...
-
-        # FIXME: circular imports, probably bad module/class architecture...
-        from .client import TelegramClient
-        from .gateway import Gateway
 
         self.tg = TelegramClient(
             self,
@@ -265,21 +258,6 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         self.log.debug("Delete message response: %s", r)
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
-
-
-async def on_message_success(
-    tg: "TelegramClient", update: tgapi.UpdateMessageSendSucceeded
-):
-    tg.session.sent_read_marks.add(update.message.id)
-    for _ in range(10):
-        try:
-            future = tg.session.ack_futures.pop(update.message.id)
-        except KeyError:
-            await asyncio.sleep(0.5)
-        else:
-            future.set_result(update.message.id)
-            return
-    log.warning("Ignoring Send success for %s", update.message.id)
 
 
 def escape(t: str):
