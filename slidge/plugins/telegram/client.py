@@ -156,6 +156,9 @@ class TelegramClient(aiotdlib.Client):
                             contact.carbon_react(update.message_id, [reaction.reaction])
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
+        if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
+            self.log.debug("Ignoring non permanent delete")
+            return
         for legacy_msg_id in update.message_ids:
             try:
                 future = self.session.delete_futures.pop(legacy_msg_id)
