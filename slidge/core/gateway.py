@@ -8,7 +8,7 @@ import re
 import tempfile
 from asyncio import Future
 from pathlib import Path
-from typing import Any, Iterable, Optional, Type, TypeVar
+from typing import Any, Generic, Iterable, Optional, Type, TypeVar
 
 import aiohttp
 import qrcode
@@ -22,7 +22,9 @@ from ..util.types import AvatarType
 from .session import BaseSession, SessionType
 
 
-class BaseGateway(ComponentXMPP, metaclass=ABCSubclassableOnceAtMost):
+class BaseGateway(
+    Generic[SessionType], ComponentXMPP, metaclass=ABCSubclassableOnceAtMost
+):
     """
     Must be subclassed by a plugin to set up various aspects of the XMPP
     component behaviour, such as its display name or its registration process.

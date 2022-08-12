@@ -1,4 +1,5 @@
 import logging
+import typing
 from argparse import Namespace
 
 from slixmpp import JID
@@ -7,6 +8,9 @@ from slidge import *
 
 from .config import get_parser
 
+if typing.TYPE_CHECKING:
+    from .session import Session
+
 REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH
 
 This is the only tested login method, but other methods (password, bot token, 2FA...)
@@ -14,7 +18,7 @@ should work too, in theory at least.
 """
 
 
-class Gateway(BaseGateway):
+class Gateway(BaseGateway["Session"]):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),

@@ -19,12 +19,15 @@ else:
 
 def ignore_message_to_component(func):
     @functools.wraps(func)
-    async def wrapped(self: "BaseSession", msg: Message):
+    async def wrapped(self: T, msg: Message):
         if msg.get_to() != self.xmpp.boundjid.bare:
             return await func(self, msg)
         log.debug("Ignoring message to component: %s %s", self, msg)
 
     return wrapped
+
+
+T = TypeVar("T", bound="BaseSession")
 
 
 class BaseSession(
@@ -118,7 +121,7 @@ class BaseSession(
         return cls._from_user_or_none(user)
 
     @classmethod
-    def from_stanza(cls, s) -> "BaseSession":
+    def from_stanza(cls: Type[T], s) -> T:
         """
         Get a user's :class:`.LegacySession` using the "from" field of a stanza
 
@@ -130,7 +133,7 @@ class BaseSession(
         return cls._from_user_or_none(user_store.get_by_stanza(s))
 
     @classmethod
-    def from_jid(cls, jid: JID) -> "BaseSession":
+    def from_jid(cls: Type[T], jid: JID) -> T:
         """
         Get a user's :class:`.LegacySession` using its jid
 
