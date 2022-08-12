@@ -259,6 +259,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
 
+    async def list_sessions(self) -> tgapi.Sessions:
+        return await self.tg.request(tgapi.GetActiveSessions())
+
+    async def terminate_session(self, session_id):
+        return await self.tg.request(tgapi.TerminateSession(session_id=session_id))
+
 
 def escape(t: str):
     return re.sub(ESCAPE_PATTERN, r"\\\1", t)
