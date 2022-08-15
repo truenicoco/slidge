@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from copy import copy
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import (
@@ -388,20 +387,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.__send_message(msg, legacy_msg_id)
         return msg
 
-    def __carbon(self, msg: Message):
-        carbon = Message()
-        carbon["from"] = self.user.jid
-        carbon["type"] = "chat"
-        carbon["carbon_sent"] = msg
-
-        from_ = copy(self.user.jid)
-        from_.resource = "slidge"
-        msg["from"] = from_
-        for resource in self.xmpp.client_roster.presence(self.user.jid):
-            to = copy(self.user.jid)
-            to.resource = resource
-            carbon["to"] = str(to)
-            self.xmpp["xep_0356"].send_privileged_message(copy(carbon))
+    def __privileged_send(self, msg: Message):
+        msg.set_from(self.user.jid.bare)
+        msg.enable("store")
+        self.session.ignore_messages.add(msg.get_id())
+        self.xmpp["xep_0356"].send_privileged_message(msg)
+        return msg.get_id()
 
     def carbon(
         self,
@@ -410,9 +401,13 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         date: Optional[datetime] = None,
     ):
         """
-        Sync a message sent using an official client by the gateway user to a legacy contact.
+        Call this when the user sends a message to a legacy network contact.
 
-        Uses xep:`0356` to impersonate the XMPP user and send a carbon message (:xep:`0280`).
+        This synchronizes the outgoing message history on the XMPP side, using
+         xep:`0356` to impersonate the XMPP user and send a message from the user to
+        the contact. Thw XMPP server should in turn send carbons (:xep:`0280`) to online
+        XMPP clients +/- write the message in server-side archives (:xep:`0_313`),
+        depending on the user's and the server's archiving policy.
 
         :param str body: Body of the message.
         :param legacy_id: Legacy message ID
@@ -432,14 +427,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 date = date.astimezone(timezone.utc)
             msg["delay"].set_stamp(date)
 
-        self.__carbon(msg)
-        return msg.get_id()
+        return self.__privileged_send(msg)
 
     def carbon_read(self, legacy_msg_id: Any, date: Optional[datetime] = None):
         """
         Synchronize user read state from official clients.
-
-        Uses xep:`0356` to impersonate the XMPP user and send a carbon message (:xep:`0280`).
 
         :param str legacy_msg_id:
         :param str date:
@@ -456,7 +448,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 date = date.astimezone(timezone.utc)
             msg["delay"].set_stamp(date)
 
-        self.__carbon(msg)
+        return self.__privileged_send(msg)
 
     def carbon_correct(self, legacy_msg_id: LegacyMessageType, text: str):
         """
@@ -476,7 +468,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_type("chat")
         msg["replace"]["id"] = xmpp_id
         msg["body"] = text
-        self.__carbon(msg)
+        return self.__privileged_send(msg)
 
     def carbon_react(
         self, legacy_msg_id: LegacyMessageType, reactions: Iterable[str] = ()
@@ -498,7 +490,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
             reactions=reactions,
         )
-        self.__carbon(msg)
+        return self.__privileged_send(msg)
 
     def carbon_retract(self, legacy_msg_id):
         if (xmpp_id := self.session.sent.inverse.get(legacy_msg_id)) is None:
@@ -511,7 +503,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_type("chat")
         msg["apply_to"]["id"] = xmpp_id
         msg["apply_to"].enable("retract")
-        self.__carbon(msg)
+        return self.__privileged_send(msg)
 
     def correct(self, legacy_msg_id: Any, new_text: str):
         """

@@ -69,6 +69,8 @@ class BaseSession(
             LegacyMessageType, str
         ] = BiDict()  # TODO: set a max size for this
 
+        self.ignore_messages = set[str]()
+
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.post_init()
 
@@ -181,6 +183,11 @@ class BaseSession(
             "id"
         ]:  # ignore last message correction (handled by a specific method)
             return
+        if (i := m.get_id()) in self.ignore_messages:
+            self.log.debug("Ignored message: %s", i)
+            self.ignore_messages.remove(i)
+            return
+
         url = m["oob"]["url"]
         text = m["body"]
         if url:

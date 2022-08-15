@@ -10,6 +10,7 @@ services:
       - "127.0.0.1:8065:8065"
     volumes:
       - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
+      - ./confs/mod_privilege.lua:/var/lib/prosody/custom_plugins/share/lua/5.2/mod_privilege.lua
 
   slidge-dummy:
     build:

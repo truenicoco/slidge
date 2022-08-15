@@ -4,6 +4,7 @@ A pseudo legacy network, to easily test things
 
 import asyncio
 import logging
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,16 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     def __init__(self, user):
         super(Session, self).__init__(user)
         self.counter = 0
+        self.xmpp.loop.create_task(self.backfill())
+
+    async def backfill(self):
+        self.log.debug("CARBON")
+        i = uuid.uuid1()
+
+        self.contacts.by_legacy_id("bibi").carbon(
+            f"Sent by the component on behalf of the user, but this does not seem to reach MAM? {i}",
+            legacy_id=i,
+        )
 
     async def paused(self, c: LegacyContact):
         pass
