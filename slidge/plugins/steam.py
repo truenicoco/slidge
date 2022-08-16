@@ -6,25 +6,24 @@ to make it play nice with asyncio.
 
 Right now, listing friends + send them messages works BUT in a blocking way.
 
-Listening to events is broken.
-
 Asyncsteampy https://github.com/somespecialone/asyncsteampy
 might be interesting as it uses python's asyncio BUT the
 login process seem a little too exotic for my taste.
 """
+import asyncio
+from typing import Any
 
-import pprint
-from typing import Any, Optional
-
-from slixmpp import Presence
 from steam.client import SteamClient
+from steam.client.user import SteamUser
 from steam.core.msg import MsgProto
 from steam.enums.common import EPersonaState, EResult
+from steam.enums.emsg import EMsg
+from steam.steamid import SteamID
 
 from slidge import *
 
 
-class Gateway(BaseGateway):
+class Gateway(BaseGateway["Session"]):
     REGISTRATION_INSTRUCTIONS = "Enter steam credentials"
     REGISTRATION_FIELDS = [
         FormField(var="username", label="Steam username", required=True),
@@ -39,13 +38,25 @@ class Gateway(BaseGateway):
     COMPONENT_AVATAR = "https://logos-download.com/wp-content/uploads/2016/05/Steam_icon_logo_logotype.png"
 
 
-class Roster(LegacyRoster):
+class Contact(LegacyContact["Session"]):
+    def update_status(self, persona_state: EPersonaState):
+        if persona_state == EPersonaState.Offline:
+            self.offline()
+        elif persona_state == EPersonaState.Online:
+            self.online()
+        elif persona_state == EPersonaState.Busy:
+            self.busy()
+        elif persona_state == EPersonaState.Away:
+            self.away()
+
+
+class Roster(LegacyRoster[Contact, "Session"]):
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> int:
         return int(jid_username)
 
 
-class Session(BaseSession[LegacyContact, Roster, Gateway]):
+class Session(BaseSession[Contact, Roster, Gateway]):
     steam: SteamClient
 
     def post_init(self):
@@ -55,11 +66,13 @@ class Session(BaseSession[LegacyContact, Roster, Gateway]):
         self.steam = SteamClient()
         self.steam.set_credential_location(store_dir)
         self.steam.username = self.user.registration_form["username"]
-        self.steam.on(SteamClient.EVENT_CHAT_MESSAGE, self.on_steam_msg)
 
     async def login(self):
         username = self.user.registration_form["username"]
         password = self.user.registration_form["password"]
+
+        self.steam.on(SteamClient.EVENT_CHAT_MESSAGE, self.on_steam_msg)
+        self.steam.on(EMsg.ClientPersonaState, self.on_persona_state)
 
         login_result = self.steam.relogin()
 
@@ -81,32 +94,41 @@ class Session(BaseSession[LegacyContact, Roster, Gateway]):
             raise RuntimeError("Could not connect to steam")
 
         for f in self.steam.friends:
-            self.log.debug("Friend: %s - %s", f, f.name)
+            f: SteamUser
+            self.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
             c = self.contacts.by_legacy_id(f.steam_id.id)
             c.name = f.name
             c.avatar = f.get_avatar_url()
             await c.add_to_roster()
-            if f.state == EPersonaState.Online:
-                c.online()
-            elif f.state == EPersonaState.Busy:
-                c.busy()
-            elif f.state == EPersonaState.Away:
-                c.away()
-            elif f.state == EPersonaState.Offline:
-                c.offline()
-            else:
-                self.log.warning("Unknown status: %s", f.state)
+            c.update_status(f.state)
 
-    def on_steam_msg(self, msg: MsgProto):
-        self.log.debug("New message event: %s", vars(pprint.pformat(msg)))
+        asyncio.create_task(self.idle())
+
+    async def idle(self):
+        while True:
+            self.steam.idle()
+            await asyncio.sleep(0.1)
+
+    def on_steam_msg(self, user, text):
+        self.log.debug("New message event: %s, %s", user, text)
+        self.contacts.by_legacy_id(user.steam_id).send_text(text)
+
+    def on_persona_state(self, msg: MsgProto):
+        persona_state = msg.body
+        self.log.debug("New state event: %s", persona_state)
+        for f in persona_state.friends:
+            if f.friendid == self.steam.steam_id:
+                self.log.debug("This is me %s", self.steam.steam_id)
+                return
+            self.contacts.by_legacy_id(SteamID(f.friendid).id).update_status(
+                f.persona_state
+            )
 
     async def logout(self):
         pass
 
     async def send_text(self, t: str, c: LegacyContact):
-        friend = self.steam.get_user(c.legacy_id)
-        friend.send_message(t)
-        self.steam.sleep(0)  # FIXME: implement this in a non blocking way
+        self.steam.get_user(c.legacy_id).send_message(t)
 
     async def send_file(self, u: str, c: LegacyContact):
         pass

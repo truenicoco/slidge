@@ -27,6 +27,7 @@ It comes with a few plugins included, implementing at least basic direct messagi
 | Mattermost | ~         | ✓      | N/A   | ✓      | ✓          | ✓         | ✓           |
 | Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         | ✗           |
 | Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         | ✗           |
+| Steam      | ✗         | ✗      | ✗     | ✗      | ✗          | ✗         | ✗           |
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
 
