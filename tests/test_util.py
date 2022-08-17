@@ -1,4 +1,7 @@
+import cryptography.fernet
+
 from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost, BiDict
+from slidge.util.db import EncryptedShelf
 
 
 def test_subclass():
@@ -44,3 +47,24 @@ def test_bidict():
     assert d.inverse["c"] == 2
     assert "b" not in d
     assert len(d.inverse.values()) == 2
+
+
+def test_encrypted_shelf(tmp_path):
+    key = "test_key"
+    s = EncryptedShelf(tmp_path / "test.db", key)
+    s["x"] = 123
+    s["y"] = 777
+    s.close()
+
+    s = EncryptedShelf(tmp_path / "test.db", key)
+    assert s["x"] == 123
+    assert s["y"] == 777.0
+    s.close()
+
+    s = EncryptedShelf(tmp_path / "test.db", "WRONG_KEY")
+    try:
+        s["x"]
+    except Exception as e:
+        assert isinstance(e, cryptography.fernet.InvalidToken), e
+    else:
+        assert False

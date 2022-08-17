@@ -267,6 +267,25 @@ test = ["mock", "pyyaml", "pytest"]
 yaml = ["pyyaml"]
 
 [[package]]
+name = "cryptography"
+version = "36.0.2"
+description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cffi = ">=1.12"
+
+[package.extras]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
+docstest = ["pyenchant (>=1.6.11)", "twine (>=1.12.0)", "sphinxcontrib-spelling (>=4.0.1)"]
+pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
+sdist = ["setuptools_rust (>=0.11.4)"]
+ssh = ["bcrypt (>=3.1.5)"]
+test = ["pytest (>=6.2.0)", "pytest-cov", "pytest-subtests", "pytest-xdist", "pretend", "iso8601", "pytz", "hypothesis (>=1.11.4,!=3.79.2)"]
+
+[[package]]
 name = "discord.py-self"
 version = "1.9.2"
 description = "A Python wrapper for the Discord API"
@@ -610,6 +629,17 @@ description = "Utility library for gitignore style pattern matching of file path
 category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
+
+[[package]]
+name = "pickle-secure"
+version = "0.9.99"
+description = "Easily create encrypted pickle files"
+category = "main"
+optional = false
+python-versions = ">=3.7.0,<4.0.0"
+
+[package.dependencies]
+cryptography = ">=36.0.0,<37.0.0"
 
 [[package]]
 name = "pillow"
@@ -1306,7 +1336,7 @@ telegram = ["aiotdlib", "pydantic"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "7aa52bfb8da18667f3737d2dd1c4a43912c55fdc441806caa567c24ee18e6bd1"
+content-hash = "92cae85c8c3ef9204dc35fd97f4afceb22120e5fc0d3d6827245255885d80413"
 
 [metadata.files]
 aiodns = []
@@ -1332,6 +1362,7 @@ click = []
 colorama = []
 commonmark = []
 configargparse = []
+cryptography = []
 "discord.py-self" = []
 docutils = []
 emoji = []
@@ -1359,6 +1390,7 @@ mypy-extensions = []
 packaging = []
 paho-mqtt = []
 pathspec = []
+pickle-secure = []
 pillow = []
 platformdirs = []
 pluggy = []

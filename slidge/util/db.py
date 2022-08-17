@@ -6,10 +6,39 @@ pseudo-roster for the gateway component.
 import dataclasses
 import logging
 import shelve
+from io import BytesIO
 from os import PathLike
 from typing import Iterable, Optional, Union
 
+from pickle_secure import Pickler, Unpickler
 from slixmpp import JID, Iq, Message, Presence
+
+
+# noinspection PyUnresolvedReferences
+class EncryptedShelf(shelve.DbfilenameShelf):
+    def __init__(
+        self, filename: PathLike, key: str, flag="c", protocol=None, writeback=False
+    ):
+        super().__init__(str(filename), flag, protocol, writeback)
+        self.secret_key = key
+
+    def __getitem__(self, key):
+        try:
+            value = self.cache[key]
+        except KeyError:
+            f = BytesIO(self.dict[key.encode(self.keyencoding)])
+            value = Unpickler(f, key=self.secret_key).load()
+            if self.writeback:
+                self.cache[key] = value
+        return value
+
+    def __setitem__(self, key, value):
+        if self.writeback:
+            self.cache[key] = value
+        f = BytesIO()
+        p = Pickler(f, self._protocol, key=self.secret_key)
+        p.dump(value)
+        self.dict[key.encode(self.keyencoding)] = f.getvalue()
 
 
 @dataclasses.dataclass
@@ -58,18 +87,21 @@ class UserStore:
     """
 
     def __init__(self):
-        # noinspection PyTypeChecker
-        self._users: shelve.Shelf[GatewayUser] = None
+        self._users: shelve.Shelf[GatewayUser] = None  # type: ignore
 
-    def set_file(self, filename: PathLike):
+    def set_file(self, filename: PathLike, secret_key: Optional[str] = None):
         """
         Set the file to use to store user data
 
         :param filename: Path to the shelf file
+        :param secret_key: Secret key to store files encrypted on disk
         """
         if self._users is not None:
             raise RuntimeError("Shelf file already set!")
-        self._users = shelve.open(filename=str(filename))
+        if secret_key:
+            self._users = EncryptedShelf(filename, key=secret_key)
+        else:
+            self._users = shelve.open(str(filename))
 
     def get_all(self) -> Iterable[GatewayUser]:
         """

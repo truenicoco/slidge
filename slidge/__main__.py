@@ -82,6 +82,11 @@ def get_parser():
         "Defaults to .*@${SLIDGE_SERVER}, forbids the gateway to JIDs "
         "not using the same XMPP server as the gateway",
     )
+    p.add(
+        "--secret-key",
+        env_var="SLIDGE_SECRET_KEY",
+        help="Encryption for disk storage",
+    )
     p.add_argument(
         "-q",
         "--quiet",
@@ -119,7 +124,7 @@ def main():
         args.user_jid_validator = ".*@" + args.server
 
     db_file = Path(args.home_dir) / "slidge.db"
-    user_store.set_file(db_file)
+    user_store.set_file(db_file, args.secret_key)
 
     importlib.import_module(args.legacy_module)
     gateway = BaseGateway.get_unique_subclass()(args)
