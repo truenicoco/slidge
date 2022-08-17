@@ -101,7 +101,6 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         self.xmpp = session.xmpp
         asyncio.create_task(self.__make_caps())
-        asyncio.create_task(self.__make_vcard())
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
