@@ -28,6 +28,9 @@ class Contact(LegacyContact["Session"]):
         elif isinstance(content, tgapi.MessageVideo):
             best_file = content.video.video
             await self.send_tg_file(best_file, content.caption, msg.id)
+        elif isinstance(content, tgapi.MessageAnimation):
+            best_file = content.animation.animation
+            await self.send_tg_file(best_file, content.caption, msg.id)
         else:
             self.session.log.debug("Ignoring content: %s", type(content))
 

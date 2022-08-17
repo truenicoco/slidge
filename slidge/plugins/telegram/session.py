@@ -89,18 +89,24 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         if type_ is not None:
             type_, subtype = type_.split("/")
 
-        if type_ == "image":
-            async with aiohttp.ClientSession() as session:
-                async with session.get(u) as response:
-                    response.raise_for_status()
-                    with tempfile.NamedTemporaryFile() as file:
-                        bytes_ = await response.read()
-                        file.write(bytes_)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(u) as response:
+                response.raise_for_status()
+                with tempfile.NamedTemporaryFile() as file:
+                    bytes_ = await response.read()
+                    file.write(bytes_)
+                    if type_ == "image":
                         result = await self.tg.send_photo(
                             chat_id=c.legacy_id, photo=file.name
                         )
-        else:
-            result = await self.tg.send_text(chat_id=c.legacy_id, text=u)
+                    elif type_ == "video":
+                        result = await self.tg.send_video(
+                            chat_id=c.legacy_id, video=file.name
+                        )
+                    else:
+                        result = await self.tg.send_document(
+                            c.legacy_id, document=file.name
+                        )
 
         return result.id
 
