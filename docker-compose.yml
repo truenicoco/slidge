@@ -142,6 +142,22 @@ services:
       - prosody
     network_mode: "service:prosody"
 
+  slidge-discord:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --config=/slidge-example.ini
+      - --legacy-module=slidge.plugins.discord_self
+      - --jid=discord.localhost
+    volumes:
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
+    depends_on:
+      - prosody
+    network_mode: "service:prosody"
+
   signald:
     image: signald/signald:0.20.0
     volumes:

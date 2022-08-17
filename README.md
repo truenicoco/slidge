@@ -28,6 +28,7 @@ It comes with a few plugins included, implementing at least basic direct messagi
 | Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         | ✗           |
 | Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         | ✗           |
 | Steam      | ✗         | ✗      | ✗     | ✗      | ✗          | ✗         | ✗           |
+| Discord    | ✗         | ✓      | N/A   | ✗      | ✓          | ~         | ✓           |
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
 
