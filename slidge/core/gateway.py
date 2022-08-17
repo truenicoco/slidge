@@ -175,7 +175,11 @@ class BaseGateway(
     @staticmethod
     def __exception_handler(loop: asyncio.AbstractEventLoop, context):
         loop.default_exception_handler(context)  # prints a standard python traceback
-        log.exception(context["exception"])
+        exc = context.get("exception")
+        if exc is None:
+            log.warning("No exception in this context: %s", context)
+        else:
+            log.exception(exc)
         loop.stop()
 
     def exception(self, exception: Exception):
