@@ -150,6 +150,10 @@ ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.mattermost
 
 FROM slidge-base AS slidge-steam
 
+COPY --from=builder /slidge/requirements-steam.txt /r.txt
+RUN --mount=type=cache,id=pip-slidge-skype,target=/root/.cache/pip \
+    pip install -r /r.txt
+
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
 ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.steam"]

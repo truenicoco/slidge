@@ -32,7 +32,7 @@ Put this in a file called ``superduper.py``:
                 event=super_duper.api.IncomingMessageEvent
             )
 
-        async def login(self, p: Presence):
+        async def login():
             await self.legacy.login()
 
         async def incoming_legacy_message(self, msg: super_duper.api.Message):

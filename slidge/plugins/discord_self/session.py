@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from typing import TYPE_CHECKING, Union, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import discord as di
 from slixmpp.exceptions import XMPPError
@@ -8,8 +8,8 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 if TYPE_CHECKING:
+    from . import Contact, Gateway, Roster
     from .client import Discord
-    from . import Contact, Roster, Gateway
 
 
 def raise_xmpp_not_found_if_necessary(func):
