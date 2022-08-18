@@ -23,7 +23,7 @@ It comes with a few plugins included, implementing at least basic direct messagi
 |            | Presences | Typing | Marks | Upload | Correction | Reactions | Retractions |
 |------------|-----------|--------|-------|--------|------------|-----------|-------------|
 | Signal     | N/A       | ✓      | ✓     | ✓      | N/A        | ✓         | ✓           |
-| Telegram   | ~         | ✓      | ✓     | ✓      | ✓          | ✓         | ✓           |
+| Telegram   | ✓         | ✓      | ✓     | ✓      | ✓          | ✓         | ✓           |
 | Mattermost | ~         | ✓      | N/A   | ✓      | ✓          | ✓         | ✓           |
 | Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         | ✗           |
 | Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         | ✗           |

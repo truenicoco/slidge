@@ -164,6 +164,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             contact.avatar = avatar
             await contact.add_to_roster()
             contact.online()
+            contact.away()
 
     async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
