@@ -238,7 +238,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     "server_timestamp": legacy_msg_id,
                     "reaction_type": k_EMessageReactionType_Emoticon,
                     "reaction": emoji_name,
-                    "is_add": True
+                    "is_add": True,
                 },
             )
 
