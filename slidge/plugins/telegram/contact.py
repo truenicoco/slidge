@@ -56,10 +56,18 @@ class Contact(LegacyContact["Session"]):
         if isinstance(content, tgapi.MessageText):
             # TODO: parse formatted text to markdown
             formatted_text = content.text
-            self.send_text(body=formatted_text.text, legacy_msg_id=msg.id)
+            self.send_text(
+                body=formatted_text.text,
+                legacy_msg_id=msg.id,
+                reply_to_msg_id=msg.reply_to_message_id,
+            )
         elif isinstance(content, tgapi.MessageAnimatedEmoji):
             emoji = content.animated_emoji.sticker.emoji
-            self.send_text(body=emoji, legacy_msg_id=msg.id)
+            self.send_text(
+                body=emoji,
+                legacy_msg_id=msg.id,
+                reply_to_msg_id=msg.reply_to_message_id,
+            )
         elif isinstance(content, tgapi.MessagePhoto):
             photo = content.photo
             best_file = max(photo.sizes, key=lambda x: x.width).photo

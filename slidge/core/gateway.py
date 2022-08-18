@@ -778,5 +778,6 @@ SLIXMPP_PLUGINS = [
     "xep_0363",  # HTTP file upload
     "xep_0424",  # Message retraction
     "xep_0444",  # Message reactions
+    "xep_0461",  # Message replies
 ]
 log = logging.getLogger(__name__)

@@ -114,7 +114,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: LegacyContact):
+    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         goto = f"threads?id={self.hn_username}#{c.legacy_id}"
         url = f"{REPLY_URL}?id={c.legacy_id}&goto={goto}"
         async with self.http_session.get(url) as r:
@@ -161,7 +161,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
 
     # none of the following make sense in a HN context,
     # this is just to avoid raising NotImplementedErrors
-    async def send_file(self, u: str, c: LegacyContact):
+    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
         pass
 
     async def active(self, c: LegacyContact):

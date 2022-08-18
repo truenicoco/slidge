@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import tempfile
@@ -187,6 +188,10 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         contact = self.contacts.by_json_address(msg.source)
 
         if (data := msg.data_message) is not None:
+            if (quote := data.quote) is None:
+                reply_to_msg_id = None
+            else:
+                reply_to_msg_id = quote.id
             for attachment in data.attachments:
                 with open(attachment.storedFilename, "rb") as f:
                     await contact.send_file(
@@ -194,11 +199,13 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                         input_file=f,
                         content_type=attachment.contentType,
                         legacy_msg_id=msg.data_message.timestamp,
+                        reply_to_msg_id=reply_to_msg_id,
                     )
             if (body := data.body) is not None:
                 contact.send_text(
                     body=body,
                     legacy_msg_id=msg.data_message.timestamp,
+                    reply_to_msg_id=reply_to_msg_id,
                 )
             if (reaction := data.reaction) is not None:
                 self.log.debug("Reaction: %s", reaction)
@@ -226,11 +233,21 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 for t in msg.receipt_message.timestamps:
                     contact.displayed(t)
 
-    async def send_text(self, t: str, c: "Contact") -> int:
+    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None) -> int:
+        if reply_to_msg_id is None:
+            quote = None
+        else:
+            quote = sigapi.JsonQuotev1(
+                id=reply_to_msg_id,
+                author=c.signal_address,
+                text=""  # not sure what this accomplishes? does not seem to have any effect,
+                # but must not be None or NullPointerException
+            )
         response = await (await self.signal).send(
             account=self.phone,
             recipientAddress=c.signal_address,
             messageBody=t,
+            quote=quote,
         )
         result = response.results[0]
         log.debug("Result: %s", result)
@@ -242,7 +259,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             raise XMPPError(str(result))
         return response.timestamp
 
-    async def send_file(self, u: str, c: "Contact"):
+    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
         s = await self.signal
         async with aiohttp.ClientSession() as client:
             async with client.get(url=u) as r:
@@ -293,7 +310,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 self.send_gateway_message("Only one reaction per message on signal")
                 c.carbon_react(legacy_msg_id, emoji)
 
-        await (await self.signal).react(
+        response = await (await self.signal).react(
             username=self.phone,
             recipientAddress=c.signal_address,
             reaction=sigapi.JsonReactionv1(
@@ -305,6 +322,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 targetSentTimestamp=legacy_msg_id,
             ),
         )
+        result = response.results[0]
+        if (
+            result.networkFailure
+            or result.identityFailure
+            or result.proof_required_failure
+        ):
+            raise XMPPError(str(result))
+        f = self.reaction_ack_futures[
+            (legacy_msg_id, emoji)
+        ] = self.xmpp.loop.create_future()
+        await f
 
     async def retract(self, legacy_msg_id: int, c: "Contact"):
         try:

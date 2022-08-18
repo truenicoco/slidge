@@ -181,7 +181,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact) -> str:
+    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
             target=c.legacy_id, message=t, is_group=False
         )
@@ -193,7 +193,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.sent_messages[c.legacy_id].add(fb_msg)
         return fb_msg.mid
 
-    async def send_file(self, u: str, c: Contact):
+    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
         async with aiohttp.ClientSession() as s:
             async with s.get(u) as r:
                 data = await r.read()

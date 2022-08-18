@@ -73,32 +73,32 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def logout(self):
         log.debug("User has disconnected")
 
-    async def send_text(self, t: str, c: LegacyContact):
+    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         i = self.counter
         self.counter = i + 1
-        self.xmpp.loop.create_task(self.later(c))
+        self.xmpp.loop.create_task(self.later(c, i))
 
         if t == "crash":
             raise RuntimeError("PANIC!!!")
         return i
 
-    async def send_file(self, u: str, c: LegacyContact) -> int:
+    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None) -> int:
         i = self.counter
         self.counter = i + 1
         c.send_text(u)
         await c.send_file(ASSETS_DIR / "buddy1.png")
         return i
 
-    async def later(self, c: LegacyContact):
+    async def later(self, c: LegacyContact, trigger_msg_id: int):
         i = self.counter - 1
         await asyncio.sleep(1)
         c.received(i)
         await asyncio.sleep(1)
         c.active()
         await asyncio.sleep(1)
-        c.ack(i)
-        await asyncio.sleep(1)
         c.displayed(i)
+        await asyncio.sleep(1)
+        c.ack(i)
         await asyncio.sleep(1)
         c.composing()
         await asyncio.sleep(1)
@@ -106,10 +106,11 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         await asyncio.sleep(1)
         c.composing()
         await asyncio.sleep(1)
-        c.send_text("OK", legacy_msg_id=i)
+        c.send_text("OK", legacy_msg_id=i, reply_to_msg_id=trigger_msg_id)
         await asyncio.sleep(1)
-        c.send_text("I will retract this", legacy_msg_id=666)
-        c.retract(666)
+        i = uuid.uuid1().int
+        c.send_text("I will retract this", legacy_msg_id=i)
+        c.retract(i)
         c.inactive()
 
     async def active(self, c: LegacyContact):

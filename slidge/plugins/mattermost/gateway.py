@@ -282,13 +282,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact):
+    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
         async with self.send_lock:
             msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, u: str, c: Contact):
+    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
         channel_id = await c.direct_channel_id()
         file_id = await self.mm_client.upload_file(channel_id, u)
         return await self.mm_client.send_message_with_file(channel_id, file_id)

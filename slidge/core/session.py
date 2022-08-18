@@ -188,12 +188,24 @@ class BaseSession(
             self.ignore_messages.remove(i)
             return
 
+        contact: LegacyContactType = self.contacts.by_stanza(m)
+
         url = m["oob"]["url"]
         text = m["body"]
+        if (
+            m["feature_fallback"]["for"] == self.xmpp["xep_0461"].namespace
+            and contact.REPLIES
+        ):
+            text = m["feature_fallback"].get_stripped_body()
+
         if url:
-            legacy_msg_id = await self.send_file(url, self.contacts.by_stanza(m))
+            legacy_msg_id = await self.send_file(
+                url, contact, reply_to_msg_id=m["reply"]["id"] or None
+            )
         elif text:
-            legacy_msg_id = await self.send_text(text, self.contacts.by_stanza(m))
+            legacy_msg_id = await self.send_text(
+                text, contact, reply_to_msg_id=m["reply"]["id"] or None
+            )
         else:
             log.debug("Ignoring %s", m)
             return
@@ -378,7 +390,11 @@ class BaseSession(
         raise NotImplementedError
 
     async def send_text(
-        self, t: str, c: LegacyContactType
+        self,
+        t: str,
+        c: LegacyContactType,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user sends a text message from xmpp to a bridged contact, e.g.
@@ -388,19 +404,25 @@ class BaseSession(
 
         :param t: Content of the message
         :param c: Recipient of the message
+        :param reply_to_msg_id:
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """
         raise NotImplementedError
 
     async def send_file(
-        self, u: str, c: LegacyContactType
+        self,
+        u: str,
+        c: LegacyContactType,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user has sends a file using HTTP Upload (:xep:`0363`)
 
         :param u: URL of the file
         :param c: Recipient of the file
+        :param reply_to_msg_id:
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """

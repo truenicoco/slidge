@@ -151,7 +151,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await self.async_wrap(event.ack)
 
-    async def send_text(self, t: str, c: LegacyContact):
+    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         chat = self.sk.contacts[c.legacy_id].chat
         self.send_lock.acquire()
         msg = await self.async_wrap(chat.sendMsg, t)
@@ -166,7 +166,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_file(self, u: str, c: LegacyContact):
+    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
         async with aiohttp.ClientSession() as session:
             async with session.get(u) as response:
                 file_bytes = await response.read()

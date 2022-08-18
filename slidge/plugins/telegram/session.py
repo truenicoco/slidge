@@ -71,10 +71,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.ack_futures[result_id] = fut
         return await fut
 
-    async def send_text(self, t: str, c: "Contact") -> int:
+    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None) -> int:
         t = escape(t)
         try:
-            result = await self.tg.send_text(chat_id=c.legacy_id, text=t)
+            result = await self.tg.send_text(
+                chat_id=c.legacy_id, text=t, reply_to_message_id=reply_to_msg_id
+            )
         except tgapi.BadRequest as e:
             if e.code == 400:
                 raise XMPPError(condition="item-not-found", text="No such contact")
@@ -84,7 +86,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
 
-    async def send_file(self, u: str, c: "Contact") -> int:
+    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None) -> int:
         type_, _ = guess_type(u)
         if type_ is not None:
             type_, subtype = type_.split("/")

@@ -74,6 +74,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     CORRECTION = True
     REACTION = True
     RETRACTION = True
+    REPLIES = True
 
     """
     A list of features advertised through service discovery and client capabilities.
@@ -132,6 +133,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             await add_feature("urn:xmpp:reactions:0")
         if self.RETRACTION:
             await add_feature("urn:xmpp:message-retract:0")
+        if self.REPLIES:
+            await add_feature("urn:xmpp:reply:0")
 
         info = await xmpp["xep_0030"].get_info(jid, node=None, local=True)
         if isinstance(info, Iq):
@@ -351,11 +354,23 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id))
         msg.send()
 
+    def __make_reply(self, msg: Message, reply_to_msg_id: Optional[LegacyMessageType]):
+        if reply_to_msg_id is None:
+            return
+        xmpp_id = self.session.sent.get(
+            reply_to_msg_id
+        ) or self.session.legacy_msg_id_to_xmpp_msg_id(reply_to_msg_id)
+        msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
+        # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
+        msg["reply"]["to"] = self.user.jid
+
     def send_text(
         self,
         body: str = "",
+        *,
         chat_state: Optional[str] = "active",
         legacy_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ) -> Message:
         """
         Transmit a message from the contact to the user
@@ -365,12 +380,14 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             message. Set this to ``None`` if this is not desired.
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
+        :param reply_to_msg_id:
 
         :return: the XMPP message that was sent
         """
         msg = self.__make_message(mbody=body, mtype="chat")
         if self.CHAT_STATES and chat_state is not None:
             msg["chat_state"] = chat_state
+        self.__make_reply(msg, reply_to_msg_id)
         self.__send_message(msg, legacy_msg_id)
         return msg
 
@@ -379,7 +396,9 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         filename: Union[Path, str],
         content_type: Optional[str] = None,
         input_file: Optional[IO[bytes]] = None,
+        *,
         legacy_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ) -> Message:
         """
         Send a file using HTTP upload (:xep:`0363`)
@@ -390,6 +409,9 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             filename will still be used to give the uploaded file a name
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
+        :param reply_to_msg_id:
+
+        :return: The sent msg stanza
         """
         log.debug("HOST: %s", self.xmpp.server_host)
         url = await self.xmpp["xep_0363"].upload_file(
@@ -398,6 +420,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             input_file=input_file,
         )
         msg = self.__make_message()
+        self.__make_reply(msg, reply_to_msg_id)
         msg["oob"]["url"] = url
         msg["body"] = url
         self.__send_message(msg, legacy_msg_id)

@@ -70,7 +70,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         return f"Logged on as {self.discord.user}"
 
     @raise_xmpp_not_found_if_necessary
-    async def send_text(self, t: str, c: "Contact"):
+    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None):
         async with self.send_lock:
             mid = (await self.discord.get_user(c.discord_id).send(t)).id
         f = self.send_futures[mid] = self.xmpp.loop.create_future()
@@ -80,7 +80,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     async def logout(self):
         await self.discord.close()
 
-    async def send_file(self, u: str, c: "Contact"):
+    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
         pass
 
     async def active(self, c: "Contact"):

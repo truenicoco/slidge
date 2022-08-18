@@ -185,7 +185,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact):
+    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
         job_id = self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
@@ -197,7 +197,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         f = self.job_futures[job_id] = self.xmpp.loop.create_future()
         return (await f).server_timestamp
 
-    async def send_file(self, u: str, c: Contact):
+    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
         pass
 
     async def active(self, c: Contact):

@@ -44,7 +44,7 @@ class Session(BaseSession):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: LegacyContact):
+    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         text_received_by_juliet.append((t, c))
         assert self.user.bare_jid == "romeo@montague.lit"
         assert self.user.jid == JID("romeo@montague.lit")
@@ -54,7 +54,7 @@ class Session(BaseSession):
             c.send_text("I love you")
             return 0
 
-    async def send_file(self, u: str, c: LegacyContact):
+    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
         pass
 
     async def active(self, c: LegacyContact):
