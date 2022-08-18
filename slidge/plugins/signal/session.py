@@ -36,6 +36,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         self.phone: str = self.user.registration_form["phone"]
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
+        self.reaction_ack_futures: dict[tuple[int, str], asyncio.Future[None]] = {}
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
@@ -178,10 +179,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
                 )
             if (reaction := sent_msg.reaction) is not None:
-                contact.carbon_react(
-                    reaction.targetSentTimestamp,
-                    () if reaction.remove else reaction.emoji,
-                )
+                try:
+                    fut = self.reaction_ack_futures.pop(
+                        (reaction.targetSentTimestamp, reaction.emoji)
+                    )
+                except KeyError:
+                    contact.carbon_react(
+                        reaction.targetSentTimestamp,
+                        () if reaction.remove else reaction.emoji,
+                    )
+                else:
+                    fut.set_result(None)
             if (delete := sent_msg.remoteDelete) is not None:
                 contact.carbon_retract(delete.target_sent_timestamp)
 
