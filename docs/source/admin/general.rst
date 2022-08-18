@@ -1,6 +1,6 @@
-====================
-General instructions
-====================
+=======
+General
+=======
 
 
 Configure the XMPP server

@@ -6,5 +6,4 @@ For admins
    :maxdepth: 2
 
    general
-   telegram
-   signal
+   plugin_specific

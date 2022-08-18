@@ -3,7 +3,7 @@ For devs
 ========
 
 .. toctree::
-   :maxdepth: 8
+   :maxdepth: 2
 
    general
    tutorial
