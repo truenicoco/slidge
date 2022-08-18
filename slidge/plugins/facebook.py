@@ -38,6 +38,8 @@ class Gateway(BaseGateway):
 
 
 class Contact(LegacyContact["Session"]):
+    CHAT_STATES = False
+
     legacy_id: int
 
     async def populate_from_participant(

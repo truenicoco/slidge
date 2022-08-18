@@ -19,6 +19,8 @@ class Gateway(BaseGateway[Session]):
 
 
 class Contact(LegacyContact[Session]):
+    MARKS = False
+
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self._discord_id: Optional[int] = None

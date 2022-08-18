@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 
 class Contact(LegacyContact["Session"]):
+    CORRECTION = False
+    CHAT_STATES = False
+
     def __init__(
         self,
         session: "Session",

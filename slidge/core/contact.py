@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -64,15 +65,16 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     A full JID, including a resource part is required for chat states (and maybe other stuff)
     to work properly. This is the name of the resource the contacts will use.
     """
-    FEATURES = {
-        "http://jabber.org/protocol/chatstates",
-        "urn:xmpp:receipts",
-        "vcard-temp",
-        "jabber:x:oob",
-        "urn:xmpp:message-correct:0",
-        "urn:xmpp:reactions:0",
-        "urn:xmpp:message-retract:0",
-    }
+
+    AVATAR = True
+    RECEIPTS = True
+    MARKS = True
+    CHAT_STATES = True
+    UPLOAD = True
+    CORRECTION = True
+    REACTION = True
+    RETRACTION = True
+
     """
     A list of features advertised through service discovery and client capabilities.
     """
@@ -113,8 +115,23 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         xmpp = self.xmpp
 
         xmpp["xep_0030"].add_identity(jid=jid, category="client", itype="bot")
-        for f in self.FEATURES:
-            await xmpp["xep_0030"].add_feature(feature=f, jid=jid)
+        add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
+        if self.CHAT_STATES:
+            await add_feature("http://jabber.org/protocol/chatstates")
+        if self.AVATAR:
+            await add_feature("vcard-temp")
+        if self.RECEIPTS:
+            await add_feature("urn:xmpp:receipts")
+        if self.CORRECTION:
+            await add_feature("urn:xmpp:message-correct:0")
+        if self.MARKS:
+            await add_feature("urn:xmpp:chat-markers:0")
+        if self.UPLOAD:
+            await add_feature("jabber:x:oob")
+        if self.REACTION:
+            await add_feature("urn:xmpp:reactions:0")
+        if self.RETRACTION:
+            await add_feature("urn:xmpp:message-retract:0")
 
         info = await xmpp["xep_0030"].get_info(jid, node=None, local=True)
         if isinstance(info, Iq):
@@ -352,7 +369,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :return: the XMPP message that was sent
         """
         msg = self.__make_message(mbody=body, mtype="chat")
-        if chat_state is not None:
+        if self.CHAT_STATES and chat_state is not None:
             msg["chat_state"] = chat_state
         self.__send_message(msg, legacy_msg_id)
         return msg

@@ -50,6 +50,9 @@ class Gateway(BaseGateway):
 class Contact(LegacyContact["Session"]):
     legacy_id: str
 
+    MARKS = False
+    CHAT_STATES = False
+
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self._direct_channel_id: Optional[str] = None
