@@ -260,9 +260,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 async with aiohttp.ClientSession() as c:
                     for a in evt.attachments:
                         url = (
-                            a.image_info.uri_map.get(0)
-                            or a.audio_info.url
-                            or a.video_info.download_url
+                            ((v := a.video_info) and v.download_url)
+                            or ((au := a.audio_info) and au.url)
+                            or a.image_info.uri_map.get(0)
                         )
                         if url is None:
                             continue
