@@ -44,6 +44,10 @@ class Gateway(BaseGateway["Session"]):
 
 
 class Contact(LegacyContact["Session"]):
+    MARKS = False
+    CORRECTION = False
+    RETRACTION = False
+
     def update_status(self, persona_state: EPersonaState):
         if persona_state == EPersonaState.Offline:
             self.offline()
