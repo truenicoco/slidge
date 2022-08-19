@@ -51,7 +51,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
-        pass
+        return await self.send_text("Correction: " + text, c)
 
     async def search(self, form_values: dict[str, str]):
         pass
