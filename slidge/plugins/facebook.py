@@ -14,6 +14,7 @@ import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant, ParticipantNode, Thread
+from maufbapi.types.graphql.responses import FriendshipStatus
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -314,10 +315,15 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         for search_result in results.search_results.edges:
             result = search_result.node
             if isinstance(result, Participant):
+                is_friend = (
+                    friend := result.friendship_status
+                ) is not None and friend == FriendshipStatus.ARE_FRIENDS
                 items.append(
                     {
-                        "name": result.name,
-                        "jid": f"{result.id}@{self.xmpp.boundjid.bare}",
+                        "name": result.name + " (friend)"
+                        if is_friend
+                        else " (not friend)",
+                        "jid": f"{result.username}@{self.xmpp.boundjid.bare}",
                     }
                 )
 
