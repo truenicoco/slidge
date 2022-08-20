@@ -256,7 +256,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             offline_threading_id=oti,
             chat_id=await c.fb_id(),
             is_group=False,
-            reply_to=reply_to_msg_id
+            reply_to=reply_to_msg_id,
         )
         ack = await fut
         log.debug("Upload ack: %s", ack)
@@ -313,7 +313,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 fut.set_result(fb_msg)
         else:
             if msg.text:
-                contact.send_text(msg.text, legacy_msg_id=meta.id, reply_to_msg_id=reply_to)
+                contact.send_text(
+                    msg.text, legacy_msg_id=meta.id, reply_to_msg_id=reply_to
+                )
             if msg.attachments:
                 async with aiohttp.ClientSession() as c:
                     for a in msg.attachments:
