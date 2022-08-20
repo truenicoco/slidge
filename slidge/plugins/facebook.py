@@ -39,8 +39,6 @@ class Gateway(BaseGateway):
 
 
 class Contact(LegacyContact["Session"]):
-    CHAT_STATES = False
-
     legacy_id: str  # facebook username, as in facebook.com/name.surname123
 
     def __init__(self, *a, **k):
