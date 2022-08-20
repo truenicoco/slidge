@@ -294,7 +294,13 @@ class BaseSession(
         react_to = m["reactions"]["id"]
         if (legacy_id := self.sent.inverse.get(react_to)) is None:
             log.debug("Cannot find the XMPP ID of this msg: %s", react_to)
-            legacy_id = self.xmpp_msg_id_to_legacy_msg_id(react_to)
+            try:
+                legacy_id = self.xmpp_msg_id_to_legacy_msg_id(react_to)
+            except ValueError:
+                log.warning(
+                    "Could not convert legacy ID, xmpp reaction was not sent: %s", m
+                )
+                return
         await self.react(
             legacy_id, [r["value"] for r in m["reactions"]], self.contacts.by_stanza(m)
         )
