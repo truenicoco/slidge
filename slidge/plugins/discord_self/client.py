@@ -30,13 +30,21 @@ class Discord(di.Client):
             else:
                 fut.set_result(True)
         else:
-            self.session.contacts.by_discord_user(author).send_text(
-                message.content,
-                legacy_msg_id=message.id,
-                reply_to_msg_id=message.reference.message_id
-                if message.reference
-                else None,
-            )
+            contact = self.session.contacts.by_discord_user(author)
+            reply_to = message.reference.message_id if message.reference else None
+            if content := message.content:
+                contact.send_text(
+                    content,
+                    legacy_msg_id=message.id,
+                    reply_to_msg_id=reply_to,
+                )
+            for attachment in message.attachments:
+                await contact.send_file(
+                    url=attachment.url,
+                    filename=attachment.filename,
+                    content_type=attachment.content_type,
+                    reply_to_msg_id=reply_to,
+                )
 
     async def on_typing(self, channel, user, _when):
         if user != self.user and isinstance(channel, di.DMChannel):

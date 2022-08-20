@@ -91,7 +91,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         await self.discord.close()
 
     async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
-        pass
+        # discord clients inline previews of external URLs, so no need to actually send on discord servers
+        await self.discord.get_user(c.discord_id).send(u)
 
     async def active(self, c: "Contact"):
         pass
