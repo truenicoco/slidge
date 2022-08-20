@@ -41,8 +41,12 @@ class Contact(LegacyContact[Session]):
         self._discord_id = i
 
     @functools.cached_property
-    def discord_user(self):
+    def discord_user(self) -> di.User:
         return self.session.discord.get_user(self._discord_id)
+
+    @functools.cached_property
+    def direct_channel_id(self):
+        return self.discord_user.dm_channel.id
 
     async def update_reactions(self, m: di.Message):
         legacy_reactions = []

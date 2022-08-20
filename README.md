@@ -27,7 +27,7 @@ instant messaging features:
 | Telegram   | ✓             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
 | Mattermost | ~             | ✓     | -     | ✓      | ✓     | ✓     | ✓      | ✗      |
 | Facebook   | ✗             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
-| Discord    | ✗             | ✓     | -     | ✗      | ✓     | ~     | ✓      | ✗      |
+| Discord    | ✗             | ✓     | -     | ✗      | ✓     | ~     | ✓      | ✓      |
 | Steam      | ✓             | ✓     | -     | ✗      | -     | ~     | -      | ✗      |
 | Skype      | ✗             | ✗     | ✗     | ~      | ✗     | ✗     | ✗      | ✗      |
 

@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 
 def raise_xmpp_not_found_if_necessary(func):
     @functools.wraps(func)
-    def wrapped(*a):
+    def wrapped(*a, **kw):
         contact: "Contact" = a[-1]
         if contact.discord_id is None:
             raise XMPPError("not-found")
-        return func(*a)
+        return func(*a, **kw)
 
     return wrapped
 
@@ -72,7 +72,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     @raise_xmpp_not_found_if_necessary
     async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None):
         async with self.send_lock:
-            mid = (await self.discord.get_user(c.discord_id).send(t)).id
+            mid = (
+                await self.discord.get_user(c.discord_id).send(
+                    t,
+                    reference=None
+                    if reply_to_msg_id is None
+                    else di.MessageReference(
+                        message_id=reply_to_msg_id,
+                        channel_id=c.direct_channel_id,
+                    ),
+                )
+            ).id
         f = self.send_futures[mid] = self.xmpp.loop.create_future()
         await f
         return mid

@@ -31,7 +31,11 @@ class Discord(di.Client):
                 fut.set_result(True)
         else:
             self.session.contacts.by_discord_user(author).send_text(
-                message.content, legacy_msg_id=message.id
+                message.content,
+                legacy_msg_id=message.id,
+                reply_to_msg_id=message.reference.message_id
+                if message.reference
+                else None,
             )
 
     async def on_typing(self, channel, user, _when):
