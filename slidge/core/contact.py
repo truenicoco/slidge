@@ -2,6 +2,7 @@ import asyncio
 import functools
 import logging
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import (
     IO,
@@ -16,6 +17,7 @@ from typing import (
     Union,
 )
 
+import aiohttp
 from slixmpp import JID, Iq, Message
 
 from ..util import SubclassableOnce
@@ -396,6 +398,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         filename: Union[Path, str],
         content_type: Optional[str] = None,
         input_file: Optional[IO[bytes]] = None,
+        url: Optional[str] = None,
         *,
         legacy_msg_id: Optional[LegacyMessageType] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
@@ -409,11 +412,20 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             filename will still be used to give the uploaded file a name
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
+        :param url: Optionally, a URL of a file that slidge will download and upload to the
+            default file upload service on the xmpp server it's running on. url and input_file
+            are mutually exclusive.
         :param reply_to_msg_id:
 
         :return: The sent msg stanza
         """
         log.debug("HOST: %s", self.xmpp.server_host)
+        if url is not None:
+            if input_file is not None:
+                raise TypeError("Either a URL or a file-like object")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as r:
+                    input_file = BytesIO(await r.read())
         url = await self.xmpp["xep_0363"].upload_file(
             filename=filename,
             content_type=content_type,
