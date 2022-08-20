@@ -228,7 +228,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
-            target=(fb_id := await c.fb_id()), message=t, is_group=False
+            target=(fb_id := await c.fb_id()),
+            message=t,
+            is_group=False,
+            reply_to=reply_to_msg_id,
         )
         fut = self.ack_futures[
             resp.offline_threading_id
@@ -253,6 +256,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             offline_threading_id=oti,
             chat_id=await c.fb_id(),
             is_group=False,
+            reply_to=reply_to_msg_id
         )
         ack = await fut
         log.debug("Upload ack: %s", ack)
@@ -280,7 +284,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             await self.mqtt.mark_read(target=fb_id, read_to=t, is_group=False)
 
     async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
-        meta = evt.metadata
+        if isinstance(evt, mqtt_t.ExtendedMessage):
+            reply_to = evt.reply_to_message.metadata.id
+            msg = evt.message
+        else:
+            reply_to = None
+            msg = evt
+        meta = msg.metadata
         if is_group_thread(thread_key := meta.thread):
             return
         contact = await self.contacts.by_thread_key(thread_key)
@@ -294,18 +304,19 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             try:
                 fut = self.ack_futures.pop(meta.offline_threading_id)
             except KeyError:
-                log.debug("Received carbon %s - %s", meta.id, evt.text)
-                contact.carbon(body=evt.text, legacy_id=meta.id)
+                log.debug("Received carbon %s - %s", meta.id, msg.text)
+                contact.carbon(body=msg.text, legacy_id=meta.id)
                 log.debug("Sent carbon")
                 self.sent_messages[thread_key.other_user_id].add(fb_msg)
             else:
                 log.debug("Received echo of %s", meta.offline_threading_id)
                 fut.set_result(fb_msg)
         else:
-            contact.send_text(evt.text, legacy_msg_id=meta.id)
-            if evt.attachments:
+            if msg.text:
+                contact.send_text(msg.text, legacy_msg_id=meta.id, reply_to_msg_id=reply_to)
+            if msg.attachments:
                 async with aiohttp.ClientSession() as c:
-                    for a in evt.attachments:
+                    for a in msg.attachments:
                         url = (
                             ((v := a.video_info) and v.download_url)
                             or ((au := a.audio_info) and au.url)
