@@ -18,20 +18,34 @@ It's a work in progress, but it should make
 [writing gateways to other chat networks](https://slidge.readthedocs.io/en/latest/dev/tutorial.html)
 (*plugins*) as frictionless as possible.
 
-It comes with a few plugins included, implementing at least basic direct messaging.
+It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
+instant messaging features:
 
-|            | Presences | Typing | Marks | Upload | Correction | Reactions | Retractions |
-|------------|-----------|--------|-------|--------|------------|-----------|-------------|
-| Signal     | N/A       | ✓      | ✓     | ✓      | N/A        | ✓         | ✓           |
-| Telegram   | ✓         | ✓      | ✓     | ✓      | ✓          | ✓         | ✓           |
-| Mattermost | ~         | ✓      | N/A   | ✓      | ✓          | ✓         | ✓           |
-| Facebook   | ✗         | ✓      | ✓     | ✓      | ✓          | ✗         | ✗           |
-| Skype      | ✗         | ✗      | ✗     | ~      | ✗          | ✗         | ✗           |
-| Steam      | ✓         | ✓      | N/A   | ✗      | N/A        | ~         | N/A         |
-| Discord    | ✗         | ✓      | N/A   | ✗      | ✓          | ~         | ✓           |
+|            | Presences[^1] | …[^2] | ✓[^3] | 🗎[^4] | ✎[^5] | ☺[^6] | 🗑[^7] | ↵[^8]  | 
+|------------|---------------|-------|-------|--------|-------|-------|--------|--------|
+| Signal     | -             | ✓     | ✓     | ✓      | -     | ✓     | ✓      | ✓      |
+| Telegram   | ✓             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
+| Mattermost | ~             | ✓     | -     | ✓      | ✓     | ✓     | ✓      | ✗      |
+| Facebook   | ✗             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
+| Discord    | ✗             | ✓     | -     | ✗      | ✓     | ~     | ✓      | ✗      |
+| Steam      | ✓             | ✓     | -     | ✗      | -     | ~     | -      | ✗      |
+| Skype      | ✗             | ✗     | ✗     | ~      | ✗     | ✗     | ✗      | ✗      |
+
+
+[^1]: https://xmpp.org/rfcs/rfc6120.txt
+[^2]: https://xmpp.org/extensions/xep-0085.html
+[^3]: https://xmpp.org/extensions/xep-0333.html
+[^4]: https://xmpp.org/extensions/xep-0363.html
+[^5]: https://xmpp.org/extensions/xep-0308.html
+[^6]: https://xmpp.org/extensions/xep-0444.html
+[^7]: https://xmpp.org/extensions/xep-0424.html
+[^8]: https://xmpp.org/extensions/xep-0461.html
+
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
 
+NB: - means that the legacy network does not have an equivalent of this XMPP feature
+    (because XMPP is better, what did you think?)
 
 Status
 ------
