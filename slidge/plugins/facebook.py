@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from mimetypes import guess_type
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 import aiohttp
 import maufbapi.types.graphql
@@ -140,12 +140,17 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     ack_futures: dict[int, asyncio.Future["FacebookMessage"]]
     # keys = "offline thread ID"
+    reaction_futures: dict[str, asyncio.Future[None]]
+    unsend_futures: dict[str, asyncio.Future[None]]
+    # keys = "facebook message id"
 
     contacts: Roster
 
     def post_init(self):
         self.shelf_path = self.xmpp.home_dir / self.user.bare_jid
         self.ack_futures = {}
+        self.reaction_futures: dict[str, asyncio.Future] = {}
+        self.unsend_futures: dict[str, asyncio.Future] = {}
         self.sent_messages = defaultdict(Messages)
         self.received_messages = defaultdict(Messages)
 
@@ -188,11 +193,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.mqtt.add_event_handler(mqtt_t.ReadReceipt, self.on_fb_message_read)
         self.mqtt.add_event_handler(mqtt_t.TypingNotification, self.on_fb_typing)
         self.mqtt.add_event_handler(mqtt_t.OwnReadReceipt, self.on_fb_user_read)
+        self.mqtt.add_event_handler(mqtt_t.Reaction, self.on_fb_reaction)
+        self.mqtt.add_event_handler(mqtt_t.UnsendMessage, self.on_fb_unsend)
 
         self.mqtt.add_event_handler(mqtt_t.NameChange, self.on_fb_event)
         self.mqtt.add_event_handler(mqtt_t.AvatarChange, self.on_fb_event)
-        self.mqtt.add_event_handler(mqtt_t.UnsendMessage, self.on_fb_event)
-        self.mqtt.add_event_handler(mqtt_t.Reaction, self.on_fb_event)
         self.mqtt.add_event_handler(mqtt_t.Presence, self.on_fb_event)
         self.mqtt.add_event_handler(mqtt_t.AddMember, self.on_fb_event)
         self.mqtt.add_event_handler(mqtt_t.RemoveMember, self.on_fb_event)
@@ -346,9 +351,57 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 continue
             c.carbon_read(mid)
 
+    async def on_fb_reaction(self, reaction: mqtt_t.Reaction):
+        self.log.debug("Reaction: %s", reaction)
+        if is_group_thread(tk := reaction.thread):
+            return
+        contact = await self.contacts.by_thread_key(tk)
+        mid = reaction.message_id
+        if reaction.reaction_sender_id == self.me.id:
+            try:
+                f = self.reaction_futures.pop(mid)
+            except KeyError:
+                contact.carbon_react(mid, reaction.reaction or "")
+            else:
+                f.set_result(None)
+        else:
+            contact.react(reaction.message_id, reaction.reaction or "")
+
+    async def on_fb_unsend(self, unsend: mqtt_t.UnsendMessage):
+        self.log.debug("Unsend: %s", unsend)
+        if is_group_thread(tk := unsend.thread):
+            return
+        contact = await self.contacts.by_thread_key(tk)
+        mid = unsend.message_id
+        if unsend.user_id == self.me.id:
+            try:
+                f = self.unsend_futures.pop(mid)
+            except KeyError:
+                contact.carbon_retract(mid)
+            else:
+                f.set_result(None)
+        else:
+            contact.retract(unsend.message_id)
+
     async def correct(self, text: str, legacy_msg_id: str, c: Contact):
         await self.api.unsend(legacy_msg_id)
         return await self.send_text(text, c)
+
+    async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
+        if len(emojis) == 0:
+            emoji = None
+        else:
+            emoji = emojis[-1]
+            if len(emojis) > 1:  # only reaction per msg on facebook
+                c.carbon_react(legacy_msg_id, emoji)
+        f = self.reaction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
+        await self.api.react(legacy_msg_id, emoji)
+        await f
+
+    async def retract(self, legacy_msg_id: str, c: Contact):
+        f = self.unsend_futures[legacy_msg_id] = self.xmpp.loop.create_future()
+        await self.api.unsend(legacy_msg_id)
+        await f
 
     async def search(self, form_values: dict[str, str]) -> SearchResult:
         results = await self.api.search(form_values["query"], entity_types=["user"])
