@@ -143,10 +143,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.log.debug("New friend message : %s", msg)
         if (type_ := msg.body.chat_entry_type) == steam.enums.EChatEntryType.Typing:
             user = self.steam.get_user(msg.body.steamid_friend)
-            self.contacts.by_legacy_id(user.steam_id).composing()
+            self.contacts.by_legacy_id(user.steam_id.id).composing()
         elif type_ == steam.enums.EChatEntryType.ChatMsg:
             user = self.steam.get_user(msg.body.steamid_friend)
-            self.contacts.by_legacy_id(user.steam_id).send_text(
+            self.contacts.by_legacy_id(user.steam_id.id).send_text(
                 msg.body.message, legacy_msg_id=msg.body.rtime32_server_timestamp
             )
 
@@ -161,13 +161,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     # we would need to fetch the friend's reaction list, but I did not find
                     # how to do that via this library
                     emoji = emoji_translate.get(msg.body.reaction, "❓")
-                    self.contacts.by_legacy_id(msg.body.reactor).react(
+                    self.contacts.by_legacy_id(SteamID(msg.body.reactor).id).react(
                         msg.body.server_timestamp, emoji
                     )
                 else:
                     # FIXME: instead of retracting a single reaction, this deletes all reactions from the contact
                     # again, we need to retrieve the list of reactions for this message
-                    self.contacts.by_legacy_id(msg.body.reactor).react(
+                    self.contacts.by_legacy_id(SteamID(msg.body.reactor).id).react(
                         msg.body.server_timestamp, ""
                     )
 
@@ -186,10 +186,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
+        if not t:
+            return
         job_id = self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
-                "steamid": c.legacy_id,
+                "steamid": SteamID(c.legacy_id),
                 "chat_entry_type": steam.enums.EChatEntryType.ChatMsg,
                 "message": t,
             },
@@ -198,7 +200,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         return (await f).server_timestamp
 
     async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
-        pass
+        return await self.send_text(u, c)
 
     async def active(self, c: Contact):
         pass
@@ -210,7 +212,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
-                "steamid": c.legacy_id,
+                "steamid": SteamID(c.legacy_id),
                 "chat_entry_type": steam.enums.EChatEntryType.Typing,
             },
         )
@@ -238,7 +240,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             self.steam.send_um(
                 "FriendMessages.UpdateMessageReaction#1",
                 {
-                    "steamid": c.legacy_id,
+                    "steamid": SteamID(c.legacy_id).as_64,
                     "server_timestamp": legacy_msg_id,
                     "reaction_type": k_EMessageReactionType_Emoticon,
                     "reaction": emoji_name,
