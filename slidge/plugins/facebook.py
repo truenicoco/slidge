@@ -180,6 +180,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 self.api = api = AndroidAPI(state=s)
         self.mqtt = AndroidMQTT(api.state)
         self.me = await self.api.get_self()
+        self.me.id = int(self.me.id)  # bug in maufbapi?
         await self.add_friends()
         self.mqtt.seq_id_update_callback = lambda i: setattr(self.mqtt, "seq_id", i)
         self.mqtt.add_event_handler(mqtt_t.Message, self.on_fb_message)
@@ -284,7 +285,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         log.debug("Facebook message: %s", evt)
         fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
-        if str(meta.sender) == self.me.id:
+        if meta.sender == self.me.id:
             try:
                 fut = self.ack_futures.pop(meta.offline_threading_id)
             except KeyError:
