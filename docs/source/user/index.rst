@@ -7,3 +7,4 @@ For users
    register
    contacts
    commands
+   low_profile

@@ -16,3 +16,9 @@ that you can use to interact with them, just as you would with
 any normal XMPP user.
 The contact's ``username`` depends on the slidge plugin you use, for instance
 on signal, it is the phone number of the user you want to reach.
+
+.. warning::
+  Slidge acts as alternative client, logged on as you, running on your XMPP server.
+  For some networks, that is not a problem at all (signal, telegram, mattermost), but
+  this means breaking the terms of use and/or trigger automated security measures (account
+  lock, etc.) for some other networks. See :ref:`Keeping a low profile`.
