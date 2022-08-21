@@ -21,25 +21,25 @@ It's a work in progress, but it should make
 It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
 instant messaging features:
 
-|            | Presences[^1] | …[^2] | ✓[^3] | 🗎[^4] | ✎[^5] | ☺[^6] | 🗑[^7] | ↵[^8]  | 
-|------------|---------------|-------|-------|--------|-------|-------|--------|--------|
-| Signal     | -             | ✓     | ✓     | ✓      | -     | ✓     | ✓      | ✓      |
-| Telegram   | ✓             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
-| Mattermost | ~             | ✓     | -     | ✓      | ✓     | ✓     | ✓      | ✗      |
-| Facebook   | ✗             | ✓     | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      |
-| Discord    | ✗             | ✓     | -     | ✗      | ✓     | ~     | ✓      | ✓      |
-| Steam      | ✓             | ✓     | -     | ✗      | -     | ~     | -      | ✗      |
-| Skype      | ✗             | ✗     | ✗     | ~      | ✗     | ✗     | ✗      | ✗      |
+|            | ⏻[¹] | …[²] | ✓[³] | 🗎[⁴] | ✎[⁵] | ☺[⁶] | 🗑[⁷]  | ↵[⁸] | 
+|------------|------|------|------|-------|------|------|--------|------|
+| Signal     | -    | ✓    | ✓    | ✓     | -    | ✓    | ✓      | ✓    |
+| Telegram   | ✓    | ✓    | ✓    | ✓     | ✓    | ✓    | ✓      | ✓    |
+| Discord    | ✗    | ✓    | -    | ✓     | ✓    | ~    | ✓      | ✓    |
+| Steam      | ✓    | ✓    | -    | ✗     | -    | ~    | -      | -    |
+| Mattermost | ~    | ✓    | -    | ✓     | ✓    | ✓    | ✓      | ✗    |
+| Facebook   | ✗    | ✓    | ✓    | ✓     | ✓    | ✓    | ✓      | ✓    |
+| Skype      | ✗    | ✗    | ✗    | ~     | ✗    | ✗    | ✗      | ✗    |
 
 
-[^1]: https://xmpp.org/rfcs/rfc6120.txt
-[^2]: https://xmpp.org/extensions/xep-0085.html
-[^3]: https://xmpp.org/extensions/xep-0333.html
-[^4]: https://xmpp.org/extensions/xep-0363.html
-[^5]: https://xmpp.org/extensions/xep-0308.html
-[^6]: https://xmpp.org/extensions/xep-0444.html
-[^7]: https://xmpp.org/extensions/xep-0424.html
-[^8]: https://xmpp.org/extensions/xep-0461.html
+[¹]: https://xmpp.org/rfcs/rfc6121.html#presence
+[²]: https://xmpp.org/extensions/xep-0085.html
+[³]: https://xmpp.org/extensions/xep-0333.html
+[⁴]: https://xmpp.org/extensions/xep-0363.html
+[⁵]: https://xmpp.org/extensions/xep-0308.html
+[⁶]: https://xmpp.org/extensions/xep-0444.html
+[⁷]: https://xmpp.org/extensions/xep-0424.html
+[⁸]: https://xmpp.org/extensions/xep-0461.html
 
 
 (this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
@@ -69,8 +69,8 @@ Installation
 Docker-compose spins up a local XMPP server preconfigured for you., with a ``test@localhost`` / ``password``
 account
 
-```
-docker-compose up # or poetry install && poetry run `python -m slidge`
+```sh
+docker-compose up
 ```
 
 For the other options, you need a
@@ -79,14 +79,14 @@ XMPP server.
 
 #### poetry
 
-```
-poetry install
-poetry run python -m slidge
+```sh
+poetry install --extras signal  # you can replace signal with any network listed in the table above
+poetry run python -m slidge --legacy-module=slidge.plugins.signal
 ```
 
 #### pip
 
-```bash
+```sh
 pip install slidge[signal]  # you can replace signal with any network listed in the table above
 python -m slidge --legacy-module=slidge.plugins.signal
 ```
@@ -98,7 +98,7 @@ python -m slidge --legacy-module=slidge.plugins.signal
 If you used docker-compose, you should be able to use the [movim](https://movim.eu) client
 from your browser at http://localhost:8888
 
-Unfortunately, the movim UI thinks that``test@localhost`` is not a valid JID and does not let you click
+Unfortunately, the movim UI thinks that ``test@localhost`` is not a valid JID and does not let you click
 on the "Connect" button.
 As a workaround, use your browser dev tools to inspect and modify the ``<input id="username"`` in order to
 remove the ``pattern="^[^...`` attribute.
@@ -108,7 +108,7 @@ Then go to the Configuration/Account tab. You should be able to register to the 
 #### Gajim
 
 Install and launch [gajim](https://gajim.org) and add your XMPP account.
-Go to "Accounts"→"Discover services" (or equivalent).
+Go to "Accounts"→"Discover services".
 You should see the slidge gateways as server components.
 
 About privacy
