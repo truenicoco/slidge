@@ -122,7 +122,7 @@ class Websocket:
                         **kw_args,
                     ) as websocket:
                         self.websocket.set_result(websocket)
-                        await self._authenticate_websocket(websocket, event_handler)
+                        await self._authenticate_websocket(websocket)
                         while self._alive:
                             try:
                                 await self._start_loop(websocket, event_handler)
@@ -187,7 +187,7 @@ class Websocket:
         log.info("Disconnecting websocket")
         self._alive = False
 
-    async def _authenticate_websocket(self, websocket, event_handler):
+    async def _authenticate_websocket(self, websocket):
         """
         Sends an authentication challenge over a websocket.
         This is not needed when we just send the cookie we got on login
@@ -206,15 +206,12 @@ class Websocket:
             message = await websocket.receive_str()
             status = json.loads(message)
             log.debug(status)
-            # We want to pass the events to the event_handler already
-            # because the hello event could arrive before the authentication ok response
-            # await handle_event(status, event_handler)
             if ("event" in status and status["event"] == "hello") and (
                 "seq" in status and status["seq"] == 0
             ):
-                log.info("Websocket authentification OK")
+                log.info("Websocket authentication OK")
                 return True
-            log.error("Websocket authentification failed")
+            log.error("Websocket authentication failed")
 
     async def user_typing(self, channel_id):
         seq = self._seq_cursor
