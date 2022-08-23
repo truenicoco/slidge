@@ -6,7 +6,7 @@ import asyncio
 import logging
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from slixmpp import JID
 
@@ -28,10 +28,22 @@ class Gateway(BaseGateway):
             label="Some optional stuff not covered by jabber:iq:register",
             required=False,
             private=False,
-        )
+        ),
+        FormField(
+            var="device",
+            type="list-single",
+            label="What do you want to do?",
+            options=[
+                {"label": "Choice #1", "value": "choice1"},
+                {"label": "Choice #2", "value": "choice2"},
+            ],
+            required=True,
+        ),
     ]
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
         if registration_form["username"] != "n":
             raise ValueError("Y a que N!")
 

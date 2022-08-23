@@ -28,7 +28,9 @@ class Gateway(BaseGateway):
 
     COMPONENT_AVATAR = "https://logodownload.org/wp-content/uploads/2017/05/skype-logo-1-1-2048x2048.png"
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
         pass
 
 

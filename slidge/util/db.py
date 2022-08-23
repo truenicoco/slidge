@@ -49,7 +49,7 @@ class GatewayUser:
 
     bare_jid: str
     """Bare JID of the user"""
-    registration_form: dict[str, str]
+    registration_form: dict[str, Optional[str]]
     """Content of the registration form, as a dict"""
 
     def __hash__(self):
@@ -67,7 +67,7 @@ class GatewayUser:
         """
         return JID(self.bare_jid)
 
-    def get(self, field: str, default: str = "") -> str:
+    def get(self, field: str, default: str = "") -> Optional[str]:
         """
         Get fields from the registration form (required to comply with slixmpp backend protocol)
 
@@ -111,7 +111,7 @@ class UserStore:
         """
         return self._users.values()
 
-    def add(self, jid: JID, registration_form: dict[str, str]):
+    def add(self, jid: JID, registration_form: dict[str, Optional[str]]):
         """
         Add a user to the store.
 

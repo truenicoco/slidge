@@ -33,7 +33,9 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         :param user:
         """
         super().__init__(user)
-        self.phone: str = self.user.registration_form["phone"]
+        self.phone = self.user.registration_form["phone"]
+        if self.phone is None:
+            raise RuntimeError
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
         self.reaction_ack_futures: dict[tuple[int, str], asyncio.Future[None]] = {}

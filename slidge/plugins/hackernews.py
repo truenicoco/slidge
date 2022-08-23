@@ -11,7 +11,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
 from slixmpp import JID
@@ -37,7 +37,11 @@ class Gateway(BaseGateway):
 
     COMPONENT_AVATAR = "https://news.ycombinator.com/favicon.ico"
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
+        if registration_form["cookie"] is None:
+            raise ValueError("A cookie is required")
         async with aiohttp.ClientSession(
             cookies={"user": registration_form["cookie"]}
         ) as session:

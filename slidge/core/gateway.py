@@ -376,7 +376,7 @@ class BaseGateway(
         reply.set_payload(reg)
         return reply
 
-    async def _user_prevalidate(self, ifrom: JID, form_dict: dict[str, str]):
+    async def _user_prevalidate(self, ifrom: JID, form_dict: dict[str, Optional[str]]):
         """
         Pre validate a registration form using the content of self.REGISTRATION_FIELDS
         before passing it to the plugin custom validation logic.
@@ -388,7 +388,7 @@ class BaseGateway(
         await self.validate(ifrom, form_dict)
 
     async def _user_validate(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, str]
+        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
     ):
         """
         SliXMPP internal API stuff
@@ -401,7 +401,7 @@ class BaseGateway(
         user_store.add(ifrom, form_dict)
 
     async def _user_modify(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, str]
+        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
     ):
         """
         SliXMPP internal API stuff
@@ -519,18 +519,36 @@ class BaseGateway(
             msg.reply("You are not allowed to register to this gateway").send()
             return
 
-        form = {}
+        form: dict[str, Optional[str]] = {}
         for field in self.REGISTRATION_FIELDS:
             text = field.label or field.var
-            if field.value == "":
+            if field.value != "":
                 text += f" (default: '{field.value}')"
             if not field.required:
                 text += " (optional, reply with '.' to skip)"
-            form[field.var] = await self.input(jid, text + "?")
+            if (options := field.options) is not None:
+                for option in options:
+                    label = option["label"]
+                    value = option["value"]
+                    text += f"\n{label}: reply with '{value}'"
+
+            while True:
+                ans = await self.input(jid, text + "?")
+                if ans == "." and not field.required:
+                    form[field.var] = None
+                    break
+                else:
+                    if (options := field.options) is not None:
+                        valid_choices = [x["value"] for x in options]
+                        if ans not in valid_choices:
+                            continue
+                    form[field.var] = ans
+                    break
 
         try:
+            await self.validate(jid, form)
             await self["xep_0077"].api["user_validate"](None, None, jid, form)
-        except ValueError as e:
+        except (ValueError, XMPPError) as e:
             msg.reply(f"Something went wrong: {e}").send()
         else:
             self.event("user_register", msg)
@@ -581,7 +599,9 @@ class BaseGateway(
         """
         pass
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
         """
         Validate a registration form from a user.
 

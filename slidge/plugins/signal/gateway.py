@@ -173,7 +173,9 @@ class Gateway(BaseGateway):
             uri = args[0]
         await session.add_device(uri)
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
         phone = registration_form.get("phone")
         for u in user_store.get_all():
             if u.registration_form.get("phone") == phone:

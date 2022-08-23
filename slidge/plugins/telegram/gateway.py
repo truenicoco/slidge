@@ -48,7 +48,9 @@ class Gateway(BaseGateway["Session"]):
         if args.tdlib_path is None:
             args.tdlib_path = self.home_dir / "tdlib"
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]
+    ):
         pass
 
     async def unregister(self, user):
