@@ -8,3 +8,4 @@ For users
    contacts
    commands
    low_profile
+   plugins/index

@@ -5,7 +5,7 @@ Keeping a low profile
   None of this applies to networks that are tolerant to alternative clients, such as
   Telegram, Signal and Mattermost.
 
-Some networks, especially discord and facebook, are actively fighting alternative clients such as slidge.
+Some networks are actively fighting alternative clients such as slidge.
 To prevent being detected, you should (a) activate additional security features to your legacy account, such as 2FA
 and (b) establish "normal" traffic on your account, from slidge's IP.
 

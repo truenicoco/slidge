@@ -16,7 +16,7 @@ Issue tracker: https://todo.sr.ht/~nicoco/slidge
 
 
 .. toctree::
-   :maxdepth: 8
+   :maxdepth: 2
 
    user/index
    admin/index
