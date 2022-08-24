@@ -1,7 +1,4 @@
-# FIXME: this part is quite messy because I assumed events can either with a contact UUID
-#        *or* phone as sender, and poorly implemented it. We need to figure out if this is really
-#        necessary
-
+# TODO: rework this using https://signald.org/protocol/structures/v1/ResolveAddressRequest/
 import logging
 from typing import TYPE_CHECKING, Optional
 
