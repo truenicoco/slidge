@@ -291,7 +291,11 @@ class BaseGateway(
         try:
             status = await session.login()
         except Exception as e:
-            session.send_gateway_status(f"Could not login: {e}")
+            session.send_gateway_status(f"Could not login: {e}", show="busy")
+            session.send_gateway_message(
+                f"You are not connected to this gateway! "
+                f"Maybe this message will tell you why: {e}"
+            )
         else:
             if status is None:
                 session.send_gateway_status("Logged in", show="chat")
