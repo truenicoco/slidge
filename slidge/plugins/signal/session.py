@@ -168,12 +168,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
         :param msg:
         """
-        if msg.sync_message is not None:
-            if msg.sync_message.sent is None:
-                log.debug("Ignoring %s", msg)  # Probably a 'message read' marker
+        if (sync_msg := msg.sync_message) is not None:
+            if sync_msg.contacts is not None and msg.sync_message.contactsComplete:
+                log.debug("Received a sync contact updates")
+                await self.add_contacts_to_roster()
+
+            if (sent := sync_msg.sent) is None:
+                # Probably a 'message read' marker
+                log.debug("No sent message in this sync message")
                 return
-            contact = self.contacts.by_json_address(msg.sync_message.sent.destination)
-            sent_msg = msg.sync_message.sent.message
+            contact = self.contacts.by_json_address(sent.destination)
+            sent_msg = sent.message
 
             if (body := sent_msg.body) is not None:
                 contact.carbon(
