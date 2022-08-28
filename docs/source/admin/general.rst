@@ -2,12 +2,13 @@
 General
 =======
 
+Every slidge plugin runs in an independent process and requires its own
+entries in the XMPP server config.
+To keep this guide generic, we'll talk about running the slidge plugin
+``superduper`` that connects to the fictional legacy network "Super Duper Chat Network".
 
 Configure the XMPP server
 =========================
-
-To keep this guide generic, we'll talk about running the slidge plugin
-``superduper`` that connects to the fictional legacy network "Super Duper Chat Network".
 
 Slidge requires a running and properly configured XMPP server running and accepting
 component connections. An upload (XEP:`0363`) component is also required to exchange files
@@ -48,18 +49,7 @@ Starting with prosody 0.12, installing the module is as easy as:
 Configuration
 ~~~~~~~~~~~~~
 
-In ``prosody.cfg.lua``, add ``mod_privilege`` to the ``modules_enabled`` list:
-
-.. code-block:: lua
-
-    VirtualHost "example.com"
-      privileged_entities = {
-        ["legacy-network.example.com"] = {
-          roster = "both";
-          message = "outgoing";
-        }
-      }
-
+In ``prosody.cfg.lua``, add ``mod_privilege`` to the ``modules_enabled`` list.
 
 Define the gateway component's privileges in the appropriate virtualhost block:
 
@@ -75,7 +65,7 @@ Define the gateway component's privileges in the appropriate virtualhost block:
 
 Then either restart the prosody server, or reload config. You might need to use
 `mod_reload_component <https://modules.prosody.im/mod_reload_components.html>`_
-for all changes to be taken into account.
+for all changes to be taken into account (restarting prosody is the easiest way to go).
 
 ejabberd
 --------
@@ -87,9 +77,8 @@ Launch the gateway component
 
 .. note::
     The guide describes how to run slidge as containers with podman, but it is also possible
-    to set it up differently, for instance by using the OS's python install or a virtual environment.
-    However, no official pypi packages are provided at the moment (it may come at some
-    point, maybe even distro packages, who knows…).
+    to set it up differently, for instance by using the OS's python install, a virtual environment,
+    pipx, ...
 
 Installation
 ------------
