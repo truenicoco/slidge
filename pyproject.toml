@@ -57,7 +57,7 @@ steam = ["steam", "asyncio-gevent"]
 slidge = 'slidge.__main__:main'
 
 [tool.mypy]
-exclude = "slixpatch.py"
+exclude = "slidge.util.xep*"
 ignore_missing_imports = true
 
 [tool.black]

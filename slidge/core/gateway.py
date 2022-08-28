@@ -419,7 +419,10 @@ class BaseGateway(
         session = self._get_session_from_stanza(iq)
         for jid in self._config.admins:
             self.send_message(
-                mto=jid, mbody=f"{iq.get_from()} has registered", mtype="headline"
+                mto=jid,
+                mbody=f"{iq.get_from()} has registered",
+                mtype="headline",
+                mfrom=self.boundjid.bare,
             )
         await session.login()
 
@@ -729,7 +732,9 @@ class BaseGateway(
         :return: The user's reply
         """
         if text is not None:
-            self.send_message(mto=jid, mbody=text, mtype=mtype, **msg_kwargs)
+            self.send_message(
+                mto=jid, mbody=text, mtype=mtype, mfrom=self.boundjid.bare, **msg_kwargs
+            )
         f = self.loop.create_future()
         self._input_futures[jid.bare] = f
         await f

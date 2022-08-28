@@ -342,7 +342,9 @@ class BaseSession(
 
         :param text: A text
         """
-        self.xmpp.send_message(mto=self.user.jid, mbody=text, **msg_kwargs)
+        self.xmpp.send_message(
+            mto=self.user.jid, mbody=text, mfrom=self.xmpp.boundjid, **msg_kwargs
+        )
 
     async def input(self, text: str, **msg_kwargs):
         """

@@ -78,7 +78,9 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     raise TypeError("Unknown device type", device)
             except sigexc.SignaldException as e:
                 self.xmpp.send_message(
-                    mto=self.user.jid, mbody=f"Something went wrong: {e}"
+                    mto=self.user.jid,
+                    mbody=f"Something went wrong: {e}",
+                    mfrom=self.xmpp.boundjid,
                 )
                 raise
             await (await self.signal).subscribe(account=self.phone)
@@ -110,6 +112,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             mto=self.user.jid,
             mbody=f"Use this URI or QR code on another signal device to "
             f"finish linking your XMPP account\n{resp.uri}",
+            mfrom=self.xmpp.boundjid,
         )
         return resp
 
@@ -135,6 +138,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             self.xmpp.send_message(
                 mto=self.user.jid,
                 mbody=f"Something went wrong during the linking process: {e}.",
+                mfrom=self.xmpp.boundjid,
             )
             raise
         else:
