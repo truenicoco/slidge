@@ -1,7 +1,9 @@
 import logging
 from typing import TYPE_CHECKING, Optional
 
+import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -47,6 +49,19 @@ class Contact(LegacyContact["Session"]):
     @property
     def signal_address(self):
         return sigapi.JsonAddressv1(number=self.phone, uuid=self.uuid)
+
+    async def get_identities(self):
+        s = await self.session.signal
+        log.debug("%s, %s", type(self.session.phone), type(self.signal_address))
+        try:
+            r = await s.get_identities(
+                account=self.session.phone,
+                address=self.signal_address,
+            )
+        except sigexc.UnregisteredUserError:
+            raise XMPPError("not-found")
+        identities = r.identities
+        self.session.send_gateway_message(str(identities))
 
 
 class Roster(LegacyRoster[Contact, "Session"]):

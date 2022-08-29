@@ -35,7 +35,10 @@ class Gateway(BaseGateway):
     signal_socket: str
     sessions_by_phone: dict[str, "Session"] = {}
 
-    CHAT_COMMANDS = {"add_device": "_chat_command_add_device"}
+    CHAT_COMMANDS = {
+        "add_device": "_chat_command_add_device",
+        "get_identities": "_chat_command_get_identities",
+    }
 
     def __init__(self, args):
         super(Gateway, self).__init__(args)
@@ -172,6 +175,23 @@ class Gateway(BaseGateway):
         else:
             uri = args[0]
         await session.add_device(uri)
+
+    @staticmethod
+    async def _chat_command_get_identities(
+        *args, msg: Message, session: Optional["Session"] = None
+    ):
+        log.debug("ARGS: %s", args)
+        if session is None:
+            msg.reply("I don't know you, so don't talk to me").send()
+            return
+        if len(args) == 0:
+            phone = await session.input("phone number?")
+        elif len(args) > 1:
+            msg.reply("Syntax error! Use 'get_identities [PHONE_NUMBER]'").send()
+            return
+        else:
+            phone = args[0]
+        await session.contacts.by_phone(phone).get_identities()
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
