@@ -1,4 +1,3 @@
-# TODO: rework this using https://signald.org/protocol/structures/v1/ResolveAddressRequest/
 import logging
 from typing import TYPE_CHECKING, Optional
 
@@ -66,14 +65,16 @@ class Roster(LegacyRoster[Contact, "Session"]):
     def by_phone(self, phone: str):
         return self.by_legacy_id(phone)
 
-    def by_uuid(self, uuid: str):
+    async def by_uuid(self, uuid: str):
         try:
             return self.contacts_by_uuid[uuid]
         except KeyError:
-            log.warning(f"Cannot find the contact corresponding to the UUID {uuid}")
-            return Contact(self.session, "unknown_phone", "unknown_phone")
+            address = await (await self.session.signal).resolve_address(
+                account=self.session.phone, partial=sigapi.JsonAddressv1(uuid=uuid)
+            )
+            return await self.by_json_address(address)
 
-    def by_json_address(self, address: sigapi.JsonAddressv1):
+    async def by_json_address(self, address: sigapi.JsonAddressv1):
         uuid = address.uuid
         phone = address.number
 
@@ -84,7 +85,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
             return self.by_phone(phone)
 
         if phone is None:
-            return self.by_uuid(uuid)
+            return await self.by_uuid(uuid)
 
         contact_phone = self._contacts_by_legacy_id.get(phone)
         contact_uuid = self.contacts_by_uuid.get(uuid)
