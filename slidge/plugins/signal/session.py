@@ -270,12 +270,30 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         )
         result = response.results[0]
         log.debug("Result: %s", result)
-        if (
-            result.networkFailure
-            or result.identityFailure
-            or result.proof_required_failure
-        ):
+        if result.networkFailure or result.proof_required_failure:
             raise XMPPError(str(result))
+        elif result.identityFailure:
+            s = await self.signal
+            identities = (
+                await s.get_identities(
+                    account=self.phone,
+                    address=c.signal_address,
+                )
+            ).identities
+            latest = identities[0]
+            ans = await self.input(
+                f"The identity of {c.phone} has changed. "
+                f"Do you want to trust their latest identity and resend the message?"
+            )
+            if ans.lower().startswith("y"):
+                await (await self.signal).trust(
+                    account=self.phone,
+                    address=c.signal_address,
+                    safety_number=latest.safety_number,
+                )
+                await self.send_text(t, c, reply_to_msg_id=reply_to_msg_id)
+            else:
+                raise XMPPError(str(result))
         return response.timestamp
 
     async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
