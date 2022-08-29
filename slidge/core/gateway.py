@@ -803,7 +803,8 @@ SLIXMPP_PLUGINS = [
     "xep_0308",  # Last message correction
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints
-    "xep_0356",  # Privileged Entity  (different registration because not listed in slixmpp.plugins.__all__
+    "xep_0356",  # Privileged Entity
+    "xep_0356_old",  # Privileged Entity (old namespace)
     "xep_0363",  # HTTP file upload
     "xep_0424",  # Message retraction
     "xep_0444",  # Message reactions

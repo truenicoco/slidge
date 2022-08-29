@@ -11,7 +11,7 @@ from . import stanza
 log = logging.getLogger(__name__)
 
 
-class XEP_0356(BasePlugin):
+class XEP_0356_OLD(BasePlugin):
     """
     XEP-0356: Privileged Entity
 
@@ -22,8 +22,8 @@ class XEP_0356(BasePlugin):
         privileges_advertised  -- Received message/privilege from the server
     """
 
-    name = "xep_0356"
-    description = "XEP-0356: Privileged Entity (slidge)"
+    name = "xep_0356_old"
+    description = "XEP-0356: Privileged Entity (slidge - old namespace)"
     dependencies = {"xep_0297"}
     stanza = stanza
 
@@ -39,14 +39,14 @@ class XEP_0356(BasePlugin):
 
         self.xmpp.register_handler(
             Callback(
-                "Privileges",
-                StanzaPath("message/privilege"),
+                "Privileges_old",
+                StanzaPath("message/privilege_old"),
                 self._handle_privilege,
             )
         )
 
     def plugin_end(self):
-        self.xmpp.remove_handler("Privileges")
+        self.xmpp.remove_handler("Privileges_old")
 
     def _handle_privilege(self, msg: Message):
         """
@@ -55,11 +55,11 @@ class XEP_0356(BasePlugin):
         Stores the privileges in this instance's granted_privileges attribute (a dict)
         and raises the privileges_advertised event
         """
-        for perm in msg["privilege"]["perms"]:
+        for perm in msg["privilege_old"]["perms"]:
             self.granted_privileges[perm["access"]] = perm["type"]
         self.server_real_host = msg.get_from()
-        log.debug(f"Privileges: {self.granted_privileges}")
-        self.xmpp.event("privileges_advertised")
+        log.debug(f"Privileges (old): {self.granted_privileges}")
+        self.xmpp.event("privileges_advertised_old")
 
     def send_privileged_message(self, msg: Message):
         if self.granted_privileges["message"] == "outgoing":
@@ -73,7 +73,7 @@ class XEP_0356(BasePlugin):
         stanza = self.xmpp.make_message(
             mto=self.server_real_host, mfrom=self.xmpp.boundjid.bare
         )
-        stanza["privilege"]["forwarded"].append(msg)
+        stanza["privilege_old"]["forwarded"].append(msg)
         return stanza
 
     def _make_get_roster(self, jid: typing.Union[JID, str], **iq_kwargs):
@@ -138,6 +138,7 @@ class XEP_0356(BasePlugin):
         }
         """
         if self.granted_privileges["roster"] not in ("set", "both"):
-            raise PermissionError("The server did not grant us privileges to set rosters")
+            log.error("The server did not grant us privileges to set rosters")
+            raise ValueError
         else:
             return await self._make_set_roster(jid, roster_items).send(**send_kwargs)
