@@ -1,4 +1,3 @@
-import asyncio
 import functools
 import logging
 from datetime import datetime, timezone
@@ -105,7 +104,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self._avatar: Optional[AvatarType] = None
 
         self.xmpp = session.xmpp
-        asyncio.create_task(self.__make_caps())
+        self.xmpp.loop.create_task(self.__make_caps())
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
