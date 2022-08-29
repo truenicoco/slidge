@@ -5,6 +5,7 @@ pseudo-roster for the gateway component.
 
 import dataclasses
 import logging
+import os.path
 import shelve
 from io import BytesIO
 from os import PathLike
@@ -98,10 +99,15 @@ class UserStore:
         """
         if self._users is not None:
             raise RuntimeError("Shelf file already set!")
+        if os.path.exists(filename):
+            log.info("Using existing slidge DB: %s", filename)
+        else:
+            log.info("Creating a new slidge DB: %s", filename)
         if secret_key:
             self._users = EncryptedShelf(filename, key=secret_key)
         else:
             self._users = shelve.open(str(filename))
+        log.info("Registered users in the DB: %s", list(self._users.keys()))
 
     def get_all(self) -> Iterable[GatewayUser]:
         """
