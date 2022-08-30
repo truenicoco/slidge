@@ -280,17 +280,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     address=c.signal_address,
                 )
             ).identities
-            latest = identities[0]
             ans = await self.input(
                 f"The identity of {c.phone} has changed. "
-                f"Do you want to trust their latest identity and resend the message?"
+                f"Do you want to trust all their identities and resend the message?"
             )
             if ans.lower().startswith("y"):
-                await (await self.signal).trust(
-                    account=self.phone,
-                    address=c.signal_address,
-                    safety_number=latest.safety_number,
-                )
+                for i in identities:
+                    await (await self.signal).trust(
+                        account=self.phone,
+                        address=c.signal_address,
+                        safety_number=i.safety_number,
+                    )
                 await self.send_text(t, c, reply_to_msg_id=reply_to_msg_id)
             else:
                 raise XMPPError(str(result))
