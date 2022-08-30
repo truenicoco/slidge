@@ -68,7 +68,11 @@ class TelegramClient(aiotdlib.Client):
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):
         if update.user_id == await self.get_my_id():
             return
-        await self.contacts.by_legacy_id(update.user_id).send_tg_status(update.status)
+        contact = self.contacts.by_legacy_id(update.user_id)
+        if not contact.added_to_roster:
+            self.log.debug("Ignoring presence of contact not in the roster")
+            return
+        await contact.send_tg_status(update.status)
 
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
         self.contacts.by_legacy_id(update.chat_id).displayed(
