@@ -192,6 +192,9 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         Add this contact to the user roster using :xep:`0356`
         """
+        if self.xmpp.no_roster_push:
+            log.debug("Roster push request by plugin ignored (--no-roster-push)")
+            return
         kw = dict(
             jid=self.user.jid,
             roster_items={

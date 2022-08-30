@@ -156,6 +156,7 @@ class BaseGateway(
         self.home_dir = Path(args.home_dir)
         self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
+        self.no_roster_push = args.no_roster_push
 
         self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
