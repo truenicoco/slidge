@@ -44,6 +44,10 @@ class TelegramClient(aiotdlib.Client):
             self.log.debug("Ignoring channel post")
             return
 
+        if not await self.is_private_chat(msg.chat_id):
+            self.log.debug("Ignoring group message")
+            return
+
         session = self.session
         if msg.is_outgoing:
             # This means slidge is responsible for this message, so no carbon is needed;
@@ -75,11 +79,16 @@ class TelegramClient(aiotdlib.Client):
         await contact.send_tg_status(update.status)
 
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
+        if not await self.is_private_chat(update.chat_id):
+            return
         self.contacts.by_legacy_id(update.chat_id).displayed(
             update.last_read_outbox_message_id
         )
 
     async def handle_ChatAction(self, action: tgapi.UpdateChatAction):
+        if not await self.is_private_chat(action.chat_id):
+            return
+
         sender = action.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
             self.log.debug("Ignoring action: %s", action)
@@ -92,6 +101,9 @@ class TelegramClient(aiotdlib.Client):
         self.contacts.by_legacy_id(chat_id).composing()
 
     async def handle_ChatReadInbox(self, action: tgapi.UpdateChatReadInbox):
+        if not await self.is_private_chat(action.chat_id):
+            return
+
         session = self.session
         msg_id = action.last_read_inbox_message_id
         self.log.debug(
@@ -105,6 +117,9 @@ class TelegramClient(aiotdlib.Client):
             contact.carbon_read(msg_id)
 
     async def handle_MessageContent(self, action: tgapi.UpdateMessageContent):
+        if not await self.is_private_chat(action.chat_id):
+            return
+
         new = action.new_content
         if not isinstance(new, tgapi.MessageText):
             raise NotImplementedError(new)
@@ -145,7 +160,9 @@ class TelegramClient(aiotdlib.Client):
     async def handle_MessageInteractionInfo(
         self, update: tgapi.UpdateMessageInteractionInfo
     ):
-        # FIXME: where do we filter out group chat messages here ?!
+        if not await self.is_private_chat(update.chat_id):
+            return
+
         contact = self.session.contacts.by_legacy_id(update.chat_id)
         me = await self.get_my_id()
         if update.interaction_info is None:
@@ -160,6 +177,9 @@ class TelegramClient(aiotdlib.Client):
                             contact.carbon_react(update.message_id, [reaction.reaction])
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
+        if not await self.is_private_chat(update.chat_id):
+            return
+
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
             self.log.debug("Ignoring non permanent delete")
             return
@@ -189,3 +209,7 @@ class TelegramClient(aiotdlib.Client):
                 future.set_result(update.message.id)
                 return
         self.log.warning("Ignoring Send success for %s", update.message.id)
+
+    async def is_private_chat(self, chat_id: int):
+        chat = await self.get_chat(chat_id)
+        return isinstance(chat, tgapi.ChatTypePrivate)

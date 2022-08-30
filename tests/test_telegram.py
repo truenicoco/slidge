@@ -29,6 +29,9 @@ class MockTdlib:
 
         return mock_coroutine
 
+    async def is_private_chat(self, chat_id: int):
+        return True
+
 
 class TestTelegramBase(SlidgeTest):
     plugin = plugin
