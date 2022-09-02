@@ -116,9 +116,9 @@ def main():
 
     if args.home_dir is None:
         args.home_dir = Path("/var/lib/slidge") / args.jid
-        if not args.home_dir.exists():
-            logging.info("Making directory '%s'", args.home_dir)
-            args.home_dir.mkdir()
+    if not args.home_dir.exists():
+        logging.info("Creating directory '%s'", args.home_dir)
+        args.home_dir.mkdir()
 
     if args.user_jid_validator is None:
         args.user_jid_validator = ".*@" + args.server
