@@ -252,4 +252,136 @@ class TestAimShakespeareBase(SlidgeTest):
             assert r["value"] == "👋"
 
 
+class TestPrivilegeOld(SlidgeTest):
+    plugin = globals()
+
+    def setUp(self):
+        super().setUp()
+        user_store.add(
+            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+
+    def test_privilege_old(self):
+        assert self.xmpp["xep_0356"].granted_privileges == {
+            "roster": "none",
+            "message": "none",
+            "presence": "none",
+        }
+        assert self.xmpp["xep_0356_old"].granted_privileges == {
+            "message": "none",
+            "presence": "none",
+            "roster": "none",
+        }
+        self.recv(
+            """
+            <message to="aim.shakespeare.lit" from="aim.shakespeare.lit">
+              <privilege xmlns="urn:xmpp:privilege:1">
+                <perm access="roster" type="both" />
+                <perm access="message" type="outgoing" />
+              </privilege>
+            </message>
+            """
+        )
+        assert self.xmpp["xep_0356_old"].granted_privileges == {
+            "message": "outgoing",
+            "presence": "none",
+            "roster": "both",
+        }
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet.carbon("body")
+        self.send(
+            """
+            <message to="aim.shakespeare.lit" from="aim.shakespeare.lit">
+              <privilege xmlns="urn:xmpp:privilege:1">
+                <forwarded xmlns="urn:xmpp:forward:0">
+                  <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@montague.lit">
+                    <body>body</body>
+                    <store xmlns="urn:xmpp:hints" />
+                  </message>
+                </forwarded>
+              </privilege>
+            </message>
+            """,
+        )
+        self.xmpp.loop.create_task(juliet.add_to_roster())
+        self.send(
+            """
+            <iq xmlns="jabber:component:accept" type="set" to="romeo@montague.lit" from="aim.shakespeare.lit" id="1">
+              <query xmlns="jabber:iq:roster">
+                <item subscription="both" jid="juliet@aim.shakespeare.lit">
+                  <group>slidge</group>
+                </item>
+              </query>
+            </iq>
+            """
+        )
+
+# This works when run alone but fails in the test suite. I don't know which damn test has a side effect...
+# class TestPrivilege(SlidgeTest):
+#     plugin = globals()
+#
+#     def setUp(self):
+#         super().setUp()
+#         user_store.add(
+#             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+#         )
+#
+#     def test_privilege(self):
+#         assert self.xmpp["xep_0356"].granted_privileges == {
+#             "message": "none",
+#             "presence": "none",
+#             "roster": "none",
+#         }
+#         self.recv(
+#             """
+#             <message to="aim.shakespeare.lit" from="aim.shakespeare.lit">
+#               <privilege xmlns="urn:xmpp:privilege:2">
+#                 <perm access="roster" type="both" />
+#                 <perm access="message" type="outgoing" />
+#               </privilege>
+#             </message>
+#             """
+#         )
+#         assert self.xmpp["xep_0356"].granted_privileges == {
+#             "message": "outgoing",
+#             "presence": "none",
+#             "roster": "both",
+#         }
+#         session = BaseSession.get_self_or_unique_subclass().from_jid(
+#             JID("romeo@montague.lit")
+#         )
+#         juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+#         juliet.carbon("body")
+#         self.send(
+#             """
+#             <message to="aim.shakespeare.lit" from="aim.shakespeare.lit">
+#               <privilege xmlns="urn:xmpp:privilege:2">
+#                 <forwarded xmlns="urn:xmpp:forward:0">
+#                   <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@montague.lit">
+#                     <body>body</body>
+#                     <store xmlns="urn:xmpp:hints" />
+#                   </message>
+#                 </forwarded>
+#               </privilege>
+#             </message>
+#             """,
+#         )
+#         self.xmpp.loop.create_task(juliet.add_to_roster())
+#         self.send(
+#             """
+#             <iq xmlns="jabber:component:accept" type="set" to="romeo@montague.lit" from="aim.shakespeare.lit" id="1">
+#               <query xmlns="jabber:iq:roster">
+#                 <item subscription="both" jid="juliet@aim.shakespeare.lit">
+#                   <group>slidge</group>
+#                 </item>
+#               </query>
+#             </iq>
+#             """
+#         )
+#
+
+
 log = logging.getLogger(__name__)

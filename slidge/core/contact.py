@@ -1,4 +1,3 @@
-import asyncio
 import functools
 import logging
 from datetime import datetime, timezone
@@ -105,7 +104,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self._avatar: Optional[AvatarType] = None
 
         self.xmpp = session.xmpp
-        asyncio.create_task(self.__make_caps())
+        self.xmpp.loop.create_task(self.__make_caps())
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
@@ -193,7 +192,10 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         Add this contact to the user roster using :xep:`0356`
         """
-        await self.xmpp["xep_0356"].set_roster(
+        if self.xmpp.no_roster_push:
+            log.debug("Roster push request by plugin ignored (--no-roster-push)")
+            return
+        kw = dict(
             jid=self.user.jid,
             roster_items={
                 self.jid.bare: {
@@ -203,6 +205,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 }
             },
         )
+        try:
+            await self.xmpp["xep_0356"].set_roster(**kw)
+        except PermissionError:
+            await self.xmpp["xep_0356_old"].set_roster(**kw)
+
         self.added_to_roster = True
 
     def online(self, status: Optional[str] = None):
@@ -442,7 +449,10 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_from(self.user.jid.bare)
         msg.enable("store")
         self.session.ignore_messages.add(msg.get_id())
-        self.xmpp["xep_0356"].send_privileged_message(msg)
+        try:
+            self.xmpp["xep_0356"].send_privileged_message(msg)
+        except PermissionError:
+            self.xmpp["xep_0356_old"].send_privileged_message(msg)
         return msg.get_id()
 
     def carbon(

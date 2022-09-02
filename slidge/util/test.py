@@ -20,6 +20,7 @@ class SlidgeTest(SlixTest):
         home_dir = Path(tempfile.mkdtemp())
         user_jid_validator = ".*@shakespeare.lit"
         admins: list[str] = []
+        no_roster_push = False
 
     @classmethod
     def setUpClass(cls):

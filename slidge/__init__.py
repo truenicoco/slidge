@@ -15,11 +15,12 @@ from .util import (
     xep_0115,
     xep_0333,
     xep_0356,
+    xep_0356_old,
     xep_0363,
     xep_0461,
 )
 
-slixmpp.plugins.__all__.extend(["xep_0055", "xep_0356", "xep_0461"])
+slixmpp.plugins.__all__.extend(["xep_0055", "xep_0356", "xep_0356_old", "xep_0461"])
 
 __all__ = [
     "BaseGateway",

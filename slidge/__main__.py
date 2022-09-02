@@ -87,6 +87,12 @@ def get_parser():
         env_var="SLIDGE_SECRET_KEY",
         help="Encryption for disk storage",
     )
+    p.add(
+        "--no-roster-push",
+        env_var="SLIDGE_NO_ROSTER_PUSH",
+        help="Do not fill users' rosters with legacy contacts automatically",
+        action="store_true",
+    )
     p.add_argument(
         "-q",
         "--quiet",
