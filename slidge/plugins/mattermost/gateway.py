@@ -193,7 +193,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def on_mm_event(self, event: MattermostEvent):
         self.log.debug("Event: %s", event)
         if event.type == EventType.Hello:
-            self.log.info("Received hello event: %s", event.data)
+            self.log.debug("Received hello event: %s", event.data)
         elif event.type == EventType.Posted:
             post = event.data["post"]
             self.log.debug("Post: %s", pprint.pformat(post))

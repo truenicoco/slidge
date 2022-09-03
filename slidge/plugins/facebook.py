@@ -177,7 +177,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     login = await api.login_2fa(
                         email=self.user.registration_form["email"], code=code
                     )
-                log.debug(login)
+                log.debug("Login output: %s", login)
                 self.fb_state = shelf["state"] = api.state
             else:
                 self.api = api = AndroidAPI(state=s)
@@ -210,7 +210,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def add_friends(self, n=2):
         thread_list = await self.api.fetch_thread_list(msg_count=0, thread_count=n)
         self.mqtt.seq_id = int(thread_list.sync_sequence_id)
-        log.debug("SEQ ID: %s", self.mqtt.seq_id)
+        self.log.debug("SEQ ID: %s", self.mqtt.seq_id)
         self.log.debug("Thread list: %s", thread_list)
         self.log.debug("Thread list page info: %s", thread_list.page_info)
         for t in thread_list.nodes:

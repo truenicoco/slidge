@@ -127,7 +127,7 @@ class UserStore:
         :param jid: JID of the gateway user
         :param registration_form: Content of the registration form (:xep:`0077`)
         """
-        log.debug("Adding user %s with form: %s", jid, registration_form)
+        log.debug("Adding user %s", jid)
         self._users[jid.bare] = GatewayUser(
             bare_jid=jid.bare,
             registration_form=registration_form,

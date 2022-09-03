@@ -180,7 +180,6 @@ class Gateway(BaseGateway):
     async def _chat_command_get_identities(
         *args, msg: Message, session: Optional["Session"] = None
     ):
-        log.debug("ARGS: %s", args)
         if session is None:
             msg.reply("I don't know you, so don't talk to me").send()
             return

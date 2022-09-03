@@ -59,7 +59,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         i = uuid.uuid1()
 
         self.contacts.by_legacy_id("bibi").carbon(
-            f"Sent by the component on behalf of the user, but this does not seem to reach MAM? {i}",
+            f"Sent by the component on behalf of the user, and this should reach MAM. Msg ID: {i}",
             legacy_id=i,
         )
 
