@@ -121,6 +121,16 @@ class BaseGateway(
     passed to the handler.
     """
 
+    WELCOME_MESSAGE = (
+        "Thank you for registering. Type 'help' to list the available commands, "
+        "or just start messaging away!"
+    )
+    """
+    A welcome message displayed to users on registration.
+    This is useful notably for clients that don't consider component JIDs as a valid recipient in their UI,
+    yet still open a functional chat window on incoming messages from components.
+    """
+
     def __init__(self, args):
         """
 
@@ -425,6 +435,7 @@ class BaseGateway(
                 mtype="headline",
                 mfrom=self.boundjid.bare,
             )
+        session.send_gateway_message(self.WELCOME_MESSAGE)
         await session.login()
 
     async def _on_user_unregister(self, iq: Iq):
