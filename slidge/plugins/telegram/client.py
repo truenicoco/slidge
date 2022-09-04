@@ -212,4 +212,4 @@ class TelegramClient(aiotdlib.Client):
 
     async def is_private_chat(self, chat_id: int):
         chat = await self.get_chat(chat_id)
-        return isinstance(chat, tgapi.ChatTypePrivate)
+        return isinstance(chat.type_, tgapi.ChatTypePrivate)
