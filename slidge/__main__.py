@@ -122,6 +122,9 @@ def main():
 
     if args.home_dir is None:
         args.home_dir = Path("/var/lib/slidge") / args.jid
+    else:
+        args.home_dir = Path(args.home_dir)
+
     if not args.home_dir.exists():
         logging.info("Creating directory '%s'", args.home_dir)
         args.home_dir.mkdir()
