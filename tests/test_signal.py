@@ -73,15 +73,15 @@ class TestSignalUnregistered(TestSignalBase):
     def setUp(self):
         super(TestSignalUnregistered, self).setUp()
         self.signal = slidge.plugins.signal.gateway.signal = MockSignal()
-        self.xmpp["xep_0356"].granted_privileges["message"] = "both"
-        self.xmpp["xep_0356"].granted_privileges["roster"] = "both"
+        self.xmpp["xep_0356"].granted_privileges["test"].message = "outgoing"
+        self.xmpp["xep_0356"].granted_privileges["test"].roster = "both"
 
     def test_registration_primary_device_missing_name(self):
         self.recv(
             """
             <iq type='set'
                 to="signal.test"
-                from='romeo@signal.test'>
+                from='romeo@test'>
                 <query xmlns='jabber:iq:register'>
                     <x xmlns="jabber:x:data" type="form">
                         <field var="phone"><value>+123</value></field>
@@ -99,7 +99,7 @@ class TestSignalUnregistered(TestSignalBase):
             """
             <iq type='set'
                 to="signal.test"
-                from='romeo@signal.test'
+                from='romeo@test'
                 id="123">
                 <query xmlns='jabber:iq:register'>
                     <x xmlns="jabber:x:data" type="form">
@@ -113,7 +113,7 @@ class TestSignalUnregistered(TestSignalBase):
         )
         self.send(
             """
-            <iq type="result" to="romeo@signal.test" from="signal.test" id="123"/>
+            <iq type="result" to="romeo@test" from="signal.test" id="123"/>
             """
         )
         # self.send(
@@ -123,11 +123,11 @@ class TestSignalUnregistered(TestSignalBase):
         # )
         assert (
             user_store.get(
-                None, None, JID("romeo@signal.test"), None
+                None, None, JID("romeo@test"), None
             ).registration_form["name"]
             == "Romeo"
         )
-        user_store.remove(None, None, JID("romeo@signal.test"), None)
+        user_store.remove(None, None, JID("romeo@test"), None)
 
 
 class TestSignalFinalizePrimaryDeviceRegistration(TestSignalBase):

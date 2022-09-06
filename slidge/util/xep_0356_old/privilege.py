@@ -1,16 +1,26 @@
 import logging
 import typing
+from collections import defaultdict
 
 from slixmpp import JID, Iq, Message
 from slixmpp.plugins.base import BasePlugin
+from slixmpp.types import JidStr
+from slixmpp.xmlstream import StanzaBase
 from slixmpp.xmlstream.handler import Callback
 from slixmpp.xmlstream.matcher import StanzaPath
+
+from slidge.util.xep_0356.permissions import (
+    MessagePermission,
+    Permissions,
+    RosterAccess,
+)
 
 from . import stanza
 
 log = logging.getLogger(__name__)
 
 
+# noinspection PyPep8Naming
 class XEP_0356_OLD(BasePlugin):
     """
     XEP-0356: Privileged Entity
@@ -19,7 +29,7 @@ class XEP_0356_OLD(BasePlugin):
 
     ::
 
-        privileges_advertised  -- Received message/privilege from the server
+        privileges_advertised_old -- Received message/privilege from the server
     """
 
     name = "xep_0356_old"
@@ -27,8 +37,7 @@ class XEP_0356_OLD(BasePlugin):
     dependencies = {"xep_0297"}
     stanza = stanza
 
-    granted_privileges = {"roster": "none", "message": "none", "presence": "none"}
-    server_real_host = None
+    granted_privileges: defaultdict[JidStr, Permissions] = defaultdict(Permissions)
 
     def plugin_init(self):
         if not self.xmpp.is_component:
@@ -48,7 +57,7 @@ class XEP_0356_OLD(BasePlugin):
     def plugin_end(self):
         self.xmpp.remove_handler("Privileges_old")
 
-    def _handle_privilege(self, msg: Message):
+    def _handle_privilege(self, msg: StanzaBase):
         """
         Called when the XMPP server advertise the component's privileges.
 
@@ -56,25 +65,25 @@ class XEP_0356_OLD(BasePlugin):
         and raises the privileges_advertised event
         """
         for perm in msg["privilege_old"]["perms"]:
-            self.granted_privileges[perm["access"]] = perm["type"]
-        self.server_real_host = msg.get_from()
+            setattr(
+                self.granted_privileges[msg.get_from()], perm["access"], perm["type"]
+            )
         log.debug(f"Privileges (old): {self.granted_privileges}")
         self.xmpp.event("privileges_advertised_old")
 
     def send_privileged_message(self, msg: Message):
-        if self.granted_privileges["message"] == "outgoing":
-            self._make_privileged_message(msg).send()
-        else:
+        if self.granted_privileges[msg.get_from().domain].message != MessagePermission.OUTGOING:
             raise PermissionError(
                 "The server hasn't authorized us to send messages on behalf of other users"
             )
+        else:
+            self._make_privileged_message(msg).send()
 
     def _make_privileged_message(self, msg: Message):
-        stanza = self.xmpp.make_message(
-            mto=self.server_real_host, mfrom=self.xmpp.boundjid.bare
-        )
-        stanza["privilege_old"]["forwarded"].append(msg)
-        return stanza
+        server = msg.get_from().domain
+        wrapped = self.xmpp.make_message(mto=server, mfrom=self.xmpp.boundjid.bare)
+        wrapped["privilege_old"]["forwarded"].append(msg)
+        return wrapped
 
     def _make_get_roster(self, jid: typing.Union[JID, str], **iq_kwargs):
         return self.xmpp.make_iq_get(
@@ -106,9 +115,15 @@ class XEP_0356_OLD(BasePlugin):
 
         :param jid: user we want to fetch the roster from
         """
-        if self.granted_privileges["roster"] not in ("get", "both"):
-            log.error("The server did not grant us privileges to get rosters")
-            raise ValueError
+        if isinstance(jid, str):
+            jid = JID(jid)
+        if self.granted_privileges[jid.domain].roster not in (
+            RosterAccess.GET,
+            RosterAccess.BOTH,
+        ):
+            raise PermissionError(
+                "The server did not grant us privileges to get rosters"
+            )
         else:
             return await self._make_get_roster(jid).send(**send_kwargs)
 
@@ -137,8 +152,14 @@ class XEP_0356_OLD(BasePlugin):
             },
         }
         """
-        if self.granted_privileges["roster"] not in ("set", "both"):
-            log.error("The server did not grant us privileges to set rosters")
-            raise ValueError
+        if isinstance(jid, str):
+            jid = JID(jid)
+        if self.granted_privileges[jid.domain].roster not in (
+            RosterAccess.GET,
+            RosterAccess.BOTH,
+        ):
+            raise PermissionError(
+                "The server did not grant us privileges to set rosters"
+            )
         else:
             return await self._make_set_roster(jid, roster_items).send(**send_kwargs)

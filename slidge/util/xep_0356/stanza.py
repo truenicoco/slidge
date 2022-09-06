@@ -22,10 +22,10 @@ class Privilege(ElementBase):
     def presence(self):
         return self.permission("presence")
 
-    def add_perm(self, access, type):
+    def add_perm(self, access, type_):
         # This should only be needed for servers, so maybe out of scope for slixmpp
         perm = Perm()
-        perm["type"] = type
+        perm["type"] = type_
         perm["access"] = access
         self.append(perm)
 
