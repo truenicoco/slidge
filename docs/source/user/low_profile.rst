@@ -12,7 +12,7 @@ and (b) establish "normal" traffic on your account, from slidge's IP.
 For (b), the most convenient way is to use a proxy (a SOCKS5 proxy is pretty easy to set up in case you have
 ssh access to your xmpp server) and configure your web browser to use this proxy whenever you access the web
 interface of your legacy network.
-For instance, I use firefox's `FoxyProxy <https://addons.mozilla.org/fr/firefox/addon/foxyproxy-standard/>`_
+For instance, I use firefox's `FoxyProxy <https://addons.mozilla.org/firefox/addon/foxyproxy-standard/>`_
 and these are my rules:
 
 .. figure:: foxyproxy.png
