@@ -16,5 +16,5 @@ fallback registration workflow).
   a "friend request workflow", ie, adding/removing legacy contacts to your roster
   does not trigger anything on the legacy network side.
   Use official clients to add/remove contacts to your legacy roster.
-  This only applies to network where their is
+  This only applies to network where there is
   such notion though, such as facebook, discord, skype and steam.
