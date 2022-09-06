@@ -17,10 +17,10 @@ Just send a chat message saying "register" to the component's JID, and follow th
    :scale: 50 %
    :alt: Movim gateway discovery
 
-   In movim, you can see the gateways in settings->account.
+   In Movim, you can see the gateways in settings->account.
 
 .. figure:: movim2.png
    :scale: 50 %
    :alt: Movim registration form
 
-   An example registration in movim.
+   An example registration in Movim.

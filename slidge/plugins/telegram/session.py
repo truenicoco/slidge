@@ -253,7 +253,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             c.carbon_react(legacy_msg_id)
             raise XMPPError(
                 "not-acceptable", text="This emoji is not allowed on telegram"
-            )  # ignored by movim, unfortunately
+            )  # ignored by Movim, unfortunately
         else:
             self.log.debug("Message reaction response: %s", r)
 
