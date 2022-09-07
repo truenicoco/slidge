@@ -75,7 +75,40 @@ for all changes to be taken into account (restarting prosody is the easiest way 
 ejabberd
 --------
 
-TODO: have someone using ejabberd help me write this
+Add component
+*************
+
+Add this block to your ejabberd configuration file, in the ``listen`` section.
+Change the port, hostname and secret accordingly.
+
+.. code-block:: yaml
+
+    listen:
+      -
+        ip: 127.0.0.1
+        port: 5233
+        module: ejabberd_service
+          hosts:
+            superduper.example.com:
+              password: secret
+
+mod_privilege
+*************
+
+This is required to let slidge manage your roster and synchronize your messages
+sent from an official client.
+Roster management also requires roster versioning.
+
+.. code-block:: yaml
+
+    modules:
+      mod_privilege:
+        roster:
+          both: superduper.example.com
+        message:
+          outgoing: superduper.example.com
+      mod_roster:
+        versioning: true
 
 Launch the gateway component
 ============================
