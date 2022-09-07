@@ -21,15 +21,15 @@ It's a work in progress, but it should make
 It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
 instant messaging features:
 
-|            | ⏻[¹] | …[²] | ✓[³] | 🗎[⁴] | ✎[⁵] | ☺[⁶] | 🗑[⁷]  | ↵[⁸] | 
-|------------|------|------|------|-------|------|------|--------|------|
-| Signal     | -    | ✓    | ✓    | ✓     | -    | ✓    | ✓      | ✓    |
-| Telegram   | ✓    | ✓    | ✓    | ✓     | ✓    | ✓    | ✓      | ✓    |
-| Discord    | ✗    | ✓    | -    | ✓     | ✓    | ~    | ✓      | ✓    |
-| Steam      | ✓    | ✓    | -    | ✗     | -    | ~    | -      | -    |
-| Mattermost | ~    | ✓    | -    | ✓     | ✓    | ✓    | ✓      | ✗    |
-| Facebook   | ✗    | ✓    | ✓    | ✓     | ✓    | ✓    | ✓      | ✓    |
-| Skype      | ✗    | ✗    | ✗    | ~     | ✗    | ✗    | ✗      | ✗    |
+|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | 
+|------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|
+| Signal     | N/A          | ✅         | ✅        | ✅         | N/A     | ✅        | ✅          | ✅        |
+| Telegram   | ✅            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
+| Discord    | ❌            | ✅         | N/A      | ✅         | ✅       | ~        | ✅          | ✅        |
+| Steam      | ✅            | ✅         | N/A      | ❌         | N/A     | ~        | N/A        | N/A      |
+| Mattermost | ~            | ✅         | N/A      | ✅         | ✅       | ✅        | ✅          | ❌        |
+| Facebook   | ❌            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
+| Skype      | ❌            | ❌         | ❌        | ~         | ❌       | ❌        | ❌          | ❌        |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence
@@ -42,10 +42,9 @@ instant messaging features:
 [⁸]: https://xmpp.org/extensions/xep-0461.html
 
 
-(this table may not be entirely accurate, but **in theory**, stuff marked ✓ works)
-
-NB: - means that the legacy network does not have an equivalent of this XMPP feature
-    (because XMPP is better, what did you think?)
+This table may not be entirely accurate, but **in theory**, stuff marked ✅ works.
+N/A means that the legacy network does not have an equivalent of this XMPP feature
+(because XMPP is better, what did you think?).
 
 **WARNING**: you may break the terms of use of a legacy network and end up getting your account locked
 by using slidge. Refer to the [keeping a low profile](https://slidge.readthedocs.io/en/latest/user/low_profile.html)
