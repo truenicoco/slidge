@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -88,10 +89,14 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         i = self.counter
         self.counter = i + 1
-        self.xmpp.loop.create_task(self.later(c, i))
 
         if t == "crash":
             raise RuntimeError("PANIC!!!")
+        elif t == "delete":
+            self.xmpp.loop.create_task(self.later_carbon_delete(c, i))
+        else:
+            self.xmpp.loop.create_task(self.later(c, i))
+
         return i
 
     async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None) -> int:
@@ -125,6 +130,10 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         c.retract(i)
         c.inactive()
 
+    async def later_carbon_delete(self, c: LegacyContact, trigger_msg_id: int):
+        await asyncio.sleep(1)
+        c.carbon_retract(trigger_msg_id)
+
     async def active(self, c: LegacyContact):
         log.debug("User is active for contact %s", c)
 
@@ -148,7 +157,12 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
             )
 
     async def react(self, legacy_msg_id, emojis, c):
-        c.react(legacy_msg_id, "♥")
+        if "😈" in emojis:
+            c.send_text("That's forbidden")
+            c.carbon_react(legacy_msg_id, "")
+            raise XMPPError("not-acceptable")
+        else:
+            c.react(legacy_msg_id, "♥")
 
     async def retract(self, legacy_msg_id, c):
         log.debug("User has retracted their msg: '%s' (sent to '%s')", legacy_msg_id, c)
