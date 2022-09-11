@@ -2,7 +2,9 @@ Skype
 -----
 
 .. warning::
-  To do things the right way, you should set up an app password that slidge will use.
+  It can be tricky to know if a username, or an email should be provided to login,
+  especially when using app password. Refer to
+  `the skpy docs <https://skpy.t.allofti.me/guides/login.html>`_ in case of trouble.
 
 Roster
 ******

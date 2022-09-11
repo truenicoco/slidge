@@ -76,21 +76,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def login(self):
         f = self.user.registration_form
-        try:
-            self.sk = await self.async_wrap(
-                skpy.Skype,
-                f["username"],
-                f["password"],
-                str(self.skype_token_path),
-            )
-        except skpy.core.SkypeApiException:
-            # workaround for https://github.com/Terrance/SkPy/issues/164
-            # not sure why, but I need this for my (nicoco's) account
-            # FWIW, I have a live (I think) a account with a very old skype account (pre-microsoft)
-            # and I set up 2FA + app password for slidge
-            self.sk = await self.async_wrap(skpy.Skype)
-            self.sk.conn.setTokenFile(str(self.skype_token_path))
-            self.sk.conn.soapLogin(f["username"], f["password"])
+        self.sk = await self.async_wrap(
+            skpy.Skype,
+            f["username"],
+            f["password"],
+            str(self.skype_token_path),
+        )
 
         # self.sk.subscribePresence()
         for contact in self.sk.contacts:
