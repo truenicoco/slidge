@@ -1,0 +1,6 @@
+#!/bin/sh
+
+chown -R root:slidge /etc/slidge
+chmod -R 0640 /etc/slidge
+chmod 0650 /etc/slidge
+chmod 0650 /etc/slidge/conf.d

@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+  install)
+    addgroup --system slidge
+    APP_GROUP=$(grep "slidge" /etc/group|cut -d: -f3)
+    adduser --system --home /var/lib/slidge --gid "${APP_GROUP}" slidge
+    mkdir -p /etc/slidge/conf.d
+    mkdir -p /var/lib/slidge
+    ;;
+
+  upgrade | abort-upgrade)
+    ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    ;;
+esac

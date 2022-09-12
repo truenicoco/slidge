@@ -84,10 +84,6 @@ def main():
     bot.loop.run_until_complete(bot.disconnected)
 
 
-parser = ArgumentParser()
-parser.add_argument("-m", "--muc")
-args = parser.parse_args()
-
 ROOM = "slidge@conference.nicoco.fr"
 REPO = "slidge"
 BOT_PASS_FILE = "~/.c3p0"

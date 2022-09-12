@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+export DH_VERBOSE=1
+export DH_VIRTUALENV_INSTALL_ROOT=/usr/lib/
+
+%:
+	dh $@ --with python-virtualenv
+
+override_dh_virtualenv:
+	dh_virtualenv --install-suffix=slidge
+
+override_dh_shlibdeps:
+override_dh_dwz:

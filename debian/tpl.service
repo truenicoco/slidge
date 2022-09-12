@@ -1,0 +1,15 @@
+[Unit]
+Description=Slidge XMPP --PLUGIN-- bridge
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+ExecStart=/usr/bin/slidge -c /etc/slidge/--PLUGIN--.conf
+KillSignal=SIGINT
+User=slidge
+Group=slidge
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
