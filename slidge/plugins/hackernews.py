@@ -81,7 +81,12 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         while True:
             kid_ids.clear()
             for submission_id in await self.get_user_submissions():
-                user_submission = await self.get_item(submission_id)
+                try:
+                    user_submission = await self.get_item(submission_id)
+                except aiohttp.ContentTypeError as e:
+                    log.warning("Hackernews API problem: %s")
+                    log.exception(e)
+                    continue
                 for kid_id in user_submission.get("kids", []):
                     if kid_id <= self.highest_handled_submission_id:
                         continue
