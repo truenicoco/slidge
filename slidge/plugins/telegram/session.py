@@ -113,36 +113,31 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         return result.id
 
     async def active(self, c: "Contact"):
-        action = tgapi.OpenChat.construct(chat_id=c.legacy_id)
-        res = await self.tg.request(action)
+        res = await self.tg.api.open_chat(chat_id=c.legacy_id)
         self.log.debug("Open chat res: %s", res)
 
     async def inactive(self, c: "Contact"):
-        action = tgapi.CloseChat.construct(chat_id=c.legacy_id)
-        res = await self.tg.request(action)
+        res = await self.tg.api.close_chat(chat_id=c.legacy_id)
         self.log.debug("Close chat res: %s", res)
 
     async def composing(self, c: "Contact"):
-        action = tgapi.SendChatAction.construct(
+        res = self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
             message_thread_id=0,  # TODO: check what telegram's threads really are
         )
-
-        res = await self.tg.request(action)
         self.log.debug("Send composing res: %s", res)
 
     async def paused(self, c: "Contact"):
         pass
 
     async def displayed(self, tg_id: int, c: "Contact"):
-        query = tgapi.ViewMessages.construct(
+        res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
             message_thread_id=0,
             message_ids=[tg_id],
             force_read=True,
         )
-        res = await self.tg.request(query)
         self.log.debug("Send chat action res: %s", res)
 
     async def add_contacts_to_roster(self):
@@ -153,10 +148,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     "Skipping %s as it is of type %s", chat.title, chat.type_
                 )
             if isinstance(chat.photo, tgapi.ChatPhotoInfo):
-                query = tgapi.DownloadFile.construct(
+                response = await self.tg.api.download_file(
                     file_id=chat.photo.big.id, synchronous=True, priority=32
                 )
-                response: tgapi.File = await self.tg.request(query)
                 with open(response.local.path, "rb") as f:
                     avatar = f.read()
             else:
@@ -170,30 +164,27 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
-        query = tgapi.EditMessageText.construct(
+        await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
             message_id=legacy_msg_id,
             input_message_content=tgapi.InputMessageText.construct(
                 text=tgapi.FormattedText.construct(text=text)
             ),
         )
-        await self.tg.request(query)
         await f
 
     async def search(self, form_values: dict[str, str]):
         phone = form_values["phone"]
-        response: tgapi.ImportedContacts = await self.tg.request(
-            query=tgapi.ImportContacts(
-                contacts=[
-                    tgapi.Contact(
-                        phone_number=phone,
-                        user_id=0,
-                        first_name=phone,
-                        vcard="",
-                        last_name="",
-                    )
-                ]
-            )
+        response = await self.tg.api.import_contacts(
+            contacts=[
+                tgapi.Contact(
+                    phone_number=phone,
+                    user_id=0,
+                    first_name=phone,
+                    vcard="",
+                    last_name="",
+                )
+            ]
         )
         user_id = response.user_ids[0]
         if user_id == 0:
@@ -210,13 +201,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def react(self, legacy_msg_id, emojis, c: "Contact"):
         if len(emojis) == 0:
-            r = await self.tg.request(
-                query=tgapi.SetMessageReaction(
-                    chat_id=c.legacy_id,
-                    message_id=legacy_msg_id,
-                    reaction="",
-                    is_big=False,
-                )
+            r = await self.tg.api.set_message_reaction(
+                chat_id=c.legacy_id,
+                message_id=legacy_msg_id,
+                reaction="",
+                is_big=False,
             )
             self.log.debug("Remove reaction response: %s", r)
             return
@@ -231,20 +220,17 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         emoji = emojis[-1]
 
         try:
-            r = await self.tg.request(
-                query=tgapi.SetMessageReaction(
-                    chat_id=c.legacy_id,
-                    message_id=legacy_msg_id,
-                    reaction=emoji,
-                    is_big=False,
-                )
+            r = await self.tg.api.set_message_reaction(
+                chat_id=c.legacy_id,
+                message_id=legacy_msg_id,
+                reaction=emoji,
+                is_big=False,
             )
         except BadRequest:
-            available: tgapi.AvailableReactions = await self.tg.request(
-                tgapi.GetMessageAvailableReactions(
-                    chat_id=c.legacy_id, message_id=legacy_msg_id
-                )
+            available = await self.tg.api.get_message_available_reactions(
+                chat_id=c.legacy_id, message_id=legacy_msg_id
             )
+
             available_emojis = [a.reaction for a in available.reactions]
             self.send_gateway_message(
                 "Error: unlike XMPP, telegram does not allow arbitrary emojis to be used as reactions. "
@@ -259,20 +245,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def retract(self, legacy_msg_id, c):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
-        r = await self.tg.request(
-            tgapi.DeleteMessages(
-                chat_id=c.legacy_id, message_ids=[legacy_msg_id], revoke=True
-            )
-        )
+        r = await self.tg.api.delete_messages([legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
-
-    async def list_sessions(self) -> tgapi.Sessions:
-        return await self.tg.request(tgapi.GetActiveSessions())
-
-    async def terminate_session(self, session_id):
-        return await self.tg.request(tgapi.TerminateSession(session_id=session_id))
 
 
 def escape(t: str):

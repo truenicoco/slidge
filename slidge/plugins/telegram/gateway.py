@@ -72,7 +72,7 @@ class Gateway(BaseGateway["Session"]):
         session = self._session_cls.from_stanza(iq)
 
         form = self["xep_0004"].make_form("form", "Active telegram sessions")
-        tg_sessions = (await session.list_sessions()).sessions
+        tg_sessions = (await session.tg.api.get_active_sessions()).sessions
         form.add_field(
             "tg_session_id",
             ftype="list-single",
@@ -118,7 +118,7 @@ class Gateway(BaseGateway["Session"]):
 
         if terminate:
             session: Session = adhoc_session["slidge_session"]
-            await session.terminate_session(int(form_values["tg_session_id"]))
+            await session.tg.api.terminate_session(int(form_values["tg_session_id"]))
             info = "Session terminated."
         else:
             info = "Session not terminated."

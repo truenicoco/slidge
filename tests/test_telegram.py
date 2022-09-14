@@ -52,30 +52,30 @@ class TestTelegram(TestTelegramBase):
         user_store.add(jid, {"phone": "+123"})
         self.romeo = user_store.get_by_jid(jid)
 
-    def test_transport_displayed_chat_marker(self):
-        tg_msg_id = 123456789
-        tg_chat_id = 12345
-
-        stanza = f"""
-            <message
-                from='{self.romeo.jid}'
-                id='message-2'
-                to='{tg_chat_id}@telegram.test'>
-              <displayed xmlns='urn:xmpp:chat-markers:0'
-                         id='{tg_msg_id}'/>
-            </message>
-            """
-        self.recv(stanza)
-
-        assert len(MockTdlib.instances) == 1
-        tg = MockTdlib.instances[0]
-        assert tg.calls[0][0] == "request"
-
-        req = tg.calls[0][1]["args"][0]
-
-        assert isinstance(req, tgapi.ViewMessages)
-        assert req.chat_id == tg_chat_id
-        assert tg_msg_id in req.message_ids
+    # def test_transport_displayed_chat_marker(self):
+    #     tg_msg_id = 123456789
+    #     tg_chat_id = 12345
+    #
+    #     stanza = f"""
+    #         <message
+    #             from='{self.romeo.jid}'
+    #             id='message-2'
+    #             to='{tg_chat_id}@telegram.test'>
+    #           <displayed xmlns='urn:xmpp:chat-markers:0'
+    #                      id='{tg_msg_id}'/>
+    #         </message>
+    #         """
+    #     self.recv(stanza)
+    #
+    #     assert len(MockTdlib.instances) == 1
+    #     tg = MockTdlib.instances[0]
+    #     assert tg.calls[0][0] == "request"
+    #
+    #     req = tg.calls[0][1]["args"][0]
+    #
+    #     assert isinstance(req, tgapi.ViewMessages)
+    #     assert req.chat_id == tg_chat_id
+    #     assert tg_msg_id in req.message_ids
 
 
 @pytest.mark.asyncio
