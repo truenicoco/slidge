@@ -48,7 +48,7 @@ Define the gateway component's privileges in the appropriate virtualhost block:
 
     VirtualHost "example.com"
       privileged_entities = {
-        ["legacy-network.example.com"] = {
+        ["superduper.example.com"] = {
           roster = "both";
           message = "outgoing";
         }
