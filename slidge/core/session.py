@@ -397,6 +397,14 @@ class BaseSession(
         """
         raise NotImplementedError
 
+    def re_login(self):
+        """
+        Logout then re-login
+
+        No reason to override this
+        """
+        self.xmpp.re_login(self)
+
     async def send_text(
         self,
         t: str,

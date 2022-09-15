@@ -313,6 +313,13 @@ class BaseGateway(
             else:
                 session.send_gateway_status(status, show="chat")
 
+    def re_login(self, session: "SessionType"):
+        async def w():
+            await session.logout()
+            await self._login_wrap(session)
+
+        self.loop.create_task(w())
+
     def __add_adhoc_commands(self):
         # TODO: this should only be advertised to admins
         # Not a big deal since we need to check if 'from' is an admin in the handler
