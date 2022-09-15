@@ -2,7 +2,7 @@ from slidge import *
 
 REGISTRATION_INSTRUCTIONS = (
     "Fill the form to use your XMPP account as a signal client. "
-    "More information at https://slidge.readthedocs.io/en/latest/user/signal.html"
+    "More information at https://slidge.readthedocs.io/en/latest/user/plugins/signal.html"
 )
 REGISTRATION_FIELDS = [
     FormField(var="phone", label="Phone number (ex: +123456789)", required=True),
