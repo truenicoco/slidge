@@ -149,7 +149,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 )
             if isinstance(chat.photo, tgapi.ChatPhotoInfo):
                 response = await self.tg.api.download_file(
-                    file_id=chat.photo.big.id, synchronous=True, priority=32
+                    file_id=chat.photo.big.id,
+                    synchronous=True,
+                    priority=32,
+                    offset=0,
+                    limit=0,
                 )
                 with open(response.local.path, "rb") as f:
                     avatar = f.read()
