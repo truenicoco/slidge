@@ -3,6 +3,7 @@ import concurrent.futures
 import io
 import logging
 import pprint
+import threading
 from pathlib import Path
 from threading import Lock, Thread
 from typing import Any, Optional
@@ -33,6 +34,14 @@ class Gateway(BaseGateway):
     ):
         pass
 
+    def __init__(self, args):
+        super().__init__(args)
+        self.executor = concurrent.futures.ThreadPoolExecutor()
+
+    def shutdown(self):
+        self.executor.shutdown()
+        super().shutdown()
+
 
 class Roster(LegacyRoster):
     # ':' is forbidden in the username part of a JID
@@ -56,10 +65,33 @@ class Contact(LegacyContact):
     pass
 
 
+class ListenThread(Thread):
+    def __init__(self, session: "Session", *a, **kw):
+        super().__init__(*a, **kw)
+        self.name = f"listen-{session.user.bare_jid}"
+        self.session = session
+        self._target = self.skype_blocking
+        self.stop_event = threading.Event()
+
+    def skype_blocking(self):
+        session = self.session
+        sk = session.sk
+        loop = session.xmpp.loop
+        while True:
+            if self.stop_event.is_set():
+                break
+            for event in sk.getEvents():
+                # no need to sleep since getEvents blocks for 30 seconds already
+                asyncio.run_coroutine_threadsafe(session.on_skype_event(event), loop)
+
+    def stop(self):
+        self.stop_event.set()
+
+
 class Session(BaseSession[Contact, Roster, Gateway]):
     skype_token_path: Path
     sk: skpy.Skype
-    thread: Optional[Thread]
+    thread: Optional[ListenThread]
     sent_by_user_to_ack: dict[int, asyncio.Future]
     unread_by_user: dict[int, skpy.SkypeMsg]
     send_lock: Lock
@@ -72,7 +104,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.send_lock = Lock()
 
     async def async_wrap(self, func, *args):
-        return await self.xmpp.loop.run_in_executor(executor, func, *args)
+        return await self.xmpp.loop.run_in_executor(self.xmpp.executor, func, *args)
 
     async def login(self):
         f = self.user.registration_form
@@ -98,18 +130,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 c.avatar = contact.avatar
             await c.add_to_roster()
             c.online()
-        # TODO: close this gracefully on exit
-        self.thread = thread = Thread(target=self.skype_blocking)
+        # TODO: Creating 1 thread per user is probably very not optimal.
+        #       We should contribute to skpy to make it aiohttp compatible…
+        self.thread = thread = ListenThread(self)
         thread.start()
         return f"Connected as '{self.sk.userId}'"
-
-    def skype_blocking(self):
-        while True:
-            for event in self.sk.getEvents():
-                # no need to sleep since getEvents blocks for 30 seconds already
-                asyncio.run_coroutine_threadsafe(
-                    self.on_skype_event(event), self.xmpp.loop
-                )
 
     async def on_skype_event(self, event: skpy.SkypeEvent):
         log.debug("Skype event: %s", event)
@@ -167,7 +192,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         return skype_msg.id
 
     async def logout(self):
-        pass
+        if self.thread is not None:
+            self.thread.stop()
+            self.thread.join()
 
     async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
         async with aiohttp.ClientSession() as session:
@@ -189,10 +216,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def composing(self, c: LegacyContact):
-        executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, True)
+        self.xmpp.executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, True)
 
     async def paused(self, c: LegacyContact):
-        executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, False)
+        self.xmpp.executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, False)
 
     async def displayed(self, legacy_msg_id: int, c: LegacyContact):
         try:
@@ -202,10 +229,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 "We did not transmit: %s (%s)", legacy_msg_id, self.unread_by_user
             )
         else:
-            # FIXME: this raises HTTP 400 and does not mark the message as read
-            # https://github.com/Terrance/SkPy/issues/207
             log.debug("Calling read on %s", skype_msg)
-            await self.async_wrap(skype_msg.read)
+            try:
+                await self.async_wrap(skype_msg.read)
+            except skpy.SkypeApiException as e:
+                # FIXME: this raises HTTP 400 and does not mark the message as read
+                # https://github.com/Terrance/SkPy/issues/207
+                self.log.exception(e)
 
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
@@ -214,8 +244,20 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
 
-executor = (
-    concurrent.futures.ThreadPoolExecutor()
-)  # TODO: close this gracefully on exit
+def handle_thread_exception(args):
+    # TODO: establish what exceptions are OK (eg temporary network failures)
+    #       and which one should trigger killing the session and/or exiting slidge
+    #       and/or relogging in
+    log.error("Exception in thread: %s", args)
+    if (thread := getattr(args, "thread")) is not None:
+        if isinstance(thread, ListenThread):
+            session = thread.session
+            log.warning("Attempting re-login for %s", session.user)
+            thread.stop()
+            session.re_login()
+    raise RuntimeError
+
+
+threading.excepthook = handle_thread_exception
 
 log = logging.getLogger(__name__)
