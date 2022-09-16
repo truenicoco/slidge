@@ -58,6 +58,18 @@ Then either restart the prosody server, or reload config. You might need to use
 `mod_reload_component <https://modules.prosody.im/mod_reload_components.html>`_
 for all changes to be taken into account (restarting prosody is the easiest way to go).
 
+Upload component
+****************
+
+
+Slidge to display information provided by any chat network use XEP-0363 (HTTP File Upload). To display qrcode or any other element to permit some action as device association. It's required to enable propsody http_file_share plugin
+
+.. code-block:: lua
+
+   Component "upload.example.org" "http_file_share"
+
+To get more informaton about component configuration : https://prosody.im/doc/modules/mod_http_file_share
+
 ejabberd
 --------
 
@@ -95,3 +107,29 @@ Roster management also requires roster versioning.
           outgoing: superduper.example.com
       mod_roster:
         versioning: true
+
+Upload component
+****************
+
+Slidge to display information provided by any chat network use XEP-0363 (HTTP File Upload). 
+To display qrcode or any other element to permit some action as device association.
+
+.. code-block:: yaml
+
+    listen:
+      -
+        port: 5443
+        module: ejabberd_http
+        tls: true
+        request_handlers:
+          /upload: mod_http_upload
+
+.. code-block:: yaml
+
+    modules:
+      mod_http_upload:
+        docroot: /ejabberd/upload
+        put_url: "https://@HOST@:5443/upload"
+
+
+To get more informaton about component configuration : https://docs.ejabberd.im/admin/configuration/modules/#mod-http-upload
