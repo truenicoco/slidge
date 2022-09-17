@@ -2,8 +2,17 @@ Configure the XMPP server
 =========================
 
 Slidge requires a running and properly configured XMPP server running and accepting
-component connections. An upload (XEP:`0363`) component is also required to exchange files
-(eg. QR codes) with the gateway and the legacy contacts.
+component connections.
+
+Slidge uses :XEP:`0363` (HTTP File Upload) to receive files from your contacts.
+For some networks, this is also required to receive QR codes to scan in official apps.
+Chances are you already have this component enabled in your XMPP server config.
+
+Slidge also uses :XEP:`0356` (Privileged Entity) to:
+
+- manage the user's roster, i.e., automatically fill it up with legacy contacts
+- impersonate the user to keep sent history and read markers in sync if they use
+  an official app and not slidge exclusively to send messages on the legacy network.
 
 Prosody
 -------
@@ -22,16 +31,11 @@ Add a component block below the appropriate virtualhost in ``prosody.cfg.lua``
 mod_privilege
 *************
 
-Use `mod_privilege <https://modules.prosody.im/mod_privilege.html>`_ to allow slidge to:
-
-- manage the gateway user's roster, i.e., automatically add legacy contacts
-- impersonate the user to send XMPP carbons for messages and markers sent by the user
-  from the official legacy client
-
 Installation
 ~~~~~~~~~~~~
 
-Starting with prosody 0.12, installing the module is as easy as:
+Starting with prosody 0.12, installing the  `mod_privilege <https://modules.prosody.im/mod_privilege.html>`_
+community module is as easy as:
 
 .. code-block:: bash
 
@@ -61,14 +65,13 @@ for all changes to be taken into account (restarting prosody is the easiest way 
 Upload component
 ****************
 
-
-Slidge to display information provided by any chat network use XEP-0363 (HTTP File Upload). To display qrcode or any other element to permit some action as device association. It's required to enable propsody http_file_share plugin
+In prosody the easiest option is to use the
+`http_file_share <https://prosody.im/doc/modules/mod_http_file_share>`_ module.
 
 .. code-block:: lua
 
    Component "upload.example.org" "http_file_share"
 
-To get more informaton about component configuration : https://prosody.im/doc/modules/mod_http_file_share
 
 ejabberd
 --------
@@ -93,9 +96,7 @@ Change the port, hostname and secret accordingly.
 mod_privilege
 *************
 
-This is required to let slidge manage your roster and synchronize your messages
-sent from an official client.
-Roster management also requires roster versioning.
+Roster management also requires roster versioning enabled.
 
 .. code-block:: yaml
 
@@ -110,9 +111,6 @@ Roster management also requires roster versioning.
 
 Upload component
 ****************
-
-Slidge to display information provided by any chat network use XEP-0363 (HTTP File Upload). 
-To display qrcode or any other element to permit some action as device association.
 
 .. code-block:: yaml
 
@@ -132,4 +130,5 @@ To display qrcode or any other element to permit some action as device associati
         put_url: "https://@HOST@:5443/upload"
 
 
-To get more informaton about component configuration : https://docs.ejabberd.im/admin/configuration/modules/#mod-http-upload
+To get more informaton about component configuration, see `ejabberd's docs
+<https://docs.ejabberd.im/admin/configuration/modules/#mod-http-upload>`_.
