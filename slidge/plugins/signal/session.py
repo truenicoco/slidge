@@ -181,8 +181,11 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 # Probably a 'message read' marker
                 log.debug("No sent message in this sync message")
                 return
-            contact = await self.contacts.by_json_address(sent.destination)
             sent_msg = sent.message
+            if sent_msg.group or sent_msg.groupV2:
+                return
+
+            contact = await self.contacts.by_json_address(sent.destination)
 
             if (body := sent_msg.body) is not None:
                 contact.carbon(
@@ -207,6 +210,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         contact = await self.contacts.by_json_address(msg.source)
 
         if (data := msg.data_message) is not None:
+            if data.group or data.groupV2:
+                return
             if (quote := data.quote) is None:
                 reply_to_msg_id = None
             else:
@@ -236,6 +241,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 contact.retract(delete.target_sent_timestamp)
 
         if (typing_message := msg.typing_message) is not None:
+            if typing_message.group_id:
+                return
             action = typing_message.action
             if action == "STARTED":
                 contact.active()
