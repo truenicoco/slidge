@@ -15,13 +15,12 @@ environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
   PLUGINS: facebook signal telegram skype hackernews mattermost steam discord
+  POETRY_EXTRAS: facebook signal telegram skype mattermost steam discord
   DOCKER_BUILDKIT: "1"
 tasks:
   - setup-poetry: |
       cd slidge
-      for LEGACY in $PLUGINS; do
-        poetry install -E $LEGACY || true  # some plugins do not have extras
-      done
+      poetry install --extras "$POETRY_EXTRAS"
   - muc-bot: |
       cd slidge
       poetry run python .builds/muc_bot.py || true  # let's not block if this fails

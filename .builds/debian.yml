@@ -1,8 +1,7 @@
 image: debian/stable
 
 packages:
-  - dh-virtualenv
-  - virtualenv
+#  - virtualenv
   - devscripts
 #  - git-buildpackage
   - debhelper-compat
@@ -10,11 +9,13 @@ packages:
   - python3-dev
   - libffi-dev
   - cython3
+  - dh-virtualenv
 
 environment:
   DEBFULLNAME: IGImonster
   EMAIL: igimonster@mailbox.org
   PLUGINS: facebook signal telegram skype hackernews mattermost steam discord
+  POETRY_EXTRAS: facebook signal telegram skype mattermost steam discord
 
 artifacts:
   - slidge-debian-amd64.tar
@@ -30,9 +31,12 @@ tasks:
         fi
       done
   - export-requirements: |
-      pip install poetry
+      # https://github.com/python-poetry/poetry/issues/5241
+      sudo apt-get remove python3-virtualenv -y
+      curl -sSL https://install.python-poetry.org | python3 -
       cd slidge
-      ~/.local/bin/poetry export $(for p in $PLUGINS; do echo -n "-E $p "; done) -o requirements.txt
+      ~/.local/bin/poetry export $(for p in $POETRY_EXTRAS; do echo -n "-E $p "; done) -o requirements.txt
+      sudo apt-get install python3-virtualenv dh-virtualenv -y
   - generate-plugin-files: |
       cd slidge/debian
       mkdir systemd
