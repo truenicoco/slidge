@@ -5,8 +5,9 @@ Launch the gateway component
 Debian packages
 ===============
 
-Edit the example ``/etc/slidge/conf.d/common.conf`` and ``/etc/slidge/superduper.conf`` to properly
-configure and start a service with ``sudo systemctl enable --now slidge-superduper``.
+Edit ``/etc/slidge/conf.d/common.conf``, edit ``/etc/slidge/conf.d/superduper.conf.example``
+and remove the ``.example`` extension.
+Enable and start the service with ``sudo systemctl enable --now slidge@superduper.service``.
 
 Containers
 ==========

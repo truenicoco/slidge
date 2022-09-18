@@ -1,10 +1,10 @@
 [Unit]
-Description=Slidge XMPP --PLUGIN-- bridge
+Description=Slidge XMPP %i bridge
 Wants=network-online.target
 After=network.target network-online.target
 
 [Service]
-ExecStart=/usr/bin/slidge -c /etc/slidge/--PLUGIN--.conf
+ExecStart=/usr/bin/slidge -c /etc/slidge/conf.d/%i.conf
 KillSignal=SIGINT
 User=slidge
 Group=slidge
