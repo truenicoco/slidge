@@ -437,6 +437,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             filename=filename,
             content_type=content_type,
             input_file=input_file,
+            ifrom=self.xmpp.boundjid.bare,
         )
         msg = self.__make_message()
         self.__make_reply(msg, reply_to_msg_id)

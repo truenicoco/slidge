@@ -768,7 +768,9 @@ class BaseGateway(
         :param msg_kwargs:
         :return:
         """
-        url = await self["xep_0363"].upload_file(filename=filename)
+        url = await self["xep_0363"].upload_file(
+            filename=filename, ifrom=self.boundjid.bare
+        )
         msg = self.make_message(**msg_kwargs)
         msg["oob"]["url"] = url
         msg["body"] = url
