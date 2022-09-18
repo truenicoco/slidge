@@ -447,6 +447,9 @@ class XEP_0030(BasePlugin):
                          the XEP-0059 plugin, if the plugin is loaded.
                          Otherwise the parameter is ignored.
         """
+        if ifrom is None and self.xmpp.is_component:
+            ifrom = self.xmpp.boundjid.bare
+
         if local or local is None and jid is None:
             items = await self.api['get_items'](jid, node, ifrom, kwargs)
             return self._wrap(kwargs.get('ifrom', None), jid, items)
