@@ -22,10 +22,10 @@ from . import txt
 
 
 def handle_unregistered_recipient(func):
-    @functools.wraps
-    def wrapped(*a, **kw):
+    @functools.wraps(func)
+    async def wrapped(*a, **kw):
         try:
-            func(*a, **kw)
+            return await func(*a, **kw)
         except sigexc.UnregisteredUserError:
             raise XMPPError(
                 "item-not-found",
