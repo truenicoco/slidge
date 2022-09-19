@@ -774,6 +774,7 @@ class BaseGateway(
         msg = self.make_message(**msg_kwargs)
         msg["oob"]["url"] = url
         msg["body"] = url
+        msg.set_from(self.boundjid.bare)
         msg.send()
 
     async def send_qr(self, text: str, **msg_kwargs):
