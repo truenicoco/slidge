@@ -162,6 +162,9 @@ services:
     image: signald/signald:0.21.1
     volumes:
       - ./persistent/signald:/signald
+    environment:
+      - SIGNALD_TRUST_ALL_KEYS:true
+      - SIGNALD_TRUST_NEW_KEYS:true
 
   movim:
     environment:
