@@ -10,7 +10,8 @@ Slidge 🛷
 Turn any XMPP client into that fancy multiprotocol chat app that every cool kid want.
 
 [![Documentation status](https://readthedocs.org/projects/slidge/badge/?version=latest)](https://slidge.readthedocs.io/)
-[![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/.build.yml?)
+[![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
+[![Debian package](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
 
 Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
@@ -27,7 +28,7 @@ instant messaging features:
 | Telegram   | ✅            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
 | Discord    | ❌            | ✅         | N/A      | ✅         | ✅       | ~        | ✅          | ✅        |
 | Steam      | ✅            | ✅         | N/A      | ❌         | N/A     | ~        | N/A        | N/A      |
-| Mattermost | ~            | ✅         | N/A      | ✅         | ✅       | ✅        | ✅          | ❌        |
+| Mattermost | ~            | ✅         | ~        | ✅         | ✅       | ✅        | ✅          | ❌        |
 | Facebook   | ❌            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
 | Skype      | ❌            | ✅         | ❌        | ✅         | ❌       | ❌        | ❌          | ❌        |
 
@@ -47,72 +48,47 @@ N/A means that the legacy network does not have an equivalent of this XMPP featu
 (because XMPP is better, what did you think?).
 
 **WARNING**: you may break the terms of use of a legacy network and end up getting your account locked
-by using slidge. Refer to the [keeping a low profile](https://slidge.readthedocs.io/en/latest/user/low_profile.html)
+by using slidge. Refer to the
+[keeping a low profile](https://slidge.readthedocs.io/en/latest/user/low_profile.html)
 documentation page for more info.
 
 Status
 ------
 
-Slidge is alpha-grade software.
+Slidge is beta-grade software.
 Right now, only direct messages are implemented, no group chat stuff at all.
 Direct messaging does (more or less) work though.
 Any contribution whatsoever (testing, patches, suggestions, beer, …) is more than welcome.
-Don't be shy!
 
-Testing locally should be fairly easy, so please go ahead and give me some
+Try slidge and give us some
 feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
-[issue tracker](https://todo.sr.ht/~nicoco/slidge) or in my
+[issue tracker](https://todo.sr.ht/~nicoco/slidge) or in the
 [public inbox](https://lists.sr.ht/~nicoco/public-inbox).
+Don't be shy!
 
 Installation
 ------------
 
-#### docker-compose
+### containers
 
-Docker-compose spins up a local XMPP server preconfigured for you., with a ``test@localhost`` / ``password``
-account
+Containers are available on [docker hub](https://hub.docker.com/u/nicocool84).
 
-```sh
-docker-compose up
-```
+### debian
 
-For the other options, you need a
-[configured](https://slidge.readthedocs.io/en/latest/admin/general.html#configure-the-xmpp-server)
-XMPP server.
+Debian packages are built on each push to master as artifacts of
+[this build job](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
 
-#### poetry
+### pip
 
-```sh
-poetry install --extras signal  # you can replace signal with any network listed in the table above
-poetry run python -m slidge --legacy-module=slidge.plugins.signal
-```
-
-#### pip
+Tagged releases are uploaded to [pypi](https://pypi.org/project/slidge/).
 
 ```sh
 pip install slidge[signal]  # you can replace signal with any network listed in the table above
 python -m slidge --legacy-module=slidge.plugins.signal
 ```
 
-### XMPP client
-
-#### movim
-
-If you used docker-compose, you should be able to use the [movim](https://movim.eu) client
-from your browser at http://localhost:8888
-
-Unfortunately, the movim UI thinks that ``test@localhost`` is not a valid JID and does not let you click
-on the "Connect" button.
-As a workaround, use your browser dev tools to inspect and modify the ``<input id="username"`` in order to
-remove the ``pattern="^[^...`` attribute.
-
-Then go to the Configuration/Account tab. You should be able to register to the slidge gateways from here.
-
-#### Gajim
-
-Install and launch [gajim](https://gajim.org) and add your XMPP account.
-Go to "Accounts"→"Discover services".
-You should see the slidge gateways as server components.
+If you're looking for the bleeding edge, download an artifact
+[here](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?).
 
 About privacy
 -------------
