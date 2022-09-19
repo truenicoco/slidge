@@ -208,7 +208,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         try:
             await self.xmpp["xep_0356"].set_roster(**kw)
         except PermissionError:
-            await self.xmpp["xep_0356_old"].set_roster(**kw)
+            try:
+                await self.xmpp["xep_0356_old"].set_roster(**kw)
+            except PermissionError:
+                log.warning(
+                    "Slidge does not have privileges to add contacts to the roster."
+                    "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
+                    "for more info."
+                )
+                return
 
         self.added_to_roster = True
 
@@ -453,7 +461,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         try:
             self.xmpp["xep_0356"].send_privileged_message(msg)
         except PermissionError:
-            self.xmpp["xep_0356_old"].send_privileged_message(msg)
+            try:
+                self.xmpp["xep_0356_old"].send_privileged_message(msg)
+            except PermissionError:
+                log.warning(
+                    "Slidge does not have privileges to send message on behalf of user."
+                    "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
+                    "for more info."
+                )
+                return
         return msg.get_id()
 
     def carbon(
