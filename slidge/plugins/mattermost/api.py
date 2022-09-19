@@ -8,6 +8,7 @@ from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
     get_channel_members,
     get_channels_for_team_for_user,
+    view_channel,
 )
 from mattermost_api_reference_client.api.files import get_file, upload_file
 from mattermost_api_reference_client.api.posts import (
@@ -30,7 +31,12 @@ from mattermost_api_reference_client.api.users import (
     get_users_by_ids,
 )
 from mattermost_api_reference_client.client import AuthenticatedClient
-from mattermost_api_reference_client.models import Reaction, Status, User
+from mattermost_api_reference_client.models import (
+    Reaction,
+    Status,
+    User,
+    ViewChannelJsonBody,
+)
 from mattermost_api_reference_client.models.create_post_json_body import (
     CreatePostJsonBody,
 )
@@ -252,6 +258,13 @@ class MattermostClient:
     async def delete_reaction(self, post_id: str, emoji_name: str):
         await delete_reaction.asyncio(
             await self.mm_id, post_id, emoji_name=emoji_name, client=self.http
+        )
+
+    async def view_channel(self, channel_id: str):
+        await view_channel.asyncio(
+            await self.mm_id,
+            client=self.http,
+            json_body=ViewChannelJsonBody(channel_id=channel_id),
         )
 
 

@@ -138,6 +138,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     ws: Websocket
     messages_waiting_for_echo: set[str]
     send_lock: asyncio.Lock
+    view_futures: dict[str, asyncio.Future[None]]
 
     def post_init(self):
         self.messages_waiting_for_echo = set()
@@ -154,10 +155,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             re.sub("^http", "ws", f["url"]) + f["basepath"] + f["basepath_ws"],
             f["token"],
         )
+        self.view_futures = {}
 
     async def login(self):
         await self.mm_client.login()
-
         await self.add_contacts()
         self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
         if self.mm_client.me is None:
@@ -242,6 +243,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 pass
         elif event.type == EventType.ChannelViewed:
             channel_id = event.data["channel_id"]
+            try:
+                f = self.view_futures.pop(channel_id)
+            except KeyError:
+                pass
+            else:
+                f.set_result(None)
+                return
             posts = await self.mm_client.get_posts_for_channel(channel_id)
             last_msg_id = posts.posts.additional_keys[-1]
             if (c := await self.contacts.by_direct_channel_id(channel_id)) is None:
@@ -306,8 +314,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def displayed(self, legacy_msg_id: Any, c: Contact):
-        # no read marks in MM?
-        pass
+        channel = await c.direct_channel_id()
+        f = self.view_futures[channel] = self.xmpp.loop.create_future()
+        await self.mm_client.view_channel(channel)
+        await f
 
     async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
         await self.mm_client.update_post(legacy_msg_id, text)
