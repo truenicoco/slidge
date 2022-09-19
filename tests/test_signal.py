@@ -32,41 +32,6 @@ class TestSignalBase(SlidgeTest):
         jid = "signal.test"
         user_jid_validator = ".*"
 
-    async def test_roster(self):
-        class MockGateway:
-            boundjid = JID("test")
-
-            async def set_vcard_avatar(*a, **kw):
-                pass
-
-        class MockUser:
-            pass
-
-        class MockSession:
-            xmpp = MockGateway
-            user = MockUser
-
-        phone = "+xxx"
-        uuid = "UUID"
-
-        roster = slidge.plugins.signal.Roster(MockSession)
-        MockSession.contacts = roster
-        c = roster.by_phone(phone)
-        assert c.uuid is None
-        assert c.phone == phone
-
-        c2 = await roster.by_json_address(sigapi.JsonAddressv1(number=phone, uuid=uuid))
-
-        assert c is c2
-        assert c2.uuid == uuid
-
-        c7 = await roster.by_json_address(sigapi.JsonAddressv1(number=phone, uuid=uuid))
-        c4 = roster.by_phone(phone)
-        c5 = roster.by_legacy_id(phone)
-        c6 = await roster.by_uuid(uuid)
-        c3 = roster.by_jid(JID(phone + "@" + MockGateway.boundjid.bare))
-        assert c3 is c4 is c5 is c6 is c7
-        assert c6.signal_address == sigapi.JsonAddressv1(number=phone, uuid=uuid)
 
 
 class TestSignalUnregistered(TestSignalBase):

@@ -21,6 +21,7 @@ def ignore_message_to_component(func):
     @functools.wraps(func)
     async def wrapped(self: T, msg: Message):
         if msg.get_to() != self.xmpp.boundjid.bare:
+            log.debug("FUNC: %s", func)
             return await func(self, msg)
         log.debug("Ignoring message to component: %s %s", self, msg)
 
@@ -243,6 +244,7 @@ class BaseSession(
         :return:
         """
         if m.get_to() != self.xmpp.boundjid.bare:
+            log.debug("COMPOSING: %s", self.contacts.by_stanza(m))
             await self.composing(self.contacts.by_stanza(m))
 
     @ignore_message_to_component

@@ -172,7 +172,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             full_profile = await (await self.signal).get_profile(
                 account=self.phone, address=profile.address
             )
-            contact = await self.contacts.by_json_address(profile.address)
+            contact = self.contacts.by_json_address(profile.address)
             contact.name = profile.name or profile.profile_name
             if contact.name is not None:
                 contact.name = contact.name.replace("\u0000", "")
@@ -201,7 +201,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if sent_msg.group or sent_msg.groupV2:
                 return
 
-            contact = await self.contacts.by_json_address(sent.destination)
+            contact = self.contacts.by_json_address(sent.destination)
 
             if (body := sent_msg.body) is not None:
                 contact.carbon(
@@ -223,7 +223,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if (delete := sent_msg.remoteDelete) is not None:
                 contact.carbon_retract(delete.target_sent_timestamp)
 
-        contact = await self.contacts.by_json_address(msg.source)
+        contact = self.contacts.by_json_address(msg.source)
 
         if (data := msg.data_message) is not None:
             if data.group or data.groupV2:
@@ -305,7 +305,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 )
             ).identities
             ans = await self.input(
-                f"The identity of {c.phone} has changed. "
+                f"The identity of {c.legacy_id} has changed. "
                 f"Do you want to trust all their identities and resend the message?"
             )
             if ans.lower().startswith("y"):
@@ -349,6 +349,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
     @handle_unregistered_recipient
     async def composing(self, c: "Contact"):
+        self.log.debug("COMPOSING %s", c)
         await (await self.signal).typing(
             account=self.phone,
             address=c.signal_address,
