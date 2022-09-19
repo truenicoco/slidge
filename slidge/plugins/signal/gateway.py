@@ -32,6 +32,10 @@ class Gateway(BaseGateway):
 
     ROSTER_GROUP = "Signal"
 
+    SEARCH_FIELDS = [
+        FormField(var="phone", label="Phone number", required=True),
+    ]
+
     signal: asyncio.Future["Signal"]
     signal_socket: str
     sessions_by_phone: dict[str, "Session"] = {}

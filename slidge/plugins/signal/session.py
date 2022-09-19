@@ -40,8 +40,6 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     Represents a signal account
     """
 
-    # contacts: Roster
-
     def __init__(self, user: GatewayUser):
         """
 
@@ -72,7 +70,24 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         return await self.send_text("Correction: " + text, c)
 
     async def search(self, form_values: dict[str, str]):
-        pass
+        phone = form_values.get("phone")
+        if phone is None:
+            raise ValueError("Empty phone")
+
+        try:
+            address = await (await self.signal).resolve_address(
+                account=self.phone,
+                partial=sigapi.JsonAddressv1(number=form_values.get("phone")),
+            )
+        except sigexc.UnregisteredUserError:
+            raise XMPPError("not-found")
+
+        contact = self.contacts.by_json_address(address)
+
+        return SearchResult(
+            fields=[FormField("phone"), FormField("jid", type="jid-single")],
+            items=[{"phone": phone, "jid": contact.jid.bare}],
+        )
 
     async def login(self):
         """
