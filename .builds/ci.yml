@@ -17,10 +17,15 @@ environment:
   PLUGINS: facebook signal telegram skype hackernews mattermost steam discord
   POETRY_EXTRAS: facebook signal telegram skype mattermost steam discord
   DOCKER_BUILDKIT: "1"
+artifacts:
+  - ./slidge/dist/slidge-0.0.0.dev0-py3-none-any.whl
+  - ./slidge/dist/slidge-0.0.0.dev0.tar.gz
+  - ./slidge-docs.tar.gz
 tasks:
   - setup-poetry: |
       cd slidge
       poetry install --extras "$POETRY_EXTRAS"
+      poetry build
   - muc-bot: |
       cd slidge
       poetry run python .builds/muc_bot.py || true  # let's not block if this fails
@@ -37,6 +42,9 @@ tasks:
       set +x
       curl -X POST -d "branches=master" -d "token=$(cat .rtd-slidge)" $RTD_URL
       set -x
+      cd slidge/docs/
+      make html
+      tar czf ~/slidge-docs.tar.gz build
   - docker-setup: |
       sudo service docker start
       sudo addgroup build docker
