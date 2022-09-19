@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import logging
 import os
 import tempfile
@@ -18,6 +19,20 @@ if TYPE_CHECKING:
     from .gateway import Gateway
 
 from . import txt
+
+
+def handle_unregistered_recipient(func):
+    @functools.wraps
+    def wrapped(*a, **kw):
+        try:
+            func(*a, **kw)
+        except sigexc.UnregisteredUserError:
+            raise XMPPError(
+                "item-not-found",
+                text="This phone number is not associated with a signal account",
+            )
+
+    return wrapped
 
 
 class Session(BaseSession["Contact", "Roster", "Gateway"]):
@@ -47,6 +62,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         except ValueError:
             raise NotImplementedError
 
+    @handle_unregistered_recipient
     async def paused(self, c: "Contact"):
         await (await self.signal).typing(
             account=self.phone, typing=False, address=c.signal_address
@@ -259,6 +275,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 for t in msg.receipt_message.timestamps:
                     contact.displayed(t)
 
+    @handle_unregistered_recipient
     async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None) -> int:
         if reply_to_msg_id is None:
             quote = None
@@ -303,6 +320,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 raise XMPPError(str(result))
         return response.timestamp
 
+    @handle_unregistered_recipient
     async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
         s = await self.signal
         async with aiohttp.ClientSession() as client:
@@ -329,6 +347,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     async def inactive(self, c: "Contact"):
         pass
 
+    @handle_unregistered_recipient
     async def composing(self, c: "Contact"):
         await (await self.signal).typing(
             account=self.phone,
@@ -336,6 +355,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             typing=True,
         )
 
+    @handle_unregistered_recipient
     async def displayed(self, legacy_msg_id: int, c: "Contact"):
         await (await self.signal).mark_read(
             account=self.phone,
@@ -343,6 +363,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             timestamps=[legacy_msg_id],
         )
 
+    @handle_unregistered_recipient
     async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
         remove = len(emojis) == 0
         if len(emojis) == 0:
@@ -378,6 +399,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         ] = self.xmpp.loop.create_future()
         await f
 
+    @handle_unregistered_recipient
     async def retract(self, legacy_msg_id: int, c: "Contact"):
         try:
             await (await self.signal).remote_delete(
