@@ -1,6 +1,6 @@
 import cryptography.fernet
 
-from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost, BiDict
+from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost, BiDict, is_valid_phone_number
 from slidge.util.db import EncryptedShelf
 
 
@@ -68,3 +68,10 @@ def test_encrypted_shelf(tmp_path):
         assert isinstance(e, cryptography.fernet.InvalidToken), e
     else:
         assert False
+
+
+def test_phone_validation():
+    assert is_valid_phone_number("+33")
+    assert not is_valid_phone_number("+")
+    assert not is_valid_phone_number("+asdfsadfa48919sadf")
+    assert not is_valid_phone_number("12597891")

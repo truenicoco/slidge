@@ -4,6 +4,7 @@ from .util import (
     FormField,
     SearchResult,
     SubclassableOnce,
+    is_valid_phone_number,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "FormField",
     "SubclassableOnce",
     "ABCSubclassableOnceAtMost",
+    "is_valid_phone_number",
 ]

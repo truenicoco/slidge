@@ -9,6 +9,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from ...util import is_valid_phone_number
 from .config import get_parser
 
 if typing.TYPE_CHECKING:
@@ -51,7 +52,9 @@ class Gateway(BaseGateway["Session"]):
     async def validate(
         self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]
     ):
-        pass
+        phone = registration_form.get("phone")
+        if not is_valid_phone_number(phone):
+            raise ValueError("Not a valid phone number")
 
     async def unregister(self, user):
         pass

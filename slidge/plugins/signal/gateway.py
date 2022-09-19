@@ -13,6 +13,7 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form
 
 from slidge import *
+from slidge.util import is_valid_phone_number
 
 if TYPE_CHECKING:
     from .session import Session
@@ -196,6 +197,8 @@ class Gateway(BaseGateway):
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
         phone = registration_form.get("phone")
+        if not is_valid_phone_number(phone):
+            raise ValueError("Not a valid phone number")
         for u in user_store.get_all():
             if u.registration_form.get("phone") == phone:
                 raise XMPPError(

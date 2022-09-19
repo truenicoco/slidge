@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import re
 from abc import ABCMeta
 from typing import Generic, Iterable, Literal, Optional, TypeVar
 
@@ -114,6 +115,15 @@ class SubclassableOnce(type):
 
 class ABCSubclassableOnceAtMost(ABCMeta, SubclassableOnce):
     pass
+
+
+def is_valid_phone_number(phone: Optional[str]):
+    if phone is None:
+        return False
+    match = re.match(r"\+\d.*", phone)
+    if match is None:
+        return False
+    return match[0] == phone
 
 
 log = logging.getLogger(__name__)
