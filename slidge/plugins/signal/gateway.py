@@ -189,13 +189,13 @@ class Gateway(BaseGateway):
             msg.reply("I don't know you, so don't talk to me").send()
             return
         if len(args) == 0:
-            phone = await session.input("phone number?")
+            uuid = await session.input("UUID?")
         elif len(args) > 1:
-            msg.reply("Syntax error! Use 'get_identities [PHONE_NUMBER]'").send()
+            msg.reply("Syntax error! Use 'get_identities [UUID]'").send()
             return
         else:
-            phone = args[0]
-        await session.contacts.by_legacy_id(phone).get_identities()
+            uuid = args[0]
+        await session.contacts.by_legacy_id(uuid).get_identities()
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
