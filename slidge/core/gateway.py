@@ -19,6 +19,7 @@ from slixmpp.types import MessageTypes
 from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
+from ..util.xep_0363 import FileUploadError
 from .session import BaseSession, SessionType
 
 
@@ -768,13 +769,25 @@ class BaseGateway(
         :param msg_kwargs:
         :return:
         """
-        url = await self["xep_0363"].upload_file(
-            filename=filename, ifrom=self.boundjid.bare
-        )
         msg = self.make_message(**msg_kwargs)
+        msg.set_from(self.boundjid.bare)
+        try:
+            url = await self["xep_0363"].upload_file(
+                filename=filename, ifrom=self.boundjid.bare
+            )
+        except FileUploadError as e:
+            log.warning(
+                "Something is wrong with the upload service, see the traceback below"
+            )
+            log.exception(e)
+            msg["body"] = (
+                "I tried to send a file, but something went wrong. "
+                "Tell your XMPP admin to check slidge logs."
+            )
+            msg.send()
+            return
         msg["oob"]["url"] = url
         msg["body"] = url
-        msg.set_from(self.boundjid.bare)
         msg.send()
 
     async def send_qr(self, text: str, **msg_kwargs):

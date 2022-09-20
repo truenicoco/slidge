@@ -26,6 +26,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyUserIdType,
 )
+from ..util.xep_0363 import FileUploadError
 
 if TYPE_CHECKING:
     from .session import SessionType
@@ -434,23 +435,37 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         :return: The sent msg stanza
         """
-        log.debug("HOST: %s", self.xmpp.server_host)
+        msg = self.__make_message()
+        self.__make_reply(msg, reply_to_msg_id)
         if url is not None:
             if input_file is not None:
                 raise TypeError("Either a URL or a file-like object")
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as r:
                     input_file = BytesIO(await r.read())
-        url = await self.xmpp["xep_0363"].upload_file(
-            filename=filename,
-            content_type=content_type,
-            input_file=input_file,
-            ifrom=self.xmpp.boundjid.bare,
-        )
-        msg = self.__make_message()
-        self.__make_reply(msg, reply_to_msg_id)
-        msg["oob"]["url"] = url
-        msg["body"] = url
+        try:
+            uploaded_url = await self.xmpp["xep_0363"].upload_file(
+                filename=filename,
+                content_type=content_type,
+                input_file=input_file,
+                ifrom=self.xmpp.boundjid.bare,
+            )
+        except FileUploadError as e:
+            log.warning(
+                "Something is wrong with the upload service, see the traceback below"
+            )
+            log.exception(e)
+            if url is not None:
+                uploaded_url = url
+            else:
+                msg["body"] = (
+                    "I tried to send a file, but something went wrong. "
+                    "Tell your XMPP admin to check slidge logs."
+                )
+                return msg
+
+        msg["oob"]["url"] = uploaded_url
+        msg["body"] = uploaded_url
         self.__send_message(msg, legacy_msg_id)
         return msg
 
