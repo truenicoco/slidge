@@ -9,7 +9,7 @@ Telegram
 Roster
 ******
 
-Contact JIDs are of the form ``123456789@signal.example.com`` where 123456789 is a telegram ID.
+Contact JIDs are of the form ``123456789@slidge-telegram.example.com`` where 123456789 is a telegram ID.
 If you want to find the telegram ID of someone using their phone number, use slidge's search feature:
 :ref:`Finding legacy contacts`.
 

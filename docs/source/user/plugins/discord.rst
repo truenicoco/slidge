@@ -9,5 +9,5 @@ Discord
 Roster
 ******
 
-Contacts JIDs are of the form ``cooldude#4561@signal.example.com`` where ``cooldude`` is a
+Contact JIDs are of the form ``cooldude#4561@slidge-discord.example.com`` where ``cooldude`` is a
 discord username and ``4561`` their discriminator.
