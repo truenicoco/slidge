@@ -1,26 +1,13 @@
 import asyncio
-import functools
 from typing import TYPE_CHECKING, Any, Union
 
 import discord as di
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
 if TYPE_CHECKING:
     from . import Contact, Gateway, Roster
     from .client import Discord
-
-
-def raise_xmpp_not_found_if_necessary(func):
-    @functools.wraps(func)
-    def wrapped(*a, **kw):
-        contact: "Contact" = a[-1]
-        if contact.discord_id is None:
-            raise XMPPError("not-found")
-        return func(*a, **kw)
-
-    return wrapped
 
 
 class Session(BaseSession["Contact", "Roster", "Gateway"]):
@@ -60,20 +47,18 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if not u.is_friend():
                 self.log.debug(f"%s is not a friend", u)
                 continue
-            c = self.contacts.by_legacy_id(str(u))
+            c = self.contacts.by_legacy_id(u.id)
             c.name = u.display_name
             c.avatar = str(u.avatar_url)
             self.log.debug("Avatar: %s", u.avatar_url)
-            c.discord_id = u.id
             await c.add_to_roster()
             c.online()
         return f"Logged on as {self.discord.user}"
 
-    @raise_xmpp_not_found_if_necessary
     async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None):
         async with self.send_lock:
             mid = (
-                await self.discord.get_user(c.discord_id).send(
+                await c.discord_user.send(
                     t,
                     reference=None
                     if reply_to_msg_id is None
@@ -92,7 +77,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
     async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
-        await self.discord.get_user(c.discord_id).send(u)
+        await c.discord_user.send(u)
 
     async def active(self, c: "Contact"):
         pass
@@ -100,19 +85,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     async def inactive(self, c: "Contact"):
         pass
 
-    @raise_xmpp_not_found_if_necessary
     async def composing(self, c: "Contact"):
-        await self.discord.get_user(c.discord_id).trigger_typing()
+        await c.discord_user.trigger_typing()
 
     async def paused(self, c: "Contact"):
         pass
 
-    @raise_xmpp_not_found_if_necessary
     async def displayed(self, legacy_msg_id: str, c: "Contact"):
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
-        u: di.User = self.discord.get_user(c.discord_id)
+        u = c.discord_user
         channel: di.DMChannel = u.dm_channel
         if channel is None:
             return
@@ -123,9 +106,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         # except Exception as e:
         #     self.log.exception("Message %s should have been marked as read but this raised %s", m, e)
 
-    @raise_xmpp_not_found_if_necessary
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
-        u: di.User = self.discord.get_user(c.discord_id)
+        u = c.discord_user
         channel: di.DMChannel = u.dm_channel
         if channel is None:
             return
@@ -134,9 +116,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         await m.edit(content=text)
         await self.edit_futures[legacy_msg_id]
 
-    @raise_xmpp_not_found_if_necessary
     async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
-        u: di.User = self.discord.get_user(c.discord_id)
+        u = c.discord_user
         channel: di.DMChannel = u.dm_channel
         if channel is None:
             return
@@ -151,9 +132,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         for e in legacy_reactions - xmpp_reactions:
             await m.remove_reaction(e, self.discord.user)
 
-    @raise_xmpp_not_found_if_necessary
     async def retract(self, legacy_msg_id: Any, c: "Contact"):
-        u: di.User = self.discord.get_user(c.discord_id)
+        u = c.discord_user
         channel: di.DMChannel = u.dm_channel
         if channel is None:
             return

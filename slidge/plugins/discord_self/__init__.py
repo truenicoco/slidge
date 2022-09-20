@@ -1,7 +1,8 @@
 import functools
-from typing import Optional
+import logging
 
 import discord as di
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -21,28 +22,14 @@ class Gateway(BaseGateway[Session]):
 class Contact(LegacyContact[Session]):
     MARKS = False
 
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self._discord_id: Optional[int] = None
-
-    @property
-    def discord_id(self):
-        if self._discord_id is None:
-            for u in self.session.discord.users:
-                if not isinstance(u, di.User):
-                    continue
-                if str(u) == self.legacy_id:
-                    self._discord_id = u.id
-                    break
-        return self._discord_id
-
-    @discord_id.setter
-    def discord_id(self, i: int):
-        self._discord_id = i
-
     @functools.cached_property
     def discord_user(self) -> di.User:
-        return self.session.discord.get_user(self._discord_id)
+        logging.debug("Searching for user: %s", self.legacy_id)
+        if (u := self.session.discord.get_user(self.legacy_id)) is None:
+            raise XMPPError(
+                "not-found", text=f"Cannot find the discord user {self.legacy_id}"
+            )
+        return u
 
     @functools.cached_property
     def direct_channel_id(self):
@@ -60,4 +47,13 @@ class Contact(LegacyContact[Session]):
 
 class Roster(LegacyRoster[Contact, "Session"]):
     def by_discord_user(self, u: di.User):
-        return self.by_legacy_id(str(u))
+        return self.by_legacy_id(u.id)
+
+    @staticmethod
+    def jid_username_to_legacy_id(discord_id: str):
+        try:
+            return int(discord_id)
+        except ValueError:
+            raise XMPPError(
+                "not-found", text=f"Not a valid discord user ID: {discord_id}"
+            )

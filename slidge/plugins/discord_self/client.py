@@ -16,17 +16,17 @@ class Discord(di.Client):
         print(f"Logged on as {self.user}")
 
     async def on_message(self, message: di.Message):
+        channel = message.channel
+        if not isinstance(channel, di.DMChannel):
+            return
+
         if (author := message.author) == self.user:
             async with self.session.send_lock:
                 fut = self.session.send_futures.get(message.id)
             if fut is None:
-                channel = message.channel
-                if isinstance(channel, di.DMChannel):
-                    self.session.contacts.by_discord_user(channel.recipient).carbon(
-                        message.content
-                    )
-                else:
-                    self.session.log.debug("Ignoring group chat carbon")
+                self.session.contacts.by_discord_user(channel.recipient).carbon(
+                    message.content
+                )
             else:
                 fut.set_result(True)
         else:
