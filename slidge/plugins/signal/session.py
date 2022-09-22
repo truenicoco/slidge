@@ -188,9 +188,10 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 account=self.phone, address=profile.address
             )
             contact = self.contacts.by_json_address(profile.address)
-            contact.name = profile.name or profile.profile_name
-            if contact.name is not None:
-                contact.name = contact.name.replace("\u0000", "")
+            nick = profile.name or profile.profile_name
+            if nick is not None:
+                nick = nick.replace("\u0000", "")
+                contact.name = nick
             if full_profile.avatar is not None:
                 with open(full_profile.avatar, "rb") as f:
                     contact.avatar = f.read()
