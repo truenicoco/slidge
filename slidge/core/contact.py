@@ -703,7 +703,9 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
                 self.jid_username_to_legacy_id(jid_username),
                 jid_username,
             )
-            self._contacts_by_bare_jid[bare] = c
+            self._contacts_by_legacy_id[c.legacy_id] = self._contacts_by_bare_jid[
+                bare
+            ] = c
         return c
 
     def by_legacy_id(self, legacy_id: Any) -> LegacyContactType:
@@ -723,7 +725,9 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
             c = self._contact_cls(
                 self.session, legacy_id, self.legacy_id_to_jid_username(legacy_id)
             )
-            self._contacts_by_legacy_id[legacy_id] = c
+            self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[
+                legacy_id
+            ] = c
         return c
 
     def by_stanza(self, s) -> LegacyContactType:
