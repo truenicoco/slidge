@@ -121,7 +121,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.log.debug("Close chat res: %s", res)
 
     async def composing(self, c: "Contact"):
-        res = self.tg.api.send_chat_action(
+        res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
             message_thread_id=0,  # TODO: check what telegram's threads really are
