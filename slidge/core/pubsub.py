@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, TypeVar, Union
 
 import aiohttp
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.base import BasePlugin, register_plugin
@@ -262,7 +262,12 @@ class PubSubComponent(BasePlugin):
             self._broadcast(AvatarMetadata(), jid, restrict_to)
         else:
             pep_avatar = PepAvatar()
-            await pep_avatar.set_avatar(avatar)
+            try:
+                await pep_avatar.set_avatar(avatar)
+            except UnidentifiedImageError as e:
+                log.warning("Failed to set avatar for %s: %r", self, e)
+                return
+
             pep_avatar.authorized_jid = restrict_to
             self._avatars[jid] = pep_avatar
             if pep_avatar.metadata is None:
@@ -273,7 +278,6 @@ class PubSubComponent(BasePlugin):
                 restrict_to,
                 id=pep_avatar.metadata["info"]["id"],
             )
-            return pep_avatar
 
     def set_nick(
         self,

@@ -17,7 +17,6 @@ from typing import (
 )
 
 import aiohttp
-from PIL import UnidentifiedImageError
 from slixmpp import JID, Message
 
 from ..util import SubclassableOnce
@@ -28,7 +27,6 @@ from ..util.types import (
     LegacyUserIdType,
 )
 from ..util.xep_0363 import FileUploadError
-from .pubsub import PepAvatar
 
 if TYPE_CHECKING:
     from .session import SessionType
@@ -104,7 +102,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.added_to_roster = False
 
         self._name: Optional[str] = None
-        self._avatar: Optional[PepAvatar] = None
+        self._avatar: Optional[AvatarType] = None
 
         self._subscribe_from = True
         self._subscribe_to = True
@@ -186,15 +184,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
-        try:
-            self.xmpp.loop.create_task(
-                self.xmpp.pubsub.set_avatar(
-                    jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
-                )
-            ).add_done_callback(lambda f: setattr(self, "_avatar", f.result()))
-        except UnidentifiedImageError as e:
-            log.warning("Failed to set avatar for %s", self)
-            log.exception(e)
+        self.xmpp.loop.create_task(
+            self.xmpp.pubsub.set_avatar(
+                jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
+            )
+        )
+        self._avatar = a
 
     async def add_to_roster(self):
         """
