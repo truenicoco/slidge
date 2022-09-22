@@ -2,7 +2,6 @@
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
 import asyncio
-import hashlib
 import logging
 import re
 import tempfile
@@ -10,7 +9,6 @@ from asyncio import Future
 from pathlib import Path
 from typing import Any, Generic, Iterable, Optional, Type, TypeVar
 
-import aiohttp
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
@@ -20,6 +18,7 @@ from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from ..util.xep_0363 import FileUploadError
+from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
 
 
@@ -184,6 +183,9 @@ class BaseGateway(
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
 
+        self.register_plugin("pubsub")
+        self.pubsub: PubSubComponent = self["pubsub"]
+
     @staticmethod
     def __exception_handler(loop: asyncio.AbstractEventLoop, context):
         loop.default_exception_handler(context)  # prints a standard python traceback
@@ -276,19 +278,24 @@ class BaseGateway(
         log.debug("Gateway session start: %s", event)
 
         # prevents XMPP clients from considering the gateway as an HTTP upload
-        await self["xep_0030"].del_feature(
+        disco = self.plugin["xep_0030"]
+        await disco.del_feature(
             feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
         )
+        await self.plugin["xep_0115"].update_caps(jid=self.boundjid.bare)
 
         self.__add_adhoc_commands()
         self.add_adhoc_commands()
-        await self.set_vcard_avatar(self.boundjid.bare, self.COMPONENT_AVATAR)
+        await self.pubsub.set_avatar(
+            jid=self.boundjid.bare, avatar=self.COMPONENT_AVATAR
+        )
 
         for user in user_store.get_all():
             # TODO: before this, we should check if the user has removed us from their roster
             #       while we were offline and trigger unregister from there. Presence probe does not seem
             #       to work in this case, there must be another way. privileged entity could be used
             #       as last resort.
+            await self["xep_0100"].add_component_to_roster(user.jid)
             self.send_presence(
                 pto=user.bare_jid, ptype="probe"
             )  # ensure we get all resources for user
@@ -652,37 +659,6 @@ class BaseGateway(
         """
         pass
 
-    async def set_vcard_avatar(self, jid: JID, avatar: AvatarType):
-        """
-        Set an avatar for a specific JID.
-
-        For contacts, :attr:`.LegacyContact.avatar` property
-
-        :param jid: JID to associate the avatar with
-        :param avatar: bytes, URL, or Path
-        """
-        vcard = self["xep_0054"].make_vcard()
-        if avatar is not None:
-            if isinstance(avatar, bytes):
-                avatar_bytes = avatar
-            elif isinstance(avatar, Path):
-                with avatar.open("rb") as f:
-                    avatar_bytes = f.read()
-            elif isinstance(avatar, str):
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(avatar) as response:
-                        avatar_bytes = await response.read()
-            else:
-                raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
-            vcard["PHOTO"]["BINVAL"] = avatar_bytes
-            await self["xep_0153"].api["set_hash"](
-                jid=jid, args=hashlib.sha1(avatar_bytes).hexdigest()
-            )
-        await self["xep_0054"].api["set_vcard"](
-            jid=jid,
-            args=vcard,
-        )
-
     async def _on_gateway_message_private(self, msg: Message):
         """
         Called when an XMPP user (not necessarily registered as a gateway user) sends a direct message to
@@ -825,14 +801,14 @@ GatewayType = TypeVar("GatewayType", bound=BaseGateway)
 
 SLIXMPP_PLUGINS = [
     "xep_0050",  # Adhoc commands
-    "xep_0054",  # vCard-temp
     "xep_0055",  # Jabber search
     "xep_0066",  # Out of Band Data
     "xep_0077",  # In-band registration
+    "xep_0084",  # User Avatar
     "xep_0085",  # Chat state notifications
     "xep_0100",  # Gateway interaction
     "xep_0115",  # Entity capabilities
-    "xep_0153",  # vCard-Based Avatars
+    "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
     "xep_0280",  # Carbons
     "xep_0308",  # Last message correction

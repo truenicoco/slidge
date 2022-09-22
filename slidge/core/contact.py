@@ -17,7 +17,8 @@ from typing import (
 )
 
 import aiohttp
-from slixmpp import JID, Iq, Message
+from PIL import UnidentifiedImageError
+from slixmpp import JID, Message
 
 from ..util import SubclassableOnce
 from ..util.types import (
@@ -27,6 +28,7 @@ from ..util.types import (
     LegacyUserIdType,
 )
 from ..util.xep_0363 import FileUploadError
+from .pubsub import PepAvatar
 
 if TYPE_CHECKING:
     from .session import SessionType
@@ -102,13 +104,25 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.added_to_roster = False
 
         self._name: Optional[str] = None
-        self._avatar: Optional[AvatarType] = None
+        self._avatar: Optional[PepAvatar] = None
+
+        self._subscribe_from = True
+        self._subscribe_to = True
 
         self.xmpp = session.xmpp
         self.xmpp.loop.create_task(self.__make_caps())
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
+
+    def __get_subscription_string(self):
+        if self._subscribe_from and self._subscribe_to:
+            return "both"
+        if self._subscribe_from:
+            return "from"
+        if self._subscribe_to:
+            return "to"
+        return "none"
 
     async def __make_caps(self):
         """
@@ -121,8 +135,6 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
         if self.CHAT_STATES:
             await add_feature("http://jabber.org/protocol/chatstates")
-        if self.AVATAR:
-            await add_feature("vcard-temp")
         if self.RECEIPTS:
             await add_feature("urn:xmpp:receipts")
         if self.CORRECTION:
@@ -138,24 +150,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         if self.REPLIES:
             await add_feature("urn:xmpp:reply:0")
 
-        info = await xmpp["xep_0030"].get_info(jid, node=None, local=True)
-        if isinstance(info, Iq):
-            info = info["disco_info"]
-        ver = xmpp["xep_0115"].generate_verstring(info, xmpp["xep_0115"].hash)
-        await xmpp["xep_0030"].set_info(
-            jid=jid,
-            node="%s#%s" % (xmpp["xep_0115"].caps_node, ver),
-            info=info,
-        )
-
-        await xmpp["xep_0115"].cache_caps(ver, info)
-        await xmpp["xep_0115"].assign_verstring(jid, ver)
-
-    async def __make_vcard(self):
-        """
-        Configure slixmpp to correctly set this contact's vcard (in fact only its avatar ATM)
-        """
-        await self.xmpp.set_vcard_avatar(jid=self.jid, avatar=self.avatar)
+        await xmpp["xep_0115"].update_caps(jid=self.jid)
 
     @property
     def jid(self) -> JID:
@@ -175,7 +170,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
     @name.setter
     def name(self, n: Optional[str]):
+        if self._name == n:
+            return
         self._name = n
+        self.xmpp.pubsub.set_nick(
+            jid=self.jid.bare, nick=n, restrict_to=self.user.jid.bare
+        )
 
     @property
     def avatar(self):
@@ -186,8 +186,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
-        self._avatar = a
-        self.xmpp.loop.create_task(self.__make_vcard())
+        try:
+            self.xmpp.loop.create_task(
+                self.xmpp.pubsub.set_avatar(
+                    jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
+                )
+            ).add_done_callback(lambda f: setattr(self, "_avatar", f.result()))
+        except UnidentifiedImageError as e:
+            log.warning("Failed to set avatar for %s", self)
+            log.exception(e)
 
     async def add_to_roster(self):
         """
@@ -200,8 +207,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             jid=self.user.jid,
             roster_items={
                 self.jid.bare: {
-                    "name": self.name,
-                    "subscription": "both",
+                    "subscription": self.__get_subscription_string(),
                     "groups": [self.xmpp.ROSTER_GROUP],
                 }
             },

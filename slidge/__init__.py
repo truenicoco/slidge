@@ -11,6 +11,7 @@ from .util import (
     xep_0030,
     xep_0055,
     xep_0077,
+    xep_0084,
     xep_0100,
     xep_0115,
     xep_0333,

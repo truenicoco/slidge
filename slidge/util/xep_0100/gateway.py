@@ -1,6 +1,6 @@
 import logging
 
-from slixmpp import Iq, Message, Presence
+from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins.base import BasePlugin
 
 log = logging.getLogger(__name__)
@@ -62,8 +62,11 @@ class XEP_0100(BasePlugin):
 
     async def on_user_register(self, iq: Iq):
         self.xmpp.client_roster[iq.get_from()].load()
+        await self.add_component_to_roster(jid=iq.get_from())
+
+    async def add_component_to_roster(self, jid: JID):
         await self.xmpp["xep_0356"].set_roster(
-            jid=iq.get_from().bare,
+            jid=jid.bare,
             roster_items={
                 self.xmpp.boundjid.bare: {
                     "name": self.component_name,

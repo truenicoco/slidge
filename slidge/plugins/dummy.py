@@ -94,6 +94,12 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
             raise RuntimeError("PANIC!!!")
         elif t == "delete":
             self.xmpp.loop.create_task(self.later_carbon_delete(c, i))
+        elif t == "nick":
+            c.name = "NEWNAME"
+        elif t == "avatar":
+            c.avatar = ASSETS_DIR / "5x5.png"
+        elif t == "nonick":
+            c.name = None
         else:
             self.xmpp.loop.create_task(self.later(c, i))
 

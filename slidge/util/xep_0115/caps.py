@@ -5,7 +5,7 @@
 import base64
 import hashlib
 import logging
-from asyncio import Future
+from asyncio import Future, Lock
 from typing import Optional
 
 from slixmpp import __version__
@@ -39,6 +39,7 @@ class XEP_0115(BasePlugin):
         "broadcast": True,
         "cache": None,
     }
+    lock = Lock()
 
     def plugin_init(self):
         self.hashes = {"sha-1": hashlib.sha1, "sha1": hashlib.sha1, "md5": hashlib.md5}
@@ -146,45 +147,46 @@ class XEP_0115(BasePlugin):
             self.xmpp.event("entity_caps_legacy", pres)
             return
 
-        if self.xmpp.is_component and pres.get_to() != self.xmpp.boundjid.bare:
-            log.debug("Not attempting to update caps for presence not directed at the component JID")
-            return
+        # if self.xmpp.is_component and pres.get_to() != self.xmpp.boundjid.bare:
+        #     log.debug("Not attempting to update caps for presence not directed at the component JID")
+        #     return
 
-        ver = pres["caps"]["ver"]
+        async with self.lock:
+            ver = pres["caps"]["ver"]
 
-        existing_verstring = await self.get_verstring(pres["from"].full)
-        if str(existing_verstring) == str(ver):
-            return
+            existing_verstring = await self.get_verstring(pres["from"].full)
+            if str(existing_verstring) == str(ver):
+                return
 
-        existing_caps = await self.get_caps(verstring=ver)
-        if existing_caps is not None:
-            await self.assign_verstring(pres["from"], ver)
-            return
+            existing_caps = await self.get_caps(verstring=ver)
+            if existing_caps is not None:
+                await self.assign_verstring(pres["from"], ver)
+                return
 
-        ifrom = pres["to"] if self.xmpp.is_component else None
+            ifrom = pres["to"] if self.xmpp.is_component else None
 
-        if pres["caps"]["hash"] not in self.hashes:
+            if pres["caps"]["hash"] not in self.hashes:
+                try:
+                    log.debug("Unknown caps hash: %s", pres["caps"]["hash"])
+                    self.xmpp["xep_0030"].get_info(jid=pres["from"], ifrom=ifrom)
+                    return
+                except XMPPError:
+                    return
+
+            log.debug("New caps verification string: %s", ver)
             try:
-                log.debug("Unknown caps hash: %s", pres["caps"]["hash"])
-                self.xmpp["xep_0030"].get_info(jid=pres["from"], ifrom=ifrom)
-                return
+                node = "%s#%s" % (pres["caps"]["node"], ver)
+                caps = await self.xmpp["xep_0030"].get_info(pres["from"], node, ifrom=ifrom)
+
+                if isinstance(caps, Iq):
+                    caps = caps["disco_info"]
+
+                if await self._validate_caps(
+                    caps, pres["caps"]["hash"], pres["caps"]["ver"]
+                ):
+                    await self.assign_verstring(pres["from"], pres["caps"]["ver"])
             except XMPPError:
-                return
-
-        log.debug("New caps verification string: %s", ver)
-        try:
-            node = "%s#%s" % (pres["caps"]["node"], ver)
-            caps = await self.xmpp["xep_0030"].get_info(pres["from"], node, ifrom=ifrom)
-
-            if isinstance(caps, Iq):
-                caps = caps["disco_info"]
-
-            if await self._validate_caps(
-                caps, pres["caps"]["hash"], pres["caps"]["ver"]
-            ):
-                await self.assign_verstring(pres["from"], pres["caps"]["ver"])
-        except XMPPError:
-            log.debug("Could not retrieve disco#info results for caps for %s", node)
+                log.debug("Could not retrieve disco#info results for caps for %s", node)
 
     async def _validate_caps(self, caps, hash, check_verstring):
         # Check Identities
