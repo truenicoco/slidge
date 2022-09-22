@@ -1,5 +1,6 @@
 import functools
 import logging
+from argparse import ArgumentParser
 
 import discord as di
 from slixmpp.exceptions import XMPPError
@@ -17,6 +18,15 @@ class Gateway(BaseGateway[Session]):
     REGISTRATION_FIELDS = [FormField("token", required=True)]
 
     ROSTER_GROUP = "Discord"
+
+    def config(self, argv: list[str]):
+        parser = ArgumentParser()
+        parser.add_argument("--discord-verbose", action="store_true")
+        args = parser.parse_args(argv)
+        if not args.discord_verbose:
+            log.debug("Disabling discord info logs")
+            logging.getLogger("discord.gateway").setLevel(logging.WARNING)
+            logging.getLogger("discord.client").setLevel(logging.WARNING)
 
 
 class Contact(LegacyContact[Session]):
@@ -57,3 +67,6 @@ class Roster(LegacyRoster[Contact, "Session"]):
             raise XMPPError(
                 "not-found", text=f"Not a valid discord user ID: {discord_id}"
             )
+
+
+log = logging.getLogger(__name__)
