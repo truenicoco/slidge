@@ -18,7 +18,7 @@ class Contact(LegacyContact["Session"]):
 
     def __init__(self, *a, **k):
         super(Contact, self).__init__(*a, **k)
-        self.last_seen = datetime.datetime.fromtimestamp(0)
+        self.last_seen = None
         self.away_task: asyncio.Task = self.xmpp.loop.create_task(self.delayed_away())
 
     def reset_delayed_away(self):
@@ -43,7 +43,12 @@ class Contact(LegacyContact["Session"]):
         self.away()
 
     def away(self, status=None):
-        super().away(status or f"Last seen: {self.last_seen:%%B %d, %Y}")
+        if status is None:
+            if self.last_seen is None:
+                status = "Last seen: never"
+            else:
+                status = f"{self.last_seen: %B %d, %Y}"
+        super().away(status)
 
     def active(self):
         self.reset_delayed_away()
