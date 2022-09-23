@@ -184,6 +184,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
+        if a == self._avatar:
+            return
         self.xmpp.loop.create_task(
             self.xmpp.pubsub.set_avatar(
                 jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
