@@ -147,21 +147,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 self.log.debug(
                     "Skipping %s as it is of type %s", chat.title, chat.type_
                 )
-            if isinstance(chat.photo, tgapi.ChatPhotoInfo):
-                response = await self.tg.api.download_file(
-                    file_id=chat.photo.big.id,
-                    synchronous=True,
-                    priority=32,
-                    offset=0,
-                    limit=0,
-                )
-                with open(response.local.path, "rb") as f:
-                    avatar = f.read()
-            else:
-                avatar = None
             contact = self.contacts.by_legacy_id(chat.id)
-            contact.name = chat.title
-            contact.avatar = avatar
+            await contact.update_info_from_chat(chat)
             await contact.add_to_roster()
             contact.online()
             contact.away()
@@ -196,6 +183,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         await self.add_contacts_to_roster()
         contact = self.contacts.by_legacy_id(user_id)
+        await contact.update_info_from_user()
         await contact.add_to_roster()
 
         return SearchResult(
