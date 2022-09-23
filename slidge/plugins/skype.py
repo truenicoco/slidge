@@ -235,7 +235,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             except skpy.SkypeApiException as e:
                 # FIXME: this raises HTTP 400 and does not mark the message as read
                 # https://github.com/Terrance/SkPy/issues/207
-                self.log.exception(e)
+                self.log.debug("Skype read marker failed: %r", e)
 
     async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
         pass
@@ -255,7 +255,6 @@ def handle_thread_exception(args):
             log.warning("Attempting re-login for %s", session.user)
             thread.stop()
             session.re_login()
-    raise RuntimeError
 
 
 threading.excepthook = handle_thread_exception
