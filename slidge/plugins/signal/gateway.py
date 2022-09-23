@@ -237,6 +237,12 @@ class Signal(SignaldAPI):
         super().__init__()
         self.sessions_by_phone = xmpp.sessions_by_phone
 
+    async def handle_WebSocketConnectionState(
+        self, state: sigapi.WebSocketConnectionStatev1, payload
+    ):
+        session = self.sessions_by_phone[payload["account"]]
+        await session.on_websocket_connection_state(state)
+
     async def handle_ListenerState(self, state: sigapi.ListenerStatev1, payload):
         """
         Connection state for an account.

@@ -118,6 +118,14 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
         return f"Connected as {self.phone}"
 
+    async def on_websocket_connection_state(
+        self, state: sigapi.WebSocketConnectionStatev1
+    ):
+        if (s := state.state) == "CONNECTED" and state.socket == "IDENTIFIED":
+            self.send_gateway_status(f"Connected as {self.phone}", show="chat")
+        else:
+            self.send_gateway_status(f"{s} ({state.socket})", show="busy")
+
     async def register(self):
         self.send_gateway_status("Registering…", show="dnd")
         try:
