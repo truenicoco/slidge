@@ -200,14 +200,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         if self.xmpp.no_roster_push:
             log.debug("Roster push request by plugin ignored (--no-roster-push)")
             return
+        item = {
+            "subscription": self.__get_subscription_string(),
+            "groups": [self.xmpp.ROSTER_GROUP],
+        }
+        if (n := self.name) is not None:
+            item["name"] = n
         kw = dict(
             jid=self.user.jid,
-            roster_items={
-                self.jid.bare: {
-                    "subscription": self.__get_subscription_string(),
-                    "groups": [self.xmpp.ROSTER_GROUP],
-                }
-            },
+            roster_items={self.jid.bare: item},
         )
         try:
             await self.xmpp["xep_0356"].set_roster(**kw)
