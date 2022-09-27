@@ -65,16 +65,30 @@ class XEP_0100(BasePlugin):
         await self.add_component_to_roster(jid=iq.get_from())
 
     async def add_component_to_roster(self, jid: JID):
-        await self.xmpp["xep_0356"].set_roster(
-            jid=jid.bare,
-            roster_items={
-                self.xmpp.boundjid.bare: {
-                    "name": self.component_name,
-                    "subscription": "both",
-                    "groups": ["Slidge"],
-                }
-            },
-        )
+        try:
+            if self.xmpp.no_roster_push:
+                return
+        except AttributeError:
+            return
+        items = {
+            self.xmpp.boundjid.bare: {
+                "name": self.component_name,
+                "subscription": "both",
+                "groups": ["Slidge"],
+            }
+        }
+        try:
+            await self.xmpp["xep_0356"].set_roster(jid=jid.bare, roster_items=items)
+        except PermissionError:
+            try:
+                await self.xmpp["xep_0356_old"].set_roster(
+                    jid=jid.bare, roster_items=items
+                )
+            except PermissionError:
+                log.warning(
+                    "Slidge does not have the privilege to manage users' rosters. "
+                    "Users should add the slidge component to their rosters manually."
+                )
 
     def on_presence_unsubscribe(self, p: Presence):
         if p.get_to() == self.xmpp.boundjid.bare:
