@@ -176,7 +176,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_USER: movim
       POSTGRES_PASSWORD: BAD
-    image: movim/movim:0.21rc1
+    image: movim/movim:0.21rc2
     volumes:
       - ./persistent/movim/html:/var/www/html:rw
     network_mode: "service:prosody"
