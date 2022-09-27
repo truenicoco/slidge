@@ -192,6 +192,7 @@ class PubSubComponent(BasePlugin):
                 log.debug("item id: %s", item["id"])
                 if item["id"] == pep_avatar.id:
                     self._reply_with_payload(iq, pep_avatar.data, pep_avatar.id)
+                    return
             else:
                 raise XMPPError("item-not-found")
 
@@ -206,6 +207,7 @@ class PubSubComponent(BasePlugin):
                 log.debug("item id: %s", item["id"])
                 if item["id"] == pep_avatar.id:
                     self._reply_with_payload(iq, pep_avatar.metadata, pep_avatar.id)
+                    return
             else:
                 raise XMPPError("item-not-found")
 
