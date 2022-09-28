@@ -40,6 +40,8 @@ class Gateway(BaseGateway["Session"]):
 
     SEARCH_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
+        FormField(var="first", label="First name", required=False),
+        FormField(var="last", label="Last name", required=False),
     ]
 
     args: Namespace

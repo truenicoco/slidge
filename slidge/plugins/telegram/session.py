@@ -166,14 +166,16 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def search(self, form_values: dict[str, str]):
         phone = form_values["phone"]
+        first = form_values.get("first", phone)
+        last = form_values.get("last", "")
         response = await self.tg.api.import_contacts(
             contacts=[
                 tgapi.Contact(
                     phone_number=phone,
                     user_id=0,
-                    first_name=phone,
+                    first_name=first,
                     vcard="",
-                    last_name="",
+                    last_name=last,
                 )
             ]
         )
