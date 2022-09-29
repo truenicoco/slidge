@@ -205,8 +205,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 nick = nick.replace("\u0000", "")
                 contact.name = nick
             if full_profile.avatar is not None:
-                with open(full_profile.avatar, "rb") as f:
-                    contact.avatar = f.read()
+                contact.avatar = Path(full_profile.avatar)
             await contact.add_to_roster()
             contact.online()
 
