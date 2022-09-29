@@ -52,6 +52,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
         self.reaction_ack_futures: dict[tuple[int, str], asyncio.Future[None]] = {}
+        self.connected = self.xmpp.loop.create_future()
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
@@ -115,16 +116,19 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 )
                 raise
             await (await self.signal).subscribe(account=self.phone)
-
+        await self.connected
+        await self.add_contacts_to_roster()
         return f"Connected as {self.phone}"
 
     async def on_websocket_connection_state(
         self, state: sigapi.WebSocketConnectionStatev1
     ):
-        if (s := state.state) == "CONNECTED" and state.socket == "IDENTIFIED":
-            self.send_gateway_status(f"Connected as {self.phone}", show="chat")
-        else:
-            self.send_gateway_status(f"{s} ({state.socket})", show="busy")
+        if (
+            state.state == "CONNECTED"
+            and state.socket == "IDENTIFIED"
+            and not self.connected.done()
+        ):
+            self.connected.set_result(True)
 
     async def register(self):
         self.send_gateway_status("Registering…", show="dnd")

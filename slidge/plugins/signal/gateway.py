@@ -240,21 +240,24 @@ class Signal(SignaldAPI):
     async def handle_WebSocketConnectionState(
         self, state: sigapi.WebSocketConnectionStatev1, payload
     ):
+        """
+        We should not care much about this since
+
+        :param state:
+        :param payload:
+        """
         session = self.sessions_by_phone[payload["account"]]
         await session.on_websocket_connection_state(state)
 
     async def handle_ListenerState(self, state: sigapi.ListenerStatev1, payload):
         """
-        Connection state for an account.
+        Deprecated in signald and replaced by WebSocketConnectionState
+        Just here to avoid cluttering logs with unhandled events warnings
 
-        :param state: State of the connection
-        :param payload: The raw payload sent by signald
+        :param state:
+        :param payload:
         """
-
-        phone = payload["account"]
-        if state.connected:
-            session = self.sessions_by_phone[phone]
-            await session.add_contacts_to_roster()
+        pass
 
     async def handle_IncomingMessage(self, msg: sigapi.IncomingMessagev1, _payload):
         """
