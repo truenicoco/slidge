@@ -12,7 +12,9 @@ class Discord(di.Client):
         self.session = session
 
     async def on_ready(self):
-        self.session.ready_future.set_result(True)
+        if (f := self.session.ready_future).done():
+            return
+        f.set_result(True)
         print(f"Logged on as {self.user}")
 
     async def on_message(self, message: di.Message):
