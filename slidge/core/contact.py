@@ -82,6 +82,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     A list of features advertised through service discovery and client capabilities.
     """
 
+    CLIENT_TYPE = "pc"
+    """
+    https://xmpp.org/registrar/disco-categories.html#client
+    """
+
     def __init__(
         self,
         session: "SessionType",
@@ -129,7 +134,9 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         jid = self.jid
         xmpp = self.xmpp
 
-        xmpp["xep_0030"].add_identity(jid=jid, category="client", itype="bot")
+        xmpp["xep_0030"].add_identity(
+            jid=jid, category="client", itype=self.CLIENT_TYPE
+        )
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
         if self.CHAT_STATES:
             await add_feature("http://jabber.org/protocol/chatstates")
