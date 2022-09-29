@@ -12,6 +12,7 @@ from .session import Session
 
 class Gateway(BaseGateway[Session]):
     COMPONENT_NAME = "Discord (slidge)"
+    COMPONENT_TYPE = "discord"
     REGISTRATION_INSTRUCTIONS = (
         "Have a look at https://discordpy-self.readthedocs.io/en/latest/token.html"
     )
