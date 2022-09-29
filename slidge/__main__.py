@@ -9,6 +9,7 @@ from pathlib import Path
 import configargparse
 
 from slidge import BaseGateway
+from slidge.core.pubsub import PepAvatar
 from slidge.util.db import user_store
 
 
@@ -94,6 +95,14 @@ def get_parser():
         action="store_true",
     )
     p.add_argument(
+        "--avatar-size",
+        env_var="SLIDGE_AVATAR_SIZE",
+        type=int,
+        default=200,
+        help="Maximum image size (width and height), image ratio will be preserved",
+    )
+
+    p.add_argument(
         "-q",
         "--quiet",
         help="loglevel=WARNING",
@@ -134,6 +143,8 @@ def main():
 
     db_file = Path(args.home_dir) / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
+
+    PepAvatar.AVATAR_SIZE = args.avatar_size
 
     importlib.import_module(args.legacy_module)
     gateway = BaseGateway.get_unique_subclass()(args)

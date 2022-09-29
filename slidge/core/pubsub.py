@@ -27,6 +27,8 @@ class PepItem:
 
 
 class PepAvatar(PepItem):
+    AVATAR_SIZE: Optional[int] = None
+
     def __init__(self, authorized_jid: Optional[JidStr] = None):
         super().__init__(authorized_jid)
         self.metadata: Optional[AvatarMetadata] = None
@@ -47,9 +49,15 @@ class PepAvatar(PepItem):
 
         metadata = AvatarMetadata()
 
-        if img.format == "PNG" and isinstance(avatar, bytes):
+        resampled = False
+        if (size := self.AVATAR_SIZE) and any(x > size for x in img.size):
+            img.thumbnail((size, size))
+            log.debug("Resampled image to %s", img.size)
+            resampled = True
+
+        if not resampled and img.format == "PNG" and isinstance(avatar, bytes):
             avatar_bytes = avatar
-        elif img.format == "PNG" and isinstance(avatar, Path):
+        elif not resampled and img.format == "PNG" and isinstance(avatar, Path):
             with avatar.open("rb") as f:
                 avatar_bytes = f.read()
         else:
