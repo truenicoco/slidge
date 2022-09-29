@@ -183,7 +183,7 @@ class BaseGateway(
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
 
-        self.register_plugin("pubsub")
+        self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
 
     @staticmethod

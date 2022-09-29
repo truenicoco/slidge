@@ -107,6 +107,8 @@ class PubSubComponent(BasePlugin):
         "xep_0115",
         "xep_0163",
     }
+    default_config = {"component_name": None}
+    component_name: str
 
     def __init__(self, *a, **kw):
         super(PubSubComponent, self).__init__(*a, **kw)
@@ -131,8 +133,8 @@ class PubSubComponent(BasePlugin):
         self.xmpp.add_event_handler("got_online", self._on_got_online)
 
         disco = self.xmpp.plugin["xep_0030"]
-        disco.add_identity("pubsub", "pep")
-        disco.add_identity("account", "registered")
+        disco.add_identity("pubsub", "pep", self.component_name)
+        disco.add_identity("account", "registered", self.component_name)
         disco.add_feature("http://jabber.org/protocol/pubsub#event")
         disco.add_feature("http://jabber.org/protocol/pubsub#retrieve-items")
         disco.add_feature("http://jabber.org/protocol/pubsub#persistent-items")
