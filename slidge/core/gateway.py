@@ -195,6 +195,7 @@ class BaseGateway(
         else:
             log.exception(exc)
         loop.stop()
+        exit(1)
 
     def exception(self, exception: Exception):
         """
