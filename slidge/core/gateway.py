@@ -7,7 +7,7 @@ import re
 import tempfile
 from asyncio import Future
 from pathlib import Path
-from typing import Any, Generic, Iterable, Optional, Type, TypeVar
+from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
 
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
@@ -76,7 +76,7 @@ class BaseGateway(
     Roster entries added by the plugin in the user's roster will be part of the group specified here.
     """
 
-    SEARCH_FIELDS: Iterable[FormField] = [
+    SEARCH_FIELDS: Sequence[FormField] = [
         FormField(var="first", label="First name", required=True),
         FormField(var="last", label="Last name", required=True),
     ]
@@ -508,14 +508,19 @@ class BaseGateway(
             return
 
         search_form = {}
-        if len(args) == 0:
-            for field in self.SEARCH_FIELDS:
-                search_form[field.var] = await session.input(
-                    (field.label or field.var) + "?"
-                )
-        else:
-            for field, arg in zip(self.SEARCH_FIELDS, args):
-                search_form[field.var] = arg
+        diff = len(args) - len(self.SEARCH_FIELDS)
+
+        if diff > 0:
+            session.send_gateway_message("Too many parameters!")
+            return
+
+        for field, arg in zip(self.SEARCH_FIELDS, args):
+            search_form[field.var] = arg
+
+        for field in self.SEARCH_FIELDS[diff:]:
+            search_form[field.var] = await session.input(
+                (field.label or field.var) + "?"
+            )
 
         results = await session.search(search_form)
         if results is None:
