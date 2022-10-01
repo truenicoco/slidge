@@ -71,12 +71,32 @@ Installation
 
 ### containers
 
-Containers are available on [docker hub](https://hub.docker.com/u/nicocool84).
+Containers for arm64 and amd64 are available on
+[docker hub](https://hub.docker.com/u/nicocool84).
 
 ### debian
 
-Debian packages are built on each push to master as artifacts of
-[this build job](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
+Debian packages for *bullseye* (amd64 only for now, help welcome
+to support other architectures)
+are built on each push to master as artifacts of
+[this build job](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?).
+
+A repo is maintained by IGImonster. To use it do this (as root):
+
+```sh
+# trust the repo's key
+wget -O- http://deb.slidge.im/repo/slidge.gpg.key \
+  |gpg --dearmor \
+  |tee /usr/share/keyrings/slidge.gpg > /dev/null
+# add the repo
+echo "deb [signed-by=/usr/share/keyrings/slidge.gpg] http://deb.slidge.im/repo/debian bullseye main" \
+  > /etc/apt/sources.list.d/slidge.list
+# install
+apt update && apt install slidge -y
+```
+
+Refer to [the docs](https://slidge.readthedocs.io/en/latest/admin/launch.html#debian-packages)
+for information about how to use the provided systemd service files.
 
 ### pip
 
