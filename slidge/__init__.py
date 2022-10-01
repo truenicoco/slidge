@@ -1,10 +1,12 @@
+import logging
+
+logging.getLogger("slixmpp").addHandler(logging.StreamHandler())
+
 import slixmpp.plugins
 
-from slidge.core.contact import LegacyContact, LegacyRoster
-from slidge.core.gateway import BaseGateway
-from slidge.core.session import BaseSession
-from slidge.util.db import GatewayUser, user_store
-
+from .core.contact import LegacyContact, LegacyRoster
+from .core.gateway import BaseGateway
+from .core.session import BaseSession
 from .util import (
     FormField,
     SearchResult,
@@ -20,6 +22,7 @@ from .util import (
     xep_0363,
     xep_0461,
 )
+from .util.db import GatewayUser, user_store
 
 slixmpp.plugins.__all__.extend(["xep_0055", "xep_0356", "xep_0356_old", "xep_0461"])
 
