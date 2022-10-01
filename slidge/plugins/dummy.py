@@ -19,6 +19,7 @@ ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 class Gateway(BaseGateway):
     COMPONENT_NAME = "The great legacy network (slidge)"
     COMPONENT_AVATAR = ASSETS_DIR / "gateway.png"
+    COMPONENT_TYPE = "aim"
     REGISTRATION_INSTRUCTIONS = (
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."
