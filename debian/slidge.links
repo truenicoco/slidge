@@ -1,1 +1,2 @@
 /usr/lib/slidge/bin/slidge /usr/bin/slidge
+/usr/lib/python3/dist-packages/slixmpp/stringprep.cpython-39-x86_64-linux-gnu.so /usr/lib/slidge/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-x86_64-linux-gnu.so

@@ -8,5 +8,5 @@ Standards-Version: 3
 Package: slidge
 Architecture: any
 Pre-Depends: python3, ${misc:Pre-Depends}
-Depends: ${python3:Depends}, python3-gdbm, ${misc:Depends}, python3, libc++1
+Depends: ${python3:Depends}, python3-gdbm, ${misc:Depends}, python3, libc++1, python3-slixmpp-lib
 Description: A multi XMPP Bridge
