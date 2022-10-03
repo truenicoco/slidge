@@ -23,157 +23,95 @@ FROM prosody AS prosody-dev
 
 RUN prosodyctl register test localhost password
 
-FROM docker.io/library/python:3.9-slim AS poetry
+FROM docker.io/library/debian:stable AS builder-tdlib
 
-RUN --mount=type=cache,id=slidge-poetry,target=/root/.cache/pip \
-    pip install "poetry==1.1.13" wheel
+# everything telegram/tdlib-specific would be improved, ie removed, if we fixed
+# https://github.com/pylakey/aiotdlib/issues/50
 
-FROM poetry AS builder
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=cache,id=slidge-apt-builder,target=/var/cache/apt \
-    DEBIAN_FRONTEND=noninteractive apt update && \
-    apt install libidn11-dev python3-dev gcc -y && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt update
+RUN apt install -y git g++ cmake zlib1g-dev gperf libssl-dev
+RUN git clone https://github.com/pylakey/td --depth 1
+RUN mkdir td/build
+WORKDIR td/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/tmp/tdlib/ -DTD_ENABLE_LTO=ON ..
+RUN CMAKE_BUILD_PARALLEL_LEVEL=$(grep -c processor /proc/cpuinfo) cmake --build . --target install
+RUN ls -la /tmp/tdlib/lib
 
-RUN python3 -m venv /venv/
-ENV PATH /venv/bin:$PATH
+FROM scratch AS tdlib
+COPY --from=builder-tdlib /tmp/tdlib/lib /
 
-RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
-    pip install cython
+
+FROM docker.io/library/python:3.9-slim AS builder
+
+ARG TARGETPLATFORM
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH /venv/bin:/root/.local/bin:$PATH
+
+RUN apt update && apt install gcc python3-slixmpp-lib wget curl -y
+
+RUN python3 -m venv /venv
+
+RUN mkdir -p /venv/lib/python3.9/site-packages/slixmpp
+RUN cp /usr/lib/python3/dist-packages/slixmpp/* /venv/lib/python3.9/site-packages/slixmpp/
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 WORKDIR slidge
-COPY poetry.lock pyproject.toml /slidge/
-RUN poetry export --without-hashes > /slidge/requirements.txt
-RUN poetry export --without-hashes --extras telegram > /slidge/requirements-telegram.txt
-RUN poetry export --without-hashes --extras signal > /slidge/requirements-signal.txt
-RUN poetry export --without-hashes --extras mattermost > /slidge/requirements-mattermost.txt
-RUN poetry export --without-hashes --extras facebook > /slidge/requirements-facebook.txt
-RUN poetry export --without-hashes --extras skype > /slidge/requirements-skype.txt
-RUN poetry export --without-hashes --extras steam > /slidge/requirements-steam.txt
-RUN poetry export --without-hashes --extras discord > /slidge/requirements-discord.txt
 
-RUN --mount=type=cache,id=pip-slidge-builder,target=/root/.cache/pip \
-    pip install -r ./requirements.txt
+RUN pip install wheel
+COPY poetry.lock pyproject.toml ./
+RUN poetry export > r-base.txt
+RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
+    pip install -r r-base.txt
+ARG PLUGIN="facebook signal telegram skype mattermost steam discord"
+RUN poetry export --extras "$PLUGIN" > r.txt || true
+RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
+    pip install -r r.txt || true
 
-RUN pip uninstall cython -y
-RUN test -f /venv/lib/python3.9/site-packages/slixmpp/stringprep.cpython-39-*-linux-gnu.so
+RUN if [ "$PLUGIN" = "telegram" ]; then \
+      cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib/ && \
+      rm *.dylib && \
+      if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        rm *amd64.so && \
+        wget https://slidge.im/libtdjson_linux_arm64.so; \
+      fi; \
+    fi
 
-FROM docker.io/library/python:3.9-slim AS slidge-base
+RUN pip uninstall wheel -y
+
+FROM docker.io/library/python:3.9-slim AS slidge
+
+ENV PATH /venv/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+STOPSIGNAL SIGINT
+
+RUN mkdir -p /var/lib/slidge
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN --mount=type=cache,id=slidge-apt-base,target=/var/cache/apt \
-    DEBIAN_FRONTEND=noninteractive apt update && \
+    apt update && \
     apt install libidn11 -y && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /venv /venv
-ENV PATH /venv/bin:$PATH
-ENV PYTHONUNBUFFERED=1
-
-RUN mkdir -p /var/lib/slidge
-
-STOPSIGNAL SIGINT
-
-FROM slidge-base AS slidge-telegram
-
-ARG TARGETPLATFORM
-
-RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt \
-    DEBIAN_FRONTEND=noninteractive apt update && \
-    apt install libc++1 -y
-
-COPY --from=builder /slidge/requirements-telegram.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-telegram,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-RUN --mount=type=cache,id=apt-slidge-telegram,target=/var/cache/apt if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+ARG PLUGIN
+RUN --mount=type=cache,id=slidge-apt-base,target=/var/cache/apt \
+    if [ "$PLUGIN" = "telegram" ]; then \
       apt update && \
-      apt install -y git g++ cmake zlib1g-dev gperf libssl-dev && \
-      git clone https://github.com/pylakey/td --depth 1 && \
-      mkdir td/build && cd td/build && \
-      cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/tmp/tdlib/ -DTD_ENABLE_LTO=ON .. && \
-      cmake --build . --target install && \
-      ls -la /tmp/tdlib/lib && \
-      cp -L /tmp/tdlib/lib/libtdjson.so "/venv/lib/python3.9/site-packages/aiotdlib/tdlib/libtdjson_linux_arm64.so" && \
-      apt remove -y git g++ cmake zlib1g-dev gperf libssl-dev && \
-      rm -rf /tmp/tdlib ../td; \
+      apt install libc++1 -y && \
+      rm -rf /var/lib/apt/lists/*; \
     fi
 
+RUN echo "#!/bin/sh\n/venv/bin/python -m slidge --legacy-module=slidge.plugins.$PLUGIN \"\$@\"" >> /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+COPY --from=builder /venv /venv
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.telegram"]
+ENTRYPOINT ["/entrypoint.sh"]
 
-FROM slidge-base AS slidge-signal
-
-COPY --from=builder /slidge/requirements-signal.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-signal,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.signal"]
-
-FROM slidge-base AS slidge-facebook
-
-COPY --from=builder /slidge/requirements-facebook.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-facebook,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.facebook"]
-
-FROM slidge-base AS slidge-skype
-
-COPY --from=builder /slidge/requirements-skype.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-skype,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.skype"]
-
-FROM slidge-base AS slidge-hackernews
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.hackernews"]
-
-FROM slidge-base AS slidge-mattermost
-
-COPY --from=builder /slidge/requirements-mattermost.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-skype,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.mattermost"]
-
-FROM slidge-base AS slidge-steam
-
-COPY --from=builder /slidge/requirements-steam.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-skype,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.steam"]
-
-FROM slidge-base AS slidge-discord
-
-COPY --from=builder /slidge/requirements-discord.txt /r.txt
-RUN --mount=type=cache,id=pip-slidge-skype,target=/root/.cache/pip \
-    pip install -r /r.txt
-
-COPY ./slidge /venv/lib/python3.9/site-packages/slidge
-
-ENTRYPOINT ["python", "-m", "slidge", "--legacy-module=slidge.plugins.discord_self"]
-
-FROM slidge-telegram AS slidge-dev
-
-COPY --from=builder /slidge/*.txt /slidge/
-
-RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
-    for f in /slidge/*.txt; do pip install -r $f; done
+FROM slidge AS slidge-dev
 
 RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
     pip install watchdog[watchmedo]
@@ -182,6 +120,8 @@ COPY --from=prosody /etc/prosody/certs/localhost.crt /usr/local/share/ca-certifi
 RUN update-ca-certificates
 
 COPY ./assets /venv/lib/python3.9/site-packages/assets
+
+RUN apt update && apt install libc++1 -y
 
 ENTRYPOINT ["watchmedo", "auto-restart", \
             "--directory=/venv/lib/python3.9/site-packages/slidge", "--pattern=*.py", "-R", "--", \

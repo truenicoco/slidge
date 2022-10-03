@@ -1,9 +1,9 @@
 image: alpine/edge
 packages:
-  - python3-dev
-  - python3
   - poetry
+  - python3-dev
   - docker
+  - docker-cli-buildx
 sources:
   - https://git.sr.ht/~nicoco/slidge
 secrets:
@@ -14,7 +14,7 @@ secrets:
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
-  PLUGINS: facebook signal telegram skype hackernews mattermost steam discord
+  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord
   POETRY_EXTRAS: facebook signal telegram skype mattermost steam discord
   DOCKER_BUILDKIT: "1"
 artifacts:
@@ -51,21 +51,22 @@ tasks:
   - container: |
       cd slidge
       while ! test -e /var/run/docker.sock; do sleep 1; done
+      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
+      docker buildx create --use
       for LEGACY in $PLUGINS; do
-        docker pull $REGISTRY_PREFIX-$LEGACY:latest || true
-        docker build --target slidge-$LEGACY -t $REGISTRY_PREFIX-$LEGACY:latest .
+        export NAME=$REGISTRY_PREFIX-$LEGACY:latest
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
+        docker buildx build $ARGS
+        if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
+          docker buildx --push build $ARGS
+        fi
       done
-  - publish: |
+  - release: |
       if ! test -f ~/.pypi-token; then
         echo "We don't have access to secrets, publishing is not possible, exiting."
         exit 0
       fi
       cd slidge
-      if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
-        for LEGACY in $PLUGINS; do
-          docker push $REGISTRY_PREFIX-$LEGACY:latest
-        done
-      fi
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           VER=$(echo $TAG | cut -c2-)
@@ -79,8 +80,12 @@ tasks:
           poetry publish
       
           for LEGACY in $PLUGINS; do
-            docker tag $REGISTRY_PREFIX-$LEGACY:latest $REGISTRY_PREFIX-$LEGACY:$VER
-            docker push $REGISTRY_PREFIX-$LEGACY:$VER
+            docker buildx build \
+              --build-arg PLUGIN=$LEGACY \
+              --push \
+              --platform linux/arm64,linux/amd64 \
+              --tag $REGISTRY_PREFIX-$LEGACY:$VER \
+              --target slidge-$LEGACY .
           done
         fi
       done

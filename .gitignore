@@ -10,3 +10,4 @@ persistent/
 .idea
 .mypy_cache
 .old
+requirements*
