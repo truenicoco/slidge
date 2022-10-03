@@ -1,9 +1,7 @@
 image: debian/stable
 
 packages:
-#  - virtualenv
   - devscripts
-#  - git-buildpackage
   - debhelper-compat
   - dwz
   - python3-dev
