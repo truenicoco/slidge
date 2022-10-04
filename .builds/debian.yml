@@ -37,9 +37,9 @@ tasks:
       sudo apt-get install python3-virtualenv dh-virtualenv -y
   - generate-plugin-files: |
       cd slidge/debian
-      mkdir -p etc/conf.d
+      mkdir -p etc
       for PLUGIN in $PLUGINS; do
-        sed "s/--PLUGIN--/$PLUGIN/" tpl.conf > etc/conf.d/$PLUGIN.conf.example
+        sed "s/--PLUGIN--/$PLUGIN/" tpl.conf > etc/$PLUGIN.conf.example
       done
       echo "socket=/var/run/signald/signald.sock" >> etc/signal.conf
   - build: |
@@ -53,7 +53,8 @@ tasks:
       sudo apt-get install ./slidge_${VER}_amd64.deb -y
       ls -la /usr/lib/slidge*
       sudo ls -la /etc/slidge*
-      sudo mv /etc/slidge/conf.d/mattermost.conf.example /etc/slidge/conf.d/mattermost.conf
+      sudo mv /etc/slidge/conf.d/common.conf.example /etc/slidge/conf.d/common.conf
+      sudo mv /etc/slidge/mattermost.conf.example /etc/slidge/mattermost.conf
       sudo systemctl cat slidge@mattermost.service
       slidge --help
       sudo systemctl enable --now slidge@mattermost

@@ -1,3 +1,3 @@
 debian/etc/* /etc/slidge/
 debian/systemd/* /usr/lib/systemd/system/
-debian/common.conf /etc/slidge/conf.d/common.conf.example
+debian/common.conf.example /etc/slidge/conf.d/
