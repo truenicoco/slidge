@@ -57,7 +57,7 @@ tasks:
         export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
-          docker buildx --push build $ARGS
+          docker buildx build --push $ARGS
         fi
       done
   - release: |
