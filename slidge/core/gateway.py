@@ -102,6 +102,7 @@ class BaseGateway(
         "find": "_chat_command_search",
         "help": "_chat_command_help",
         "register": "_chat_command_register",
+        "contacts": "_chat_command_list_contacts",
     }
     CHAT_COMMANDS: dict[str, str] = {}
     """
@@ -597,6 +598,19 @@ class BaseGateway(
             )
             log.debug("In help: %s", t)
             msg.reply(f"Available commands: {t}").send()
+
+    @staticmethod
+    async def _chat_command_list_contacts(
+        *_args, msg: Message, session: Optional[SessionType]
+    ):
+        if session is None:
+            msg.reply("Register to the gateway first!").send()
+        else:
+            contacts = sorted(
+                session.contacts, key=lambda c: c.name.casefold() if c.name else ""
+            )
+            t = "\n".join(f"{c.name}: xmpp:{c.jid.bare}" for c in contacts)
+            msg.reply(t).send()
 
     async def _chat_command_register(
         self, *args, msg: Message, session: Optional[SessionType]
