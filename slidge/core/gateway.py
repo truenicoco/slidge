@@ -340,6 +340,9 @@ class BaseGateway(
         self["xep_0050"].add_command(
             node="info", name="List registered users", handler=self._handle_info
         )
+        self.plugin["xep_0050"].add_command(
+            node="search", name="Search for contacts", handler=self._handle_search
+        )
 
     def _handle_info(self, iq: Iq, session: dict[str, Any]):
         """
@@ -358,6 +361,45 @@ class BaseGateway(
         session["has_next"] = False
 
         return session
+
+    async def _handle_search(self, iq: Iq, adhoc_session: dict[str, Any]):
+        """
+        Jabber search, but as an adhoc command (search form)
+        """
+        user = user_store.get_by_jid(iq.get_from())
+        if user is None:
+            raise XMPPError(
+                "not-authorized", text="Search is only allowed for registered users"
+            )
+
+        session = self._get_session_from_stanza(iq)
+
+        reply = await self._search_get_form(None, None, ifrom=iq.get_from(), iq=iq)
+        adhoc_session["payload"] = reply["search"]["form"]
+        adhoc_session["next"] = self._handle_search2
+        adhoc_session["has_next"] = True
+        adhoc_session["session"] = session
+
+        return adhoc_session
+
+    async def _handle_search2(self, form, adhoc_session: dict[str, Any]):
+        """
+        Jabber search, but as an adhoc command (results)
+        """
+
+        search_results = await adhoc_session["session"].search(form.get_values())
+
+        form = self.plugin["xep_0004"].make_form("result", "Contact search results")
+        for field in search_results.fields:
+            form.add_reported(field.var, label=field.label, type=field.type)
+        for item in search_results.items:
+            form.add_item(item)
+
+        adhoc_session["next"] = None
+        adhoc_session["has_next"] = False
+        adhoc_session["payload"] = form
+
+        return adhoc_session
 
     async def _make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         if not self._jid_validator.match(iq.get_from().bare):
