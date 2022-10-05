@@ -76,7 +76,7 @@ class TelegramClient(aiotdlib.Client):
         if not contact.added_to_roster:
             self.log.debug("Ignoring presence of contact not in the roster")
             return
-        await contact.send_tg_status(update.status)
+        contact.update_status(update.status)
 
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
         if not await self.is_private_chat(update.chat_id):

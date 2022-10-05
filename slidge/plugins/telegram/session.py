@@ -144,10 +144,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         users = await self.tg.api.get_contacts()
         for id_ in users.user_ids:
             contact = self.contacts.by_legacy_id(id_)
-            await contact.update_info_from_user()
             await contact.add_to_roster()
-            contact.online()
-            contact.away()
+            await contact.update_info_from_user()
 
     async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()

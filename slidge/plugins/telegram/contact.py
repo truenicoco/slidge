@@ -1,6 +1,7 @@
 import asyncio
-import datetime
 import logging
+import time
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
@@ -11,6 +12,10 @@ if TYPE_CHECKING:
     from .session import Session
 
 
+async def noop():
+    return
+
+
 class Contact(LegacyContact["Session"]):
     legacy_id: int
     # Telegram official clients have no XMPP presence equivalent, but a 'last seen' indication.
@@ -19,45 +24,35 @@ class Contact(LegacyContact["Session"]):
 
     def __init__(self, *a, **k):
         super(Contact, self).__init__(*a, **k)
-        self.last_seen = None
-        self.away_task: asyncio.Task = self.xmpp.loop.create_task(self.delayed_away())
+        self._online_expire_task = self.xmpp.loop.create_task(noop())
 
-    def reset_delayed_away(self):
-        self.away_task.cancel()
-        self.last_seen = datetime.datetime.now()
-        self.online()
-        self.away_task = self.xmpp.loop.create_task(self.delayed_away())
+    async def _expire_online(self, timestamp: int):
+        how_long = timestamp - time.time()
+        log.debug("Online status expires in %s seconds", how_long)
+        await asyncio.sleep(how_long)
+        self.away("Away (online status has expired)")
 
-    async def delayed_away(self):
-        await asyncio.sleep(60)
-        for x in range(1, 60):
-            self.away(f"Last seen {x} minute{'s' if x > 1 else ''} ago")
-            await asyncio.sleep(60)
-        for x in range(1, 24):
-            self.away(f"Last seen {x} hour{'s' if x > 1 else ''} ago")
-            await asyncio.sleep(3600)
-        self.away(f"Last seen yesterday")
-        await asyncio.sleep(3600 * 24)
-        for x in range(2, 7):
-            self.away(f"Last seen {x} day{'s' if x > 1 else ''} ago")
-            await asyncio.sleep(3600 * 24)
-        self.away()
-
-    def away(self, status=None):
-        if status is None:
-            if self.last_seen is None:
-                status = "Last seen: never"
-            else:
-                status = f"{self.last_seen: %B %d, %Y}"
-        super().away(status)
-
-    def active(self):
-        self.reset_delayed_away()
-        self.online()
-        super().active()
+    def update_status(self, status: tgapi.UserStatus):
+        self._online_expire_task.cancel()
+        if isinstance(status, tgapi.UserStatusEmpty):
+            self.offline()
+        elif isinstance(status, tgapi.UserStatusLastMonth):
+            self.extended_away("Offline since last month")
+        elif isinstance(status, tgapi.UserStatusLastWeek):
+            self.extended_away("Offline since last week")
+        elif isinstance(status, tgapi.UserStatusOffline):
+            self.away(
+                f"Last seen on {datetime.fromtimestamp(status.was_online): %A at %H:%M}"
+            )
+        elif isinstance(status, tgapi.UserStatusOnline):
+            self.online()
+            self._online_expire_task = self.xmpp.loop.create_task(
+                self._expire_online(status.expires)
+            )
+        elif isinstance(status, tgapi.UserStatusRecently):
+            self.away("Last seen recently")
 
     async def send_tg_message(self, msg: tgapi.Message):
-        self.reset_delayed_away()
         content = msg.content
         if isinstance(content, tgapi.MessageText):
             # TODO: parse formatted text to markdown
@@ -88,7 +83,6 @@ class Contact(LegacyContact["Session"]):
             self.session.log.debug("Ignoring content: %s", type(content))
 
     async def send_tg_file(self, best_file, caption, msg_id):
-        self.reset_delayed_away()
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
@@ -96,16 +90,6 @@ class Contact(LegacyContact["Session"]):
         await self.send_file(best_file_downloaded.local.path)
         if caption.text:
             self.send_text(caption.text, legacy_msg_id=msg_id)
-
-    async def send_tg_status(self, status: tgapi.UserStatus):
-        self.reset_delayed_away()
-        if isinstance(status, tgapi.UserStatusOnline):
-            self.active()
-        elif isinstance(status, tgapi.UserStatusOffline):
-            self.paused()
-            self.inactive()
-        else:
-            log.debug("Ignoring status %s", status)
 
     async def update_info_from_user(self, user: Optional[tgapi.User] = None):
         if user is None:
@@ -117,7 +101,7 @@ class Contact(LegacyContact["Session"]):
             if last := user.last_name:
                 name += " " + last
         self.name = name
-        # TODO: use user.status
+
         if photo := user.profile_photo:
             if (local := photo.small.local) and (path := local.path):
                 with open(path, "rb") as f:
@@ -132,10 +116,20 @@ class Contact(LegacyContact["Session"]):
                 )
                 with open(response.local.path, "rb") as f:
                     self.avatar = f.read()
+
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives
             # confirmation codes and announces telegram-related stuff
             self.CLIENT_TYPE = "bot"
+
+        else:
+            if user.is_contact:
+                self._subscribe_to = True
+                self._subscribe_from = user.is_mutual_contact
+            else:
+                self._subscribe_to = self._subscribe_from = False
+
+        self.update_status(user.status)
 
     async def update_info_from_chat(self, chat: tgapi.Chat):
         self.name = chat.title
