@@ -15,6 +15,7 @@ class Contact(LegacyContact["Session"]):
     legacy_id: int
     # Telegram official clients have no XMPP presence equivalent, but a 'last seen' indication.
     AWAY_DELAY = 300
+    CLIENT_TYPE = "phone"
 
     def __init__(self, *a, **k):
         super(Contact, self).__init__(*a, **k)
@@ -117,6 +118,24 @@ class Contact(LegacyContact["Session"]):
                 name += " " + last
         self.name = name
         # TODO: use user.status
+        if photo := user.profile_photo:
+            if (local := photo.small.local) and (path := local.path):
+                with open(path, "rb") as f:
+                    self.avatar = f.read()
+            else:
+                response = await self.session.tg.api.download_file(
+                    file_id=photo.small.id,
+                    synchronous=True,
+                    priority=1,
+                    offset=0,
+                    limit=0,
+                )
+                with open(response.local.path, "rb") as f:
+                    self.avatar = f.read()
+        if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
+            # 777000 is not marked as bot, it's the "Telegram" contact, which gives
+            # confirmation codes and announces telegram-related stuff
+            self.CLIENT_TYPE = "bot"
 
     async def update_info_from_chat(self, chat: tgapi.Chat):
         self.name = chat.title
