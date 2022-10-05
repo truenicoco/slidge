@@ -253,6 +253,19 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             pfrom=self.jid, pto=self.user.jid.bare, pshow="away", pstatus=status
         )
 
+    def extended_away(self, status: Optional[str] = None):
+        """
+        Send an "extended away" presence from this contact to the user.
+
+        This is a global status, as opposed to :meth:`.LegacyContact.inactive`
+        which concerns a specific conversation, ie a specific "chat window"
+
+        :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
+        """
+        self.xmpp.send_presence(
+            pfrom=self.jid, pto=self.user.jid.bare, pshow="xa", pstatus=status
+        )
+
     def busy(self, status: Optional[str] = None):
         """
         Send a "busy" presence from this contact to the user,
