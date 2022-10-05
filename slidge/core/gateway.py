@@ -79,6 +79,7 @@ class BaseGateway(
     SEARCH_FIELDS: Sequence[FormField] = [
         FormField(var="first", label="First name", required=True),
         FormField(var="last", label="Last name", required=True),
+        FormField(var="phone", label="Last name", required=False),
     ]
     """
     Fields used for searching items via the component, through :xep:`0055` (jabber search).
@@ -518,10 +519,13 @@ class BaseGateway(
         for field, arg in zip(self.SEARCH_FIELDS, args):
             search_form[field.var] = arg
 
-        for field in self.SEARCH_FIELDS[diff:]:
-            search_form[field.var] = await session.input(
-                (field.label or field.var) + "?"
-            )
+        if diff < 0:
+            for field in self.SEARCH_FIELDS[diff:]:
+                if not field.required:
+                    continue
+                search_form[field.var] = await session.input(
+                    (field.label or field.var) + "?"
+                )
 
         results = await session.search(search_form)
         if results is None:
