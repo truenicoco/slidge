@@ -88,8 +88,8 @@ A repo is maintained by IGImonster. To use it do this (as root):
 wget -O- http://deb.slidge.im/repo/slidge.gpg.key \
   |gpg --dearmor \
   |tee /usr/share/keyrings/slidge.gpg > /dev/null
-# add the repo
-echo "deb [signed-by=/usr/share/keyrings/slidge.gpg] http://deb.slidge.im/repo/debian bullseye main" \
+# add the repo, replace 'release' with 'nightly' if you're feeling adventurous 
+echo "deb [signed-by=/usr/share/keyrings/slidge.gpg] http://deb.slidge.im/repo/debian release main" \
   > /etc/apt/sources.list.d/slidge.list
 # install
 apt update && apt install slidge -y
