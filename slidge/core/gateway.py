@@ -17,6 +17,7 @@ from slixmpp.types import MessageTypes
 from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
+from ..util.xep_0292.vcard4 import VCard4Provider
 from ..util.xep_0363 import FileUploadError
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
@@ -189,6 +190,7 @@ class BaseGateway(
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
+        self.vcard: VCard4Provider = self["xep_0292_provider"]
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -315,6 +317,10 @@ class BaseGateway(
             )  # ensure we get all resources for user
             session = self._session_cls.from_user(user)
             self.loop.create_task(self._login_wrap(session))
+            for c in session.contacts:
+                # we need to receive presences directed at the contacts, in order to
+                # send pubsub events for their +notify features
+                self.send_presence(pfrom=c.jid, pto=user.bare_jid, ptype="probe")
 
         log.info("Slidge has successfully started")
 
@@ -894,6 +900,7 @@ SLIXMPP_PLUGINS = [
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
     "xep_0280",  # Carbons
+    "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints

@@ -55,6 +55,17 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         super(Session, self).__init__(user)
         self.counter = 0
         self.xmpp.loop.create_task(self.backfill())
+        self.contacts.by_legacy_id("bibi").set_vcard(
+            given="FirstBi",
+            surname="LastBi",
+            phone="+555",
+            full_name="Bi bi",
+            note="A fake friend, always there for you",
+            url="https://example.org",
+            email="bibi@prout.com",
+            country="Westeros",
+            locality="The place with the thing",
+        )
 
     async def backfill(self):
         self.log.debug("CARBON")

@@ -19,6 +19,9 @@ from slidge.util.db import user_store
 from slidge.util.types import AvatarType
 from slidge.util.xep_0084 import Data as AvatarData
 from slidge.util.xep_0084 import MetaData as AvatarMetadata
+from slidge.util.xep_0292.stanza import VCard4
+
+VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 
 class PepItem:
@@ -130,6 +133,13 @@ class PubSubComponent(BasePlugin):
                 self._get_avatar_metadata,  # type:ignore
             )
         )
+        self.xmpp.register_handler(
+            CoroutineCallback(
+                "pubsub_get_vcard",
+                StanzaPath(f"iq@type=get/pubsub/items@node={VCARD4_NAMESPACE}"),
+                self._get_vcard,  # type:ignore
+            )
+        )
         self.xmpp.add_event_handler("got_online", self._on_got_online)
 
         disco = self.xmpp.plugin["xep_0030"]
@@ -170,6 +180,27 @@ class PubSubComponent(BasePlugin):
                 pass
             else:
                 self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
+
+        if VCARD4_NAMESPACE + "+notify" in features:
+            self.broadcast_vcard_event(p.get_to(), to=from_)
+
+    def broadcast_vcard_event(self, from_, to):
+        item = Item()
+        item.namespace = VCARD4_NAMESPACE
+        item["id"] = "current"
+        vcard: VCard4 = self.xmpp["xep_0292_provider"].get_vcard(from_, to)
+        # The vcard content should NOT be in this event according to the spec:
+        # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
+        # but movim expects it to be here, and I guess
+
+        log.debug("Broadcast vcard4 event: %s", vcard)
+        self._broadcast(
+            data=vcard,
+            from_=JID(from_).bare,
+            to=to,
+            id="current",
+            node=VCARD4_NAMESPACE,
+        )
 
     @staticmethod
     def _get_authorized_item(
@@ -223,27 +254,46 @@ class PubSubComponent(BasePlugin):
             else:
                 raise XMPPError("item-not-found")
 
+    async def _get_vcard(self, iq: Iq):
+        # this is not the proper way that clients should retrieve VCards, but
+        # gajim does it this way.
+        # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
+        vcard: VCard4 = self.xmpp["xep_0292_provider"].get_vcard(
+            iq.get_to().bare, iq.get_from().bare
+        )
+        log.debug("VCARD: %s -- %s -- %s", iq.get_to().bare, iq.get_from().bare, vcard)
+        if vcard is None:
+            raise XMPPError("item-not-found")
+        self._reply_with_payload(iq, vcard, "current", VCARD4_NAMESPACE)
+
     @staticmethod
     def _reply_with_payload(
-        iq: Iq, payload: Union[AvatarMetadata, AvatarData], id_: str
+        iq: Iq,
+        payload: Union[AvatarMetadata, AvatarData, VCard4],
+        id_: str,
+        namespace: Optional[str] = None,
     ):
         result = iq.reply()
         item = Item()
-        item.set_payload(payload.xml)
+        if payload:
+            item.set_payload(payload.xml)
         item["id"] = id_
-        result["pubsub"]["items"]["node"] = payload.namespace
+        result["pubsub"]["items"]["node"] = (
+            namespace if namespace else payload.namespace
+        )
         result["pubsub"]["items"].append(item)
         result.send()
 
     def _broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
         item = EventItem()
-        item.set_payload(data.xml)
+        if data:
+            item.set_payload(data.xml)
         for k, v in kwargs.items():
             item[k] = v
 
         items = EventItems()
         items.append(item)
-        items["node"] = data.namespace
+        items["node"] = kwargs.get("node") or data.namespace
 
         event = Event()
         event.append(items)

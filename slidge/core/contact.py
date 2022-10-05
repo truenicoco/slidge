@@ -1,6 +1,6 @@
 import functools
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import (
@@ -26,6 +26,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyUserIdType,
 )
+from ..util.xep_0292.stanza import VCard4
 from ..util.xep_0363 import FileUploadError
 
 if TYPE_CHECKING:
@@ -155,6 +156,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         if self.REPLIES:
             await add_feature("urn:xmpp:reply:0")
 
+        await add_feature("urn:ietf:params:xml:ns:vcard-4.0")
         await xmpp["xep_0115"].update_caps(jid=self.jid)
 
     @property
@@ -199,6 +201,52 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             )
         )
         self._avatar = a
+
+    def set_vcard(
+        self,
+        /,
+        full_name: Optional[str] = None,
+        given: Optional[str] = None,
+        surname: Optional[str] = None,
+        birthday: Optional[date] = None,
+        phone: Optional[str] = None,
+        note: Optional[str] = None,
+        url: Optional[str] = None,
+        email: Optional[str] = None,
+        country: Optional[str] = None,
+        locality: Optional[str] = None,
+    ):
+        vcard = VCard4()
+        vcard.add_impp(f"xmpp:{self.jid.bare}")
+
+        if n := self.name:
+            vcard.add_nickname(n)
+        if full_name:
+            vcard["full_name"] = full_name
+        elif n:
+            vcard["full_name"] = n
+
+        if given:
+            vcard["given"] = given
+        if surname:
+            vcard["surname"] = surname
+        if birthday:
+            vcard["birthday"] = birthday
+
+        if note:
+            vcard.add_note(note)
+        if url:
+            vcard.add_url(url)
+        if email:
+            vcard.add_email(email)
+        if phone:
+            vcard.add_tel(phone)
+        if country and locality:
+            vcard.add_address(country, locality)
+        elif country:
+            vcard.add_address(country, locality)
+
+        self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user.jid.bare})
 
     async def add_to_roster(self):
         """
