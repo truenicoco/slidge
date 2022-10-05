@@ -109,7 +109,13 @@ class Contact(LegacyContact["Session"]):
     async def update_info_from_user(self, user: Optional[tgapi.User] = None):
         if user is None:
             user = await self.session.tg.api.get_user(self.legacy_id)
-        self.name = user.first_name + " " + user.last_name
+        if username := user.username:
+            name = username
+        else:
+            name = user.first_name
+            if last := user.last_name:
+                name += " " + last
+        self.name = name
         # TODO: use user.status
 
     async def update_info_from_chat(self, chat: tgapi.Chat):
