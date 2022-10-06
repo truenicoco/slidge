@@ -101,6 +101,11 @@ def get_parser():
         default=200,
         help="Maximum image size (width and height), image ratio will be preserved",
     )
+    p.add_argument(
+        "--upload-requester",
+        env_var="SLIDGE_UPLOAD_REQUESTER",
+        help="Set which JID should request the upload slots. Defaults to the component JID.",
+    )
 
     p.add_argument(
         "-q",

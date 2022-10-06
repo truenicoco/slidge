@@ -21,6 +21,7 @@ class SlidgeTest(SlixTest):
         user_jid_validator = ".*@shakespeare.lit"
         admins: list[str] = []
         no_roster_push = False
+        upload_requester = None
 
     @classmethod
     def setUpClass(cls):

@@ -472,7 +472,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 filename=filename,
                 content_type=content_type,
                 input_file=input_file,
-                ifrom=self.xmpp.boundjid.bare,
+                ifrom=self.xmpp.upload_requester,
             )
         except FileUploadError as e:
             log.warning(

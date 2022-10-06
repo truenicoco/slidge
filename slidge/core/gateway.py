@@ -169,6 +169,7 @@ class BaseGateway(
         self._jid_validator = re.compile(args.user_jid_validator)
         self._config = args
         self.no_roster_push = args.no_roster_push
+        self.upload_requester = args.upload_requester or self.boundjid.bare
 
         self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
@@ -821,7 +822,7 @@ class BaseGateway(
         msg.set_from(self.boundjid.bare)
         try:
             url = await self["xep_0363"].upload_file(
-                filename=filename, ifrom=self.boundjid.bare
+                filename=filename, ifrom=self.upload_requester
             )
         except FileUploadError as e:
             log.warning(
