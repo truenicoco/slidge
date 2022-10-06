@@ -79,7 +79,10 @@ RUN if [ "$PLUGIN" = "telegram" ]; then \
       fi; \
     fi
 
-RUN pip uninstall wheel -y
+# getting weird errors when uninstalling wheel for some reason!?
+# OSError: [Errno 18] Invalid cross-device link: '/venv/lib/python3.9/site-packages/wheel-0.37.1.dist-info/' -> '/venv/lib/python3.9/site-packages/~heel-0.37.1.dist-info'
+# OSError: [Errno 39] Directory not empty: '/venv/lib/python3.9/site-packages/wheel-0.37.1.dist-info/'
+#RUN pip uninstall wheel -y
 
 FROM docker.io/library/python:3.9-slim AS slidge
 
