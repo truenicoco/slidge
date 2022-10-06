@@ -26,10 +26,14 @@ def handle_unregistered_recipient(func):
     async def wrapped(*a, **kw):
         try:
             return await func(*a, **kw)
-        except sigexc.UnregisteredUserError:
+        except (
+            sigexc.UnregisteredUserError,
+            sigexc.IllegalArgumentException,
+            sigexc.InternalError,
+        ) as e:
             raise XMPPError(
                 "item-not-found",
-                text="This phone number is not associated with a signal account",
+                text=e.message,
             )
 
     return wrapped
