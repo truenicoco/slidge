@@ -1,7 +1,3 @@
-import logging
-
-logging.getLogger("slixmpp").addHandler(logging.StreamHandler())
-
 import slixmpp.plugins
 
 from .core.contact import LegacyContact, LegacyRoster
