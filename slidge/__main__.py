@@ -156,13 +156,23 @@ def main():
     gateway.config(argv)
     gateway.connect()
 
+    return_code = 0
     try:
         gateway.loop.run_forever()
     except KeyboardInterrupt:
         logging.debug("Received SIGINT")
+    except SystemExit as e:
+        return_code = e.code
+        logging.debug("Exit called")
     except Exception as e:
+        return_code = 2
+        logging.exception("Exception in __main__")
         logging.exception(e)
     finally:
+        if gateway.has_crashed:
+            if return_code != 0:
+                logging.warning("Return code has been set twice. Please report this.")
+            return_code = 3
         if gateway.is_connected():
             logging.debug("Gateway is connected, cleaning up")
             gateway.shutdown()
@@ -171,6 +181,8 @@ def main():
         else:
             logging.debug("Gateway is not connected, no need to clean up")
         logging.info("Successful clean shut down")
+    logging.debug("Exiting with code %s", return_code)
+    exit(return_code)
 
 
 if __name__ == "__main__":

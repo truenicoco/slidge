@@ -164,6 +164,7 @@ class BaseGateway(
             },
         )
         self.loop.set_exception_handler(self.__exception_handler)
+        self.has_crashed = False
 
         self.home_dir = Path(args.home_dir)
         self._jid_validator = re.compile(args.user_jid_validator)
@@ -189,19 +190,29 @@ class BaseGateway(
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
 
-    @staticmethod
-    def __exception_handler(loop: asyncio.AbstractEventLoop, context):
-        loop.default_exception_handler(context)  # prints a standard python traceback
+    def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
+        """
+        Called when a task created by loop.create_task() raises an Exception
+
+        :param loop:
+        :param context:
+        :return:
+        """
+        log.debug("CONTEXT: %s", context)
         exc = context.get("exception")
         if exc is None:
             log.warning("No exception in this context: %s", context)
+        elif isinstance(exc, SystemExit):
+            log.debug("SystemExit called in an asyncio task")
         else:
-            log.exception(exc)
-        loop.stop()
-        exit(1)
+            log.exception("Crash in an asyncio task: %s", context)
+            self.has_crashed = True
+            loop.stop()
 
     def exception(self, exception: Exception):
         """
+        Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
+
         Stop the event loop and exit on unhandled exception.
 
         The default :class:slixmpp.basexmpp.BaseXMPP` behaviour is just to
@@ -223,7 +234,6 @@ class BaseGateway(
             # don't need to make a mess in the logs).
             pass
         else:
-            log.exception(exception)
             self.loop.stop()
             exit(1)
 

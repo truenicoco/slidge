@@ -93,6 +93,8 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
 
         if t == "crash":
             raise RuntimeError("PANIC!!!")
+        if t == "crash2":
+            self.xmpp.loop.create_task(self.crash())
         elif t == "delete":
             self.xmpp.loop.create_task(self.later_carbon_delete(c, i))
         elif t == "nick":
@@ -105,6 +107,9 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
             self.xmpp.loop.create_task(self.later(c, i))
 
         return i
+
+    async def crash(self):
+        raise RuntimeError("PANIC222!!!")
 
     async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None) -> int:
         i = self.counter
