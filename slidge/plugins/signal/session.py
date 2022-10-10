@@ -263,15 +263,11 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 reply_to_msg_id = None
             else:
                 reply_to_msg_id = quote.id
-            for attachment in data.attachments:
-                with open(attachment.storedFilename, "rb") as f:
-                    await contact.send_file(
-                        filename=attachment.customFilename,
-                        input_file=f,
-                        content_type=attachment.contentType,
-                        legacy_msg_id=msg.data_message.timestamp,
-                        reply_to_msg_id=reply_to_msg_id,
-                    )
+            await contact.send_attachments(
+                data.attachments,
+                legacy_msg_id=msg.data_message.timestamp,
+                reply_to_msg_id=reply_to_msg_id,
+            )
             if (body := data.body) is not None:
                 contact.send_text(
                     body=body,

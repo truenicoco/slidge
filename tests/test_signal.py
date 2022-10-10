@@ -4,6 +4,7 @@ from aiosignald import exc
 
 import slidge.plugins.signal as plugin
 import slidge.plugins.signal.gateway
+from slidge.plugins.signal.contact import get_filename
 from slidge.util.test import SlidgeTest
 from slidge import *
 from aiosignald import generated as sigapi
@@ -165,3 +166,39 @@ class TestSignalFinalizePrimaryDeviceRegistration(TestSignalBase):
         #     == self.romeo.registration_form["phone"]
         # )
         # assert self.signal.calls[0][1]["kwargs"]["code"] == "CODE"
+
+
+def test_attachment_filename():
+    assert get_filename(sigapi.JsonAttachmentv1(customFilename="TEST")) == "TEST"
+    assert (
+        get_filename(
+            sigapi.JsonAttachmentv1(
+                customFilename=None, id="test", contentType="image/jpeg"
+            )
+        )
+        == "test.jpg"
+    )
+    assert (
+        get_filename(
+            sigapi.JsonAttachmentv1(
+                contentType="image/jpeg"
+            )
+        )
+        == "unnamed.jpg"
+    )
+    assert (
+        get_filename(
+            sigapi.JsonAttachmentv1(
+                contentType="bogus/bogus"
+            )
+        )
+        == "unnamed"
+    )
+    assert (
+        get_filename(
+            sigapi.JsonAttachmentv1(
+                customFilename="test.bogus", contentType="image/jpeg"
+            )
+        )
+        == "test.bogus"
+    )
