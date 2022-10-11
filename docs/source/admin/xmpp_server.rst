@@ -93,6 +93,16 @@ Change the port, hostname and secret accordingly.
             superduper.example.com:
               password: secret
 
+ACL
+***
+
+Create a policy like this:
+
+.. code-block:: yaml
+    acl:
+      slidge:
+        server: superduper.example.com
+
 mod_privilege
 *************
 
@@ -103,16 +113,22 @@ Roster management also requires roster versioning enabled.
     modules:
       mod_privilege:
         roster:
-          both: superduper.example.com
+          both: slidge
         message:
-          outgoing: superduper.example.com
+          outgoing: slidge
       mod_roster:
         versioning: true
 
 Upload component
 ****************
 
+ejabberd's HTTP upload will not let the component request upload slots,
+so you need to use a pseudo user on the component domain, eg,
+``slidge@superduper.example.com`` and use slidge's
+``--upload-requester=slidge@superduper.example.com`` `config`_ option.
+
 .. code-block:: yaml
+
 
     listen:
       -
@@ -122,13 +138,14 @@ Upload component
         request_handlers:
           /upload: mod_http_upload
 
-.. code-block:: yaml
-
     modules:
-      mod_http_upload:
         docroot: /ejabberd/upload
         put_url: "https://@HOST@:5443/upload"
+        access:
+          - local
+        access:
+          - slidge
 
 
-To get more informaton about component configuration, see `ejabberd's docs
+To get more information about component configuration, see `ejabberd's docs
 <https://docs.ejabberd.im/admin/configuration/modules/#mod-http-upload>`_.
