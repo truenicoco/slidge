@@ -131,6 +131,14 @@ class Contact(LegacyContact["Session"]):
 
         self.update_status(user.status)
 
+        if p := user.phone_number:
+            phone = "+" + p
+        else:
+            phone = None
+        self.set_vcard(
+            given=user.first_name, surname=user.last_name, phone=phone, full_name=name
+        )
+
     async def update_info_from_chat(self, chat: tgapi.Chat):
         self.name = chat.title
         if isinstance(chat.photo, tgapi.ChatPhotoInfo):
