@@ -155,19 +155,21 @@ class PubSubComponent(BasePlugin):
             try:
                 pep_avatar = self._get_authorized_avatar(p)
             except XMPPError:
-                return
-            self._broadcast(
-                data=pep_avatar.metadata,
-                from_=p.get_to(),
-                to=from_,
-                id=pep_avatar.metadata["info"]["id"],
-            )
+                pass
+            else:
+                self._broadcast(
+                    data=pep_avatar.metadata,
+                    from_=p.get_to(),
+                    to=from_,
+                    id=pep_avatar.metadata["info"]["id"],
+                )
         if UserNick.namespace + "+notify" in features:
             try:
                 pep_nick = self._get_authorized_nick(p)
             except XMPPError:
-                return
-            self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
+                pass
+            else:
+                self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
     @staticmethod
     def _get_authorized_item(
