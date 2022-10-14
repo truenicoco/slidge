@@ -116,6 +116,16 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 FROM slidge AS slidge-dev
 
+ARG TARGETPLATFORM
+
+RUN apt update && apt install libc++1 wget -y
+
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib/ && \
+      rm *amd64.so && \
+      wget https://slidge.im/libtdjson_linux_arm64.so; \
+    fi
+
 RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
     pip install watchdog[watchmedo]
 
@@ -123,8 +133,6 @@ COPY --from=prosody /etc/prosody/certs/localhost.crt /usr/local/share/ca-certifi
 RUN update-ca-certificates
 
 COPY ./assets /venv/lib/python3.9/site-packages/assets
-
-RUN apt update && apt install libc++1 -y
 
 ENTRYPOINT ["watchmedo", "auto-restart", \
             "--directory=/venv/lib/python3.9/site-packages/slidge", "--pattern=*.py", "-R", "--", \
