@@ -180,9 +180,8 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m["replace"][
-            "id"
-        ]:  # ignore last message correction (handled by a specific method)
+        if m["replace"]["id"] or m["apply_to"]["id"]:
+            # ignore last message correction and retraction (handled by a specific method)
             return
         if (i := m.get_id()) in self.ignore_messages:
             self.log.debug("Ignored message: %s", i)
