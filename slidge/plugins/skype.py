@@ -11,6 +11,7 @@ from typing import Any, Optional
 import aiohttp
 import skpy
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -148,7 +149,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 contact = self.contacts.by_legacy_id(chat.userIds[0])
                 if msg.userId == self.sk.userId:
                     try:
-                        fut = self.sent_by_user_to_ack.pop(msg.id)
+                        fut = self.sent_by_user_to_ack.pop(msg.clientId)
                     except KeyError:
                         if log.isEnabledFor(logging.DEBUG):
                             log.debug(
@@ -160,8 +161,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                         fut.set_result(msg)
                 else:
                     if isinstance(msg, skpy.SkypeTextMsg):
-                        contact.send_text(msg.plain, legacy_msg_id=msg.id)
-                        self.unread_by_user[msg.id] = msg
+                        contact.send_text(msg.plain, legacy_msg_id=msg.clientId)
+                        self.unread_by_user[msg.clientId] = msg
                     elif isinstance(msg, skpy.SkypeFileMsg):
                         file = io.BytesIO(
                             await self.async_wrap(lambda: msg.fileContent)
@@ -173,6 +174,25 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 contact.composing()
             else:
                 contact.paused()
+        elif isinstance(event, skpy.SkypeEditMessageEvent):
+            msg = event.msg
+            chat = event.msg.chat
+            if isinstance(chat, skpy.SkypeSingleChat):
+                if (user_id := msg.userId) != self.sk.userId:
+                    if log.isEnabledFor(logging.DEBUG):
+                        log.debug("edit msg event: %s", pprint.pformat(vars(event)))
+                    contact = self.contacts.by_legacy_id(user_id)
+                    msg_id = msg.clientId
+                    log.debug("edited msg id: %s", msg_id)
+                    if text := msg.plain:
+                        contact.correct(msg_id, text)
+                    else:
+                        if msg_id:
+                            contact.retract(msg_id)
+                        else:
+                            contact.send_text(
+                                "/me tried to remove a message, but slidge got in trouble"
+                            )
         elif isinstance(event, skpy.SkypeChatUpdateEvent):
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("chat update: %s", pprint.pformat(vars(event)))
@@ -186,10 +206,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         if log.isEnabledFor(logging.DEBUG):
             log.debug("Sent msg: %s", pprint.pformat(vars(msg)))
         future = asyncio.Future[skpy.SkypeMsg]()
-        self.sent_by_user_to_ack[msg.id] = future
+        self.sent_by_user_to_ack[msg.clientId] = future
         self.send_lock.release()
         skype_msg = await future
-        return skype_msg.id
+        return skype_msg.clientId
 
     async def logout(self):
         if self.thread is not None:
@@ -237,11 +257,33 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 # https://github.com/Terrance/SkPy/issues/207
                 self.log.debug("Skype read marker failed: %r", e)
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
-        pass
+    async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
+        try:
+            m = self.get_msg(legacy_msg_id, c)
+        except RuntimeError:
+            raise XMPPError("not-found")
+        else:
+            self.xmpp.executor.submit(m.edit, text)
+
+    async def retract(self, legacy_msg_id: Any, c: Contact):
+        try:
+            m = self.get_msg(legacy_msg_id, c)
+        except RuntimeError:
+            raise XMPPError("not-found")
+        else:
+            log.debug("Deleting %s", m)
+            self.xmpp.executor.submit(m.delete)
 
     async def search(self, form_values: dict[str, str]):
         pass
+
+    def get_msg(self, legacy_msg_id: int, contact: Contact) -> skpy.SkypeTextMsg:
+        for m in self.sk.contacts[contact.legacy_id].chat.getMsgs():
+            log.debug("Message %r vs %r : %s", legacy_msg_id, m.clientId, m)
+            if m.clientId == legacy_msg_id:
+                return m
+        else:
+            raise RuntimeError("Could not find message ID")
 
 
 def handle_thread_exception(args):

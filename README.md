@@ -30,7 +30,7 @@ instant messaging features:
 | Steam      | ✅            | ✅         | N/A      | ❌         | N/A     | ~        | N/A        | N/A      |
 | Mattermost | ~            | ✅         | ~        | ✅         | ✅       | ✅        | ✅          | ❌        |
 | Facebook   | ❌            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
-| Skype      | ❌            | ✅         | ❌        | ✅         | ❌       | ❌        | ❌          | ❌        |
+| Skype      | ❌            | ✅         | ❌        | ✅         | ✅       | ❌        | ✅          | ❌        |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence
