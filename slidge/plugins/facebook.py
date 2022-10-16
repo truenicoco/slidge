@@ -317,11 +317,18 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             if msg.attachments:
                 async with aiohttp.ClientSession() as c:
                     for a in msg.attachments:
-                        url = (
-                            ((v := a.video_info) and v.download_url)
-                            or ((au := a.audio_info) and au.url)
-                            or a.image_info.uri_map.get(0)
-                        )
+                        try:
+                            url = (
+                                ((v := a.video_info) and v.download_url)
+                                or ((au := a.audio_info) and au.url)
+                                or a.image_info.uri_map.get(0)
+                            )
+                        except AttributeError:
+                            log.warning("Unhandled attachment: %s", a)
+                            contact.send_text(
+                                "/me sent an attachment that slidge does not support"
+                            )
+                            continue
                         if url is None:
                             continue
                         async with c.get(url) as r:
