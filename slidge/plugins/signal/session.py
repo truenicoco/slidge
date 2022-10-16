@@ -85,7 +85,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 partial=sigapi.JsonAddressv1(number=form_values.get("phone")),
             )
         except sigexc.UnregisteredUserError:
-            raise XMPPError("not-found")
+            return
 
         contact = self.contacts.by_json_address(address)
 
