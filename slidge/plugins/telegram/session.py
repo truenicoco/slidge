@@ -233,7 +233,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def retract(self, legacy_msg_id, c):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
-        r = await self.tg.api.delete_messages([legacy_msg_id], revoke=True)
+        r = await self.tg.api.delete_messages(c.legacy_id, [legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
