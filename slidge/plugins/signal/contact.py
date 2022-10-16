@@ -1,6 +1,7 @@
 import functools
 import logging
 from mimetypes import guess_extension
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import aiosignald.exc as sigexc
@@ -50,6 +51,25 @@ class Contact(LegacyContact["Session"]):
                     legacy_msg_id=legacy_msg_id,
                     reply_to_msg_id=reply_to_msg_id,
                 )
+
+    async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
+        if profile is None:
+            profile = await (await self.session.signal).get_profile(
+                account=self.session.phone, address=self.signal_address
+            )
+        nick = profile.name or profile.profile_name
+        if nick is not None:
+            nick = nick.replace("\u0000", "")
+            self.name = nick
+        if profile.avatar is not None:
+            self.avatar = Path(profile.avatar)
+
+        address = await (await self.session.signal).resolve_address(
+            account=self.session.phone,
+            partial=sigapi.JsonAddressv1(uuid=self.legacy_id),
+        )
+
+        self.set_vcard(full_name=nick, phone=address.number, note=profile.about)
 
 
 def get_filename(attachment: sigapi.JsonAttachmentv1):

@@ -200,16 +200,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         """
         profiles = await (await self.signal).list_contacts(account=self.phone)
         for profile in profiles.profiles:
-            full_profile = await (await self.signal).get_profile(
-                account=self.phone, address=profile.address
-            )
             contact = self.contacts.by_json_address(profile.address)
-            nick = profile.name or profile.profile_name
-            if nick is not None:
-                nick = nick.replace("\u0000", "")
-                contact.name = nick
-            if full_profile.avatar is not None:
-                contact.avatar = Path(full_profile.avatar)
+            await contact.update_info()
             await contact.add_to_roster()
             contact.online()
 
