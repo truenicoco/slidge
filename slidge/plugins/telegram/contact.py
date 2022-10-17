@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
 
@@ -26,30 +26,41 @@ class Contact(LegacyContact["Session"]):
         super(Contact, self).__init__(*a, **k)
         self._online_expire_task = self.xmpp.loop.create_task(noop())
 
-    async def _expire_online(self, timestamp: int):
-        how_long = timestamp - time.time()
+    @staticmethod
+    def _format_last_seen(timestamp: Union[int, float]):
+        return f"Last seen {datetime.fromtimestamp(timestamp): %A %H:%M GMT}"
+
+    async def _expire_online(self, timestamp: Union[int, float]):
+        now = time.time()
+        how_long = timestamp - now
         log.debug("Online status expires in %s seconds", how_long)
         await asyncio.sleep(how_long)
-        self.away("Away (online status has expired)")
+        self.away(self._format_last_seen(now))
 
     def update_status(self, status: tgapi.UserStatus):
-        self._online_expire_task.cancel()
         if isinstance(status, tgapi.UserStatusEmpty):
+            self.inactive()
             self.offline()
         elif isinstance(status, tgapi.UserStatusLastMonth):
+            self.inactive()
             self.extended_away("Offline since last month")
         elif isinstance(status, tgapi.UserStatusLastWeek):
+            self.inactive()
             self.extended_away("Offline since last week")
         elif isinstance(status, tgapi.UserStatusOffline):
-            self.away(
-                f"Last seen on {datetime.fromtimestamp(status.was_online): %A at %H:%M}"
-            )
+            self.inactive()
+            if self._online_expire_task.done():
+                # we've never seen the contact online, so we use the was_online timestamp
+                self.away(self._format_last_seen(status.was_online))
         elif isinstance(status, tgapi.UserStatusOnline):
             self.online()
+            self.active()
+            self._online_expire_task.cancel()
             self._online_expire_task = self.xmpp.loop.create_task(
                 self._expire_online(status.expires)
             )
         elif isinstance(status, tgapi.UserStatusRecently):
+            self.inactive()
             self.away("Last seen recently")
 
     async def send_tg_message(self, msg: tgapi.Message):
