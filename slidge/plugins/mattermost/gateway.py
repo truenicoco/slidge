@@ -280,8 +280,23 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 contact.retract(post["id"])
         elif event.type in (EventType.ReactionAdded, EventType.ReactionRemoved):
             reaction = event.data["reaction"]
+            legacy_msg_id = reaction["post_id"]
             if (who := reaction["user_id"]) == await self.mm_client.mm_id:
-                pass
+                user_reactions_name = {
+                    f":{x}:" for x in await self.get_mm_reactions(legacy_msg_id, who)
+                }
+                user_reactions_char = {
+                    # TODO: find a better when than these non standard emoji aliases replace
+                    emoji.emojize(x.replace("_3_", "_three_"), language="alias")
+                    for x in user_reactions_name
+                }
+                self.log.debug(
+                    "carbon: %s vs %s", user_reactions_name, user_reactions_char
+                )
+                contact = await self.contacts.by_direct_channel_id(
+                    event.broadcast["channel_id"]
+                )
+                contact.carbon_react(legacy_msg_id, user_reactions_char)
             else:
                 await (await self.contacts.by_mm_user_id(who)).update_reactions(
                     reaction["post_id"]
