@@ -17,13 +17,18 @@ else:
     GatewayType = TypeVar("GatewayType")
 
 
-def ignore_message_to_component(func):
+def ignore_message_to_component_and_sent_carbons(func):
     @functools.wraps(func)
     async def wrapped(self: T, msg: Message):
         if msg.get_to() != self.xmpp.boundjid.bare:
-            log.debug("FUNC: %s", func)
-            return await func(self, msg)
-        log.debug("Ignoring message to component: %s %s", self, msg)
+            if (i := msg.get_id()) in self.ignore_messages:
+                self.log.debug("Ignored message: %s", i)
+                self.ignore_messages.remove(i)
+            else:
+                log.debug("FUNC: %s", func)
+                return await func(self, msg)
+        else:
+            log.debug("Ignoring message to component: %s %s", self, msg)
 
     return wrapped
 
@@ -172,7 +177,7 @@ class BaseSession(
         del user
         del session
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def send_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -182,10 +187,6 @@ class BaseSession(
         """
         if m["replace"]["id"] or m["apply_to"]["id"]:
             # ignore last message correction and retraction (handled by a specific method)
-            return
-        if (i := m.get_id()) in self.ignore_messages:
-            self.log.debug("Ignored message: %s", i)
-            self.ignore_messages.remove(i)
             return
 
         contact: LegacyContactType = self.contacts.by_stanza(m)
@@ -212,7 +213,7 @@ class BaseSession(
         if legacy_msg_id is not None:
             self.sent[legacy_msg_id] = m.get_id()
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def active_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -223,7 +224,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.active(self.contacts.by_stanza(m))
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def inactive_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -234,7 +235,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.inactive(self.contacts.by_stanza(m))
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def composing_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -246,7 +247,7 @@ class BaseSession(
             log.debug("COMPOSING: %s", self.contacts.by_stanza(m))
             await self.composing(self.contacts.by_stanza(m))
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def paused_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -257,7 +258,7 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.paused(self.contacts.by_stanza(m))
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def displayed_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -274,7 +275,7 @@ class BaseSession(
 
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def correct_from_msg(self, m: Message):
         xmpp_id = m["replace"]["id"]
         legacy_id = self.sent.inverse.get(xmpp_id)
@@ -290,7 +291,7 @@ class BaseSession(
         if new_legacy_msg_id is not None:
             self.sent[new_legacy_msg_id] = m.get_id()
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def react_from_msg(self, m: Message):
         react_to = m["reactions"]["id"]
         if (legacy_id := self.sent.inverse.get(react_to)) is None:
@@ -306,7 +307,7 @@ class BaseSession(
             legacy_id, [r["value"] for r in m["reactions"]], self.contacts.by_stanza(m)
         )
 
-    @ignore_message_to_component
+    @ignore_message_to_component_and_sent_carbons
     async def retract_from_msg(self, m: Message):
         xmpp_id = m["apply_to"]["id"]
         if (legacy_id := self.sent.inverse.get(xmpp_id)) is None:
