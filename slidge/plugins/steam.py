@@ -11,6 +11,7 @@ might be interesting as it uses python's asyncio BUT the
 login process seem a little too exotic for my taste.
 """
 import asyncio
+from collections import defaultdict
 from typing import Any
 
 import steam.enums
@@ -48,6 +49,12 @@ class Contact(LegacyContact["Session"]):
     CORRECTION = False
     RETRACTION = False
 
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        # keys = msg timestamp; vals = list of single character emoji
+        self.user_reactions = defaultdict[int, set[str]](set)
+        self.contact_reactions = defaultdict[int, set[str]](set)
+
     def update_status(self, persona_state: EPersonaState):
         if persona_state == EPersonaState.Offline:
             self.offline()
@@ -57,6 +64,9 @@ class Contact(LegacyContact["Session"]):
             self.busy()
         elif persona_state == EPersonaState.Away:
             self.away()
+
+    def update_reactions(self, timestamp: int):
+        self.react(timestamp, self.contact_reactions[timestamp])
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
@@ -152,24 +162,38 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     def on_friend_reaction(self, msg):
         self.log.debug("New friend reaction : %s", msg)
-        if msg.body.reactor == self.steam.steam_id:
-            pass
-        else:
-            if msg.body.reaction_type == k_EMessageReactionType_Emoticon:
-                if msg.body.is_add:
-                    # FIXME: this replace the XMPP reaction with the latest steam reaction
-                    # we would need to fetch the friend's reaction list, but I did not find
-                    # how to do that via this library
-                    emoji = emoji_translate.get(msg.body.reaction, "❓")
-                    self.contacts.by_legacy_id(SteamID(msg.body.reactor).id).react(
-                        msg.body.server_timestamp, emoji
-                    )
+        body = msg.body
+        timestamp = body.server_timestamp
+        if body.reactor == self.steam.steam_id:
+            if body.reaction_type == k_EMessageReactionType_Emoticon:
+                contact = self.contacts.by_legacy_id(
+                    SteamID(msg.body.steamid_friend).id
+                )
+                emoji = emoji_translate.get(body.reaction)
+                if emoji is None:
+                    return
+                if body.is_add:
+                    contact.user_reactions[timestamp].add(emoji)
                 else:
-                    # FIXME: instead of retracting a single reaction, this deletes all reactions from the contact
-                    # again, we need to retrieve the list of reactions for this message
-                    self.contacts.by_legacy_id(SteamID(msg.body.reactor).id).react(
-                        msg.body.server_timestamp, ""
-                    )
+                    try:
+                        contact.user_reactions[timestamp].remove(emoji)
+                    except KeyError:
+                        self.log.warning("User removed a reaction we didn't know about")
+                contact.carbon_react(timestamp, contact.user_reactions[timestamp])
+        else:
+            if body.reaction_type == k_EMessageReactionType_Emoticon:
+                contact = self.contacts.by_legacy_id(SteamID(msg.body.reactor).id)
+                emoji = emoji_translate.get(body.reaction, "❓")
+                if body.is_add:
+                    contact.contact_reactions[timestamp].add(emoji)
+                else:
+                    try:
+                        contact.contact_reactions[timestamp].remove(emoji)
+                    except KeyError:
+                        self.log.warning(
+                            "Contact removed a reaction we didn't know about"
+                        )
+                contact.update_reactions(timestamp)
 
     def on_persona_state(self, msg: MsgProto):
         persona_state = msg.body
@@ -230,23 +254,42 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def react(self, legacy_msg_id: Any, emojis: list[str], c: Contact):
+        old = c.user_reactions[legacy_msg_id]
+        new = set[str]()
         for emoji in emojis:
-            emoji_name = emoji_translate.inverse.get(emoji)
-            if emoji_name is None:
+            if emoji_translate.inverse.get(emoji) is None:
                 self.send_gateway_message(
                     f"On steam, you can only react with {' '.join(emoji_translate.values())}"
                 )
-                continue
+            else:
+                new.add(emoji)
+
+        for emoji_char in old - new:
             self.steam.send_um(
                 "FriendMessages.UpdateMessageReaction#1",
                 {
                     "steamid": SteamID(c.legacy_id).as_64,
                     "server_timestamp": legacy_msg_id,
                     "reaction_type": k_EMessageReactionType_Emoticon,
-                    "reaction": emoji_name,
+                    "reaction": emoji_translate.inverse.get(emoji_char),
+                    "is_add": False,
+                },
+            )
+
+        for emoji_char in new - old:
+            self.steam.send_um(
+                "FriendMessages.UpdateMessageReaction#1",
+                {
+                    "steamid": SteamID(c.legacy_id).as_64,
+                    "server_timestamp": legacy_msg_id,
+                    "reaction_type": k_EMessageReactionType_Emoticon,
+                    "reaction": emoji_translate.inverse.get(emoji_char),
                     "is_add": True,
                 },
             )
+
+        c.user_reactions[legacy_msg_id] = new
+        c.carbon_react(legacy_msg_id, new)
 
     async def retract(self, legacy_msg_id: Any, c: Contact):
         pass
@@ -262,6 +305,6 @@ emoji_translate = BiDict[str, str](
         (":steammocking:", "😝"),
         (":steamsalty:", "🧂"),
         (":steamsad:", "😔"),
-        (":steamthis:", "⬆️"),
+        (":steamthis:", "⬆"),
     ]
 )
