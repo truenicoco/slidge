@@ -17,6 +17,11 @@ if TYPE_CHECKING:
 class Contact(LegacyContact["Session"]):
     CORRECTION = False
 
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        # keys = msg timestamp; vals = single character emoji
+        self.user_reactions = dict[int, str]()
+
     @functools.cached_property
     def signal_address(self):
         return sigapi.JsonAddressv1(uuid=self.legacy_id)

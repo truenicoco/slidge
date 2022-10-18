@@ -386,14 +386,21 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
     @handle_unregistered_recipient
     async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
         remove = len(emojis) == 0
-        if len(emojis) == 0:
-            remove = True
-            emoji = ""
+        if remove:
+            try:
+                emoji = c.user_reactions.pop(legacy_msg_id)
+            except KeyError:
+                self.send_gateway_message(
+                    f"Slidge failed to remove your reactions on message '{legacy_msg_id}'"
+                )
+                self.log.warning("Could not find the emoji to remove reaction")
+                return
         else:
             emoji = emojis[-1]
             if len(emojis) > 1:
                 self.send_gateway_message("Only one reaction per message on signal")
                 c.carbon_react(legacy_msg_id, emoji)
+            c.user_reactions[legacy_msg_id] = emoji
 
         response = await (await self.signal).react(
             username=self.phone,
