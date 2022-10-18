@@ -40,8 +40,14 @@ class Gateway(BaseGateway):
         self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def shutdown(self):
-        self.executor.shutdown()
         super().shutdown()
+        log.debug("Shutting down thread pool")
+        self.executor.shutdown(wait=False, cancel_futures=True)
+        log.debug("Shutting down user threads")
+        for user in user_store.get_all():
+            session = self._session_cls.from_jid(user.jid)
+            if thread := session.thread:
+                thread.stop()
 
 
 class Roster(LegacyRoster):
@@ -68,7 +74,7 @@ class Contact(LegacyContact):
 
 class ListenThread(Thread):
     def __init__(self, session: "Session", *a, **kw):
-        super().__init__(*a, **kw)
+        super().__init__(*a, **kw, daemon=True)
         self.name = f"listen-{session.user.bare_jid}"
         self.session = session
         self._target = self.skype_blocking
