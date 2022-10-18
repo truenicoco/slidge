@@ -44,7 +44,7 @@ tasks:
       for PLUGIN in $PLUGINS; do
         sed "s/--PLUGIN--/$PLUGIN/" tpl.conf > etc/$PLUGIN.conf.example
       done
-      echo "socket=/var/run/signald/signald.sock" >> etc/signal.conf
+      echo "socket=/var/run/signald/signald.sock" >> etc/signal.conf.example
   - build: |
       cd slidge
       cp ./LICENSE ./debian/copyright
