@@ -690,7 +690,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["body"] = new_text
         self.__send_message(msg)
 
-    def react(self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str]):
+    def react(self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str] = ()):
         """
         Call this when a legacy contact reacts to a message
 
