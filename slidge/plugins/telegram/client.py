@@ -154,14 +154,40 @@ class TelegramClient(aiotdlib.Client):
         me = await self.get_my_id()
         if update.interaction_info is None:
             contact.react(update.message_id, [])
+            contact.carbon_react(update.message_id, [])
         else:
+            user_reactions = list[str]()
+            contact_reactions = list[str]()
+            # these sanity checks might not be necessary, but in doubt…
             for reaction in update.interaction_info.reactions:
-                for sender in reaction.recent_sender_ids:
+                if reaction.total_count == 1:
+                    if len(reaction.recent_sender_ids) != 1:
+                        self.log.warning(
+                            "Weird reactions (wrong count): %s",
+                            update.interaction_info.reactions,
+                        )
+                        continue
+                    sender = reaction.recent_sender_ids[0]
                     if isinstance(sender, tgapi.MessageSenderUser):
-                        if sender.user_id == contact.legacy_id:
-                            contact.react(update.message_id, [reaction.reaction])
-                        elif sender.user_id == me:
-                            contact.carbon_react(update.message_id, [reaction.reaction])
+                        if sender.user_id == me:
+                            user_reactions.append(reaction.reaction)
+                        elif sender.user_id == contact.legacy_id:
+                            contact_reactions.append(reaction.reaction)
+                    else:
+                        self.log.warning(
+                            "Weird reactions (neither me nor them): %s",
+                            update.interaction_info.reactions,
+                        )
+                elif reaction.total_count == 2:
+                    user_reactions.append(reaction.reaction)
+                    contact_reactions.append(reaction.reaction)
+                else:
+                    self.log.warning(
+                        "Weird reactions (empty): %s", update.interaction_info.reactions
+                    )
+
+            contact.react(update.message_id, contact_reactions)
+            contact.carbon_react(update.message_id, user_reactions)
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
         if not await self.is_private_chat(update.chat_id):

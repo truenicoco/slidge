@@ -187,23 +187,32 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             items=[{"phone": form_values["phone"], "jid": contact.jid.bare}],
         )
 
-    async def react(self, legacy_msg_id, emojis, c: "Contact"):
-        if len(emojis) == 0:
+    async def remove_reactions(self, legacy_msg_id, c: "Contact"):
+        try:
             r = await self.tg.api.set_message_reaction(
                 chat_id=c.legacy_id,
                 message_id=legacy_msg_id,
                 reaction="",
                 is_big=False,
             )
+        except BadRequest as e:
+            self.log.debug("Remove reaction error: %s", e)
+        else:
             self.log.debug("Remove reaction response: %s", r)
+
+    async def react(self, legacy_msg_id, emojis, c: "Contact"):
+        if len(emojis) == 0:
+            await self.remove_reactions(legacy_msg_id, c)
             return
 
         if len(emojis) > 1:
             c.carbon_react(legacy_msg_id)
+            await self.remove_reactions(legacy_msg_id, c)
             self.send_gateway_message(
                 "Warning: unlike XMPP, telegram only accepts one reaction per message. "
-                "Only your last reaction will be visible on Telegram."
+                f"Your reactions have been removed."
             )
+            return
 
         emoji = emojis[-1]
 
@@ -214,20 +223,16 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 reaction=emoji,
                 is_big=False,
             )
-        except BadRequest:
+        except BadRequest as e:
             available = await self.tg.api.get_message_available_reactions(
                 chat_id=c.legacy_id, message_id=legacy_msg_id
             )
-
             available_emojis = [a.reaction for a in available.reactions]
             self.send_gateway_message(
-                "Error: unlike XMPP, telegram does not allow arbitrary emojis to be used as reactions. "
-                f"Please pick your reaction in this list: {' '.join(available_emojis)}"
+                "Error: unlike XMPP, telegram does not allow arbitrary emojis to be used as reactions: "
+                f"{e.message}. Please pick your reaction in this list: {' '.join(available_emojis)}"
             )
             c.carbon_react(legacy_msg_id)
-            raise XMPPError(
-                "not-acceptable", text="This emoji is not allowed on telegram"
-            )  # ignored by Movim, unfortunately
         else:
             self.log.debug("Message reaction response: %s", r)
 
