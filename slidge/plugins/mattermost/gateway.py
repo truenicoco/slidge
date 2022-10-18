@@ -97,7 +97,8 @@ class Contact(LegacyContact["Session"]):
         self.react(
             legacy_msg_id,
             [
-                emoji.emojize(f":{x}:", language="alias")
+                # TODO: find a better when than these non standard emoji aliases replace
+                emoji.emojize(f":{x.replace('_3_', '_three_')}:", language="alias")
                 for x in await self.session.get_mm_reactions(
                     legacy_msg_id, await self.mm_id()
                 )
@@ -343,7 +344,6 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def get_mm_reactions(self, legacy_msg_id: str, user_id: Optional[str]):
         return {
-            # emoji.emojize(f":{x.emoji_name}:", language='alias')
             x.emoji_name
             for x in await self.mm_client.get_reactions(legacy_msg_id)
             if x.user_id == user_id

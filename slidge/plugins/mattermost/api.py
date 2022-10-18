@@ -269,7 +269,12 @@ class MattermostClient:
 
 
 def demojize(emoji_char: str):
-    return emoji.demojize(emoji_char, delimiters=("", ""), language="alias")
+    # TODO: find a better when than these non standard emoji aliases replace
+    return (
+        emoji.demojize(emoji_char, delimiters=("", ""), language="alias")
+        .replace("_three_", "_3_")
+        .replace("thumbsup", "+1")
+    )
 
 
 log = logging.getLogger(__name__)
