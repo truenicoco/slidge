@@ -16,7 +16,7 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 
-class Gateway(BaseGateway):
+class Gateway(BaseGateway["Session"]):
     REGISTRATION_INSTRUCTIONS = "Enter skype credentials"
     REGISTRATION_FIELDS = [
         FormField(var="username", label="Username", required=True),
@@ -69,7 +69,19 @@ class Roster(LegacyRoster):
 
 
 class Contact(LegacyContact):
-    pass
+    def update_presence(self, status: skpy.SkypeUtils.Status):
+        if status == skpy.SkypeUtils.Status.Offline:
+            self.offline()
+        elif status == skpy.SkypeUtils.Status.Busy:
+            self.busy()
+        elif status == skpy.SkypeUtils.Status.Away:
+            self.away("Away")
+        elif status == skpy.SkypeUtils.Status.Idle:
+            self.away("Idle")
+        elif status == skpy.SkypeUtils.Status.Online:
+            self.online()
+        else:
+            log.warning("Unknown contact status: %s", status)
 
 
 class ListenThread(Thread):
@@ -122,7 +134,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             str(self.skype_token_path),
         )
 
-        # self.sk.subscribePresence()
+        self.sk.subscribePresence()
         for contact in self.sk.contacts:
             c = self.contacts.by_legacy_id(contact.id)
             first = contact.name.first
@@ -136,7 +148,6 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             if contact.avatar is not None:
                 c.avatar = contact.avatar
             await c.add_to_roster()
-            c.online()
         # TODO: Creating 1 thread per user is probably very not optimal.
         #       We should contribute to skpy to make it aiohttp compatible…
         self.thread = thread = ListenThread(self)
@@ -202,6 +213,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         elif isinstance(event, skpy.SkypeChatUpdateEvent):
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("chat update: %s", pprint.pformat(vars(event)))
+        elif isinstance(event, skpy.SkypePresenceEvent):
+            if event.userId != self.sk.userId:
+                self.contacts.by_legacy_id(event.userId).update_presence(event.status)
+
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await self.async_wrap(event.ack)
 
