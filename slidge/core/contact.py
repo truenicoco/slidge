@@ -647,14 +647,20 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param legacy_msg_id: Legacy message ID this refers to
         :param reactions: iterable of emojis
         """
+        if xmpp_id := self.session.sent.inverse.get(str(legacy_msg_id)):
+            log.debug("This is a reaction to a carbon message")
+            xmpp_id = str(xmpp_id)
+        elif xmpp_id := self.session.sent.get(legacy_msg_id):
+            log.debug("This is a reaction to the user's own message")
+        else:
+            log.debug(
+                "Cannot determine which message this reaction refers to, attempting msg ID conversion"
+            )
+            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
         msg = Message()
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
-        self.xmpp["xep_0444"].set_reactions(
-            msg,
-            to_id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
-            reactions=reactions,
-        )
+        self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=reactions)
         return self.__privileged_send(msg)
 
     def carbon_retract(self, legacy_msg_id):
