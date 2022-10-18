@@ -148,8 +148,9 @@ services:
       target: slidge-dev
     command:
       - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.discord_self
+      - --legacy-module=slidge.plugins.discord
       - --jid=discord.localhost
+      - --discord-verbose
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
