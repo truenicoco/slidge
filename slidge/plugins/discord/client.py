@@ -10,12 +10,13 @@ class Discord(di.Client):
     def __init__(self, session: "Session"):
         super().__init__()
         self.session = session
+        self.log = session.log
 
     async def on_ready(self):
         if (f := self.session.ready_future).done():
             return
         f.set_result(True)
-        print(f"Logged on as {self.user}")
+        self.log.debug(f"Logged on as {self.user}")
 
     async def on_message(self, message: di.Message):
         channel = message.channel
