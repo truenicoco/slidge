@@ -48,10 +48,12 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 self.log.debug(f"%s is not a friend", u)
                 continue
             c = self.contacts.by_legacy_id(u.id)
-            c.name = u.display_name
-            c.avatar = str(u.avatar_url)
-            self.log.debug("Avatar: %s", u.avatar_url)
+            await c.update_info()
             await c.add_to_roster()
+            # TODO: contribute to discord.py-self so that the presence information
+            #       of relationships is parsed. logs show:
+            #       'PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.'
+            #       https://github.com/dolfies/discord.py-self/blob/master/discord/state.py#L1044
             c.online()
         return f"Logged on as {self.discord.user}"
 

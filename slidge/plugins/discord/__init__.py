@@ -55,6 +55,23 @@ class Contact(LegacyContact[Session]):
                     legacy_reactions.append(r.emoji)
         self.react(m.id, legacy_reactions)
 
+    async def update_info(self):
+        u = self.discord_user
+        self.name = name = u.display_name
+        self.avatar = str(u.avatar_url)
+
+        try:
+            profile = await u.profile()
+        except di.Forbidden:
+            log.debug("Forbidden to fetch the profile of %s", u)
+        except di.HTTPException as e:
+            log.debug("HTTP exception %s when fetch the profile of %s", e, u)
+        else:
+            self.set_vcard(full_name=name, note=profile.bio)
+
+        # TODO: use the relationship here
+        # relationship = u.relationship
+
 
 class Roster(LegacyRoster[Contact, "Session"]):
     def by_discord_user(self, u: di.User):
