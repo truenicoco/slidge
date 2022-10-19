@@ -29,7 +29,7 @@ REF = """
             <uri>xmpp:test@localhost</uri>
         </impp>
         <email>
-            <uri>mailto:test@gmail.com</uri>
+            <text>test@gmail.com</text>
         </email>
         <tel>
             <parameters>
@@ -59,7 +59,7 @@ class TestVcard(SlixTest):
         x["note"]["text"] = "About me"
         x["url"]["uri"] = "https://nicoco.fr"
         x["impp"]["uri"] = "xmpp:test@localhost"
-        x["email"]["uri"] = "mailto:test@gmail.com"
+        x["email"]["text"] = "test@gmail.com"
 
         x["tel"]["uri"] = "tel:+555"
         x["tel"]["parameters"]["type_"]["text"] = "work"

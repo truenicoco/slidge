@@ -77,7 +77,7 @@ class VCard4(_VCardElementBase):
 
     def add_email(self, email: str):
         el = Email()
-        el["uri"] = f"mailto:{email}"
+        el["text"] = email
         self.append(el)
 
 
@@ -111,7 +111,7 @@ class Impp(_VCardUriElementBase):
     name = plugin_attrib = "impp"
 
 
-class Email(_VCardUriElementBase):
+class Email(_VCardTextElementBase):
     name = plugin_attrib = "email"
 
 
