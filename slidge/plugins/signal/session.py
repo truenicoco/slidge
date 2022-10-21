@@ -229,7 +229,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if (body := sent_msg.body) is not None:
                 contact.carbon(
                     body=body,
-                    date=datetime.fromtimestamp(sent_msg.timestamp / 1000),
+                    when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
                 )
             if (reaction := sent_msg.reaction) is not None:
                 try:

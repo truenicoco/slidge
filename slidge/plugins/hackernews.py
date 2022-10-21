@@ -111,7 +111,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         date = datetime.fromtimestamp(user_submission["time"])
         contact.carbon(
             parse_comment_text(user_submission["text"]),
-            date=date,
+            when=date,
         )
         kid = await self.get_item(reply_id)
         contact.send_text(parse_comment_text(kid["text"]))

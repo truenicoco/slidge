@@ -19,7 +19,6 @@ async def noop():
 class Contact(LegacyContact["Session"]):
     legacy_id: int
     # Telegram official clients have no XMPP presence equivalent, but a 'last seen' indication.
-    AWAY_DELAY = 300
     CLIENT_TYPE = "phone"
 
     def __init__(self, *a, **k):

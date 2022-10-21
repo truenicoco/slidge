@@ -543,9 +543,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.__send_message(msg, legacy_msg_id)
         return msg
 
-    def __privileged_send(self, msg: Message):
+    def __privileged_send(self, msg: Message, when: Optional[datetime] = None):
         msg.set_from(self.user.jid.bare)
         msg.enable("store")
+
+        if when:
+            if when.tzinfo is None:
+                when = when.astimezone(timezone.utc)
+            msg["delay"].set_stamp(when)
+
         self.session.ignore_messages.add(msg.get_id())
         try:
             self.xmpp["xep_0356"].send_privileged_message(msg)
@@ -565,7 +571,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self,
         body: str,
         legacy_id: Optional[Any] = None,
-        date: Optional[datetime] = None,
+        when: Optional[datetime] = None,
     ):
         """
         Call this when the user sends a message to a legacy network contact.
@@ -578,7 +584,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         :param str body: Body of the message.
         :param legacy_id: Legacy message ID
-        :param str date: When was this message sent.
+        :param str when: When was this message sent.
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
@@ -589,19 +595,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
             msg.set_id(xmpp_id)
             self.session.sent[legacy_id] = xmpp_id
-        if date:
-            if date.tzinfo is None:
-                date = date.astimezone(timezone.utc)
-            msg["delay"].set_stamp(date)
 
-        return self.__privileged_send(msg)
+        return self.__privileged_send(msg, when)
 
-    def carbon_read(self, legacy_msg_id: Any, date: Optional[datetime] = None):
+    def carbon_read(self, legacy_msg_id: Any, when: Optional[datetime] = None):
         """
         Synchronize user read state from official clients.
 
         :param str legacy_msg_id:
-        :param str date:
+        :param str when:
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
@@ -610,19 +612,21 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["displayed"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
             legacy_msg_id
         )
-        if date is not None:
-            if date.tzinfo is None:
-                date = date.astimezone(timezone.utc)
-            msg["delay"].set_stamp(date)
 
-        return self.__privileged_send(msg)
+        return self.__privileged_send(msg, when)
 
-    def carbon_correct(self, legacy_msg_id: LegacyMessageType, text: str):
+    def carbon_correct(
+        self,
+        legacy_msg_id: LegacyMessageType,
+        text: str,
+        when: Optional[datetime] = None,
+    ):
         """
         Call this when the user corrects their own (last) message from an official client
 
         :param legacy_msg_id:
         :param text: The new body of the message
+        :param when:
         """
         if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
             log.debug(
@@ -635,10 +639,13 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_type("chat")
         msg["replace"]["id"] = xmpp_id
         msg["body"] = text
-        return self.__privileged_send(msg)
+        return self.__privileged_send(msg, when)
 
     def carbon_react(
-        self, legacy_msg_id: LegacyMessageType, reactions: Iterable[str] = ()
+        self,
+        legacy_msg_id: LegacyMessageType,
+        reactions: Iterable[str] = (),
+        when: Optional[datetime] = None,
     ):
         """
         Call this to modify the user's own reactions (:xep:`0444`) about a message.
@@ -648,6 +655,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         :param legacy_msg_id: Legacy message ID this refers to
         :param reactions: iterable of emojis
+        :param when:
         """
         if xmpp_id := self.session.sent.inverse.get(str(legacy_msg_id)):
             log.debug("This is a reaction to a carbon message")
@@ -663,10 +671,19 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=reactions)
-        return self.__privileged_send(msg)
+        return self.__privileged_send(msg, when)
 
-    def carbon_retract(self, legacy_msg_id):
-        if (xmpp_id := self.session.sent.inverse.get(legacy_msg_id)) is None:
+    def carbon_retract(
+        self, legacy_msg_id: LegacyMessageType, when: Optional[datetime] = None
+    ):
+        """
+        Call this when the user calls retracts (:xep:`0424`) a message from an official client
+
+        :param legacy_msg_id:
+        :param when:
+        :return:
+        """
+        if (xmpp_id := self.session.sent.inverse.get(str(legacy_msg_id))) is None:
             if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
                 log.debug("Cannot find XMPP ID of retracted msg: %s", legacy_msg_id)
                 return
@@ -676,7 +693,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_type("chat")
         msg["apply_to"]["id"] = xmpp_id
         msg["apply_to"].enable("retract")
-        return self.__privileged_send(msg)
+        return self.__privileged_send(msg, when)
 
     def correct(self, legacy_msg_id: Any, new_text: str):
         """
