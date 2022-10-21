@@ -434,8 +434,10 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         self.__send_marker(legacy_msg_id, "displayed")
 
-    def __make_message(self, **kwargs) -> Message:
-        m = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, **kwargs)
+    def __make_message(self, mtype="chat", **kwargs) -> Message:
+        m = self.xmpp.make_message(
+            mfrom=self.jid, mto=self.user.jid, mtype=mtype, **kwargs
+        )
         m.enable("markable")
         return m
 
@@ -474,7 +476,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         :return: the XMPP message that was sent
         """
-        msg = self.__make_message(mbody=body, mtype="chat")
+        msg = self.__make_message(mbody=body)
         if self.CHAT_STATES and chat_state is not None:
             msg["chat_state"] = chat_state
         self.__make_reply(msg, reply_to_msg_id)
