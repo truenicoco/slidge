@@ -152,6 +152,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
             message_id=legacy_msg_id,
+            reply_markup=None,
             input_message_content=tgapi.InputMessageText.construct(
                 text=tgapi.FormattedText.construct(text=text)
             ),
