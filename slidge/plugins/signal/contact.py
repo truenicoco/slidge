@@ -76,6 +76,10 @@ class Contact(LegacyContact["Session"]):
 
         self.set_vcard(full_name=nick, phone=address.number, note=profile.about)
 
+    async def update_and_add(self):
+        await self.update_info()
+        await self.add_to_roster()
+
 
 def get_filename(attachment: sigapi.JsonAttachmentv1):
     if f := attachment.customFilename:
@@ -90,7 +94,10 @@ def get_filename(attachment: sigapi.JsonAttachmentv1):
 
 class Roster(LegacyRoster[Contact, "Session"]):
     def by_json_address(self, address: sigapi.JsonAddressv1):
-        return self.by_legacy_id(address.uuid)
+        c = self.by_legacy_id(address.uuid)
+        if not c.added_to_roster:
+            self.session.xmpp.loop.create_task(c.update_and_add())
+        return c
 
 
 log = logging.getLogger(__name__)
