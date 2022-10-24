@@ -60,6 +60,13 @@ tasks:
       sudo systemctl enable --now slidge@mattermost
       sleep 5
       sudo journalctl -u slidge@mattermost --since yesterday
+      sudo apt remove slidge -y
+      sudo ls -la /etc/slidge
+      sudo ls -la /var/lib/slidge
+      sudo apt remove slidge --purge -y
+      if grep -q slidge /etc/passwd; then false; else true; fi
+      [[ ! -d /var/lib/slidge ]]
+      [[ ! -d /etc/slidge ]]
   - tar: |
       tar cf slidge-debian-amd64.tar slidge-* slidge_*
       mv slidge_${VER}_amd64.deb slidge-latest-amd64.deb

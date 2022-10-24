@@ -11,6 +11,7 @@ case "$1" in
     ;;
 
   upgrade | abort-upgrade)
+  systemctl try-restart 'slidge@*'
     ;;
 
   *)
