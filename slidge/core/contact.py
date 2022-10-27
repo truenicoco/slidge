@@ -441,9 +441,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         m.enable("markable")
         return m
 
-    def __send_message(self, msg: Message, legacy_msg_id: Optional[Any] = None):
+    def __send_message(
+        self,
+        msg: Message,
+        legacy_msg_id: Optional[Any] = None,
+        when: Optional[datetime] = None,
+    ):
         if legacy_msg_id is not None:
             msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id))
+        _add_delay(msg, when)
         msg.send()
 
     def __make_reply(self, msg: Message, reply_to_msg_id: Optional[LegacyMessageType]):
@@ -463,6 +469,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         chat_state: Optional[str] = "active",
         legacy_msg_id: Optional[LegacyMessageType] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        when: Optional[datetime] = None,
     ) -> Message:
         """
         Transmit a message from the contact to the user
@@ -473,6 +480,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
         :param reply_to_msg_id:
+        :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
 
         :return: the XMPP message that was sent
         """
@@ -480,7 +488,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         if self.CHAT_STATES and chat_state is not None:
             msg["chat_state"] = chat_state
         self.__make_reply(msg, reply_to_msg_id)
-        self.__send_message(msg, legacy_msg_id)
+        self.__send_message(msg, legacy_msg_id, when)
         return msg
 
     async def send_file(
@@ -492,6 +500,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         *,
         legacy_msg_id: Optional[LegacyMessageType] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        when: Optional[datetime] = None,
     ) -> Message:
         """
         Send a file using HTTP upload (:xep:`0363`)
@@ -506,8 +515,9 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             default file upload service on the xmpp server it's running on. url and input_file
             are mutually exclusive.
         :param reply_to_msg_id:
+        :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
 
-        :return: The sent msg stanza
+        :return: The msg stanza that was sent
         """
         msg = self.__make_message()
         self.__make_reply(msg, reply_to_msg_id)
@@ -540,17 +550,14 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         msg["oob"]["url"] = uploaded_url
         msg["body"] = uploaded_url
-        self.__send_message(msg, legacy_msg_id)
+        self.__send_message(msg, legacy_msg_id, when)
         return msg
 
     def __privileged_send(self, msg: Message, when: Optional[datetime] = None):
         msg.set_from(self.user.jid.bare)
         msg.enable("store")
 
-        if when:
-            if when.tzinfo is None:
-                when = when.astimezone(timezone.utc)
-            msg["delay"].set_stamp(when)
+        _add_delay(msg, when)
 
         self.session.ignore_messages.add(msg.get_id())
         try:
@@ -865,6 +872,13 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         :return: An identifier for the user on the legacy network.
         """
         return jid_username  # type:ignore
+
+
+def _add_delay(msg: Message, when: Optional[datetime] = None):
+    if when:
+        if when.tzinfo is None:
+            when = when.astimezone(timezone.utc)
+        msg["delay"].set_stamp(when)
 
 
 LegacyRosterType = TypeVar("LegacyRosterType", bound=LegacyRoster)
