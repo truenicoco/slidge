@@ -1,5 +1,6 @@
 import functools
 import logging
+from datetime import datetime
 from mimetypes import guess_extension
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -45,6 +46,7 @@ class Contact(LegacyContact["Session"]):
         /,
         legacy_msg_id: int,
         reply_to_msg_id: int,
+        when: Optional[datetime] = None,
     ):
         for attachment in attachments:
             filename = get_filename(attachment)
@@ -55,6 +57,7 @@ class Contact(LegacyContact["Session"]):
                     content_type=attachment.contentType,
                     legacy_msg_id=legacy_msg_id,
                     reply_to_msg_id=reply_to_msg_id,
+                    when=when,
                 )
 
     async def update_info(self, profile: Optional[sigapi.Profilev1] = None):

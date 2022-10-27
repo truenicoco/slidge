@@ -265,6 +265,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     body=body,
                     legacy_msg_id=msg.data_message.timestamp,
                     reply_to_msg_id=reply_to_msg_id,
+                    when=datetime.fromtimestamp(msg.data_message.timestamp / 1000),
                 )
             if (reaction := data.reaction) is not None:
                 self.log.debug("Reaction: %s", reaction)
