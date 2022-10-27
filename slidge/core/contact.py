@@ -546,6 +546,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                     "I tried to send a file, but something went wrong. "
                     "Tell your XMPP admin to check slidge logs."
                 )
+                self.__send_message(msg, legacy_msg_id, when)
                 return msg
 
         msg["oob"]["url"] = uploaded_url
