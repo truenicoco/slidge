@@ -160,7 +160,7 @@ services:
     network_mode: "service:prosody"
 
   signald:
-    image: signald/signald:0.22.1
+    image: signald/signald:0.23.0
     volumes:
       - ./persistent/signald:/signald
     environment:
