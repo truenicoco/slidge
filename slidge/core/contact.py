@@ -585,14 +585,14 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         Call this when the user sends a message to a legacy network contact.
 
         This synchronizes the outgoing message history on the XMPP side, using
-         xep:`0356` to impersonate the XMPP user and send a message from the user to
+        :xep:`0356` to impersonate the XMPP user and send a message from the user to
         the contact. Thw XMPP server should in turn send carbons (:xep:`0280`) to online
-        XMPP clients +/- write the message in server-side archives (:xep:`0_313`),
+        XMPP clients +/- write the message in server-side archives (:xep:`0313`),
         depending on the user's and the server's archiving policy.
 
-        :param str body: Body of the message.
+        :param body: Body of the message.
         :param legacy_id: Legacy message ID
-        :param str when: When was this message sent.
+        :param when: When was this message sent.
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
@@ -610,8 +610,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         Synchronize user read state from official clients.
 
-        :param str legacy_msg_id:
-        :param str when:
+        :param legacy_msg_id:
+        :param when:
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
