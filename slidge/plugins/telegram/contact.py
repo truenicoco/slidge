@@ -27,7 +27,7 @@ class Contact(LegacyContact["Session"]):
 
     @staticmethod
     def _format_last_seen(timestamp: Union[int, float]):
-        return f"Last seen {datetime.fromtimestamp(timestamp): %A %H:%M GMT}"
+        return f"Last seen {datetime.fromtimestamp(timestamp):%A %H:%M GMT}"
 
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()
