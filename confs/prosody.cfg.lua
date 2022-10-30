@@ -88,6 +88,10 @@ VirtualHost "localhost"
            roster = "both";
            message = "outgoing";
      },
+     ["whatsapp.localhost"] = {
+           roster = "both";
+           message = "outgoing";
+     },
   }
 
 Component "muc.localhost" "muc"
@@ -126,6 +130,10 @@ Component "steam.localhost"
   modules_enabled = {"privilege"}
 
 Component "discord.localhost"
+  component_secret = "secret"
+  modules_enabled = {"privilege"}
+
+Component "whatsapp.localhost"
   component_secret = "secret"
   modules_enabled = {"privilege"}
 

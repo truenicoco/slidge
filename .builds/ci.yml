@@ -13,7 +13,7 @@ secrets:
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
-  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord
+  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord whatsapp
   DOCKER_BUILDKIT: "1"
 artifacts:
   - ./slidge/dist/slidge-0.0.0.dev0-py3-none-any.whl
