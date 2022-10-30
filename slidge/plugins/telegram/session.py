@@ -156,6 +156,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             input_message_content=tgapi.InputMessageText.construct(
                 text=tgapi.FormattedText.construct(text=text)
             ),
+            skip_validation=True,
         )
         await f
 
