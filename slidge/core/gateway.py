@@ -6,6 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
 
@@ -172,7 +173,7 @@ class BaseGateway(
         self._config = args
         self.no_roster_push = args.no_roster_push
         self.upload_requester = args.upload_requester or self.boundjid.bare
-        self.ignore_delay_threshold = args.ignore_delay_threshold
+        self.ignore_delay_threshold = timedelta(seconds=args.ignore_delay_threshold)
 
         self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
