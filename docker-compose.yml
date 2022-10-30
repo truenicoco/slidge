@@ -159,6 +159,24 @@ services:
       - prosody
     network_mode: "service:prosody"
 
+  slidge-whatsapp:
+    build:
+      context: .
+      target: slidge-dev
+    command:
+      - --config=/slidge-example.ini
+      - --legacy-module=slidge.plugins.whatsapp
+      - --jid=whatsapp.localhost
+    environment:
+      SLIDGE__WHATSAPP_SKIP_VERIFY_TLS: "true"
+    volumes:
+      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./persistent:/var/lib/slidge
+      - ./confs/slidge-example.ini:/slidge-example.ini
+    depends_on:
+      - prosody
+    network_mode: "service:prosody"
+
   signald:
     image: signald/signald:0.23.0
     volumes:

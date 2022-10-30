@@ -11,3 +11,4 @@ persistent/
 .mypy_cache
 .old
 requirements*
+slidge/plugins/whatsapp/generated

@@ -42,6 +42,20 @@ RUN ls -la /tmp/tdlib/lib
 FROM scratch AS tdlib
 COPY --from=builder-tdlib /tmp/tdlib/lib /
 
+FROM docker.io/library/python:3.9-slim AS builder-whatsapp
+ENV PATH /root/go/bin:$PATH
+
+RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/backports.list && \
+    apt update -y && apt install -yt bullseye-backports golang
+
+RUN go install github.com/go-python/gopy@latest && \
+    go install golang.org/x/tools/cmd/goimports@latest
+
+WORKDIR /build
+COPY slidge/plugins/whatsapp /build
+
+RUN python -m pip install pybindgen
+RUN cd /build && gopy build -output=generated -no-make=true .
 
 FROM docker.io/library/python:3.9-slim AS builder
 
@@ -65,7 +79,7 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry export > r-base.txt
 RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
     pip install -r r-base.txt
-ARG PLUGIN="facebook signal telegram skype mattermost steam discord"
+ARG PLUGIN="facebook signal telegram skype mattermost steam discord whatsapp"
 RUN poetry export --extras "$PLUGIN" > r.txt || true
 RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
     pip install -r r.txt || true
@@ -110,14 +124,23 @@ ENV SLIDGE_LEGACY_MODULE=slidge.plugins.$PLUGIN
 
 COPY --from=builder /venv /venv
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
+COPY --from=builder-whatsapp /build/generated /venv/lib/python3.9/site-packages/slidge/plugins/whatsapp/generated
 
 ENTRYPOINT ["python", "-m", "slidge"]
 
 FROM slidge AS slidge-dev
 
 ARG TARGETPLATFORM
+ENV PATH /root/go/bin:$PATH
+
+RUN apt update -y && apt install -y libc++1 wget
+
+RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/backports.list && \
+    apt update -y && apt install -yt bullseye-backports golang
 
 RUN apt update && apt install libc++1 wget -y
+RUN go install github.com/go-python/gopy@latest && \
+    go install golang.org/x/tools/cmd/goimports@latest
 
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
       cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib/ && \
@@ -126,13 +149,12 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     fi
 
 RUN --mount=type=cache,id=slidge-slidge-dev,target=/root/.cache/pip \
-    pip install watchdog[watchmedo]
+    pip install watchdog[watchmedo] pybindgen
 
 COPY --from=prosody /etc/prosody/certs/localhost.crt /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 
 COPY ./assets /venv/lib/python3.9/site-packages/assets
+COPY watcher.py /watcher.py
 
-ENTRYPOINT ["watchmedo", "auto-restart", \
-            "--directory=/venv/lib/python3.9/site-packages/slidge", "--pattern=*.py", "-R", "--", \
-            "python", "-m", "slidge"]
+ENTRYPOINT ["/venv/bin/python", "/watcher.py", "/venv/lib/python3.9/site-packages/slidge/"]

@@ -22,15 +22,16 @@ It's a work in progress, but it should make
 It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
 instant messaging features:
 
-|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | 
+|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] |
 |------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|
-| Signal     | N/A          | ✅         | ✅        | ✅         | N/A     | ✅        | ✅          | ✅        |
-| Telegram   | ✅            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
-| Discord    | ❌            | ✅         | N/A      | ✅         | ✅       | ~        | ✅          | ✅        |
-| Steam      | ✅            | ✅         | N/A      | ❌         | N/A     | ~        | N/A        | N/A      |
-| Mattermost | ✅            | ✅         | ~        | ✅         | ✅       | ✅        | ✅          | ❌        |
-| Facebook   | ❌            | ✅         | ✅        | ✅         | ✅       | ✅        | ✅          | ✅        |
-| Skype      | ✅            | ✅         | ❌        | ✅         | ✅       | ❌        | ✅          | ❌        |
+| Signal     | N/A          | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       |
+| Telegram   | ✅           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       |
+| Discord    | ❌           | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       |
+| Steam      | ✅           | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      |
+| Mattermost | ✅           | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       |
+| Facebook   | ❌           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       |
+| Skype      | ✅           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       |
+| WhatsApp   | ✅           | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence
