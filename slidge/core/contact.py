@@ -449,7 +449,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     ):
         if legacy_msg_id is not None:
             msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id))
-        _add_delay(msg, when)
+        self._add_delay(msg, when)
         msg.send()
 
     def __make_reply(self, msg: Message, reply_to_msg_id: Optional[LegacyMessageType]):
@@ -558,7 +558,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg.set_from(self.user.jid.bare)
         msg.enable("store")
 
-        _add_delay(msg, when)
+        self._add_delay(msg, when)
 
         self.session.ignore_messages.add(msg.get_id())
         try:
@@ -754,6 +754,17 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
         )
 
+    def _add_delay(self, msg: Message, when: Optional[datetime] = None):
+        if not when:
+            return
+        if when.tzinfo is None:
+            when = when.astimezone(timezone.utc)
+        if (
+            datetime.now().astimezone(timezone.utc) - when
+            > self.xmpp.ignore_delay_threshold
+        ):
+            msg["delay"].set_stamp(when)
+
 
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
 
@@ -873,13 +884,6 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         :return: An identifier for the user on the legacy network.
         """
         return jid_username  # type:ignore
-
-
-def _add_delay(msg: Message, when: Optional[datetime] = None):
-    if when:
-        if when.tzinfo is None:
-            when = when.astimezone(timezone.utc)
-        msg["delay"].set_stamp(when)
 
 
 LegacyRosterType = TypeVar("LegacyRosterType", bound=LegacyRoster)

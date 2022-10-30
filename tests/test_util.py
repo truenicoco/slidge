@@ -1,7 +1,15 @@
+from datetime import datetime, timedelta
+
 import cryptography.fernet
 
-from slidge.util import SubclassableOnce, ABCSubclassableOnceAtMost, BiDict, is_valid_phone_number
+from slidge.util import (
+    SubclassableOnce,
+    ABCSubclassableOnceAtMost,
+    BiDict,
+    is_valid_phone_number,
+)
 from slidge.util.db import EncryptedShelf
+from slidge.core.contact import LegacyContact
 
 
 def test_subclass():
@@ -75,3 +83,32 @@ def test_phone_validation():
     assert not is_valid_phone_number("+")
     assert not is_valid_phone_number("+asdfsadfa48919sadf")
     assert not is_valid_phone_number("12597891")
+
+
+def test_strip_delay():
+    class MockContact:
+        class xmpp:
+            ignore_delay_threshold = timedelta(seconds=300)
+
+    class MockDelay:
+        @staticmethod
+        def set_stamp(x):
+            pass
+
+    class MockMsg:
+        delay_added = None
+
+        def __getitem__(self, key):
+            if key == "delay":
+                self.delay_added = True
+            return MockDelay
+
+    msg = MockMsg()
+    LegacyContact._add_delay(MockContact, msg, datetime.now())
+    assert not msg.delay_added
+
+    MockContact.xmpp.ignore_delay_threshold = timedelta(seconds=0)
+
+    msg = MockMsg()
+    LegacyContact._add_delay(MockContact, msg, datetime.now())
+    assert msg.delay_added

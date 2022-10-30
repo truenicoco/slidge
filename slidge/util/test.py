@@ -22,6 +22,7 @@ class SlidgeTest(SlixTest):
         admins: list[str] = []
         no_roster_push = False
         upload_requester = None
+        ignore_delay_threshold = 300
 
     @classmethod
     def setUpClass(cls):

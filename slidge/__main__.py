@@ -106,6 +106,13 @@ def get_parser():
         env_var="SLIDGE_UPLOAD_REQUESTER",
         help="Set which JID should request the upload slots. Defaults to the component JID.",
     )
+    p.add_argument(
+        "--ignore-delay-threshold",
+        env_var="SLIDGE_IGNORE_DELAY_THRESHOLD",
+        help="Threshold, in seconds, below which the <delay> information is stripped "
+        "out of emitted stanzas.",
+        default=300,
+    )
 
     p.add_argument(
         "-q",

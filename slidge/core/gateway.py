@@ -172,6 +172,7 @@ class BaseGateway(
         self._config = args
         self.no_roster_push = args.no_roster_push
         self.upload_requester = args.upload_requester or self.boundjid.bare
+        self.ignore_delay_threshold = args.ignore_delay_threshold
 
         self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
