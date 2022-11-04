@@ -270,9 +270,17 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             contact.composing()
         elif event.type == EventType.PostEdited:
             post = event.data["post"]
-            contact = await self.contacts.by_mm_user_id(post["user_id"])
-            if post["channel_id"] == await contact.direct_channel_id():
-                contact.correct(post["id"], post["message"])
+            if post["user_id"] == await self.mm_client.mm_id:
+                if (
+                    c := await self.contacts.by_direct_channel_id(post["channel_id"])
+                ) is None:
+                    self.log.debug("Ignoring edit in unknown channel")
+                else:
+                    c.carbon_correct(post["id"], post["message"])
+            else:
+                contact = await self.contacts.by_mm_user_id(post["user_id"])
+                if post["channel_id"] == await contact.direct_channel_id():
+                    contact.correct(post["id"], post["message"])
         elif event.type == EventType.PostDeleted:
             post = event.data["post"]
             contact = await self.contacts.by_mm_user_id(post["user_id"])
