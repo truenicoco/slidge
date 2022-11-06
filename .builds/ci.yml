@@ -84,7 +84,7 @@ tasks:
               --push \
               --platform linux/arm64,linux/amd64 \
               --tag $REGISTRY_PREFIX-$LEGACY:$VER \
-              --target slidge-$LEGACY .
+              --target slidge .
           done
         fi
       done
