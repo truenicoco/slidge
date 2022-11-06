@@ -506,7 +506,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def search(self, form_values: dict[str, str]) -> "SearchResult":
+    async def search(self, form_values: dict[str, str]) -> Optional["SearchResult"]:
         """
         Triggered when the user uses Jabber Search (:xep:`0055`) on the component
 

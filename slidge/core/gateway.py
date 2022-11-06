@@ -410,6 +410,9 @@ class BaseGateway(
         search_results = await adhoc_session["session"].search(form.get_values())
 
         form = self.plugin["xep_0004"].make_form("result", "Contact search results")
+        if search_results is None:
+            raise XMPPError("item-not-found", text="No contact was found")
+
         for field in search_results.fields:
             form.add_reported(field.var, label=field.label, type=field.type)
         for item in search_results.items:
