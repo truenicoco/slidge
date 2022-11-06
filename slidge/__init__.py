@@ -7,6 +7,7 @@ from .util import (
     FormField,
     SearchResult,
     xep_0030,
+    xep_0050,
     xep_0055,
     xep_0077,
     xep_0084,
