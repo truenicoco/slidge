@@ -380,6 +380,9 @@ class BaseGateway(
         self["xep_0050"].add_command(
             node="info", name="List registered users", handler=self._handle_info
         )
+        self["xep_0050"].add_command(
+            node="delete_user", name="Delete a user", handler=self._handle_user_delete
+        )
         self.plugin["xep_0050"].add_command(
             node="search", name="Search for contacts", handler=self._handle_search
         )
@@ -400,6 +403,41 @@ class BaseGateway(
         session["has_next"] = False
 
         return session
+
+    @admin_only
+    def _handle_user_delete(self, iq: Iq, adhoc_session: dict[str, Any]):
+        form = self["xep_0004"].make_form(
+            title="Delete user",
+            instructions="Enter the bare JID(s) of the user(s) you want to delete",
+        )
+        form.add_field("user_jid", ftype="jid-single", label="User JID")
+
+        adhoc_session["payload"] = form
+        adhoc_session["has_next"] = True
+        adhoc_session["next"] = self._handle_user_delete2
+
+        return adhoc_session
+
+    async def _handle_user_delete2(self, form, adhoc_session: dict[str, Any]):
+        form_values = form.get_values()
+        try:
+            user_jid = JID(form_values.get("user_jid"))
+        except ValueError:
+            raise XMPPError("bad-request", text="This JID is invalid")
+
+        user = user_store.get_by_jid(user_jid)
+        if user is None:
+            raise XMPPError("item-not-found", text=f"There is no user '{user_jid}'")
+
+        log.debug("Admin requested unregister of %s", user_jid)
+
+        await self._session_cls.kill_by_jid(user_jid)
+        user_store.remove_by_jid(user_jid)
+
+        adhoc_session["notes"] = [("info", "Success!")]
+        adhoc_session["has_next"] = False
+
+        return adhoc_session
 
     async def _handle_search(self, iq: Iq, adhoc_session: dict[str, Any]):
         """
