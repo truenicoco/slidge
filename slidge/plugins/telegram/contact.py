@@ -93,7 +93,11 @@ class Contact(LegacyContact["Session"]):
             best_file = content.audio.audio
             await self.send_tg_file(best_file, content.caption, msg.id)
         else:
-            self.session.log.debug("Ignoring content: %s", type(content))
+            self.send_text(
+                "/me tried to send an unsupported content. "
+                "Please report this: https://todo.sr.ht/~nicoco/slidge"
+            )
+            self.session.log.warning("Ignoring content: %s", type(content))
 
     async def send_tg_file(self, best_file, caption, msg_id):
         query = tgapi.DownloadFile.construct(
