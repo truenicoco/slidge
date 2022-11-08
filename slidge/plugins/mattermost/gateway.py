@@ -8,10 +8,11 @@ from typing import Any, Optional
 import emoji
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-from .api import MattermostClient
+from .api import ContactNotFound, MattermostClient
 from .websocket import EventType, MattermostEvent, Websocket
 
 
@@ -327,7 +328,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
         async with self.send_lock:
-            msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
+            try:
+                msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
+            except ContactNotFound:
+                raise XMPPError(
+                    "recipient-unavailable", text="Cannot find this mattermost user"
+                )
+
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
