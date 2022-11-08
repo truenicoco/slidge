@@ -338,15 +338,10 @@ class BaseGateway(
             )  # ensure we get all resources for user
             session = self._session_cls.from_user(user)
             self.loop.create_task(self._login_wrap(session))
-            for c in session.contacts:
-                # we need to receive presences directed at the contacts, in order to
-                # send pubsub events for their +notify features
-                self.send_presence(pfrom=c.jid, pto=user.bare_jid, ptype="probe")
 
         log.info("Slidge has successfully started")
 
-    @staticmethod
-    async def _login_wrap(session: "SessionType"):
+    async def _login_wrap(self, session: "SessionType"):
         session.send_gateway_status("Logging in…", show="dnd")
         try:
             status = await session.login()
@@ -363,6 +358,12 @@ class BaseGateway(
                 session.send_gateway_status("Logged in", show="chat")
             else:
                 session.send_gateway_status(status, show="chat")
+            for c in session.contacts:
+                # we need to receive presences directed at the contacts, in
+                # order to send pubsub events for their +notify features
+                self.send_presence(
+                    pfrom=c.jid, pto=session.user.bare_jid, ptype="probe"
+                )
 
     def re_login(self, session: "SessionType"):
         async def w():
