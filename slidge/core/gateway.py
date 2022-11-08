@@ -671,9 +671,7 @@ class BaseGateway(
             msg.reply("Register to the gateway first!").send()
         else:
             t = "|".join(
-                x
-                for x in self._chat_commands.keys()
-                if not x not in ("register", "help")
+                x for x in self._chat_commands.keys() if x not in ("register", "help")
             )
             log.debug("In help: %s", t)
             msg.reply(f"Available commands: {t}").send()
