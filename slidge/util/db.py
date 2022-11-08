@@ -156,15 +156,17 @@ class UserStore:
         """
         Remove a user from the store
 
-        NB: there is no reason to call this, it is used by SliXMPP plugins
-
-        :param _gateway_jid:
-        :param _node:
-        :param ifrom:
-        :param _iq:
+        NB: there is no reason to call this, it is used by SliXMPP internal API
         """
-        log.debug("Removing user %s", ifrom.bare)
-        del self._users[ifrom.bare]
+        self.remove_by_jid(ifrom)
+
+    def remove_by_jid(self, jid: JID):
+        """
+        Remove a user from the store, by JID
+        """
+        j = jid.bare
+        log.debug("Removing user %s", j)
+        del self._users[j]
         self._users.sync()
 
     def get_by_jid(self, jid: JID) -> Optional[GatewayUser]:
