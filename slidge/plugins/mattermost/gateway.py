@@ -252,7 +252,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 f.set_result(None)
                 return
             posts = await self.mm_client.get_posts_for_channel(channel_id)
-            last_msg_id = posts.posts.additional_keys[-1]
+            try:
+                last_msg_id = posts.posts.additional_keys[-1]
+            except IndexError:
+                self.log.debug("ChannelViewed event for a channel with no messages")
+                return
             if (c := await self.contacts.by_direct_channel_id(channel_id)) is None:
                 self.log.debug("Ignoring unknown channel")
             else:
