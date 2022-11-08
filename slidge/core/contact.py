@@ -334,11 +334,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
     def unsubscribe(self):
         """
-        Send an "unsubscribed" presence from this contact to the user.
+        Send an "unsubscribe", "unsubscribed", "unavailable" presence sequence
+        from this contact to the user, ie, "this contact has removed you from
+        their 'friends'".
         """
-        self.xmpp.send_presence(
-            pfrom=self.jid, pto=self.user.jid.bare, ptype="unsubscribed"
-        )
+        for ptype in "unsubscribe", "unsubscribed", "unavailable":
+            self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)
 
     def status(self, text: str):
         """
