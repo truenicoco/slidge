@@ -79,25 +79,24 @@ class Contact(LegacyContact["Session"]):
                 legacy_msg_id=msg.id,
                 reply_to_msg_id=msg.reply_to_message_id,
             )
-        elif isinstance(content, tgapi.MessagePhoto):
-            photo = content.photo
-            best_file = max(photo.sizes, key=lambda x: x.width).photo
-            await self.send_tg_file(best_file, content.caption, msg.id)
-        elif isinstance(content, tgapi.MessageVideo):
-            best_file = content.video.video
-            await self.send_tg_file(best_file, content.caption, msg.id)
-        elif isinstance(content, tgapi.MessageAnimation):
-            best_file = content.animation.animation
-            await self.send_tg_file(best_file, content.caption, msg.id)
-        elif isinstance(content, tgapi.MessageAudio):
-            best_file = content.audio.audio
-            await self.send_tg_file(best_file, content.caption, msg.id)
         else:
-            self.send_text(
-                "/me tried to send an unsupported content. "
-                "Please report this: https://todo.sr.ht/~nicoco/slidge"
-            )
-            self.session.log.warning("Ignoring content: %s", type(content))
+            if isinstance(content, tgapi.MessagePhoto):
+                photo = content.photo
+                best_file = max(photo.sizes, key=lambda x: x.width).photo
+            elif isinstance(content, tgapi.MessageVideo):
+                best_file = content.video.video
+            elif isinstance(content, tgapi.MessageAnimation):
+                best_file = content.animation.animation
+            elif isinstance(content, tgapi.MessageAudio):
+                best_file = content.audio.audio
+            else:
+                self.send_text(
+                    "/me tried to send an unsupported content. "
+                    "Please report this: https://todo.sr.ht/~nicoco/slidge"
+                )
+                self.session.log.warning("Ignoring content: %s", type(content))
+                return
+            await self.send_tg_file(best_file, content.caption, msg.id)
 
     async def send_tg_file(self, best_file, caption, msg_id):
         query = tgapi.DownloadFile.construct(
