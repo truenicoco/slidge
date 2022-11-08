@@ -155,7 +155,8 @@ class Websocket:
                 try:
                     self._futures.pop(seq).set_result(d)
                 except KeyError:
-                    log.warning("Ignoring %s", d)
+                    if d["seq_reply"] != 1 and d["status"] != "OK":
+                        log.warning("Ignoring %s", d)
         log.debug("cancelling heartbeat task")
         keep_alive.cancel()
         try:
