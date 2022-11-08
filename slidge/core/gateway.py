@@ -5,8 +5,9 @@ import asyncio
 import logging
 import re
 import tempfile
-from asyncio import Future
+from asyncio import Future, iscoroutinefunction
 from datetime import timedelta
+from functools import wraps
 from pathlib import Path
 from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
 
@@ -22,6 +23,24 @@ from ..util.xep_0292.vcard4 import VCard4Provider
 from ..util.xep_0363 import FileUploadError
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
+
+
+def admin_only(func):
+    # fmt: off
+    if iscoroutinefunction(func):
+        @wraps(func)
+        async def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
+            if iq.get_from().bare not in self._config.admins:
+                raise XMPPError("not-authorized")
+            return await func(self, iq, session)
+    else:
+        @wraps(func)
+        def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
+            if iq.get_from().bare not in self._config.admins:
+                raise XMPPError("not-authorized")
+            return func(self, iq, session)
+    # fmt: on
+    return wrapped
 
 
 class BaseGateway(
@@ -364,12 +383,11 @@ class BaseGateway(
             node="search", name="Search for contacts", handler=self._handle_search
         )
 
+    @admin_only
     def _handle_info(self, iq: Iq, session: dict[str, Any]):
         """
         List registered users for admins
         """
-        if iq.get_from().bare not in self._config.admins:
-            raise XMPPError("not-authorized")
         form = self["xep_0004"].make_form("result", "Component info")
         form.add_field(
             ftype="jid-multi",
