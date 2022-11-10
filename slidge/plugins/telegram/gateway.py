@@ -49,7 +49,7 @@ class Gateway(BaseGateway["Session"]):
     def config(self, argv: list[str]):
         Gateway.args = args = get_parser().parse_args(argv)
         if args.tdlib_path is None:
-            args.tdlib_path = self.home_dir / "tdlib"
+            args.tdlib_path = config.HOME_DIR / "tdlib"
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]

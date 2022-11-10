@@ -80,7 +80,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     job_futures: dict[str, asyncio.Future[Any]]
 
     def post_init(self):
-        store_dir = self.xmpp.home_dir / self.user.bare_jid
+        store_dir = global_config.HOME_DIR / self.user.bare_jid
         store_dir.mkdir(exist_ok=True)
 
         self.job_futures = {}

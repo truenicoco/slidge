@@ -145,7 +145,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     contacts: Roster
 
     def post_init(self):
-        self.shelf_path = self.xmpp.home_dir / self.user.bare_jid
+        self.shelf_path = global_config.HOME_DIR / self.user.bare_jid
         self.ack_futures = {}
         self.reaction_futures: dict[str, asyncio.Future] = {}
         self.unsend_futures: dict[str, asyncio.Future] = {}

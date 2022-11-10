@@ -28,6 +28,7 @@ from ..util.types import (
 )
 from ..util.xep_0292.stanza import VCard4
 from ..util.xep_0363 import FileUploadError
+from . import config
 
 if TYPE_CHECKING:
     from .session import SessionType
@@ -252,7 +253,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         Add this contact to the user roster using :xep:`0356`
         """
-        if self.xmpp.no_roster_push:
+        if config.NO_ROSTER_PUSH:
             log.debug("Roster push request by plugin ignored (--no-roster-push)")
             return
         item = {
@@ -533,7 +534,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                 filename=filename,
                 content_type=content_type,
                 input_file=input_file,
-                ifrom=self.xmpp.upload_requester,
+                ifrom=config.UPLOAD_REQUESTER,
             )
         except FileUploadError as e:
             log.warning(

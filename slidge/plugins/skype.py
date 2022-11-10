@@ -35,8 +35,8 @@ class Gateway(BaseGateway["Session"]):
     ):
         pass
 
-    def __init__(self, args):
-        super().__init__(args)
+    def __init__(self):
+        super().__init__()
         self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def shutdown(self):
@@ -116,7 +116,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     send_lock: Lock
 
     def post_init(self):
-        self.skype_token_path = self.xmpp.home_dir / self.user.bare_jid
+        self.skype_token_path = global_config.HOME_DIR / self.user.bare_jid
         self.thread = None
         self.sent_by_user_to_ack = {}
         self.unread_by_user = {}

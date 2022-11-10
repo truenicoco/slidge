@@ -6,9 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future, iscoroutinefunction
-from datetime import timedelta
 from functools import wraps
-from pathlib import Path
 from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
 
 import qrcode
@@ -21,6 +19,7 @@ from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
 from ..util.xep_0363 import FileUploadError
+from . import config
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
 
@@ -30,13 +29,13 @@ def admin_only(func):
     if iscoroutinefunction(func):
         @wraps(func)
         async def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
-            if iq.get_from().bare not in self._config.admins:
+            if iq.get_from().bare not in config.ADMINS:
                 raise XMPPError("not-authorized")
             return await func(self, iq, session)
     else:
         @wraps(func)
         def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
-            if iq.get_from().bare not in self._config.admins:
+            if iq.get_from().bare not in config.ADMINS:
                 raise XMPPError("not-authorized")
             return func(self, iq, session)
     # fmt: on
@@ -154,16 +153,16 @@ class BaseGateway(
     yet still open a functional chat window on incoming messages from components.
     """
 
-    def __init__(self, args):
+    def __init__(self):
         """
 
         :param args: CLI arguments parsed by :func:`.slidge.__main__.get_parser`
         """
         super().__init__(
-            args.jid,
-            args.secret,
-            args.server,
-            args.port,
+            config.JID,
+            config.SECRET,
+            config.SERVER,
+            config.PORT,
             plugin_whitelist=SLIXMPP_PLUGINS,
             plugin_config={
                 "xep_0077": {
@@ -180,19 +179,14 @@ class BaseGateway(
                     "auto_request": True,
                 },
                 "xep_0363": {
-                    "upload_service": args.upload_service,
+                    "upload_service": config.UPLOAD_SERVICE,
                 },
             },
         )
         self.loop.set_exception_handler(self.__exception_handler)
         self.has_crashed = False
 
-        self.home_dir = Path(args.home_dir)
-        self._jid_validator = re.compile(args.user_jid_validator)
-        self._config = args
-        self.no_roster_push = args.no_roster_push
-        self.upload_requester = args.upload_requester or self.boundjid.bare
-        self.ignore_delay_threshold = timedelta(seconds=args.ignore_delay_threshold)
+        self._jid_validator = re.compile(config.USER_JID_VALIDATOR)
 
         self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
         self._session_cls.xmpp = self
@@ -569,7 +563,7 @@ class BaseGateway(
 
     async def _on_user_register(self, iq: Iq):
         session = self._get_session_from_stanza(iq)
-        for jid in self._config.admins:
+        for jid in config.ADMINS:
             self.send_message(
                 mto=jid,
                 mbody=f"{iq.get_from()} has registered",
@@ -898,7 +892,7 @@ class BaseGateway(
         msg.set_from(self.boundjid.bare)
         try:
             url = await self["xep_0363"].upload_file(
-                filename=filename, ifrom=self.upload_requester
+                filename=filename, ifrom=config.UPLOAD_REQUESTER
             )
         except FileUploadError as e:
             log.warning(

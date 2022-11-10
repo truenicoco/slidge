@@ -3,6 +3,8 @@ import logging
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins.base import BasePlugin
 
+from slidge.core import config
+
 log = logging.getLogger(__name__)
 
 
@@ -65,10 +67,7 @@ class XEP_0100(BasePlugin):
         await self.add_component_to_roster(jid=iq.get_from())
 
     async def add_component_to_roster(self, jid: JID):
-        try:
-            if self.xmpp.no_roster_push:
-                return
-        except AttributeError:
+        if config.NO_ROSTER_PUSH:
             return
         items = {
             self.xmpp.boundjid.bare: {

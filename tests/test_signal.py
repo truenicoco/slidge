@@ -1,3 +1,6 @@
+import tempfile
+from pathlib import Path
+
 from slixmpp import JID, Presence
 
 from aiosignald import exc
@@ -32,7 +35,15 @@ class TestSignalBase(SlidgeTest):
     class Config(SlidgeTest.Config):
         jid = "signal.test"
         user_jid_validator = ".*"
-
+        secret = "test"
+        server = "shakespeare.lit"
+        port = 5222
+        upload_service = "upload.test"
+        admins: list[str] = []
+        no_roster_push = False
+        upload_requester = None
+        ignore_delay_threshold = 300
+        home_dir = Path(tempfile.mkdtemp())
 
 
 class TestSignalUnregistered(TestSignalBase):
@@ -88,9 +99,9 @@ class TestSignalUnregistered(TestSignalBase):
         #     """
         # )
         assert (
-            user_store.get(
-                None, None, JID("romeo@test"), None
-            ).registration_form["name"]
+            user_store.get(None, None, JID("romeo@test"), None).registration_form[
+                "name"
+            ]
             == "Romeo"
         )
         user_store.remove(None, None, JID("romeo@test"), None)
@@ -179,21 +190,9 @@ def test_attachment_filename():
         == "test.jpg"
     )
     assert (
-        get_filename(
-            sigapi.JsonAttachmentv1(
-                contentType="image/jpeg"
-            )
-        )
-        == "unnamed.jpg"
+        get_filename(sigapi.JsonAttachmentv1(contentType="image/jpeg")) == "unnamed.jpg"
     )
-    assert (
-        get_filename(
-            sigapi.JsonAttachmentv1(
-                contentType="bogus/bogus"
-            )
-        )
-        == "unnamed"
-    )
+    assert get_filename(sigapi.JsonAttachmentv1(contentType="bogus/bogus")) == "unnamed"
     assert (
         get_filename(
             sigapi.JsonAttachmentv1(

@@ -1,5 +1,6 @@
 import slixmpp.plugins
 
+from .core import config as global_config
 from .core.contact import LegacyContact, LegacyRoster
 from .core.gateway import BaseGateway
 from .core.session import BaseSession
@@ -35,4 +36,5 @@ __all__ = [
     "FormField",
     "SearchResult",
     "user_store",
+    "global_config",
 ]

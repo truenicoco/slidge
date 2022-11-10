@@ -9,111 +9,31 @@ from pathlib import Path
 import configargparse
 
 from slidge import BaseGateway
-from slidge.core.pubsub import PepAvatar
+from slidge.core import config
+from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
 
 
-# noinspection PyUnresolvedReferences
-def get_parser():
-    p = configargparse.ArgParser(
+class MainConfig(ConfigModule):
+    def update_dynamic_defaults(self, args):
+        if args.home_dir is None:
+            args.home_dir = Path("/var/lib/slidge") / str(args.jid)
+
+        if args.user_jid_validator is None:
+            args.user_jid_validator = ".*@" + args.server
+
+
+def get_configurator():
+    p = configargparse.ArgumentParser(
         default_config_files=["/etc/slidge/conf.d/*.conf"], description=__doc__
     )
-    p.add(
+    p.add_argument(
         "-c",
         "--config",
         help="Path to a INI config file.",
         env_var="SLIDGE_CONFIG",
         is_config_file=True,
     )
-    p.add(
-        "--legacy-module",
-        help="Importable python module containing (at least) "
-        "a BaseGateway and a LegacySession subclass",
-        env_var="SLIDGE_LEGACY_MODULE",
-    )
-    p.add(
-        "-s",
-        "--server",
-        env_var="SLIDGE_SERVER",
-        required=True,
-        help="The XMPP server's host name.",
-    )
-    p.add(
-        "-p",
-        "--port",
-        default="5347",
-        env_var="SLIDGE_PORT",
-        help="The XMPP server's port for incoming component connections",
-    )
-    p.add(
-        "--secret",
-        required=True,
-        env_var="SLIDGE_SECRET",
-        help="The gateway component's secret (required to connect to the XMPP server)",
-    )
-    p.add(
-        "-j",
-        "--jid",
-        required=True,
-        env_var="SLIDGE_JID",
-        help="The gateway component's JID",
-    )
-    p.add(
-        "--upload-service",
-        env_var="SLIDGE_UPLOAD",
-        help="JID of an HTTP upload service the gateway can use. "
-        "This is optional, as it should be automatically determined via service discovery",
-    )
-    p.add(
-        "--home-dir",
-        env_var="SLIDGE_HOME_DIR",
-        help="Shelve file used to store persistent user data. "
-        "Defaults to /var/lib/slidge/${SLIDGE_JID}",
-    )
-    p.add(
-        "--admins",
-        env_var="SLIDGE_ADMINS",
-        nargs="*",
-        help="JIDs of the gateway admins",
-    )
-    p.add(
-        "--user-jid-validator",
-        env_var="SLIDGE_RESTRICT",
-        help="Regular expression to restrict user that can register to the gateway by JID. "
-        "Defaults to .*@${SLIDGE_SERVER}, forbids the gateway to JIDs "
-        "not using the same XMPP server as the gateway",
-    )
-    p.add(
-        "--secret-key",
-        env_var="SLIDGE_SECRET_KEY",
-        help="Encryption for disk storage",
-    )
-    p.add(
-        "--no-roster-push",
-        env_var="SLIDGE_NO_ROSTER_PUSH",
-        help="Do not fill users' rosters with legacy contacts automatically",
-        action="store_true",
-    )
-    p.add_argument(
-        "--avatar-size",
-        env_var="SLIDGE_AVATAR_SIZE",
-        type=int,
-        default=200,
-        help="Maximum image size (width and height), image ratio will be preserved",
-    )
-    p.add_argument(
-        "--upload-requester",
-        env_var="SLIDGE_UPLOAD_REQUESTER",
-        help="Set which JID should request the upload slots. Defaults to the component JID.",
-    )
-    p.add_argument(
-        "--ignore-delay-threshold",
-        env_var="SLIDGE_IGNORE_DELAY_THRESHOLD",
-        help="Threshold, in seconds, below which the <delay> information is stripped "
-        "out of emitted stanzas.",
-        default=300,
-    )
-
     p.add_argument(
         "-q",
         "--quiet",
@@ -133,34 +53,49 @@ def get_parser():
         const=logging.DEBUG,
         env_var="SLIDGE_DEBUG",
     )
+    configurator = MainConfig(config, p)
+    return configurator
 
-    return p
+
+def get_parser():
+    return get_configurator().parser
+
+
+def configure():
+    configurator = get_configurator()
+    args, unknown_argv = configurator.set_conf()
+
+    if not (h := config.HOME_DIR).exists():
+        logging.info("Creating directory '%s'", h)
+        h.mkdir()
+
+    logging.basicConfig(level=args.loglevel)
+
+    db_file = config.HOME_DIR / "slidge.db"
+    user_store.set_file(db_file, args.secret_key)
+
+    return unknown_argv
 
 
 def main():
-    args, argv = get_parser().parse_known_args()
-    logging.basicConfig(level=args.loglevel)
+    unknown_argv = configure()
 
-    if args.home_dir is None:
-        args.home_dir = Path("/var/lib/slidge") / args.jid
+    legacy_module = importlib.import_module(config.LEGACY_MODULE)
+
+    if plugin_config_obj := getattr(
+        legacy_module, "config", getattr(legacy_module, "Config", None)
+    ):
+        logging.debug("Found a config object in plugin: %r", plugin_config_obj)
+        ConfigModule.ENV_VAR_PREFIX += (
+            f"_{config.LEGACY_MODULE.split('.')[-1].upper()}_"
+        )
+        logging.debug("Env var prefix: %s", ConfigModule.ENV_VAR_PREFIX)
+        ConfigModule(plugin_config_obj).set_conf()
     else:
-        args.home_dir = Path(args.home_dir)
+        if unknown_argv:
+            raise RuntimeError("Some arguments have not been recognized", unknown_argv)
 
-    if not args.home_dir.exists():
-        logging.info("Creating directory '%s'", args.home_dir)
-        args.home_dir.mkdir()
-
-    if args.user_jid_validator is None:
-        args.user_jid_validator = ".*@" + args.server
-
-    db_file = Path(args.home_dir) / "slidge.db"
-    user_store.set_file(db_file, args.secret_key)
-
-    PepAvatar.AVATAR_SIZE = args.avatar_size
-
-    importlib.import_module(args.legacy_module)
-    gateway = BaseGateway.get_unique_subclass()(args)
-    gateway.config(argv)
+    gateway = BaseGateway.get_unique_subclass()()
     gateway.connect()
 
     return_code = 0

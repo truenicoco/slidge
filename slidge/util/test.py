@@ -6,6 +6,7 @@ from typing import Union
 from slixmpp.test import SlixTest, TestTransport
 
 from .. import BaseGateway, BaseSession, LegacyContact, LegacyRoster, user_store
+from ..core import config
 
 
 class SlidgeTest(SlixTest):
@@ -27,6 +28,8 @@ class SlidgeTest(SlixTest):
     @classmethod
     def setUpClass(cls):
         user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
+        for k, v in vars(cls.Config).items():
+            setattr(config, k.upper(), v)
 
     def setUp(self):
         BaseGateway._subclass = find_subclass(self.plugin, BaseGateway)
@@ -36,7 +39,7 @@ class SlidgeTest(SlixTest):
             self.plugin, LegacyContact, base_ok=True
         )
 
-        self.xmpp = BaseGateway.get_self_or_unique_subclass()(self.Config)
+        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
 
         self.xmpp._always_send_everything = True
 

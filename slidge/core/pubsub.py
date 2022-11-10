@@ -15,11 +15,12 @@ from slixmpp.plugins.xep_0060.stanza import Event, EventItem, EventItems, Item
 from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.types import JidStr, OptJidStr
 
-from slidge.util.db import user_store
-from slidge.util.types import AvatarType
-from slidge.util.xep_0084 import Data as AvatarData
-from slidge.util.xep_0084 import MetaData as AvatarMetadata
-from slidge.util.xep_0292.stanza import VCard4
+from ..util.db import user_store
+from ..util.types import AvatarType
+from ..util.xep_0084 import Data as AvatarData
+from ..util.xep_0084 import MetaData as AvatarMetadata
+from ..util.xep_0292.stanza import VCard4
+from . import config
 
 VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
@@ -30,8 +31,6 @@ class PepItem:
 
 
 class PepAvatar(PepItem):
-    AVATAR_SIZE: Optional[int] = None
-
     def __init__(self, authorized_jid: Optional[JidStr] = None):
         super().__init__(authorized_jid)
         self.metadata: Optional[AvatarMetadata] = None
@@ -53,7 +52,7 @@ class PepAvatar(PepItem):
         metadata = AvatarMetadata()
 
         resampled = False
-        if (size := self.AVATAR_SIZE) and any(x > size for x in img.size):
+        if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
             img.thumbnail((size, size))
             log.debug("Resampled image to %s", img.size)
             resampled = True
