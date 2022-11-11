@@ -13,6 +13,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from . import config
 from .client import TelegramClient
 from .contact import Contact, Roster
 from .gateway import Gateway
@@ -47,8 +48,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             bot_token=registration_form.get("bot_token"),
             first_name=registration_form.get("first"),
             last_name=registration_form.get("last"),
-            database_encryption_key=Gateway.args.tdlib_key,
-            files_directory=Gateway.args.tdlib_path,
+            database_encryption_key=config.TDLIB_KEY,
+            files_directory=config.TDLIB_PATH,
         )
 
     @staticmethod

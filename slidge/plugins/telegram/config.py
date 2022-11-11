@@ -1,12 +1,8 @@
-from argparse import ArgumentParser
+from pathlib import Path
 
+TDLIB_PATH: Path
+TDLIB_PATH__DOC = "Defaults to ${SLIDGE_HOME_DIR}/tdlib"
+TDLIB_PATH__DYNAMIC_DEFAULT = True
 
-def get_parser():
-    parser = ArgumentParser()
-    parser.add_argument("--tdlib-path", help="Defaults to ${SLIDGE_HOME_DIR}/tdlib")
-    parser.add_argument(
-        "--tdlib-key",
-        default="NOT_SECURE",
-        help="Key used to encrypt tdlib persistent DB",
-    )
-    return parser
+TDLIB_KEY: str = "NOT_SECURE"
+TDLIB_KEY__DOC = "Key used to encrypt tdlib persistent DB"

@@ -1,6 +1,5 @@
 import logging
 import typing
-from argparse import Namespace
 from datetime import datetime
 
 import aiotdlib.api as tgapi
@@ -10,7 +9,7 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 from ...util import is_valid_phone_number
-from .config import get_parser
+from . import config
 
 if typing.TYPE_CHECKING:
     from .session import Session
@@ -44,12 +43,10 @@ class Gateway(BaseGateway["Session"]):
         FormField(var="last", label="Last name", required=False),
     ]
 
-    args: Namespace
-
-    def config(self, argv: list[str]):
-        Gateway.args = args = get_parser().parse_args(argv)
-        if args.tdlib_path is None:
-            args.tdlib_path = config.HOME_DIR / "tdlib"
+    def __init__(self):
+        super().__init__()
+        if config.TDLIB_PATH is None:
+            config.TDLIB_PATH = global_config.HOME_DIR / "tdlib"
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]
