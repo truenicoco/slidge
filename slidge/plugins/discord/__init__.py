@@ -1,6 +1,5 @@
 import functools
 import logging
-from argparse import ArgumentParser
 
 import discord as di
 from slixmpp.exceptions import XMPPError
@@ -8,6 +7,14 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 from .session import Session
+
+
+class Config:
+    DISCORD_VERBOSE = False
+    DISCORD_VERBOSE__DOC = (
+        "Let the discord lib at the same loglevel as others loggers. "
+        "By default, it's set it to WARNING because it's *really* verbose."
+    )
 
 
 class Gateway(BaseGateway[Session]):
@@ -20,11 +27,9 @@ class Gateway(BaseGateway[Session]):
 
     ROSTER_GROUP = "Discord"
 
-    def config(self, argv: list[str]):
-        parser = ArgumentParser()
-        parser.add_argument("--discord-verbose", action="store_true")
-        args = parser.parse_args(argv)
-        if not args.discord_verbose:
+    def __init__(self):
+        super().__init__()
+        if not Config.DISCORD_VERBOSE:
             log.debug("Disabling discord info logs")
             logging.getLogger("discord.gateway").setLevel(logging.WARNING)
             logging.getLogger("discord.client").setLevel(logging.WARNING)
