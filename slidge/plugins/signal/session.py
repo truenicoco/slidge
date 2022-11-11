@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .contact import Contact, Roster
     from .gateway import Gateway
 
-from . import txt
+from . import config, txt
 
 
 def handle_unregistered_recipient(func):
@@ -346,7 +346,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         async with aiohttp.ClientSession() as client:
             async with client.get(url=u) as r:
                 with tempfile.TemporaryDirectory(
-                    dir=Path(self.xmpp.signal_socket).parent,
+                    dir=config.SIGNALD_SOCKET.parent,
                 ) as d:
                     os.chmod(d, 0o777)
                     with open(Path(d) / r.url.name, "wb") as f:

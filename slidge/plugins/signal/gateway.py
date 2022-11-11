@@ -1,8 +1,8 @@
 import asyncio
 import functools
 import logging
-from argparse import ArgumentParser
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import aiosignald.exc as sigexc
@@ -18,7 +18,7 @@ from slidge.util import is_valid_phone_number
 if TYPE_CHECKING:
     from .session import Session
 
-from . import txt
+from . import config, txt
 
 
 class Gateway(BaseGateway):
@@ -37,7 +37,6 @@ class Gateway(BaseGateway):
     ]
 
     signal: asyncio.Future["Signal"]
-    signal_socket: str
     sessions_by_phone: dict[str, "Session"] = {}
 
     CHAT_COMMANDS = {
@@ -48,19 +47,15 @@ class Gateway(BaseGateway):
     def __init__(self):
         super().__init__()
         self.signal: asyncio.Future[Signal] = self.loop.create_future()
+        self.loop.create_task(self.connect_signal(config.SIGNALD_SOCKET))
 
-    def config(self, argv: list[str]):
-        args = get_parser().parse_args(argv)
-        self.signal_socket = socket = args.socket
-        self.loop.create_task(self.connect_signal(socket))
-
-    async def connect_signal(self, socket: str):
+    async def connect_signal(self, socket: Path):
         """
         Establish connection to the signald socker
         """
         log.debug("Connecting to signald...")
         _, signal = await self.loop.create_unix_connection(
-            functools.partial(Signal, self), socket
+            functools.partial(Signal, self), str(socket)
         )
         self.signal.set_result(signal)
         await signal.on_con_lost
@@ -271,12 +266,6 @@ class Signal(SignaldAPI):
         """
         session = self.sessions_by_phone[msg.account]
         await session.on_signal_message(msg)
-
-
-def get_parser():
-    parser = ArgumentParser()
-    parser.add_argument("--socket", default="/signald/signald.sock")
-    return parser
 
 
 log = logging.getLogger(__name__)

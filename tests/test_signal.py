@@ -48,8 +48,14 @@ class TestSignalBase(SlidgeTest):
 
 class TestSignalUnregistered(TestSignalBase):
     def setUp(self):
+        signal = self.signal = slidge.plugins.signal.gateway.signal = MockSignal()
+
+        async def connect_signal_mock(self, socket):
+            self.signal.set_result(signal)
+
+        slidge.plugins.signal.gateway.Gateway.connect_signal = connect_signal_mock
+
         super(TestSignalUnregistered, self).setUp()
-        self.signal = slidge.plugins.signal.gateway.signal = MockSignal()
         self.xmpp["xep_0356"].granted_privileges["test"].message = "outgoing"
         self.xmpp["xep_0356"].granted_privileges["test"].roster = "both"
 
