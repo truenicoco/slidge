@@ -4,6 +4,7 @@ pseudo-roster for the gateway component.
 """
 
 import dataclasses
+import datetime
 import logging
 import os.path
 import shelve
@@ -52,6 +53,8 @@ class GatewayUser:
     """Bare JID of the user"""
     registration_form: dict[str, Optional[str]]
     """Content of the registration form, as a dict"""
+    plugin_data: Optional[dict] = None
+    registration_date: Optional[datetime.datetime] = None
 
     def __hash__(self):
         return hash(self.bare_jid)
@@ -131,6 +134,7 @@ class UserStore:
         self._users[jid.bare] = GatewayUser(
             bare_jid=jid.bare,
             registration_form=registration_form,
+            registration_date=datetime.datetime.now(),
         )
         self._users.sync()
         log.debug("Store: %s", self._users)
@@ -139,7 +143,7 @@ class UserStore:
         """
         Get a user from the store
 
-        NB: there is no reason to call this, it is used by SliXMPP plugins
+        NB: there is no reason to call this, it is used by SliXMPP internal API
 
         :param _gateway_jid:
         :param _node:
@@ -186,6 +190,10 @@ class UserStore:
         :return:
         """
         return self.get_by_jid(s.get_from())
+
+    def close(self):
+        self._users.sync()
+        self._users.close()
 
 
 class YesSet(set):

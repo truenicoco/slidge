@@ -111,6 +111,7 @@ def main():
         logging.exception("Exception in __main__")
         logging.exception(e)
     finally:
+        user_store.close()
         if gateway.has_crashed:
             if return_code != 0:
                 logging.warning("Return code has been set twice. Please report this.")

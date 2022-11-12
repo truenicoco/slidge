@@ -78,6 +78,7 @@ class BaseSession(
         self.ignore_messages = set[str]()
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
+        self.never_logged = True
         self.post_init()
 
     @staticmethod

@@ -81,6 +81,12 @@ class BaseGateway(
     The text presented to a user that wants to register (or modify) their legacy account
     configuration.
     """
+    REGISTRATION_MULTISTEP = False
+    """
+    If the network requires a multistep registration, set this to True to prevent name
+    squatting. Registrations that did not successfully login withing SLIDGE_PARTIAL_REGISTRATION_TIMEOUT
+    seconds will automatically be removed from the user_store.
+    """
 
     COMPONENT_NAME: str = NotImplemented
     """Name of the component, as seen in service discovery by XMPP clients"""
@@ -348,6 +354,7 @@ class BaseGateway(
             )
         else:
             log.info(f"Login success for %s", session.user)
+            session.never_logged = False
             if status is None:
                 session.send_gateway_status("Logged in", show="chat")
             else:
@@ -571,7 +578,22 @@ class BaseGateway(
                 mfrom=self.boundjid.bare,
             )
         session.send_gateway_message(self.WELCOME_MESSAGE)
+        if self.REGISTRATION_MULTISTEP:
+            asyncio.create_task(self.__registration_timeout(session))
         await session.login()
+
+    async def __registration_timeout(self, session: "SessionType"):
+        await asyncio.sleep(config.PARTIAL_REGISTRATION_TIMEOUT)
+        if session.never_logged:
+            u = session.user
+            j = u.jid
+            log.warning(
+                "%s has never completed their registration, "
+                "the have been unregistered",
+                u,
+            )
+            await self._session_cls.kill_by_jid(j)
+            user_store.remove_by_jid(j)
 
     async def _on_user_unregister(self, iq: Iq):
         # Mypy: "Type[SessionType?]" has no attribute "kill_by_jid"

@@ -86,3 +86,9 @@ IGNORE_DELAY_THRESHOLD__DOC = (
     "Threshold, in seconds, below which the <delay> information is stripped "
     "out of emitted stanzas."
 )
+
+PARTIAL_REGISTRATION_TIMEOUT = 3600
+PARTIAL_REGISTRATION_TIMEOUT__DOC = (
+    "Timeout before registration and login. Only useful for legacy networks where "
+    "a single step registration process is not enough."
+)
