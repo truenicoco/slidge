@@ -544,13 +544,12 @@ class BaseGateway(
 
         await self.validate(ifrom, form_dict)
 
-    async def _user_validate(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
-    ):
+    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         """
         SliXMPP internal API stuff
         """
         log.debug("User validate: %s", ifrom.bare)
+        form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
         if not self._jid_validator.match(ifrom.bare):
             raise XMPPError(condition="not-allowed")
         await self._user_prevalidate(ifrom, form_dict)
