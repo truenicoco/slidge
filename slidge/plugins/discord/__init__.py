@@ -23,7 +23,7 @@ class Gateway(BaseGateway[Session]):
     REGISTRATION_INSTRUCTIONS = (
         "Have a look at https://discordpy-self.readthedocs.io/en/latest/token.html"
     )
-    REGISTRATION_FIELDS = [FormField("token", required=True)]
+    REGISTRATION_FIELDS = [FormField("token", label="Discord token", required=True)]
 
     ROSTER_GROUP = "Discord"
 
