@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
@@ -25,16 +25,12 @@ class Contact(LegacyContact["Session"]):
         super(Contact, self).__init__(*a, **k)
         self._online_expire_task = self.xmpp.loop.create_task(noop())
 
-    @staticmethod
-    def _format_last_seen(timestamp: Union[int, float]):
-        return f"Last seen {datetime.fromtimestamp(timestamp):%A %H:%M GMT}"
-
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()
         how_long = timestamp - now
         log.debug("Online status expires in %s seconds", how_long)
         await asyncio.sleep(how_long)
-        self.away(self._format_last_seen(now))
+        self.away(last_seen=datetime.fromtimestamp(timestamp))
 
     def update_status(self, status: tgapi.UserStatus):
         if isinstance(status, tgapi.UserStatusEmpty):
@@ -42,15 +38,23 @@ class Contact(LegacyContact["Session"]):
             self.offline()
         elif isinstance(status, tgapi.UserStatusLastMonth):
             self.inactive()
-            self.extended_away("Offline since last month")
+            self.extended_away(
+                "Offline since last month"
+                if global_config.LAST_SEEN_FALLBACK
+                else None,
+                last_seen=datetime.now() - timedelta(days=31),
+            )
         elif isinstance(status, tgapi.UserStatusLastWeek):
             self.inactive()
-            self.extended_away("Offline since last week")
+            self.extended_away(
+                "Offline since last week" if global_config.LAST_SEEN_FALLBACK else None,
+                last_seen=datetime.now() - timedelta(days=7),
+            )
         elif isinstance(status, tgapi.UserStatusOffline):
             self.inactive()
             if self._online_expire_task.done():
                 # we've never seen the contact online, so we use the was_online timestamp
-                self.away(self._format_last_seen(status.was_online))
+                self.away(last_seen=datetime.fromtimestamp(status.was_online))
         elif isinstance(status, tgapi.UserStatusOnline):
             self.online()
             self.active()
@@ -60,7 +64,10 @@ class Contact(LegacyContact["Session"]):
             )
         elif isinstance(status, tgapi.UserStatusRecently):
             self.inactive()
-            self.away("Last seen recently")
+            self.away(
+                "Last seen recently" if global_config.LAST_SEEN_FALLBACK else None,
+                last_seen=datetime.now(),
+            )
 
     async def send_tg_message(self, msg: tgapi.Message):
         content = msg.content
