@@ -160,10 +160,6 @@ class BaseGateway(
     """
 
     def __init__(self):
-        """
-
-        :param args: CLI arguments parsed by :func:`.slidge.__main__.get_parser`
-        """
         super().__init__(
             config.JID,
             config.SECRET,
