@@ -1,3 +1,4 @@
+import logging
 from functools import cached_property
 from types import GenericAlias
 from typing import Optional, Union, get_args, get_origin, get_type_hints
@@ -118,7 +119,9 @@ class ConfigModule:
             rest = None
         self.update_dynamic_defaults(args)
         for name in self._list_options():
-            setattr(self.config_obj, name, getattr(args, name.lower()))
+            value = getattr(args, name.lower())
+            log.debug("Setting '%s' to %r", name, value)
+            setattr(self.config_obj, name, value)
         return args, rest
 
     @cached_property
@@ -143,3 +146,6 @@ def _is_optional(t):
         if len(args) == 2 and isinstance(None, args[1]):
             return True
     return False
+
+
+log = logging.getLogger(__name__)

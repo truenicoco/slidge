@@ -16,6 +16,8 @@ from slidge.util.db import user_store
 
 class MainConfig(ConfigModule):
     def update_dynamic_defaults(self, args):
+        logging.basicConfig(level=args.loglevel)
+
         if args.home_dir is None:
             args.home_dir = Path("/var/lib/slidge") / str(args.jid)
 
@@ -68,8 +70,6 @@ def configure():
     if not (h := config.HOME_DIR).exists():
         logging.info("Creating directory '%s'", h)
         h.mkdir()
-
-    logging.basicConfig(level=args.loglevel)
 
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
