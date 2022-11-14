@@ -111,7 +111,6 @@ def main():
         logging.exception("Exception in __main__")
         logging.exception(e)
     finally:
-        user_store.close()
         if gateway.has_crashed:
             if return_code != 0:
                 logging.warning("Return code has been set twice. Please report this.")
@@ -123,6 +122,7 @@ def main():
             gateway.loop.run_until_complete(gateway.disconnected)
         else:
             logging.debug("Gateway is not connected, no need to clean up")
+        user_store.close()
         logging.info("Successful clean shut down")
     logging.debug("Exiting with code %s", return_code)
     exit(return_code)
