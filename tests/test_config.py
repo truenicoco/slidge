@@ -84,7 +84,8 @@ def test_slidge_conf():
     assert rest[0] == "--some-other"
 
 
-def test_set_conf():
+def test_set_conf(monkeypatch):
+    monkeypatch.setenv("SLIDGE_USER_JID_VALIDATOR", "cloup")
     args = main.get_parser().parse_args(
         [
             "-c",
@@ -101,3 +102,4 @@ def test_set_conf():
     assert isinstance(config.JID, JID)
     assert config.SECRET == "secret"
     assert config.IGNORE_DELAY_THRESHOLD.seconds == 200
+    assert config.USER_JID_VALIDATOR == "cloup"
