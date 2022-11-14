@@ -228,6 +228,13 @@ class BaseGateway(
             self.has_crashed = True
             loop.stop()
 
+    def _raise_if_not_allowed_jid(self, jid: JID):
+        if not self._jid_validator.match(jid.bare):
+            raise XMPPError(
+                condition="not-allowed",
+                text="Your account is not allowed to use this gateway.",
+            )
+
     def exception(self, exception: Exception):
         """
         Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
@@ -479,9 +486,7 @@ class BaseGateway(
         return adhoc_session
 
     async def _make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
-        if not self._jid_validator.match(iq.get_from().bare):
-            raise XMPPError(condition="not-allowed")
-
+        self._raise_if_not_allowed_jid(iq.get_from())
         reg = iq["register"]
         user = user_store.get_by_stanza(iq)
         log.debug("User found: %s", user)
@@ -546,8 +551,7 @@ class BaseGateway(
         """
         log.debug("User validate: %s", ifrom.bare)
         form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
-        if not self._jid_validator.match(ifrom.bare):
-            raise XMPPError(condition="not-allowed")
+        self._raise_if_not_allowed_jid(ifrom)
         await self._user_prevalidate(ifrom, form_dict)
         log.info("New user: %s", ifrom.bare)
         user_store.add(ifrom, form_dict)
