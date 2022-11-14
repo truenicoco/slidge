@@ -299,7 +299,7 @@ class XEP_0030(BasePlugin):
         return self.api['has_identity'](jid, node, ifrom, data)
 
     async def get_info_from_domain(self, domain=None, timeout=None,
-                                   cached=True, callback=None):
+                                   cached=True, callback=None, **iqkwargs):
         """Fetch disco#info of specified domain and one disco#items level below
         """
 
@@ -308,12 +308,12 @@ class XEP_0030(BasePlugin):
 
         if not cached or domain not in self.domain_infos:
             infos = [self.get_info(
-                domain, timeout=timeout)]
+                domain, timeout=timeout, **iqkwargs)]
             iq_items = await self.get_items(
                 domain, timeout=timeout)
             items = iq_items['disco_items']['items']
             infos += [
-                self.get_info(item[0], timeout=timeout)
+                self.get_info(item[0], timeout=timeout, **iqkwargs)
                 for item in items]
             info_futures, _ = await asyncio.wait(
                 infos,

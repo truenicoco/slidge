@@ -9,7 +9,7 @@ homepage = "https://sr.ht/~nicoco/slidge/"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-slixmpp = "^1.8.2"
+slixmpp = "^1.8.3"
 qrcode = ">=7.3"
 Pillow = ">=8.1.0"
 aiohttp = ">=3.6.0"

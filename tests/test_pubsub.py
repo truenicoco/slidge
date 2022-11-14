@@ -4,7 +4,6 @@ from pathlib import Path
 from slixmpp.test import SlixTest
 
 from slidge.core.pubsub import PubSubComponent
-import slidge.util.xep_0084
 
 
 class TestPubSubDisco(SlixTest):

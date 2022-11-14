@@ -12,13 +12,13 @@ from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
+from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
 
 from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
-from ..util.xep_0363 import FileUploadError
 from . import config
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType

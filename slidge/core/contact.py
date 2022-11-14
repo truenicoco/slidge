@@ -18,6 +18,7 @@ from typing import (
 
 import aiohttp
 from slixmpp import JID, Message
+from slixmpp.plugins.xep_0363 import FileUploadError
 
 from ..util import SubclassableOnce
 from ..util.types import (
@@ -27,7 +28,6 @@ from ..util.types import (
     LegacyUserIdType,
 )
 from ..util.xep_0292.stanza import VCard4
-from ..util.xep_0363 import FileUploadError
 from . import config
 
 if TYPE_CHECKING:
