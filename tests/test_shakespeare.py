@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 from copy import copy
 from typing import Hashable, Optional, Dict, Any
@@ -264,6 +265,16 @@ class TestAimShakespeareBase(SlidgeTest):
         assert msg["reactions"]["id"] == "legacy1"
         for r in msg["reactions"]:
             assert r["value"] == "👋"
+
+    def test_last_seen(self):
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        now = datetime.datetime.now(datetime.timezone.utc)
+        juliet.away(last_seen=now)
+        sent = self.next_sent()
+        assert sent["idle"]["since"] == now
 
 
 class TestNameSquatting(SlidgeTest):

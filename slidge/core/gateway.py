@@ -977,6 +977,7 @@ SLIXMPP_PLUGINS = [
     "xep_0280",  # Carbons
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction
+    "xep_0319",  # Last User Interaction in Presence
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints
     "xep_0356",  # Privileged Entity

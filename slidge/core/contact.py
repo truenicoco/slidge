@@ -281,15 +281,44 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         self.added_to_roster = True
 
-    def online(self, status: Optional[str] = None):
+    def __send_presence(
+        self,
+        *,
+        ptype: Optional[str] = None,
+        show: Optional[str] = None,
+        status: Optional[str] = None,
+        last_seen: Optional[datetime] = None,
+    ):
+        p = self.xmpp.make_presence(
+            pfrom=self.jid,
+            pto=self.user.jid.bare,
+            pstatus=status,
+            pshow=show,
+            ptype=ptype,
+        )
+        if last_seen:
+            if config.LAST_SEEN_FALLBACK and not status:
+                p["status"] = f"Last seen {last_seen:%A %H:%M GMT}"
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.astimezone(timezone.utc)
+            p["idle"]["since"] = last_seen
+        p.send()
+        return p
+
+    def online(
+        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
+    ):
         """
         Send an "online" presence from this contact to the user.
 
         :param status: Arbitrary text, details of the status, eg: "Listening to Britney Spears"
+        :param last_seen: For :xep:`0319`
         """
-        self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pstatus=status)
+        self.__send_presence(status=status, last_seen=last_seen)
 
-    def away(self, status: Optional[str] = None):
+    def away(
+        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
+    ):
         """
         Send an "away" presence from this contact to the user.
 
@@ -297,12 +326,13 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         which concerns a specific conversation, ie a specific "chat window"
 
         :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
+        :param last_seen: For :xep:`0319`
         """
-        self.xmpp.send_presence(
-            pfrom=self.jid, pto=self.user.jid.bare, pshow="away", pstatus=status
-        )
+        self.__send_presence(status=status, show="away", last_seen=last_seen)
 
-    def extended_away(self, status: Optional[str] = None):
+    def extended_away(
+        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
+    ):
         """
         Send an "extended away" presence from this contact to the user.
 
@@ -310,28 +340,28 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         which concerns a specific conversation, ie a specific "chat window"
 
         :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
+        :param last_seen: For :xep:`0319`
         """
-        self.xmpp.send_presence(
-            pfrom=self.jid, pto=self.user.jid.bare, pshow="xa", pstatus=status
-        )
+        self.__send_presence(status=status, show="xa", last_seen=last_seen)
 
-    def busy(self, status: Optional[str] = None):
+    def busy(
+        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
+    ):
         """
         Send a "busy" presence from this contact to the user,
 
         :param status: eg: "Trying to make sense of XEP-0100"
+        :param last_seen: For :xep:`0319`
         """
-        self.xmpp.send_presence(
-            pfrom=self.jid, pto=self.user.jid.bare, pshow="busy", pstatus=status
-        )
+        self.__send_presence(status=status, show="busy", last_seen=last_seen)
 
-    def offline(self):
+    def offline(self, *, last_seen: Optional[datetime] = None):
         """
         Send an "offline" presence from this contact to the user.
+
+        :param last_seen: For :xep:`0319`
         """
-        self.xmpp.send_presence(
-            pfrom=self.jid, pto=self.user.jid.bare, ptype="unavailable"
-        )
+        self.__send_presence(ptype="unavailable", last_seen=last_seen)
 
     def unsubscribe(self):
         """
