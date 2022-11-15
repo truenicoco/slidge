@@ -227,7 +227,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             r = await self.tg.api.set_message_reaction(
                 chat_id=c.legacy_id,
                 message_id=legacy_msg_id,
-                reaction=emoji,
+                reaction=remove_emoji_variation_selector_16(emoji),
                 is_big=False,
             )
         except BadRequest as e:
@@ -249,6 +249,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.log.debug("Delete message response: %s", r)
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
+
+
+def remove_emoji_variation_selector_16(emoji: str):
+    # this is required for compatibility with dino, and maybe other future clients?
+    return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
 
 
 def escape(t: str):
