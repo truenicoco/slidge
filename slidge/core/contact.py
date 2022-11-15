@@ -525,6 +525,32 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self.__send_message(msg, legacy_msg_id, when)
         return msg
 
+    async def __upload(
+        self,
+        filename: Union[Path, str],
+        content_type: Optional[str] = None,
+        input_file: Optional[IO[bytes]] = None,
+        url: Optional[str] = None,
+    ):
+        if url is not None:
+            if input_file is not None:
+                raise TypeError("Either a URL or a file-like object")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as r:
+                    input_file = BytesIO(await r.read())
+        try:
+            return await self.xmpp["xep_0363"].upload_file(
+                filename=filename,
+                content_type=content_type,
+                input_file=input_file,
+                ifrom=config.UPLOAD_REQUESTER,
+            )
+        except FileUploadError as e:
+            log.warning(
+                "Something is wrong with the upload service, see the traceback below"
+            )
+            log.exception(e)
+
     async def send_file(
         self,
         filename: Union[Path, str],
@@ -555,24 +581,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         """
         msg = self.__make_message()
         self.__make_reply(msg, reply_to_msg_id)
-        if url is not None:
-            if input_file is not None:
-                raise TypeError("Either a URL or a file-like object")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as r:
-                    input_file = BytesIO(await r.read())
-        try:
-            uploaded_url = await self.xmpp["xep_0363"].upload_file(
-                filename=filename,
-                content_type=content_type,
-                input_file=input_file,
-                ifrom=config.UPLOAD_REQUESTER,
-            )
-        except FileUploadError as e:
-            log.warning(
-                "Something is wrong with the upload service, see the traceback below"
-            )
-            log.exception(e)
+        uploaded_url = await self.__upload(filename, content_type, input_file, url)
+        if uploaded_url is None:
             if url is not None:
                 uploaded_url = url
             else:
@@ -638,6 +648,34 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             msg.set_id(xmpp_id)
             self.session.sent[legacy_id] = xmpp_id
 
+        return self.__privileged_send(msg, when)
+
+    async def carbon_upload(
+        self,
+        filename: Union[Path, str],
+        content_type: Optional[str] = None,
+        input_file: Optional[IO[bytes]] = None,
+        url: Optional[str] = None,
+        legacy_id: Optional[Any] = None,
+        when: Optional[datetime] = None,
+    ):
+        msg = Message()
+        msg["to"] = self.jid.bare
+        msg["type"] = "chat"
+        uploaded_url = await self.__upload(filename, content_type, input_file, url)
+        if uploaded_url is None:
+            if url is not None:
+                uploaded_url = url
+            else:
+                log.warning("Carbon upload issue")
+                return
+        if legacy_id:
+            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
+            msg.set_id(xmpp_id)
+            self.session.sent[legacy_id] = xmpp_id
+
+        msg["oob"]["url"] = uploaded_url
+        msg["body"] = uploaded_url
         return self.__privileged_send(msg, when)
 
     def carbon_read(self, legacy_msg_id: Any, when: Optional[datetime] = None):
