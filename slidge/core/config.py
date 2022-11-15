@@ -71,6 +71,13 @@ SECRET_KEY__DOC = "Encryption for disk storage"
 NO_ROSTER_PUSH = False
 NO_ROSTER_PUSH__DOC = "Do not fill users' rosters with legacy contacts automatically"
 
+ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK = True
+ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK__DOC = (
+    "If True, legacy contacts will send a presence request subscription "
+    "when privileged roster push does not work, eg, if XEP-0356 (privileged "
+    "entity) is not available for the component."
+)
+
 AVATAR_SIZE = 200
 AVATAR_SIZE__DOC = (
     "Maximum image size (width and height), image ratio will be preserved"

@@ -88,6 +88,8 @@ class XEP_0100(BasePlugin):
                     "Slidge does not have the privilege to manage users' rosters. "
                     "Users should add the slidge component to their rosters manually."
                 )
+                if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
+                    self.xmpp.send_presence(ptype="subscribe", pto=jid.bare)
 
     def on_presence_unsubscribe(self, p: Presence):
         if p.get_to() == self.xmpp.boundjid.bare:

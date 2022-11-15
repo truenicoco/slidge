@@ -277,6 +277,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
                     "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
                     "for more info."
                 )
+                if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
+                    self.__send_presence(ptype="subscribe")
                 return
 
         self.added_to_roster = True
