@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import aiotdlib
 from aiotdlib import api as tgapi
 
+from .util import get_best_file
+
 if TYPE_CHECKING:
     from .session import Session
 
@@ -55,11 +57,25 @@ class TelegramClient(aiotdlib.Client):
             if msg.sending_state is not None or msg.id in session.sent:
                 return
             content = msg.content
+            contact = session.contacts.by_legacy_id(msg.chat_id)
             if isinstance(content, tgapi.MessageText):
-                session.contacts.by_legacy_id(msg.chat_id).carbon(
+                contact.carbon(
                     content.text.text, msg.id, datetime.fromtimestamp(msg.date)
                 )
-            # TODO: implement carbons for other contents
+            elif best_file := get_best_file(content):
+                file = await self.api.download_file(
+                    file_id=best_file.id,
+                    synchronous=True,
+                    priority=1,
+                    offset=0,
+                    limit=0,
+                )
+                has_caption = (caption := content.caption) and (text := caption.text)
+                await contact.carbon_upload(
+                    filename=file.local.path, legacy_id=None if has_caption else msg.id
+                )
+                if has_caption:
+                    contact.carbon(text, legacy_id=msg.id)
             return
 
         sender = msg.sender_id
