@@ -32,6 +32,7 @@ class Gateway(BaseGateway["Session"]):
         FormField(var="first", label="First name", required=False),
         FormField(var="last", label="Last name", required=False),
     ]
+    REGISTRATION_MULTISTEP = True
     ROSTER_GROUP = "Telegram"
     COMPONENT_NAME = "Telegram (slidge)"
     COMPONENT_TYPE = "telegram"

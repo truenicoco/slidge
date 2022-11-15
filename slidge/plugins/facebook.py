@@ -26,6 +26,7 @@ class Gateway(BaseGateway):
         FormField(var="email", label="Email", required=True),
         FormField(var="password", label="Password", required=True, private=True),
     ]
+    REGISTRATION_MULTISTEP = True
 
     ROSTER_GROUP = "Facebook"
 
