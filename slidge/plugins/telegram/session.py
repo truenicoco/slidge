@@ -106,6 +106,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                         result = await self.tg.send_video(
                             chat_id=c.legacy_id, video=file.name
                         )
+                    elif type_ == "audio":
+                        result = await self.tg.send_audio(
+                            chat_id=c.legacy_id, audio=file.name
+                        )
                     else:
                         result = await self.tg.send_document(
                             c.legacy_id, document=file.name
