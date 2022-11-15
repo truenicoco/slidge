@@ -4,6 +4,7 @@ To use env vars, use this convention: ``--home-dir`` becomes ``HOME_DIR``.
 """
 import importlib
 import logging
+import signal
 from pathlib import Path
 
 import configargparse
@@ -23,6 +24,10 @@ class MainConfig(ConfigModule):
 
         if args.user_jid_validator is None:
             args.user_jid_validator = ".*@" + args.server
+
+
+class SigTermInterrupt(Exception):
+    pass
 
 
 def get_configurator():
@@ -77,7 +82,14 @@ def configure():
     return unknown_argv
 
 
+def handle_sigterm(_signum, _frame):
+    logging.info("Caught SIGTERM")
+    raise SigTermInterrupt
+
+
 def main():
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
     unknown_argv = configure()
 
     legacy_module = importlib.import_module(config.LEGACY_MODULE)
@@ -103,6 +115,8 @@ def main():
         gateway.loop.run_forever()
     except KeyboardInterrupt:
         logging.debug("Received SIGINT")
+    except SigTermInterrupt:
+        logging.debug("Received SIGTERM")
     except SystemExit as e:
         return_code = e.code
         logging.debug("Exit called")
