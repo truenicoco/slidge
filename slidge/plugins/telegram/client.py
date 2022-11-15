@@ -121,8 +121,13 @@ class TelegramClient(aiotdlib.Client):
             return
 
         new = action.new_content
+        if isinstance(new, tgapi.MessagePhoto):
+            # Happens when the user send a picture, looks safe to ignore
+            self.log.debug("Ignoring message photo update: %s", new)
+            return
         if not isinstance(new, tgapi.MessageText):
-            raise NotImplementedError(new)
+            self.log.warning("Ignoring message update: %s", new)
+            return
         session = self.session
         try:
             fut = session.user_correction_futures.pop(action.message_id)
