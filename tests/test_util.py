@@ -10,6 +10,7 @@ from slidge.util import (
 )
 from slidge.util.db import EncryptedShelf
 from slidge.core.contact import LegacyContact
+from slidge.core import config
 
 
 def test_subclass():
@@ -85,10 +86,8 @@ def test_phone_validation():
     assert not is_valid_phone_number("12597891")
 
 
-def test_strip_delay():
-    class MockContact:
-        class xmpp:
-            ignore_delay_threshold = timedelta(seconds=300)
+def test_strip_delay(monkeypatch):
+    monkeypatch.setattr(config, "IGNORE_DELAY_THRESHOLD", timedelta(seconds=300))
 
     class MockDelay:
         @staticmethod
@@ -104,11 +103,11 @@ def test_strip_delay():
             return MockDelay
 
     msg = MockMsg()
-    LegacyContact._add_delay(MockContact, msg, datetime.now())
+    LegacyContact._add_delay(msg, datetime.now())
     assert not msg.delay_added
 
-    MockContact.xmpp.ignore_delay_threshold = timedelta(seconds=0)
+    monkeypatch.setattr(config, "IGNORE_DELAY_THRESHOLD", timedelta(seconds=0))
 
     msg = MockMsg()
-    LegacyContact._add_delay(MockContact, msg, datetime.now())
+    LegacyContact._add_delay(msg, datetime.now())
     assert msg.delay_added

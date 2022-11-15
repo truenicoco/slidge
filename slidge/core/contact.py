@@ -826,14 +826,15 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
         )
 
-    def _add_delay(self, msg: Message, when: Optional[datetime] = None):
+    @staticmethod
+    def _add_delay(msg: Message, when: Optional[datetime] = None):
         if not when:
             return
         if when.tzinfo is None:
             when = when.astimezone(timezone.utc)
         if (
             datetime.now().astimezone(timezone.utc) - when
-            > self.xmpp.ignore_delay_threshold
+            > config.IGNORE_DELAY_THRESHOLD
         ):
             msg["delay"].set_stamp(when)
 
