@@ -106,13 +106,12 @@ RUN --mount=type=cache,id=slidge-apt-base,target=/var/cache/apt \
       rm -rf /var/lib/apt/lists/*; \
     fi
 
-RUN echo "#!/bin/sh\n/venv/bin/python -m slidge --legacy-module=slidge.plugins.$PLUGIN \"\$@\"" >> /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+ENV SLIDGE_LEGACY_MODULE=slidge.plugins.$PLUGIN
 
 COPY --from=builder /venv /venv
 COPY ./slidge /venv/lib/python3.9/site-packages/slidge
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "-m", "slidge"]
 
 FROM slidge AS slidge-dev
 
