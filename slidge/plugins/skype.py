@@ -1,5 +1,4 @@
 import asyncio
-import concurrent.futures
 import io
 import logging
 import pprint
@@ -35,14 +34,8 @@ class Gateway(BaseGateway["Session"]):
     ):
         pass
 
-    def __init__(self):
-        super().__init__()
-        self.executor = concurrent.futures.ThreadPoolExecutor()
-
     def shutdown(self):
         super().shutdown()
-        log.debug("Shutting down thread pool")
-        self.executor.shutdown(wait=False, cancel_futures=True)
         log.debug("Shutting down user threads")
         for user in user_store.get_all():
             session = self._session_cls.from_jid(user.jid)
@@ -122,12 +115,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.unread_by_user = {}
         self.send_lock = Lock()
 
-    async def async_wrap(self, func, *args):
-        return await self.xmpp.loop.run_in_executor(self.xmpp.executor, func, *args)
-
     async def login(self):
         f = self.user.registration_form
-        self.sk = await self.async_wrap(
+        self.sk = await asyncio.to_thread(
             skpy.Skype,
             f["username"],
             f["password"],
@@ -182,7 +172,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                         self.unread_by_user[msg.clientId] = msg
                     elif isinstance(msg, skpy.SkypeFileMsg):
                         file = io.BytesIO(
-                            await self.async_wrap(lambda: msg.fileContent)
+                            await asyncio.to_thread(lambda: msg.fileContent)
                         )  # non-blocking download / lambda because fileContent = property
                         await contact.send_file(filename=msg.file.name, input_file=file)
         elif isinstance(event, skpy.SkypeTypingEvent):
@@ -218,12 +208,12 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 self.contacts.by_legacy_id(event.userId).update_presence(event.status)
 
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
-        await self.async_wrap(event.ack)
+        await asyncio.to_thread(event.ack)
 
     async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
         chat = self.sk.contacts[c.legacy_id].chat
         self.send_lock.acquire()
-        msg = await self.async_wrap(chat.sendMsg, t)
+        msg = await asyncio.to_thread(chat.sendMsg, t)
         if log.isEnabledFor(logging.DEBUG):
             log.debug("Sent msg: %s", pprint.pformat(vars(msg)))
         future = asyncio.Future[skpy.SkypeMsg]()
@@ -243,7 +233,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 file_bytes = await response.read()
         fname = u.split("/")[-1]
         fname_lower = fname.lower()
-        await self.async_wrap(
+        await asyncio.to_thread(
             self.sk.contacts[c.legacy_id].chat.sendFile,
             io.BytesIO(file_bytes),
             fname,
@@ -257,10 +247,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         pass
 
     async def composing(self, c: LegacyContact):
-        self.xmpp.executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, True)
+        await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, True)
 
     async def paused(self, c: LegacyContact):
-        self.xmpp.executor.submit(self.sk.contacts[c.legacy_id].chat.setTyping, False)
+        await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, False)
 
     async def displayed(self, legacy_msg_id: int, c: LegacyContact):
         try:
@@ -272,7 +262,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         else:
             log.debug("Calling read on %s", skype_msg)
             try:
-                await self.async_wrap(skype_msg.read)
+                await asyncio.to_thread(skype_msg.read)
             except skpy.SkypeApiException as e:
                 # FIXME: this raises HTTP 400 and does not mark the message as read
                 # https://github.com/Terrance/SkPy/issues/207
@@ -284,7 +274,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         except RuntimeError:
             raise XMPPError("not-found")
         else:
-            self.xmpp.executor.submit(m.edit, text)
+            await asyncio.to_thread(m.edit, text)
 
     async def retract(self, legacy_msg_id: Any, c: Contact):
         try:
@@ -293,7 +283,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             raise XMPPError("not-found")
         else:
             log.debug("Deleting %s", m)
-            self.xmpp.executor.submit(m.delete)
+            await asyncio.to_thread(m.delete)
 
     async def search(self, form_values: dict[str, str]):
         pass
