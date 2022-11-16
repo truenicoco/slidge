@@ -131,9 +131,9 @@ class Websocket:
                         if (not self.keep_alive) or (not self._alive):
                             break
             except Exception as e:
-                log.exception(
-                    f"Failed to establish websocket connection: {type(e)} thrown"
-                )
+                log.error("Failed to establish websocket connection")
+                log.exception(e)
+                self.websocket = asyncio.get_event_loop().create_future()
                 await asyncio.sleep(self.keep_alive_delay)
 
     async def _start_loop(self, websocket, event_handler):
