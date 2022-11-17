@@ -412,6 +412,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         log.debug("%s go inactive", self)
         self.__chat_state("inactive")
 
+    def gone(self):
+        """
+        Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
+        """
+        self.__chat_state("gone")
+
     def __send_marker(
         self,
         legacy_msg_id: LegacyMessageType,
