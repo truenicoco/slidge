@@ -1,0 +1,428 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<Project xmlns="http://usefulinc.com/ns/doap#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:xmpp="https://linkmauve.fr/ns/xmpp-doap#">
+    <name>slidge</name>
+
+    <created>2022-11-16</created>
+
+    <shortdesc xml:lang="en">XMPP gateway framework in python</shortdesc>
+
+    <homepage rdf:resource="https://sr.ht/~nicoco/slidge"/>
+    <download-page rdf:resource="https://git.sr.ht/~nicoco/slidge/refs"/>
+    <bug-database rdf:resource="https://todo.sr.ht/~nicoco/slidge"/>
+    <developer-forum rdf:resource="xmpp:slidge@conference.nicoco.fr?join"/>
+    <support-forum rdf:resource="xmpp:slidge@conference.nicoco.fr?join"/>
+
+    <license rdf:resource="https://git.sr.ht/~nicoco/slidge/tree/master/item/LICENSE"/>
+
+    <language>en</language>
+
+    <programming-language>Python</programming-language>
+
+    <os>Linux</os>
+
+    <category rdf:resource="https://linkmauve.fr/ns/xmpp-doap#category-component"/>
+
+    <maintainer>
+        <foaf:Person>
+            <foaf:name>Nicoco</foaf:name>
+            <foaf:homepage rdf:resource="https://nicoco.fr/"/>
+        </foaf:Person>
+    </maintainer>
+
+    <repository>
+        <GitRepository>
+            <browse rdf:resource="https://git.sr.ht/~nicoco/slidge"/>
+            <location rdf:resource="https://git.sr.ht/~nicoco/slidge.git"/>
+        </GitRepository>
+    </repository>
+
+    <implements rdf:resource="https://xmpp.org/rfcs/rfc6120.html"/>
+    <implements rdf:resource="https://xmpp.org/rfcs/rfc6121.html"/>
+    <implements rdf:resource="https://xmpp.org/rfcs/rfc6122.html"/>
+    <implements rdf:resource="https://xmpp.org/rfcs/rfc7590.html"/>
+
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0004.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.11.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0030.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.5rc3</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0045.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:version>1.34.3</xmpp:version>
+            <xmpp:note>Planned for 0.2.0</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0050.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.3.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0060.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.19.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Basic PEP support for contact "puppet" JIDs</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0066.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.5</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>To use display http uploads inline</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0077.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.4</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>To comply with XEP-0100, but it's not sufficient for most gateways (2FA for instance)</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0082.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0085.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0092.html"/>
+            <xmpp:status>planned</xmpp:status>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0100.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:version>2.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Friend request flow not yet implemented, and slidge always acts as a bouncer</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0106.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.1.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>To map legacy contacts to JID local parts when necessary</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0107.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if it makes sense for one slidge's plugins</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0108.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if it makes sense for one slidge's plugins</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0115.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.5.2</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>So that legacy contacts announce their XMPP caps equivalent when appropriate</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0118.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if it makes sense for one slidge's plugins</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0122.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Might be useful to improve the registration process</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0128.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Planned with MUC support (0.2.0)</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0133.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>User list and delete are available via adhoc commands, but will be improved to follow this XEP</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0163.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:version>1.2.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Basic support so that legacy contacts have avatars, vcards and nicknames</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0172.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0184.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.4.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0191.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0196.html"/>
+            <xmpp:status>planned</xmpp:status>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0199.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.0.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0202.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0203.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>2.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0221.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>It could improve the registration process</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0224.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin. MSN nudges (or wizzes) anyone?</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0249.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Planned for 0.2.0</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0280.html"/>
+            <xmpp:version>0.13.2</xmpp:version>
+            <xmpp:note>Compatible with carbons if the server supports it. Even for messages sent from official clients if the component is a privileged entity.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0297.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Required for XEP-0356.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0300.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.1.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0308.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.2.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0313.html"/>
+            <xmpp:version>0.7.2</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Nothing special done in slidge, but if the XMPP server supports MAM, it is compatible with slidge-related messages.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0319.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.0.2</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0333.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.4</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0334.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.3.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0356.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.3</xmpp:version>
+            <xmpp:version>0.4</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Used to sync legacy/XMPP rosters and to reflect messages sent from official legacy clients by users.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0359.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.6.1</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0363.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>1.0.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0382.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0421.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0422.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.2.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0424.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.3.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0425.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin. MSN nudges (or wizzes) anyone?</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0428.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.1.1</xmpp:version>
+            <xmpp:since>1.6.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0437.html"/>
+            <xmpp:status>planned</xmpp:status>
+            <xmpp:note>Will implement if useful for a plugin. MSN nudges (or wizzes) anyone?</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0444.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.1.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+        </xmpp:SupportedXep>
+    </implements>
+</Project>
+</rdf:RDF>
