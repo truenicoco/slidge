@@ -43,24 +43,6 @@ class Gateway(BaseGateway["Session"]):
                 thread.stop()
 
 
-class Roster(LegacyRoster):
-    # ':' is forbidden in the username part of a JID
-
-    @staticmethod
-    def legacy_id_to_jid_username(legacy_id: str) -> str:
-        if legacy_id.startswith("live:"):
-            return legacy_id.replace("live:", "__live__")
-        else:
-            return legacy_id
-
-    @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> str:
-        if jid_username.startswith("__live__"):
-            return jid_username.replace("__live__", "live:")
-        else:
-            return jid_username
-
-
 class Contact(LegacyContact):
     def update_presence(self, status: skpy.SkypeUtils.Status):
         if status == skpy.SkypeUtils.Status.Offline:
