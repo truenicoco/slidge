@@ -18,6 +18,7 @@ from typing import (
 
 import aiohttp
 from slixmpp import JID, Message
+from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 from slixmpp.plugins.xep_0363 import FileUploadError
 
 from ..util import SubclassableOnce
@@ -936,11 +937,12 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         Convert a legacy ID to a valid 'user' part of a JID
 
         Should be overridden for cases where the str conversion of
-        the legacy_id is not enough, e.g., if it contains forbidden character.
+        the legacy_id is not enough, e.g., if it is case-sensitive or contains
+        forbidden characters not covered by :xep:`0106`.
 
         :param legacy_id:
         """
-        return str(legacy_id)
+        return str(legacy_id).translate(ESCAPE_TABLE)
 
     @staticmethod
     def jid_username_to_legacy_id(jid_username: str) -> LegacyUserIdType:
@@ -948,17 +950,21 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         Convert a JID user part to a legacy ID.
 
         Should be overridden in case legacy IDs are not strings, or more generally
-        for any case where the username part of a JID is not enough to identify
-        a contact on the legacy network.
+        for any case where the username part of a JID (unescaped with to the mapping
+        defined by :xep:`0106`) is not enough to identify a contact on the legacy network.
 
         Default implementation is an identity operation
 
         :param jid_username: User part of a JID, ie "user" in "user@example.com"
         :return: An identifier for the user on the legacy network.
         """
-        return jid_username  # type:ignore
+        return _unescape_node(jid_username)
 
 
 LegacyRosterType = TypeVar("LegacyRosterType", bound=LegacyRoster)
+
+ESCAPE_TABLE = "".maketrans(
+    {v: k for k, v in JID_UNESCAPE_TRANSFORMATIONS.items()}  # type:ignore
+)
 
 log = logging.getLogger(__name__)

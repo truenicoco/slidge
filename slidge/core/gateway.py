@@ -971,6 +971,7 @@ SLIXMPP_PLUGINS = [
     "xep_0084",  # User Avatar
     "xep_0085",  # Chat state notifications
     "xep_0100",  # Gateway interaction
+    "xep_0106",  # JID Escaping
     "xep_0115",  # Entity capabilities
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
