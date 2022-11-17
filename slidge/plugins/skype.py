@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import aiohttp
 import skpy
+from requests.exceptions import ConnectionError
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
@@ -82,7 +83,7 @@ class ListenThread(Thread):
         self.stop_event.set()
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Contact, LegacyRoster, Gateway]):
     skype_token_path: Path
     sk: skpy.Skype
     thread: Optional[ListenThread]
@@ -280,16 +281,18 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
 
 def handle_thread_exception(args):
-    # TODO: establish what exceptions are OK (eg temporary network failures)
-    #       and which one should trigger killing the session and/or exiting slidge
-    #       and/or relogging in
-    log.error("Exception in thread: %s", args)
-    if (thread := getattr(args, "thread")) is not None:
-        if isinstance(thread, ListenThread):
-            session = thread.session
-            log.warning("Attempting re-login for %s", session.user)
-            thread.stop()
-            session.re_login()
+    if (
+        (thread := getattr(args, "thread"))
+        and isinstance(thread, ListenThread)
+        and isinstance(args.exc_type, ConnectionError)
+    ):
+        session = thread.session
+        log.info("Connection error, attempting re-login for %s", session.user)
+        thread.stop()
+        session.re_login()
+    else:
+        log.error("Exception in thread: %s", args)
+        raise RuntimeError(args)
 
 
 threading.excepthook = handle_thread_exception
