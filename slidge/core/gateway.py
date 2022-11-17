@@ -975,6 +975,7 @@ SLIXMPP_PLUGINS = [
     "xep_0115",  # Entity capabilities
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
+    "xep_0199",  # XMPP Ping
     "xep_0280",  # Carbons
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction
