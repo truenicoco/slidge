@@ -271,7 +271,7 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
             )
 
 
-def handle_thread_exception(args):
+def handle_thread_exception(args: threading.ExceptHookArgs):
     if (
         (thread := getattr(args, "thread"))
         and isinstance(thread, ListenThread)
@@ -283,7 +283,6 @@ def handle_thread_exception(args):
         session.re_login()
     else:
         log.error("Exception in thread: %s", args)
-        raise RuntimeError(args)
 
 
 threading.excepthook = handle_thread_exception
