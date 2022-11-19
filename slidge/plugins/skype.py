@@ -249,21 +249,13 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
                 self.log.debug("Skype read marker failed: %r", e)
 
     async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
-        try:
-            m = self.get_msg(legacy_msg_id, c)
-        except RuntimeError:
-            raise XMPPError("not-found")
-        else:
-            await asyncio.to_thread(m.edit, text)
+        m = self.get_msg(legacy_msg_id, c)
+        await asyncio.to_thread(m.edit, text)
 
     async def retract(self, legacy_msg_id: Any, c: Contact):
-        try:
-            m = self.get_msg(legacy_msg_id, c)
-        except RuntimeError:
-            raise XMPPError("not-found")
-        else:
-            log.debug("Deleting %s", m)
-            await asyncio.to_thread(m.delete)
+        m = self.get_msg(legacy_msg_id, c)
+        log.debug("Deleting %s", m)
+        await asyncio.to_thread(m.delete)
 
     async def search(self, form_values: dict[str, str]):
         pass
@@ -274,7 +266,9 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
             if m.clientId == legacy_msg_id:
                 return m
         else:
-            raise RuntimeError("Could not find message ID")
+            raise XMPPError(
+                "item-not-found", text=f"Could not find message '{legacy_msg_id}'"
+            )
 
 
 def handle_thread_exception(args):
