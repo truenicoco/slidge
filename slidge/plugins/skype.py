@@ -284,7 +284,7 @@ def handle_thread_exception(args):
     if (
         (thread := getattr(args, "thread"))
         and isinstance(thread, ListenThread)
-        and isinstance(args.exc_type, ConnectionError)
+        and args.exc_type is ConnectionError
     ):
         session = thread.session
         log.info("Connection error, attempting re-login for %s", session.user)
