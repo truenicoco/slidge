@@ -3,8 +3,6 @@ import logging
 import re
 import tempfile
 from mimetypes import guess_type
-from pathlib import Path
-from typing import Optional
 
 import aiohttp
 import aiotdlib.api as tgapi
@@ -20,21 +18,15 @@ from .gateway import Gateway
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
-    tdlib_path: Optional[Path] = None
-    tg: TelegramClient
-    sent_read_marks: set[int]
-    ack_futures: dict[int, asyncio.Future]
-    user_correction_futures: dict[int, asyncio.Future]
-    delete_futures: dict[int, asyncio.Future]
-
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         registration_form = {
             k: v if v != "" else None for k, v in self.user.registration_form.items()
         }
-        self.sent_read_marks = set()
-        self.ack_futures = {}
-        self.user_correction_futures = {}
-        self.delete_futures = {}
+        self.sent_read_marks = set[int]()
+        self.ack_futures = dict[int, asyncio.Future]()
+        self.user_correction_futures = dict[int, asyncio.Future]()
+        self.delete_futures = dict[int, asyncio.Future]()
 
         i = registration_form.get("api_id")
         if i is not None:

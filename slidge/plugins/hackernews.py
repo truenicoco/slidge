@@ -52,11 +52,8 @@ class Gateway(BaseGateway):
 
 
 class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
-    http_session: aiohttp.ClientSession
-    highest_handled_submission_id: int
-    hn_username: str
-
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         self.http_session = aiohttp.ClientSession(
             cookies={"user": self.user.registration_form["cookie"]}
         )

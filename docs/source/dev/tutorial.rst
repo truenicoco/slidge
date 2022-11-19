@@ -22,13 +22,14 @@ Put this in a file called ``superduper.py``:
 
 
     class Session(BaseSession):
-        def post_init(self):
+        def __init__(self, user: GatewayUser):
+            super().__init__(user)
             self.legacy = SuperDuperClient(
                 login=self.user.registration_form["username"],
                 password=self.user.registration_form["password"],
             )
             self.legacy.add_event_handler(
-                callback=incoming_legacy_message,
+                callback=self.incoming_legacy_message,
                 event=super_duper.api.IncomingMessageEvent
             )
 
@@ -69,19 +70,20 @@ Setup
 .. code-block:: python
 
     class Session(BaseSession):
-        def post_init(self):
-            self.legacy = LegacyNetworkClient(
+        def __init__(self, user: GatewayUser):
+            super().__init__(user)
+            self.legacy = SuperDuperClient(
                 login=self.user.registration_form["username"],
                 password=self.user.registration_form["password"],
             )
             self.legacy.add_event_handler(
-                callback=incoming_legacy_message,
+                callback=self.incoming_legacy_message,
                 event=super_duper.api.IncomingMessageEvent
             )
 
 The session represents the gateway user's session on the legacy network.
-If you want to add custom attributes to it, it should be done in the ``post_init``
-method.
+To add custom attributes to it, override the ``__init__`` without changing its
+signature and do not forget to call the base class ``__init__``.
 The :py:attr:`slidge.Session.user` attribute is a :class:`slidge.GatewayUser` instance and
 can be used to access the fields that the user filled when subscribing to the gateway,
 via :py:attr:`slidge.GatewayUser.registration_form` dict.

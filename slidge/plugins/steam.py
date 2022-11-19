@@ -76,14 +76,12 @@ class Roster(LegacyRoster[Contact, "Session"]):
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
-    steam: SteamClient
-    job_futures: dict[str, asyncio.Future[Any]]
-
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         store_dir = global_config.HOME_DIR / self.user.bare_jid
         store_dir.mkdir(exist_ok=True)
 
-        self.job_futures = {}
+        self.job_futures = dict[str, asyncio.Future[Any]]()
 
         self.steam = SteamClient()
         self.steam.set_credential_location(store_dir)

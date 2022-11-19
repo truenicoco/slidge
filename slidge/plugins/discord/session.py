@@ -11,21 +11,15 @@ if TYPE_CHECKING:
 
 
 class Session(BaseSession["Contact", "Roster", "Gateway"]):
-    discord: "Discord"
-    ready_future: asyncio.Future[bool]
-    delete_futures: dict[int, asyncio.Future[bool]]
-    edit_futures: dict[int, asyncio.Future[bool]]
-    send_futures: dict[int, asyncio.Future[bool]]
-    send_lock: asyncio.Lock
-
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         from .client import Discord
 
         self.discord = Discord(self)
-        self.ready_future = self.xmpp.loop.create_future()
-        self.delete_futures = {}
-        self.edit_futures = {}
-        self.send_futures = {}
+        self.ready_future: asyncio.Future[bool] = self.xmpp.loop.create_future()
+        self.delete_futures = dict[int, asyncio.Future[bool]]()
+        self.edit_futures = dict[int, asyncio.Future[bool]]()
+        self.send_futures = dict[int, asyncio.Future[bool]]()
         self.send_lock = asyncio.Lock()
 
     @staticmethod

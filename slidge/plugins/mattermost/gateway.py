@@ -136,14 +136,9 @@ class Roster(LegacyRoster[Contact, "Session"]):
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
-    mm_client: MattermostClient
-    ws: Websocket
-    messages_waiting_for_echo: set[str]
-    send_lock: asyncio.Lock
-    view_futures: dict[str, asyncio.Future[None]]
-
-    def post_init(self):
-        self.messages_waiting_for_echo = set()
+    def __init__(self, user):
+        super().__init__(user)
+        self.messages_waiting_for_echo = set[str]()
         self.send_lock = asyncio.Lock()
         f = self.user.registration_form
         url = f["url"] + f["basepath"]
@@ -157,7 +152,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             re.sub("^http", "ws", f["url"]) + f["basepath"] + f["basepath_ws"],
             f["token"],
         )
-        self.view_futures = {}
+        self.view_futures = dict[str, asyncio.Future[None]]()
 
     async def login(self):
         await self.mm_client.login()

@@ -79,7 +79,6 @@ class BaseSession(
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.never_logged = True
-        self.post_init()
 
     @staticmethod
     def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: Any) -> str:
@@ -369,15 +368,6 @@ class BaseSession(
         :param text: Text to encode as a QR code
         """
         await self.xmpp.send_qr(text, mto=self.user.jid)
-
-    def post_init(self):
-        """
-        Add useful attributes for your session here, if you wish.
-
-        In most cases, this is the right place to add a legacy network-specific
-        ``LegacyClient``-like instance attached to this gateway user.
-        """
-        pass
 
     async def login(self) -> Optional[str]:
         """

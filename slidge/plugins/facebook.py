@@ -6,7 +6,6 @@ import shelve
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from mimetypes import guess_type
-from pathlib import Path
 from typing import Optional, Union
 
 import aiohttp
@@ -126,32 +125,24 @@ class Roster(LegacyRoster[Contact, "Session"]):
 
 class Session(BaseSession[Contact, Roster, Gateway]):
     fb_state: AndroidState
-
-    shelf_path: Path
     mqtt: AndroidMQTT
     api: AndroidAPI
-
     me: maufbapi.types.graphql.OwnInfo
 
-    sent_messages: defaultdict[int, "Messages"]
-    received_messages: defaultdict[int, "Messages"]
-    # keys = "contact ID"
-
-    ack_futures: dict[int, asyncio.Future["FacebookMessage"]]
-    # keys = "offline thread ID"
-    reaction_futures: dict[str, asyncio.Future[None]]
-    unsend_futures: dict[str, asyncio.Future[None]]
-    # keys = "facebook message id"
-
-    contacts: Roster
-
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         self.shelf_path = global_config.HOME_DIR / self.user.bare_jid
-        self.ack_futures = {}
-        self.reaction_futures: dict[str, asyncio.Future] = {}
-        self.unsend_futures: dict[str, asyncio.Future] = {}
-        self.sent_messages = defaultdict(Messages)
-        self.received_messages = defaultdict(Messages)
+
+        # keys = "offline thread ID"
+        self.ack_futures = dict[int, asyncio.Future[FacebookMessage]]()
+
+        # keys = "facebook message id"
+        self.reaction_futures = dict[str, asyncio.Future]()
+        self.unsend_futures = dict[str, asyncio.Future]()
+
+        # keys = "contact ID"
+        self.sent_messages = defaultdict[int, Messages](Messages)
+        self.received_messages = defaultdict[int, Messages](Messages)
 
     async def login(self):
         shelf: shelve.Shelf[AndroidState]

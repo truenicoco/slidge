@@ -86,16 +86,13 @@ class ListenThread(Thread):
 class Session(BaseSession[Contact, LegacyRoster, Gateway]):
     skype_token_path: Path
     sk: skpy.Skype
-    thread: Optional[ListenThread]
-    sent_by_user_to_ack: dict[int, asyncio.Future]
-    unread_by_user: dict[int, skpy.SkypeMsg]
-    send_lock: Lock
 
-    def post_init(self):
+    def __init__(self, user):
+        super().__init__(user)
         self.skype_token_path = global_config.HOME_DIR / self.user.bare_jid
-        self.thread = None
-        self.sent_by_user_to_ack = {}
-        self.unread_by_user = {}
+        self.thread: Optional[ListenThread] = None
+        self.sent_by_user_to_ack = dict[int, asyncio.Future]()
+        self.unread_by_user = dict[int, skpy.SkypeMsg]()
         self.send_lock = Lock()
 
     async def login(self):
