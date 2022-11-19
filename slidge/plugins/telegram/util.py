@@ -11,3 +11,5 @@ def get_best_file(content: tgapi.MessageContent):
         return content.animation.animation
     elif isinstance(content, tgapi.MessageAudio):
         return content.audio.audio
+    elif isinstance(content, tgapi.MessageDocument):
+        return content.document.document
