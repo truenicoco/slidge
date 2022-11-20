@@ -232,6 +232,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 contact.carbon(
                     body=body,
                     when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
+                    legacy_id=sent_msg.timestamp,
                 )
             if (reaction := sent_msg.reaction) is not None:
                 try:
