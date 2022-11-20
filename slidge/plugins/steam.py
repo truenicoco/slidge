@@ -103,15 +103,28 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         login_result = self.steam.relogin()
 
+        self.log.debug("Re-login result: %s", login_result)
+
         if login_result != EResult.OK:
             login_result = self.steam.login(username, password)
 
-            if login_result == EResult.AccountLogonDenied:  # 2FA
+            self.log.debug("Login result: %s", login_result)
+
+            if login_result == EResult.AccountLogonDenied:
+                # 2FA by mail (?)
                 code = await self.input("Enter the code you received by email")
                 login_result = self.steam.login(
                     self.user.registration_form["username"],
                     self.user.registration_form["password"],
                     auth_code=code,
+                )
+            elif login_result == EResult.AccountLoginDeniedNeedTwoFactor:
+                # steam guard (?)
+                code = await self.input("Enter your 2FA code")
+                login_result = self.steam.login(
+                    self.user.registration_form["username"],
+                    self.user.registration_form["password"],
+                    two_factor_code=code,
                 )
 
         self.log.debug("Login result: %s", login_result)
