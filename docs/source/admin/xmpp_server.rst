@@ -76,8 +76,8 @@ In prosody the easiest option is to use the
 ejabberd
 --------
 
-Add component
-*************
+Add the slidge component
+************************
 
 Add this block to your ejabberd configuration file, in the ``listen`` section.
 Change the port, hostname and secret accordingly.
@@ -96,9 +96,10 @@ Change the port, hostname and secret accordingly.
 ACL
 ***
 
-Create a policy like this:
+Create a policy for the component:
 
 .. code-block:: yaml
+
     acl:
       slidge:
         server: superduper.example.com
@@ -106,7 +107,7 @@ Create a policy like this:
 mod_privilege
 *************
 
-Roster management also requires roster versioning enabled.
+Make slidge a "privileged entity" and enable roster versioning.
 
 .. code-block:: yaml
 
@@ -122,13 +123,12 @@ Roster management also requires roster versioning enabled.
 Upload component
 ****************
 
-ejabberd's HTTP upload will not let the component request upload slots,
+ejabberd's HTTP upload will not let the component directly request upload slots,
 so you need to use a pseudo user on the component domain, eg,
 ``slidge@superduper.example.com`` and use slidge's
 ``--upload-requester=slidge@superduper.example.com`` `config`_ option.
 
 .. code-block:: yaml
-
 
     listen:
       -
