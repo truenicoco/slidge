@@ -59,6 +59,8 @@ class Contact(LegacyContact["Session"]):
                     reply_to_msg_id=reply_to_msg_id,
                     when=when,
                 )
+            if caption := attachment.caption:
+                self.send_text(caption)
 
     async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
         if profile is None:
