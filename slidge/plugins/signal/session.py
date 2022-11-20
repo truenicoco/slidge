@@ -226,6 +226,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
             contact = self.contacts.by_json_address(sent.destination)
 
+            await contact.carbon_send_attachments(sent_msg.attachments)
+
             if (body := sent_msg.body) is not None:
                 contact.carbon(
                     body=body,

@@ -40,6 +40,18 @@ class Contact(LegacyContact["Session"]):
         identities = r.identities
         self.session.send_gateway_message(str(identities))
 
+    async def carbon_send_attachments(self, attachments: list[sigapi.JsonAttachmentv1]):
+        for attachment in attachments:
+            filename = get_filename(attachment)
+            with open(attachment.storedFilename, "rb") as f:
+                await self.carbon_upload(
+                    filename=filename,
+                    input_file=f,
+                    content_type=attachment.contentType,
+                )
+            if caption := attachment.caption:
+                self.carbon(caption)
+
     async def send_attachments(
         self,
         attachments: list[sigapi.JsonAttachmentv1],
