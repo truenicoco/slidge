@@ -164,9 +164,6 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         await self.mm_client.login()
         await self.add_contacts()
         self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
-        if self.mm_client.me is None:
-            raise RuntimeError
-
         return f"Connected as '{(await self.mm_client.me).username}'"
 
     async def add_contacts(self):
