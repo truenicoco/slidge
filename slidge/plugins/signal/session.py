@@ -82,12 +82,16 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         try:
             address = await (await self.signal).resolve_address(
                 account=self.phone,
-                partial=sigapi.JsonAddressv1(number=form_values.get("phone")),
+                partial=sigapi.JsonAddressv1(number=phone),
             )
         except sigexc.UnregisteredUserError:
             return
 
         contact = self.contacts.by_json_address(address)
+        # the name will be updated once c.update_and_add(), triggered by by_json_address()
+        # completes, but it's nicer to have a phone number instead of a UUID
+        # in the meantime.
+        contact.name = phone
 
         return SearchResult(
             fields=[FormField("phone"), FormField("jid", type="jid-single")],

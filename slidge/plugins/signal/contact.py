@@ -22,6 +22,7 @@ class Contact(LegacyContact["Session"]):
         super().__init__(*a, **k)
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
+        self.profile_fetched = False
 
     @functools.cached_property
     def signal_address(self):
@@ -76,9 +77,14 @@ class Contact(LegacyContact["Session"]):
 
     async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
         if profile is None:
-            profile = await (await self.session.signal).get_profile(
-                account=self.session.phone, address=self.signal_address
-            )
+            try:
+                profile = await (await self.session.signal).get_profile(
+                    account=self.session.phone, address=self.signal_address
+                )
+            except sigexc.ProfileUnavailableError as e:
+                log.debug("Could not fetch the profile of a contact: %s", e.message)
+                return
+            self.profile_fetched = True
         nick = profile.name or profile.profile_name
         if nick is not None:
             nick = nick.replace("\u0000", " ")
@@ -112,7 +118,7 @@ def get_filename(attachment: sigapi.JsonAttachmentv1):
 class Roster(LegacyRoster[Contact, "Session"]):
     def by_json_address(self, address: sigapi.JsonAddressv1):
         c = self.by_legacy_id(address.uuid)
-        if not c.added_to_roster:
+        if not c.added_to_roster or not c.profile_fetched:
             self.session.xmpp.loop.create_task(c.update_and_add())
         return c
 
