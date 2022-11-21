@@ -631,6 +631,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         body: str,
         legacy_id: Optional[Any] = None,
         when: Optional[datetime] = None,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ):
         """
         Call this when the user sends a message to a legacy network contact.
@@ -644,9 +646,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param body: Body of the message.
         :param legacy_id: Legacy message ID
         :param when: When was this message sent.
+        :param reply_to_msg_id:
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
+        self.__make_reply(msg, reply_to_msg_id)
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["body"] = body
@@ -665,8 +669,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         url: Optional[str] = None,
         legacy_id: Optional[Any] = None,
         when: Optional[datetime] = None,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ):
         msg = Message()
+        self.__make_reply(msg, reply_to_msg_id)
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         uploaded_url = await self.__upload(filename, content_type, input_file, url)
@@ -707,6 +714,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         legacy_msg_id: LegacyMessageType,
         text: str,
         when: Optional[datetime] = None,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
     ):
         """
         Call this when the user corrects their own (last) message from an official client
@@ -714,6 +723,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param legacy_msg_id:
         :param text: The new body of the message
         :param when:
+        :param reply_to_msg_id:
         """
         if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
             log.debug(
@@ -722,6 +732,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             )
             return
         msg = Message()
+        self.__make_reply(msg, reply_to_msg_id)
         msg.set_to(self.jid.bare)
         msg.set_type("chat")
         msg["replace"]["id"] = xmpp_id
