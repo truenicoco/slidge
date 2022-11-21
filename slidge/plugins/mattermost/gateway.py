@@ -8,6 +8,7 @@ from typing import Any, Optional
 import emoji
 from mattermost_api_reference_client.models import Status
 from mattermost_api_reference_client.types import Unset
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -46,6 +47,17 @@ class Gateway(BaseGateway):
     COMPONENT_TYPE = "mattermost"
 
     COMPONENT_AVATAR = "https://play-lh.googleusercontent.com/aX7JaAPkmnkeThK4kgb_HHlBnswXF0sPyNI8I8LNmEMMo1vDvMx32tCzgPMsyEXXzZRc"
+
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
+        mm_client = get_client_from_registration_form(registration_form)
+        try:
+            await mm_client.login()
+        except Exception as e:
+            raise ValueError("Could not authenticate: %s - %s", e, e.args)
+        if mm_client.me is None:
+            raise ValueError("Could not authenticate")
 
 
 class Contact(LegacyContact["Session"]):
@@ -141,13 +153,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.messages_waiting_for_echo = set[str]()
         self.send_lock = asyncio.Lock()
         f = self.user.registration_form
-        url = f["url"] + f["basepath"]
-        self.mm_client = MattermostClient(
-            url,
-            verify_ssl=f["strict_ssl"],
-            timeout=5,
-            token=f["token"],
-        )
+        self.mm_client = get_client_from_registration_form(f)
         self.ws = Websocket(
             re.sub("^http", "ws", f["url"]) + f["basepath"] + f["basepath_ws"],
             f["token"],
@@ -385,3 +391,13 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             for x in await self.mm_client.get_reactions(legacy_msg_id)
             if x.user_id == user_id
         }
+
+
+def get_client_from_registration_form(f: dict[str, Optional[str]]):
+    url = (f.get("url") or "") + (f.get("basepath") or "")
+    return MattermostClient(
+        url,
+        verify_ssl=f["strict_ssl"],
+        timeout=5,
+        token=f["token"],
+    )
