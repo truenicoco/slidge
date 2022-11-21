@@ -81,7 +81,7 @@ class Contact(LegacyContact["Session"]):
             )
         nick = profile.name or profile.profile_name
         if nick is not None:
-            nick = nick.replace("\u0000", "")
+            nick = nick.replace("\u0000", " ")
             self.name = nick
         if profile.avatar is not None:
             self.avatar = Path(profile.avatar)
