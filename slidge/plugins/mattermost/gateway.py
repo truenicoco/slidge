@@ -199,7 +199,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             post = event.data["post"]
             self.log.debug("Post: %s", pprint.pformat(post))
 
-            message = post["message"]
+            text = post["message"]
 
             channel_id = post["channel_id"]
             post_id = post["id"]
@@ -222,7 +222,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                             raise RuntimeError("What?")
 
                         contact.carbon(
-                            message,
+                            text,
                             post_id,
                             datetime.fromtimestamp(post["update_at"] / 1000),
                         )
@@ -230,13 +230,23 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     contact = await self.contacts.by_mm_user_id(user_id)
                     if event.data.get("set_online"):
                         contact.online()
-                    contact.send_text(message, legacy_msg_id=post_id)
-                    for file_meta in post.get("metadata", {}).get("files", []):
+                    file_metas = post.get("metadata", {}).get("files", [])
+
+                    if not file_metas:
+                        contact.send_text(text, legacy_msg_id=post_id)
+                        return
+
+                    last_file_i = len(file_metas) - 1
+
+                    for i, file_meta in enumerate(file_metas):
+                        last = i == last_file_i
                         await contact.send_file(
                             filename=file_meta["name"],
                             input_file=io.BytesIO(
                                 await self.mm_client.get_file(file_meta["id"])
                             ),
+                            legacy_msg_id=post_id if last else None,
+                            caption=text if last else None,
                         )
             elif event.data["channel_type"] == "P":
                 # private channel
