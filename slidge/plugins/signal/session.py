@@ -262,15 +262,17 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                 reply_to_msg_id = None
             else:
                 reply_to_msg_id = quote.id
+            text = data.body
+            msg_id = data.timestamp
             await contact.send_attachments(
                 data.attachments,
-                legacy_msg_id=msg.data_message.timestamp,
+                legacy_msg_id=None if text else msg_id,
                 reply_to_msg_id=reply_to_msg_id,
             )
-            if (body := data.body) is not None:
+            if text:
                 contact.send_text(
-                    body=body,
-                    legacy_msg_id=msg.data_message.timestamp,
+                    body=text,
+                    legacy_msg_id=msg_id,
                     reply_to_msg_id=reply_to_msg_id,
                     when=datetime.fromtimestamp(msg.data_message.timestamp / 1000),
                 )
