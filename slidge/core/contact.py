@@ -493,7 +493,12 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self._add_delay(msg, when)
         msg.send()
 
-    def __make_reply(self, msg: Message, reply_to_msg_id: Optional[LegacyMessageType]):
+    def __make_reply(
+        self,
+        msg: Message,
+        reply_to_msg_id: Optional[LegacyMessageType],
+        reply_to_fallback_text: Optional[str] = None,
+    ):
         if reply_to_msg_id is None:
             return
         xmpp_id = self.session.sent.get(
@@ -502,6 +507,8 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
         # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
         msg["reply"]["to"] = self.user.jid
+        if reply_to_fallback_text:
+            msg["feature_fallback"].add_quoted_fallback(reply_to_fallback_text)
 
     def send_text(
         self,
@@ -510,6 +517,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         chat_state: Optional[str] = "active",
         legacy_msg_id: Optional[LegacyMessageType] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
         when: Optional[datetime] = None,
     ) -> Message:
         """
@@ -521,6 +529,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
         :param reply_to_msg_id:
+        :param reply_to_fallback_text:
         :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
 
         :return: the XMPP message that was sent
@@ -528,7 +537,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         msg = self.__make_message(mbody=body)
         if self.CHAT_STATES and chat_state is not None:
             msg["chat_state"] = chat_state
-        self.__make_reply(msg, reply_to_msg_id)
+        self.__make_reply(msg, reply_to_msg_id, reply_to_fallback_text)
         self.__send_message(msg, legacy_msg_id, when)
         return msg
 
@@ -639,6 +648,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         when: Optional[datetime] = None,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
     ):
         """
         Call this when the user sends a message to a legacy network contact.
@@ -653,13 +663,14 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         :param legacy_id: Legacy message ID
         :param when: When was this message sent.
         :param reply_to_msg_id:
+        :param reply_to_fallback_text:
         """
         # we use Message() directly because we need xmlns="jabber:client"
         msg = Message()
-        self.__make_reply(msg, reply_to_msg_id)
         msg["to"] = self.jid.bare
         msg["type"] = "chat"
         msg["body"] = body
+        self.__make_reply(msg, reply_to_msg_id, reply_to_fallback_text)
         if legacy_id:
             xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
             msg.set_id(xmpp_id)

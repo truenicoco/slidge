@@ -198,6 +198,9 @@ class BaseSession(
             and contact.REPLIES
         ):
             text = m["feature_fallback"].get_stripped_body()
+            reply_fallback = m["feature_fallback"].get_fallback_body()
+        else:
+            reply_fallback = None
 
         if url:
             legacy_msg_id = await self.send_file(
@@ -205,7 +208,10 @@ class BaseSession(
             )
         elif text:
             legacy_msg_id = await self.send_text(
-                text, contact, reply_to_msg_id=m["reply"]["id"] or None
+                text,
+                contact,
+                reply_to_msg_id=m["reply"]["id"] or None,
+                reply_to_fallback_text=reply_fallback,
             )
         else:
             log.debug("Ignoring %s", m)
@@ -411,6 +417,7 @@ class BaseSession(
         c: LegacyContactType,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user sends a text message from xmpp to a bridged contact, e.g.
@@ -421,6 +428,8 @@ class BaseSession(
         :param t: Content of the message
         :param c: Recipient of the message
         :param reply_to_msg_id:
+        :param reply_to_fallback_text:
+
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """

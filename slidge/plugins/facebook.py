@@ -216,7 +216,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None) -> str:
+    async def send_text(
+        self,
+        t: str,
+        c: Contact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
             target=(fb_id := await c.fb_id()),
             message=t,

@@ -3,6 +3,7 @@ import logging
 import re
 import tempfile
 from mimetypes import guess_type
+from typing import Optional
 
 import aiohttp
 import aiotdlib.api as tgapi
@@ -64,7 +65,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.ack_futures[result_id] = fut
         return await fut
 
-    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None) -> int:
+    async def send_text(
+        self,
+        t: str,
+        c: "Contact",
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ) -> int:
         t = escape(t)
         try:
             result = await self.tg.send_text(

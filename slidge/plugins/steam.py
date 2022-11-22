@@ -220,7 +220,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: Contact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text=None,
+    ):
         if not t:
             return
         job_id = self.steam.send_um(

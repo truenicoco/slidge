@@ -305,7 +305,14 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
                     contact.displayed(t)
 
     @handle_unregistered_recipient
-    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None) -> int:
+    async def send_text(
+        self,
+        t: str,
+        c: "Contact",
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text=None,
+    ) -> int:
         if reply_to_msg_id is None:
             quote = None
         else:

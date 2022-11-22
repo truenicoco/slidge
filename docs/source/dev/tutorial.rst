@@ -40,7 +40,14 @@ Put this in a file called ``superduper.py``:
             contact = self.contacts.by_legacy_id(msg.sender)
             contact.send_text(msg.text)
 
-        async def send_text(self, text: str, c: LegacyContact):
+        async def send_text(
+            self,
+            text: str,
+            c: LegacyContact,
+            *,
+            reply_to_msg_id=None,
+            reply_to_fallback_text=None
+        ):
             self.legacy.send_message(text=text, destination=c.legacy_id)
 
 
@@ -123,7 +130,14 @@ From XMPP to legacy
 
 .. code-block:: python
 
-        async def send_text(self, text: str, c: LegacyContact):
+        async def send_text(
+            self,
+            text: str,
+            c: LegacyContact,
+            *,
+            reply_to_msg_id=None,
+            reply_to_fallback_text=None
+        ):
             self.legacy.send_message(text=text, destination=c.legacy_id)
 
 When our user sends a message to ``something@superduper.example.com``,

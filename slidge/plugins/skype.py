@@ -190,7 +190,14 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await asyncio.to_thread(event.ack)
 
-    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: LegacyContact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ):
         chat = self.sk.contacts[c.legacy_id].chat
         self.send_lock.acquire()
         msg = await asyncio.to_thread(chat.sendMsg, t)

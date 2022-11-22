@@ -334,7 +334,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: Contact, *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: Contact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ):
         async with self.send_lock:
             try:
                 msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)

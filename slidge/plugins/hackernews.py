@@ -120,7 +120,14 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def logout(self):
         pass
 
-    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: LegacyContact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ):
         goto = f"threads?id={self.hn_username}#{c.legacy_id}"
         url = f"{REPLY_URL}?id={c.legacy_id}&goto={goto}"
         async with self.http_session.get(url) as r:

@@ -98,7 +98,15 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     async def logout(self):
         log.debug("User has disconnected")
 
-    async def send_text(self, t: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: LegacyContact,
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text=None,
+    ):
+        log.debug("REPLY FALLBACK: %r", reply_to_fallback_text)
         i = self.counter
         self.counter = i + 1
 
@@ -115,7 +123,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         elif t == "nonick":
             c.name = None
         else:
-            self.xmpp.loop.create_task(self.later(c, i))
+            self.xmpp.loop.create_task(self.later(c, i, body=t))
 
         return i
 
@@ -129,7 +137,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         await c.send_file(ASSETS_DIR / "buddy1.png", caption="This is a caption")
         return i
 
-    async def later(self, c: LegacyContact, trigger_msg_id: int):
+    async def later(self, c: LegacyContact, trigger_msg_id: int, body: str):
         i = self.counter - 1
         await asyncio.sleep(1)
         c.received(i)
@@ -146,7 +154,12 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         await asyncio.sleep(1)
         c.composing()
         await asyncio.sleep(1)
-        c.send_text("OK", legacy_msg_id=i, reply_to_msg_id=trigger_msg_id)
+        c.send_text(
+            "OK",
+            legacy_msg_id=i,
+            reply_to_msg_id=trigger_msg_id,
+            reply_to_fallback_text=body,
+        )
         await asyncio.sleep(1)
         i = uuid.uuid1().int
         c.send_text("I will retract this", legacy_msg_id=i)

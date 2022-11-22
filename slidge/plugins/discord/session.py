@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import discord as di
 
@@ -51,7 +51,14 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             c.online()
         return f"Logged on as {self.discord.user}"
 
-    async def send_text(self, t: str, c: "Contact", *, reply_to_msg_id=None):
+    async def send_text(
+        self,
+        t: str,
+        c: "Contact",
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text: Optional[str] = None,
+    ):
         async with self.send_lock:
             mid = (
                 await c.discord_user.send(
