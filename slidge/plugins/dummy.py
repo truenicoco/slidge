@@ -126,7 +126,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         i = self.counter
         self.counter = i + 1
         c.send_text(u)
-        await c.send_file(ASSETS_DIR / "buddy1.png")
+        await c.send_file(ASSETS_DIR / "buddy1.png", caption="This is a caption")
         return i
 
     async def later(self, c: LegacyContact, trigger_msg_id: int):
