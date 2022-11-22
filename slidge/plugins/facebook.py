@@ -302,34 +302,48 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 log.debug("Received echo of %s", meta.offline_threading_id)
                 fut.set_result(fb_msg)
         else:
-            if msg.text:
-                contact.send_text(
-                    msg.text, legacy_msg_id=meta.id, reply_to_msg_id=reply_to
-                )
-            if msg.attachments:
-                async with aiohttp.ClientSession() as c:
-                    for a in msg.attachments:
-                        try:
-                            url = (
-                                ((v := a.video_info) and v.download_url)
-                                or ((au := a.audio_info) and au.url)
-                                or a.image_info.uri_map.get(0)
-                            )
-                        except AttributeError:
-                            log.warning("Unhandled attachment: %s", a)
-                            contact.send_text(
-                                "/me sent an attachment that slidge does not support"
-                            )
-                            continue
-                        if url is None:
-                            continue
-                        async with c.get(url) as r:
-                            await contact.send_file(
-                                filename=a.file_name,
-                                content_type=a.mime_type,
-                                input_file=io.BytesIO(await r.read()),
-                            )
             self.received_messages[thread_key.other_user_id].add(fb_msg)
+
+            text = msg.text
+            msg_id = meta.id
+            if not (attachments := msg.attachments):
+                if text:
+                    contact.send_text(
+                        text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
+                    )
+                return
+
+            last_attachment_i = len(attachments) - 1
+            async with aiohttp.ClientSession() as c:
+                for i, a in enumerate(attachments):
+                    last = i == last_attachment_i
+                    try:
+                        url = (
+                            ((v := a.video_info) and v.download_url)
+                            or ((au := a.audio_info) and au.url)
+                            or a.image_info.uri_map.get(0)
+                        )
+                    except AttributeError:
+                        log.warning("Unhandled attachment: %s", a)
+                        contact.send_text(
+                            "/me sent an attachment that slidge does not support"
+                        )
+                        continue
+                    if url is None:
+                        if last:
+                            contact.send_text(
+                                text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
+                            )
+                        continue
+                    async with c.get(url) as r:
+                        await contact.send_file(
+                            filename=a.file_name,
+                            content_type=a.mime_type,
+                            input_file=io.BytesIO(await r.read()),
+                            caption=text if last else None,
+                            legacy_msg_id=msg_id if last else None,
+                            reply_to_msg_id=reply_to if last else None,
+                        )
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
         log.debug("Facebook read: %s", receipt)
