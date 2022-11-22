@@ -35,18 +35,29 @@ class Discord(di.Client):
         else:
             contact = self.session.contacts.by_discord_user(author)
             reply_to = message.reference.message_id if message.reference else None
-            if content := message.content:
+
+            text = message.content
+            attachments = message.attachments
+            msg_id = message.id
+
+            if not attachments:
                 contact.send_text(
-                    content,
-                    legacy_msg_id=message.id,
+                    text,
+                    legacy_msg_id=msg_id,
                     reply_to_msg_id=reply_to,
                 )
-            for attachment in message.attachments:
+                return
+
+            last_attachment_i = len(attachments := message.attachments) - 1
+            for i, attachment in enumerate(attachments):
+                last = i == last_attachment_i
                 await contact.send_file(
                     url=attachment.url,
                     filename=attachment.filename,
                     content_type=attachment.content_type,
-                    reply_to_msg_id=reply_to,
+                    reply_to_msg_id=reply_to if last else None,
+                    legacy_msg_id=msg_id if last else None,
+                    caption=text if last else None,
                 )
 
     async def on_typing(self, channel, user, _when):
