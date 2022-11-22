@@ -269,8 +269,12 @@ class BaseSession(
         displayed_msg_id = m["displayed"]["id"]
         try:
             legacy_msg_id = self.xmpp_msg_id_to_legacy_msg_id(displayed_msg_id)
-        except NotImplementedError:
-            log.debug("Couldn't convert xmpp msg ID to legacy ID, ignoring read mark")
+        except Exception as e:
+            log.debug(
+                "Couldn't convert xmpp msg ID to legacy ID, ignoring read mark: %r, %s",
+                e,
+                e.args,
+            )
             return
 
         await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
@@ -298,9 +302,12 @@ class BaseSession(
             log.debug("Cannot find the XMPP ID of this msg: %s", react_to)
             try:
                 legacy_id = self.xmpp_msg_id_to_legacy_msg_id(react_to)
-            except ValueError:
+            except Exception as e:
                 log.warning(
-                    "Could not convert legacy ID, xmpp reaction was not sent: %s", m
+                    "Could not convert legacy ID, xmpp reaction was not sent: %s, %r, %s",
+                    m,
+                    e,
+                    e.args,
                 )
                 return
         await self.react(
