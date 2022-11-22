@@ -102,9 +102,9 @@ class Contact(LegacyContact["Session"]):
             file_id=best_file.id, synchronous=True, priority=1
         )
         best_file_downloaded: tgapi.File = await self.session.tg.request(query)
-        await self.send_file(best_file_downloaded.local.path)
-        if caption.text:
-            self.send_text(caption.text, legacy_msg_id=msg_id)
+        await self.send_file(
+            best_file_downloaded.local.path, legacy_msg_id=msg_id, caption=caption.text
+        )
 
     async def update_info_from_user(self, user: Optional[tgapi.User] = None):
         if user is None:
