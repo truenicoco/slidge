@@ -13,6 +13,7 @@ from .util import (
     xep_0292,
     xep_0356,
     xep_0356_old,
+    xep_0461,
 )
 from .util.db import GatewayUser, user_store
 
