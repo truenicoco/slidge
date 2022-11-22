@@ -568,6 +568,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         legacy_msg_id: Optional[LegacyMessageType] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         when: Optional[datetime] = None,
+        caption: Optional[str] = None,
     ) -> Message:
         """
         Send a file using HTTP upload (:xep:`0363`)
@@ -583,6 +584,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             are mutually exclusive.
         :param reply_to_msg_id:
         :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
+        :param caption: an optional text that is linked to the file
 
         :return: The msg stanza that was sent
         """
@@ -602,7 +604,11 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 
         msg["oob"]["url"] = uploaded_url
         msg["body"] = uploaded_url
-        self.__send_message(msg, legacy_msg_id, when)
+        if caption:
+            self.__send_message(msg, None, when)
+            msg = self.send_text(caption, legacy_msg_id=legacy_msg_id, when=when)
+        else:
+            self.__send_message(msg, legacy_msg_id, when)
         return msg
 
     def __privileged_send(self, msg: Message, when: Optional[datetime] = None):
