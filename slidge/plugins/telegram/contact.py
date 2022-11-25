@@ -93,7 +93,9 @@ class Contact(LegacyContact["Session"]):
                 reply_to_msg_id=reply_to,
             )
         elif best_file := get_best_file(content):
-            await self.send_tg_file(best_file, content.caption, msg.id)
+            await self.send_tg_file(
+                best_file, content.caption, msg.id, reply_to=reply_to
+            )
         else:
             self.send_text(
                 "/me tried to send an unsupported content. "
@@ -101,13 +103,16 @@ class Contact(LegacyContact["Session"]):
             )
             self.session.log.warning("Ignoring content: %s", type(content))
 
-    async def send_tg_file(self, best_file, caption, msg_id):
+    async def send_tg_file(self, best_file, caption, msg_id, reply_to=None):
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
         best_file_downloaded: tgapi.File = await self.session.tg.request(query)
         await self.send_file(
-            best_file_downloaded.local.path, legacy_msg_id=msg_id, caption=caption.text
+            best_file_downloaded.local.path,
+            legacy_msg_id=msg_id,
+            caption=caption.text,
+            reply_to_msg_id=reply_to,
         )
 
     async def update_info_from_user(self, user: Optional[tgapi.User] = None):
