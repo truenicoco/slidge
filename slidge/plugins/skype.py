@@ -39,7 +39,7 @@ class Gateway(BaseGateway["Session"]):
         super().shutdown()
         log.debug("Shutting down user threads")
         for user in user_store.get_all():
-            session = self._session_cls.from_jid(user.jid)
+            session = self.session_cls.from_jid(user.jid)
             if thread := session.thread:
                 thread.stop()
 

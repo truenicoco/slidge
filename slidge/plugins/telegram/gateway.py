@@ -72,7 +72,7 @@ class Gateway(BaseGateway["Session"]):
         user = user_store.get_by_stanza(iq)
         if user is None:
             raise XMPPError("subscription-required")
-        session = self._session_cls.from_stanza(iq)
+        session = self.session_cls.from_stanza(iq)
 
         form = self["xep_0004"].make_form("form", "Active telegram sessions")
         tg_sessions = (await session.tg.api.get_active_sessions()).sessions

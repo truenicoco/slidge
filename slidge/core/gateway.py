@@ -5,9 +5,8 @@ import asyncio
 import logging
 import re
 import tempfile
-from asyncio import Future, iscoroutinefunction
-from functools import wraps
-from typing import Any, Generic, Iterable, Optional, Sequence, Type, TypeVar
+from asyncio import Future
+from typing import Generic, Iterable, Optional, Sequence, Type, TypeVar
 
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
@@ -20,26 +19,10 @@ from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
 from . import config
+from .adhoc import AdhocProvider
+from .chat_command import ChatCommandProvider
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
-
-
-def admin_only(func):
-    # fmt: off
-    if iscoroutinefunction(func):
-        @wraps(func)
-        async def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
-            if iq.get_from().bare not in config.ADMINS:
-                raise XMPPError("not-authorized")
-            return await func(self, iq, session)
-    else:
-        @wraps(func)
-        def wrapped(self: "BaseGateway", iq: Iq, session: dict[str, Any]):
-            if iq.get_from().bare not in config.ADMINS:
-                raise XMPPError("not-authorized")
-            return func(self, iq, session)
-    # fmt: on
-    return wrapped
 
 
 class BaseGateway(
@@ -188,26 +171,30 @@ class BaseGateway(
         self.loop.set_exception_handler(self.__exception_handler)
         self.has_crashed = False
 
-        self._jid_validator = re.compile(config.USER_JID_VALIDATOR)
+        self.jid_validator = re.compile(config.USER_JID_VALIDATOR)
 
-        self._session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
-        self._session_cls.xmpp = self
+        self.session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
+        self.session_cls.xmpp = self
 
-        self._get_session_from_stanza = self._session_cls.from_stanza
-        self._get_session_from_user = self._session_cls.from_user
+        self.get_session_from_stanza = self.session_cls.from_stanza
+        self.get_session_from_user = self.session_cls.from_user
         self.register_plugins()
         self.__register_slixmpp_api()
         self.__register_handlers()
         self._input_futures: dict[str, Future] = {}
 
-        self._chat_commands = {
-            k: getattr(self, v)
-            for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
-        }
-
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
         self.vcard: VCard4Provider = self["xep_0292_provider"]
+
+        self.adhoc = AdhocProvider(self)
+        self.add_adhoc_commands()
+
+        self.chat_commands = chat = ChatCommandProvider(self)
+        self._chat_commands = {
+            k: getattr(self, v, None) or getattr(chat, v)
+            for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
+        }
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -229,7 +216,7 @@ class BaseGateway(
             loop.stop()
 
     def _raise_if_not_allowed_jid(self, jid: JID):
-        if not self._jid_validator.match(jid.bare):
+        if not self.jid_validator.match(jid.bare):
             raise XMPPError(
                 condition="not-allowed",
                 text="Your account is not allowed to use this gateway.",
@@ -279,7 +266,7 @@ class BaseGateway(
         self["xep_0077"].api.register(self._user_validate, "user_validate")
         self["xep_0077"].api.register(self._user_modify, "user_modify")
 
-        self["xep_0055"].api.register(self._search_get_form, "search_get_form")
+        self["xep_0055"].api.register(self.search_get_form, "search_get_form")
         self["xep_0055"].api.register(self._search_query, "search_query")
 
         self.roster.set_backend(RosterBackend)
@@ -290,7 +277,7 @@ class BaseGateway(
         self.add_event_handler("gateway_message", self._on_gateway_message_private)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
-        get_session = self._get_session_from_stanza
+        get_session = self.get_session_from_stanza
 
         # fmt: off
         async def msg(m): await get_session(m).send_from_msg(m)
@@ -324,8 +311,6 @@ class BaseGateway(
         )
         await self.plugin["xep_0115"].update_caps(jid=self.boundjid.bare)
 
-        self.__add_adhoc_commands()
-        self.add_adhoc_commands()
         await self.pubsub.set_avatar(
             jid=self.boundjid.bare, avatar=self.COMPONENT_AVATAR
         )
@@ -339,7 +324,7 @@ class BaseGateway(
             self.send_presence(
                 pto=user.bare_jid, ptype="probe"
             )  # ensure we get all resources for user
-            session = self._session_cls.from_user(user)
+            session = self.session_cls.from_user(user)
             self.loop.create_task(self._login_wrap(session))
 
         log.info("Slidge has successfully started")
@@ -375,115 +360,6 @@ class BaseGateway(
             await self._login_wrap(session)
 
         self.loop.create_task(w())
-
-    def __add_adhoc_commands(self):
-        # TODO: this should only be advertised to admins
-        # Not a big deal since we need to check if 'from' is an admin in the handler
-        # anyway, BUT it would be nice if this simply does not show up in the list
-        # of available commands for regular users.
-        self["xep_0050"].add_command(
-            node="info", name="List registered users", handler=self._handle_info
-        )
-        self["xep_0050"].add_command(
-            node="delete_user", name="Delete a user", handler=self._handle_user_delete
-        )
-        self.plugin["xep_0050"].add_command(
-            node="search", name="Search for contacts", handler=self._handle_search
-        )
-
-    @admin_only
-    def _handle_info(self, iq: Iq, session: dict[str, Any]):
-        """
-        List registered users for admins
-        """
-        form = self["xep_0004"].make_form("result", "Component info")
-        form.add_field(
-            ftype="jid-multi",
-            label="Users",
-            value=[u.bare_jid for u in user_store.get_all()],
-        )
-
-        session["payload"] = form
-        session["has_next"] = False
-
-        return session
-
-    @admin_only
-    def _handle_user_delete(self, iq: Iq, adhoc_session: dict[str, Any]):
-        form = self["xep_0004"].make_form(
-            title="Delete user",
-            instructions="Enter the bare JID(s) of the user(s) you want to delete",
-        )
-        form.add_field("user_jid", ftype="jid-single", label="User JID")
-
-        adhoc_session["payload"] = form
-        adhoc_session["has_next"] = True
-        adhoc_session["next"] = self._handle_user_delete2
-
-        return adhoc_session
-
-    async def _handle_user_delete2(self, form, adhoc_session: dict[str, Any]):
-        form_values = form.get_values()
-        try:
-            user_jid = JID(form_values.get("user_jid"))
-        except ValueError:
-            raise XMPPError("bad-request", text="This JID is invalid")
-
-        user = user_store.get_by_jid(user_jid)
-        if user is None:
-            raise XMPPError("item-not-found", text=f"There is no user '{user_jid}'")
-
-        log.debug("Admin requested unregister of %s", user_jid)
-
-        await self._session_cls.kill_by_jid(user_jid)
-        user_store.remove_by_jid(user_jid)
-
-        adhoc_session["notes"] = [("info", "Success!")]
-        adhoc_session["has_next"] = False
-
-        return adhoc_session
-
-    async def _handle_search(self, iq: Iq, adhoc_session: dict[str, Any]):
-        """
-        Jabber search, but as an adhoc command (search form)
-        """
-        user = user_store.get_by_jid(iq.get_from())
-        if user is None:
-            raise XMPPError(
-                "not-authorized", text="Search is only allowed for registered users"
-            )
-
-        session = self._get_session_from_stanza(iq)
-
-        reply = await self._search_get_form(None, None, ifrom=iq.get_from(), iq=iq)
-        adhoc_session["payload"] = reply["search"]["form"]
-        adhoc_session["next"] = self._handle_search2
-        adhoc_session["has_next"] = True
-        adhoc_session["session"] = session
-
-        return adhoc_session
-
-    async def _handle_search2(self, form, adhoc_session: dict[str, Any]):
-        """
-        Jabber search, but as an adhoc command (results)
-        """
-
-        search_results = await adhoc_session["session"].search(form.get_values())
-
-        form = self.plugin["xep_0004"].make_form("result", "Contact search results")
-        if search_results is None:
-            raise XMPPError("item-not-found", text="No contact was found")
-
-        for field in search_results.fields:
-            form.add_reported(field.var, label=field.label, type=field.type)
-        for item in search_results.items:
-            form.add_item(item)
-
-        adhoc_session["next"] = None
-        adhoc_session["has_next"] = False
-        adhoc_session["payload"] = form
-
-        return adhoc_session
 
     async def _make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         self._raise_if_not_allowed_jid(iq.get_from())
@@ -568,7 +444,7 @@ class BaseGateway(
         user_store.add(ifrom, form_dict)
 
     async def _on_user_register(self, iq: Iq):
-        session = self._get_session_from_stanza(iq)
+        session = self.get_session_from_stanza(iq)
         for jid in config.ADMINS:
             self.send_message(
                 mto=jid,
@@ -591,16 +467,16 @@ class BaseGateway(
                 "the have been unregistered",
                 u,
             )
-            await self._session_cls.kill_by_jid(j)
+            await self.session_cls.kill_by_jid(j)
             user_store.remove_by_jid(j)
 
     async def _on_user_unregister(self, iq: Iq):
         # Mypy: "Type[SessionType?]" has no attribute "kill_by_jid"
         # I don't understand why ^ this question mark...
-        kill = self._session_cls.kill_by_jid  # type: ignore
+        kill = self.session_cls.kill_by_jid  # type: ignore
         await kill(iq.get_from())
 
-    async def _search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+    async def search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         """
         Prepare the search form using self.SEARCH_FIELDS
         """
@@ -624,7 +500,7 @@ class BaseGateway(
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
-        result = await self._get_session_from_stanza(iq).search(
+        result = await self.get_session_from_stanza(iq).search(
             iq["search"]["form"].get_values()
         )
 
@@ -638,119 +514,6 @@ class BaseGateway(
         for item in result.items:
             form.add_item(item)
         return reply
-
-    async def _chat_command_search(
-        self, *args, msg: Message, session: Optional[SessionType] = None
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!")
-            return
-
-        search_form = {}
-        diff = len(args) - len(self.SEARCH_FIELDS)
-
-        if diff > 0:
-            session.send_gateway_message("Too many parameters!")
-            return
-
-        for field, arg in zip(self.SEARCH_FIELDS, args):
-            search_form[field.var] = arg
-
-        if diff < 0:
-            for field in self.SEARCH_FIELDS[diff:]:
-                if not field.required:
-                    continue
-                search_form[field.var] = await session.input(
-                    (field.label or field.var) + "?"
-                )
-
-        results = await session.search(search_form)
-        if results is None:
-            session.send_gateway_message("No results!")
-            return
-
-        result_fields = results.fields
-        for result in results.items:
-            text = ""
-            for f in result_fields:
-                if f.type == "jid-single":
-                    text += f"xmpp:{result[f.var]}\n"
-                else:
-                    text += f"{f.label}: {result[f.var]}\n"
-            session.send_gateway_message(text)
-
-    async def _chat_command_help(
-        self, *_args, msg: Message, session: Optional[SessionType]
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!").send()
-        else:
-            t = "|".join(
-                x for x in self._chat_commands.keys() if x not in ("register", "help")
-            )
-            log.debug("In help: %s", t)
-            msg.reply(f"Available commands: {t}").send()
-
-    @staticmethod
-    async def _chat_command_list_contacts(
-        *_args, msg: Message, session: Optional[SessionType]
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!").send()
-        else:
-            contacts = sorted(
-                session.contacts, key=lambda c: c.name.casefold() if c.name else ""
-            )
-            t = "\n".join(f"{c.name}: xmpp:{c.jid.bare}" for c in contacts)
-            msg.reply(t).send()
-
-    async def _chat_command_register(
-        self, *args, msg: Message, session: Optional[SessionType]
-    ):
-        if session is not None:
-            msg.reply("You are already registered to this gateway").send()
-            return
-
-        jid = msg.get_from()
-
-        if not self._jid_validator.match(jid.bare):
-            msg.reply("You are not allowed to register to this gateway").send()
-            return
-
-        form: dict[str, Optional[str]] = {}
-        for field in self.REGISTRATION_FIELDS:
-            text = field.label or field.var
-            if field.value != "":
-                text += f" (default: '{field.value}')"
-            if not field.required:
-                text += " (optional, reply with '.' to skip)"
-            if (options := field.options) is not None:
-                for option in options:
-                    label = option["label"]
-                    value = option["value"]
-                    text += f"\n{label}: reply with '{value}'"
-
-            while True:
-                ans = await self.input(jid, text + "?")
-                if ans == "." and not field.required:
-                    form[field.var] = None
-                    break
-                else:
-                    if (options := field.options) is not None:
-                        valid_choices = [x["value"] for x in options]
-                        if ans not in valid_choices:
-                            continue
-                    form[field.var] = ans
-                    break
-
-        try:
-            await self.validate(jid, form)
-            await self["xep_0077"].api["user_validate"](None, None, jid, form)
-        except (ValueError, XMPPError) as e:
-            msg.reply(f"Something went wrong: {e}").send()
-        else:
-            self.event("user_register", msg)
-            msg.reply(f"Success!").send()
 
     def add_adhoc_commands(self):
         """
@@ -842,7 +605,7 @@ class BaseGateway(
             if user is None:
                 session = None
             else:
-                session = self._get_session_from_user(user)
+                session = self.get_session_from_user(user)
 
             handler = self._chat_commands.get(command)
             if handler is None:
@@ -953,7 +716,7 @@ class BaseGateway(
         """
         log.debug("Shutting down")
         for user in user_store.get_all():
-            session = self._session_cls.from_jid(user.jid)
+            session = self.session_cls.from_jid(user.jid)
             for c in session.contacts:
                 c.offline()
             self.loop.create_task(session.logout())
