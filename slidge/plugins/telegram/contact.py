@@ -73,20 +73,24 @@ class Contact(LegacyContact["Session"]):
 
     async def send_tg_message(self, msg: tgapi.Message):
         content = msg.content
+        reply_to = msg.reply_to_message_id
+        if not reply_to:
+            # if reply_to = 0, telegram really means "None"
+            reply_to = None
         if isinstance(content, tgapi.MessageText):
             # TODO: parse formatted text to markdown
             formatted_text = content.text
             self.send_text(
                 body=formatted_text.text,
                 legacy_msg_id=msg.id,
-                reply_to_msg_id=msg.reply_to_message_id,
+                reply_to_msg_id=reply_to,
             )
         elif isinstance(content, tgapi.MessageAnimatedEmoji):
             emoji = content.animated_emoji.sticker.emoji
             self.send_text(
                 body=emoji,
                 legacy_msg_id=msg.id,
-                reply_to_msg_id=msg.reply_to_message_id,
+                reply_to_msg_id=reply_to,
             )
         elif best_file := get_best_file(content):
             await self.send_tg_file(best_file, content.caption, msg.id)
