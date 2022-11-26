@@ -282,12 +282,19 @@ class TestNameSquatting(SlidgeTest):
 
     def setUp(self):
         super().setUp()
+
+        async def login(*args, **kwargs):
+            raise RuntimeError
+
+        self.original_login = Session.login
+        Session.login = login
         Gateway.REGISTRATION_MULTISTEP = True
         config.PARTIAL_REGISTRATION_TIMEOUT = 1
 
     def tearDown(self):
         Gateway.REGISTRATION_MULTISTEP = False
         config.PARTIAL_REGISTRATION_TIMEOUT = 3600
+        Session.login = self.original_login
 
     def test_name_squatting(self):
         async def sleep():
