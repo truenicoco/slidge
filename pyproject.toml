@@ -35,7 +35,7 @@ Pygments = "^2.8.0"
 sphinx-argparse = "^0.3.1"
 sphinx-autoapi = "^2.0.0"
 furo = "^2022.6.21"
-mypy = "^0.982"
+mypy = "^0.991"
 types-requests = "^2.28.1"
 isort = "^5.10.1"
 types-emoji = "^2.0.0"
@@ -59,6 +59,7 @@ slidge = 'slidge.__main__:main'
 [tool.mypy]
 exclude = "slidge.util.xep*"
 ignore_missing_imports = true
+check_untyped_defs = true
 
 [tool.black]
 exclude = "xep_*"
