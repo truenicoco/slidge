@@ -18,6 +18,12 @@ from slixmpp import JID, Iq, Message, Presence
 
 # noinspection PyUnresolvedReferences
 class EncryptedShelf(shelve.DbfilenameShelf):
+    cache: dict
+    dict: dict
+    writeback: bool
+    keyencoding: str
+    _protocol: int
+
     def __init__(
         self, filename: PathLike, key: str, flag="c", protocol=None, writeback=False
     ):

@@ -134,7 +134,6 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             raise RuntimeError("Could not connect to steam")
 
         for f in self.steam.friends:
-            f: SteamUser
             self.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
             c = self.contacts.by_legacy_id(f.steam_id.id)
             c.name = f.name
@@ -194,7 +193,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         else:
             if body.reaction_type == k_EMessageReactionType_Emoticon:
                 contact = self.contacts.by_legacy_id(SteamID(msg.body.reactor).id)
-                emoji = emoji_translate.get(body.reaction, "❓")
+                emoji = emoji_translate.get(body.reaction) or "❓"
                 if body.is_add:
                     contact.contact_reactions[timestamp].add(emoji)
                 else:

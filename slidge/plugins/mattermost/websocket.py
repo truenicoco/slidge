@@ -85,7 +85,7 @@ class Websocket:
         self.url = url
 
         self._alive = False
-        self._last_msg = 0
+        self._last_msg = 0.0
 
         self.ssl_verify = True
         self.keep_alive = True
@@ -114,13 +114,8 @@ class Websocket:
 
         while True:
             try:
-                kw_args = {}
                 async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(
-                        url,
-                        ssl=context,
-                        **kw_args,
-                    ) as websocket:
+                    async with session.ws_connect(url, ssl=context) as websocket:
                         self.websocket.set_result(websocket)
                         await self._authenticate_websocket(websocket)
                         while self._alive:

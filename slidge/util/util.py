@@ -53,7 +53,7 @@ KeyType = TypeVar("KeyType")  # FIXME: mypy does not correctly infer types with 
 ValueType = TypeVar("ValueType")
 
 
-class BiDict(Generic[KeyType, ValueType], dict):
+class BiDict(Generic[KeyType, ValueType], dict[KeyType, ValueType]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.inverse: dict[ValueType, KeyType] = {}

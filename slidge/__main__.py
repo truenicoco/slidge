@@ -118,7 +118,7 @@ def main():
     except SigTermInterrupt:
         logging.debug("Received SIGTERM")
     except SystemExit as e:
-        return_code = e.code
+        return_code = e.code  # type: ignore
         logging.debug("Exit called")
     except Exception as e:
         return_code = 2

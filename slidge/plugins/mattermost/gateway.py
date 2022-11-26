@@ -155,7 +155,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         f = self.user.registration_form
         self.mm_client = get_client_from_registration_form(f)
         self.ws = Websocket(
-            re.sub("^http", "ws", f["url"]) + f["basepath"] + f["basepath_ws"],
+            re.sub("^http", "ws", f["url"] or "")
+            + (f["basepath"] or "")
+            + (f["basepath_ws"] or ""),
             f["token"],
         )
         self.view_futures = dict[str, asyncio.Future[None]]()
@@ -189,7 +191,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             contact.avatar = await self.mm_client.get_profile_image(user.id)
 
             await contact.add_to_roster()
-            contact.update_status(status.status)
+            contact.update_status(str(status.status))
 
     async def on_mm_event(self, event: MattermostEvent):
         self.log.debug("Event: %s", event)

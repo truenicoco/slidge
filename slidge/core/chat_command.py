@@ -89,7 +89,7 @@ class ChatCommandProvider:
 
         jid = msg.get_from()
 
-        if not self.xmpp.jid_validator.match(jid.bare):
+        if not self.xmpp.jid_validator.match(jid.bare):  # type:ignore
             msg.reply("You are not allowed to register to this gateway").send()
             return
 

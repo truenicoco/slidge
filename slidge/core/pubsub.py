@@ -317,6 +317,7 @@ class PubSubComponent(BasePlugin):
         avatar: Optional[AvatarType] = None,
         restrict_to: OptJidStr = None,
     ):
+        jid = JID(jid)
         if avatar is None:
             try:
                 del self._avatars[jid]
@@ -348,6 +349,7 @@ class PubSubComponent(BasePlugin):
         nick: Optional[str] = None,
         restrict_to: OptJidStr = None,
     ):
+        jid = JID(jid)
         nickname = PepNick(restrict_to, nick)
         self._nicks[jid] = nickname
         log.debug("NICK: %s", nickname.nick)

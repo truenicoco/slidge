@@ -1,3 +1,4 @@
+# type:ignore
 import tempfile
 import types
 from pathlib import Path

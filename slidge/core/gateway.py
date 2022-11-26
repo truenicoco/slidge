@@ -6,7 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Generic, Iterable, Optional, Sequence, Type, TypeVar
+from typing import Callable, Generic, Iterable, Optional, Sequence, Type, TypeVar
 
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
@@ -191,7 +191,7 @@ class BaseGateway(
         self.add_adhoc_commands()
 
         self.chat_commands = chat = ChatCommandProvider(self)
-        self._chat_commands = {
+        self._chat_commands: dict[str, Callable] = {
             k: getattr(self, v, None) or getattr(chat, v)
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
@@ -306,10 +306,8 @@ class BaseGateway(
 
         # prevents XMPP clients from considering the gateway as an HTTP upload
         disco = self.plugin["xep_0030"]
-        await disco.del_feature(
-            feature="urn:xmpp:http:upload:0", jid=self.boundjid.bare
-        )
-        await self.plugin["xep_0115"].update_caps(jid=self.boundjid.bare)
+        await disco.del_feature(feature="urn:xmpp:http:upload:0", jid=self.boundjid)
+        await self.plugin["xep_0115"].update_caps(jid=self.boundjid)
 
         await self.pubsub.set_avatar(
             jid=self.boundjid.bare, avatar=self.COMPONENT_AVATAR

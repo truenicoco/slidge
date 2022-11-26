@@ -31,7 +31,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         i = registration_form.get("api_id")
         if i is not None:
-            i = int(i)  # makes testing easier to make api_id optional...
+            # makes testing easier to make api_id optional
+            i = int(i)  # type:ignore
 
         self.tg = TelegramClient(
             self,

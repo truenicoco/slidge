@@ -55,10 +55,10 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
     def __init__(self, user):
         super().__init__(user)
         self.http_session = aiohttp.ClientSession(
-            cookies={"user": self.user.registration_form["cookie"]}
+            cookies={"user": self.user.registration_form["cookie"]}  # type: ignore
         )
         self.highest_handled_submission_id = 0
-        self.hn_username = self.user.registration_form["cookie"].split("&")[0]
+        self.hn_username = self.user.registration_form["cookie"].split("&")[0]  # type: ignore
 
     async def login(self):
         kid_ids: list[int] = []
