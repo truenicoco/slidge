@@ -152,5 +152,5 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
 
         return reactions
 
-    async def search(self, form_values: dict[str, str]) -> SearchResult:
+    async def search(self, form_values: dict[str, str]):
         pass
