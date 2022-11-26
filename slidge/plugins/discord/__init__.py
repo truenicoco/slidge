@@ -1,7 +1,9 @@
 import functools
 import logging
+from typing import Optional
 
 import discord as di
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -35,6 +37,14 @@ class Gateway(BaseGateway[Session]):
             log.debug("Disabling discord info logs")
             logging.getLogger("discord.gateway").setLevel(logging.WARNING)
             logging.getLogger("discord.client").setLevel(logging.WARNING)
+
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
+        try:
+            await di.Client().login(registration_form.get("token"))
+        except di.LoginFailure as e:
+            raise ValueError(str(e))
 
 
 class Contact(LegacyContact[Session]):
