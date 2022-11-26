@@ -579,7 +579,7 @@ class BaseGateway(
         session.send_gateway_message(self.WELCOME_MESSAGE)
         if self.REGISTRATION_MULTISTEP:
             asyncio.create_task(self.__registration_timeout(session))
-        await session.login()
+        await self._login_wrap(session)
 
     async def __registration_timeout(self, session: "SessionType"):
         await asyncio.sleep(config.PARTIAL_REGISTRATION_TIMEOUT)
