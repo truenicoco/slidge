@@ -549,15 +549,6 @@ class BaseGateway(
         """
         pass
 
-    def config(self, argv: list[str]):
-        """
-        Override this to access CLI args to configure the slidge plugin
-
-        :param argv: CLI args that were not parsed by the slidge main entrypoint parser
-        :func:`slidge.__main__.get_parser`
-        """
-        pass
-
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
