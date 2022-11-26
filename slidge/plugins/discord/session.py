@@ -30,9 +30,9 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             return i
 
     async def login(self):
-        self.xmpp.loop.create_task(
-            self.discord.start(self.user.registration_form["token"])
-        )
+        await self.discord.login(self.user.registration_form["token"])
+        self.xmpp.loop.create_task(self.discord.connect())
+
         await self.ready_future
         for u in self.discord.users:
             if not isinstance(u, di.User):
