@@ -283,6 +283,99 @@ class TestAimShakespeareBase(SlidgeTest):
         sent = self.next_sent()
         assert sent["idle"]["since"] == now
 
+    def test_disco_adhoc_commands_unregistered(self):
+        self.recv(
+            f"""
+            <iq type='get'
+                from='requester@domain'
+                to='{self.xmpp.boundjid.bare}'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq type='result'
+                to='requester@domain'
+                from='{self.xmpp.boundjid.bare}' id='1'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands' />
+            </iq>
+            """
+        )
+
+    def test_disco_adhoc_commands_as_user(self):
+        self.recv(
+            f"""
+            <iq type='get'
+                from='romeo@montague.lit/gajim'
+                to='{self.xmpp.boundjid.bare}'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq type='result'
+                to='romeo@montague.lit/gajim'
+                from='{self.xmpp.boundjid.bare}' id='1'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
+              </query>
+            </iq>
+            """
+        )
+
+    def test_disco_adhoc_commands_as_admin(self):
+        # monkeypatch.setattr(config, "ADMINS", ("romeo@montague.lit",))
+        config.ADMINS = (JID("admin@montague.lit"),)
+        self.recv(
+            f"""
+            <iq type='get'
+                from='admin@montague.lit/gajim'
+                to='{self.xmpp.boundjid.bare}'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq type='result'
+                to='admin@montague.lit/gajim'
+                from='{self.xmpp.boundjid.bare}' id='1'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit" node="info" name="List registered users" />
+                <item jid="aim.shakespeare.lit" node="delete_user" name="Delete a user" />
+              </query>
+            </iq>
+            """
+        )
+        config.ADMINS = ()
+
+    def test_adhoc_forbidden_non_admin(self):
+        self.recv(
+            f"""
+            <iq type="set" from="test@localhost/gajim" to="{self.xmpp.boundjid.bare}" id="123">
+                <command xmlns="http://jabber.org/protocol/commands" action="execute" node="delete_user" />
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="error" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+              <error xmlns="jabber:client" type="cancel">
+                <not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+            </error>
+            </iq>
+            """,
+            use_values=False,
+        )
+
 
 class TestNameSquatting(SlidgeTest):
     plugin = globals()

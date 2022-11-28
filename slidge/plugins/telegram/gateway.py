@@ -60,10 +60,11 @@ class Gateway(BaseGateway["Session"]):
         pass
 
     def add_adhoc_commands(self):
-        self["xep_0050"].add_command(
+        self.adhoc.add_command(
             node="get_sessions",
             name="List active sessions",
             handler=self.adhoc_active_sessions1,
+            only_users=True,
         )
 
     async def adhoc_active_sessions1(

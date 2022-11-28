@@ -64,15 +64,17 @@ class Gateway(BaseGateway):
         raise RuntimeError("Signald socket connection lost")
 
     def add_adhoc_commands(self):
-        self["xep_0050"].add_command(
+        self.adhoc.add_command(
             node="linked_devices",
             name="Get linked devices",
             handler=self._handle_linked_devices,
+            only_users=True,
         )
-        self["xep_0050"].add_command(
+        self.adhoc.add_command(
             node="add_device",
             name="Link a new device",
             handler=self._handle_add_device1,
+            only_users=True,
         )
 
     async def _handle_linked_devices(self, iq: Iq, adhoc_session: dict[str, Any]):

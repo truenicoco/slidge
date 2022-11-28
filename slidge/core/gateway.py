@@ -717,6 +717,7 @@ GatewayType = TypeVar("GatewayType", bound=BaseGateway)
 
 
 SLIXMPP_PLUGINS = [
+    "xep_0030",  # Service discovery
     "xep_0050",  # Adhoc commands
     "xep_0055",  # Jabber search
     "xep_0066",  # Out of Band Data
