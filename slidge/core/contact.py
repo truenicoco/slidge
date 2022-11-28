@@ -28,6 +28,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyUserIdType,
 )
+from ..util.xep_0030.stanza import DiscoInfo
 from ..util.xep_0292.stanza import VCard4
 from . import config
 
@@ -116,7 +117,6 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
         self._subscribe_to = True
 
         self.xmpp = session.xmpp
-        self.xmpp.loop.create_task(self.__make_caps())
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
@@ -130,35 +130,46 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
             return "to"
         return "none"
 
-    async def __make_caps(self):
+    def get_features(self):
+        features = []
+        if self.CHAT_STATES:
+            features.append("http://jabber.org/protocol/chatstates")
+        if self.RECEIPTS:
+            features.append("urn:xmpp:receipts")
+        if self.CORRECTION:
+            features.append("urn:xmpp:message-correct:0")
+        if self.MARKS:
+            features.append("urn:xmpp:chat-markers:0")
+        if self.UPLOAD:
+            features.append("jabber:x:oob")
+        if self.REACTION:
+            features.append("urn:xmpp:reactions:0")
+        if self.RETRACTION:
+            features.append("urn:xmpp:message-retract:0")
+        if self.REPLIES:
+            features.append("urn:xmpp:reply:0")
+        features.append("urn:ietf:params:xml:ns:vcard-4.0")
+
+        return features
+
+    def get_disco_info(self):
+        info = DiscoInfo()
+        for feature in self.get_features():
+            info.add_feature(feature)
+        info.add_identity(category="client", itype=self.CLIENT_TYPE)
+        return info
+
+    async def update_caps(self):
         """
         Configure slixmpp to correctly advertise this contact's capabilities.
         """
         jid = self.jid
         xmpp = self.xmpp
 
-        xmpp["xep_0030"].add_identity(
-            jid=jid, category="client", itype=self.CLIENT_TYPE
-        )
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
-        if self.CHAT_STATES:
-            await add_feature("http://jabber.org/protocol/chatstates")
-        if self.RECEIPTS:
-            await add_feature("urn:xmpp:receipts")
-        if self.CORRECTION:
-            await add_feature("urn:xmpp:message-correct:0")
-        if self.MARKS:
-            await add_feature("urn:xmpp:chat-markers:0")
-        if self.UPLOAD:
-            await add_feature("jabber:x:oob")
-        if self.REACTION:
-            await add_feature("urn:xmpp:reactions:0")
-        if self.RETRACTION:
-            await add_feature("urn:xmpp:message-retract:0")
-        if self.REPLIES:
-            await add_feature("urn:xmpp:reply:0")
+        for f in self.get_features():
+            await add_feature(f)
 
-        await add_feature("urn:ietf:params:xml:ns:vcard-4.0")
         await xmpp["xep_0115"].update_caps(jid=self.jid)
 
     @property
@@ -927,6 +938,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
                 self.jid_username_to_legacy_id(jid_username),
                 jid_username,
             )
+            await c.update_caps()
             self._contacts_by_legacy_id[c.legacy_id] = self._contacts_by_bare_jid[
                 bare
             ] = c
