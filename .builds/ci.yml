@@ -1,6 +1,5 @@
 image: alpine/edge
 packages:
-  - poetry
   - python3-dev
   - docker
   - docker-cli-buildx
@@ -22,6 +21,8 @@ artifacts:
   - ./slidge-docs.tar.gz
 tasks:
   - setup-poetry: |
+      curl -sSL https://install.python-poetry.org | python3 -
+      sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
       poetry install --all-extras
       poetry build
