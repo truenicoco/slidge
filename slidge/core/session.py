@@ -189,7 +189,7 @@ class BaseSession(
             # ignore last message correction and retraction (handled by a specific method)
             return
 
-        contact: LegacyContactType = self.contacts.by_stanza(m)
+        contact: LegacyContactType = await self.contacts.by_stanza(m)
 
         url = m["oob"]["url"]
         text = m["body"]
@@ -228,7 +228,7 @@ class BaseSession(
         :return:
         """
         if m.get_to() != self.xmpp.boundjid.bare:
-            await self.active(self.contacts.by_stanza(m))
+            await self.active(await self.contacts.by_stanza(m))
 
     @ignore_message_to_component_and_sent_carbons
     async def inactive_from_msg(self, m: Message):
@@ -239,7 +239,7 @@ class BaseSession(
         :return:
         """
         if m.get_to() != self.xmpp.boundjid.bare:
-            await self.inactive(self.contacts.by_stanza(m))
+            await self.inactive(await self.contacts.by_stanza(m))
 
     @ignore_message_to_component_and_sent_carbons
     async def composing_from_msg(self, m: Message):
@@ -250,8 +250,7 @@ class BaseSession(
         :return:
         """
         if m.get_to() != self.xmpp.boundjid.bare:
-            log.debug("COMPOSING: %s", self.contacts.by_stanza(m))
-            await self.composing(self.contacts.by_stanza(m))
+            await self.composing(await self.contacts.by_stanza(m))
 
     @ignore_message_to_component_and_sent_carbons
     async def paused_from_msg(self, m: Message):
@@ -262,7 +261,7 @@ class BaseSession(
         :return:
         """
         if m.get_to() != self.xmpp.boundjid.bare:
-            await self.paused(self.contacts.by_stanza(m))
+            await self.paused(await self.contacts.by_stanza(m))
 
     @ignore_message_to_component_and_sent_carbons
     async def displayed_from_msg(self, m: Message):
@@ -283,7 +282,7 @@ class BaseSession(
             )
             return
 
-        await self.displayed(legacy_msg_id, self.contacts.by_stanza(m))
+        await self.displayed(legacy_msg_id, await self.contacts.by_stanza(m))
 
     @ignore_message_to_component_and_sent_carbons
     async def correct_from_msg(self, m: Message):
@@ -292,11 +291,11 @@ class BaseSession(
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
             new_legacy_msg_id = await self.send_text(
-                m["body"], self.contacts.by_stanza(m)
+                m["body"], await self.contacts.by_stanza(m)
             )
         else:
             new_legacy_msg_id = await self.correct(
-                m["body"], legacy_id, self.contacts.by_stanza(m)
+                m["body"], legacy_id, await self.contacts.by_stanza(m)
             )
         if new_legacy_msg_id is not None:
             self.sent[new_legacy_msg_id] = m.get_id()
@@ -317,7 +316,9 @@ class BaseSession(
                 )
                 return
         await self.react(
-            legacy_id, [r["value"] for r in m["reactions"]], self.contacts.by_stanza(m)
+            legacy_id,
+            [r["value"] for r in m["reactions"]],
+            await self.contacts.by_stanza(m),
         )
 
     @ignore_message_to_component_and_sent_carbons
@@ -328,7 +329,7 @@ class BaseSession(
                 "Cannot find the XMPP ID of this msg: %s, cannot retract", xmpp_id
             )
             return
-        await self.retract(legacy_id, self.contacts.by_stanza(m))
+        await self.retract(legacy_id, await self.contacts.by_stanza(m))
 
     def send_gateway_status(
         self,

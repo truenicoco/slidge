@@ -95,12 +95,12 @@ class Roster(LegacyRoster[Contact, "Session"]):
         return self.by_legacy_id(u.id)
 
     @staticmethod
-    def jid_username_to_legacy_id(discord_id: str):
+    async def jid_username_to_legacy_id(discord_id: str):
         try:
             return int(discord_id)
         except ValueError:
             raise XMPPError(
-                "not-found", text=f"Not a valid discord user ID: {discord_id}"
+                "bad-request", text=f"Not a valid discord user ID: {discord_id}"
             )
 
 

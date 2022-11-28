@@ -917,7 +917,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())
 
-    def by_jid(self, contact_jid: JID) -> LegacyContactType:
+    async def by_jid(self, contact_jid: JID) -> LegacyContactType:
         """
         Retrieve a contact by their JID
 
@@ -935,7 +935,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
             log.debug("Contact %s not found", contact_jid)
             c = self._contact_cls(
                 self.session,
-                self.jid_username_to_legacy_id(jid_username),
+                await self.jid_username_to_legacy_id(jid_username),
                 jid_username,
             )
             await c.update_caps()
@@ -966,7 +966,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
             ] = c
         return c
 
-    def by_stanza(self, s) -> LegacyContactType:
+    async def by_stanza(self, s) -> LegacyContactType:
         """
         Retrieve a contact by the destination of a stanza
 
@@ -975,7 +975,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         :param s:
         :return:
         """
-        return self.by_jid(s.get_to())
+        return await self.by_jid(s.get_to())
 
     @staticmethod
     def legacy_id_to_jid_username(legacy_id: Any) -> str:
@@ -991,7 +991,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         return str(legacy_id).translate(ESCAPE_TABLE)
 
     @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> LegacyUserIdType:
+    async def jid_username_to_legacy_id(jid_username: str) -> LegacyUserIdType:
         """
         Convert a JID user part to a legacy ID.
 

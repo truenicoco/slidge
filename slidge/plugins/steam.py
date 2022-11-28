@@ -15,6 +15,7 @@ from collections import defaultdict
 from typing import Any
 
 import steam.enums
+from slixmpp.exceptions import XMPPError
 from steam.client import SteamClient
 from steam.client.user import SteamUser
 from steam.core.msg import MsgProto
@@ -71,8 +72,11 @@ class Contact(LegacyContact["Session"]):
 
 class Roster(LegacyRoster[Contact, "Session"]):
     @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> int:
-        return int(jid_username)
+    async def jid_username_to_legacy_id(jid_username: str) -> int:
+        try:
+            return int(jid_username)
+        except ValueError:
+            raise XMPPError("bad-request")
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):

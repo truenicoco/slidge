@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
+from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -183,8 +184,11 @@ class Contact(LegacyContact["Session"]):
 
 class Roster(LegacyRoster["Contact", "Session"]):
     @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> int:
-        return int(jid_username)
+    async def jid_username_to_legacy_id(jid_username: str) -> int:
+        try:
+            return int(jid_username)
+        except ValueError:
+            raise XMPPError("bad-request")
 
 
 log = logging.getLogger(__name__)

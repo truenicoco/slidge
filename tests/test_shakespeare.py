@@ -63,14 +63,12 @@ class Session(BaseSession):
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
     ):
-        text_received_by_juliet.append((t, c))
+        if c.jid_username == "juliet":
+            text_received_by_juliet.append((t, c))
         assert self.user.bare_jid == "romeo@montague.lit"
         assert self.user.jid == JID("romeo@montague.lit")
-        if c.jid_username != "juliet":
-            raise XMPPError(text="Not found", condition="item-not-found")
-        else:
-            c.send_text("I love you")
-            return 0
+        c.send_text("I love you")
+        return 0
 
     async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
         pass
@@ -97,7 +95,7 @@ class Session(BaseSession):
 
 class Roster(LegacyRoster):
     @staticmethod
-    def jid_username_to_legacy_id(jid_username: str) -> int:
+    async def jid_username_to_legacy_id(jid_username: str) -> int:
         log.debug("Requested JID to legacy: %s", jid_username)
         if jid_username == "juliet":
             return 123
@@ -187,7 +185,9 @@ class TestAimShakespeareBase(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
         msg = juliet.send_text(body="What what?")
 
         # msg = self.next_sent()
@@ -267,7 +267,9 @@ class TestAimShakespeareBase(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
         msg = juliet.react("legacy1", "👋")
         assert msg["reactions"]["id"] == "legacy1"
         for r in msg["reactions"]:
@@ -277,7 +279,9 @@ class TestAimShakespeareBase(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
         now = datetime.datetime.now(datetime.timezone.utc)
         juliet.away(last_seen=now)
         sent = self.next_sent()
@@ -467,7 +471,9 @@ class TestPrivilegeOld(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@shakespeare.lit")
         )
-        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
         juliet.carbon("body")
         self.send(
             """
@@ -540,7 +546,9 @@ class TestPrivilege(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@shakespeare.lit")
         )
-        juliet = session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
         juliet.carbon("body")
         self.send(
             """
