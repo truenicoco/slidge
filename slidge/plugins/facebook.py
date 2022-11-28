@@ -1,8 +1,10 @@
 import asyncio
 import io
+import json
 import logging
 import random
 import shelve
+import zlib
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from mimetypes import guess_type
@@ -11,6 +13,9 @@ from typing import Optional, Union
 import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
+from maufbapi.mqtt.subscription import RealtimeTopic
+from maufbapi.proxy import ProxyHandler
+from maufbapi.thrift import ThriftObject
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant, ParticipantNode, Thread
 from maufbapi.types.graphql.responses import FriendshipStatus
@@ -144,36 +149,44 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.sent_messages = defaultdict[int, Messages](Messages)
         self.received_messages = defaultdict[int, Messages](Messages)
 
+    async def login_from_scratch(self):
+        s = AndroidState()
+        x = ProxyHandler(None)
+        self.api = api = AndroidAPI(state=s, proxy_handler=x)
+        s.generate(random.randbytes(30))  # type: ignore
+        await api.mobile_config_sessionless()
+        try:
+            login = await api.login(
+                email=self.user.registration_form["email"],
+                password=self.user.registration_form["password"],
+            )
+        except maufbapi.http.errors.IncorrectPassword:
+            self.send_gateway_message("Incorrect password")
+            raise
+        except maufbapi.http.errors.TwoFactorRequired:
+            code = await self.input(
+                "Reply to this message with your 2 factor authentication code"
+            )
+            login = await api.login_2fa(
+                email=self.user.registration_form["email"], code=code
+            )
+        log.debug("Login output: %s", login)
+        return api.state
+
     async def login(self):
         shelf: shelve.Shelf[AndroidState]
         with shelve.open(str(self.shelf_path)) as shelf:
             try:
                 self.fb_state = s = shelf["state"]
             except KeyError:
-                s = AndroidState()
-                self.api = api = AndroidAPI(state=s)
-                s.generate(random.randbytes(30))  # type: ignore
-                await api.mobile_config_sessionless()
-                try:
-                    login = await api.login(
-                        email=self.user.registration_form["email"],
-                        password=self.user.registration_form["password"],
-                    )
-                except maufbapi.http.errors.IncorrectPassword:
-                    self.send_gateway_message("Incorrect password")
-                    raise
-                except maufbapi.http.errors.TwoFactorRequired:
-                    code = await self.input(
-                        "Reply to this message with your 2 factor authentication code"
-                    )
-                    login = await api.login_2fa(
-                        email=self.user.registration_form["email"], code=code
-                    )
-                log.debug("Login output: %s", login)
-                self.fb_state = shelf["state"] = api.state
+                self.fb_state = shelf["state"] = await self.login_from_scratch()
             else:
-                self.api = api = AndroidAPI(state=s)
-        self.mqtt = AndroidMQTT(api.state)
+                try:
+                    x = ProxyHandler(None)
+                    self.api = AndroidAPI(state=s, proxy_handler=x)
+                except AttributeError:
+                    self.fb_state = shelf["state"] = await self.login_from_scratch()
+        self.mqtt = AndroidMQTT(self.api.state, proxy_handler=self.api.proxy_handler)
         self.me = await self.api.get_self()
         self.me.id = int(self.me.id)  # bug in maufbapi?
         await self.add_friends()
@@ -501,6 +514,61 @@ class Messages:
 
 def is_group_thread(t: mqtt_t.ThreadKey):
     return t.other_user_id is None and t.thread_fbid is not None
+
+
+# Monkeypatch
+# TODO: remove me when https://github.com/mautrix/facebook/pull/270 is merged
+# and a new maufbapi is released
+
+
+REQUEST_TIMEOUT = 60
+
+
+def publish(
+    self,
+    topic,
+    payload,
+    prefix: bytes = b"",
+    compress: bool = True,
+) -> asyncio.Future:
+    if isinstance(payload, dict):
+        payload = json.dumps(payload)
+    if isinstance(payload, str):
+        payload = payload.encode("utf-8")
+    if isinstance(payload, ThriftObject):
+        payload = payload.to_thrift()
+    if compress:
+        payload = zlib.compress(prefix + payload, level=9)
+    elif prefix:
+        payload = prefix + payload
+    info = self._client.publish(
+        topic.encoded if isinstance(topic, RealtimeTopic) else topic, payload, qos=1
+    )
+    fut = self._loop.create_future()
+    timeout_handle = self._loop.call_later(REQUEST_TIMEOUT, self._cancel_later, fut)
+    fut.add_done_callback(lambda _: timeout_handle.cancel())
+    self._publish_waiters[info.mid] = fut
+    return fut
+
+
+async def request(
+    self,
+    topic: RealtimeTopic,
+    response: RealtimeTopic,
+    payload,
+    prefix: bytes = b"",
+):
+    async with self._response_waiter_locks[response]:
+        fut = self._loop.create_future()
+        self._response_waiters[response] = fut
+        await self.publish(topic, payload, prefix)
+        timeout_handle = self._loop.call_later(REQUEST_TIMEOUT, self._cancel_later, fut)
+        fut.add_done_callback(lambda _: timeout_handle.cancel())
+        return await fut
+
+
+AndroidMQTT.publish = publish
+AndroidMQTT.request = request
 
 
 log = logging.getLogger(__name__)
