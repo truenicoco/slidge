@@ -35,12 +35,7 @@ def admin_only(func):
 class AdhocProvider:
     def __init__(self, xmpp: "BaseGateway"):
         self.xmpp = xmpp
-        self.forms = xmpp.plugin["xep_0004"]
-        xmpp.add_event_handler("session_start", self.session_start)
 
-    async def session_start(self, _event):
-        # weird slix behaviour: if we add commands *before* session_start,
-        # the items are reset (on session_bind)
         adhoc = self.xmpp.plugin["xep_0050"]
         adhoc.add_command(
             node="info", name="List registered users", handler=self._handle_info
