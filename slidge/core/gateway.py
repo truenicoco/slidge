@@ -333,6 +333,7 @@ class BaseGateway(
             status = await session.login()
         except Exception as e:
             log.warning(f"Login problem for %s: %r", session.user, e)
+            log.exception(e)
             session.send_gateway_status(f"Could not login: {e}", show="busy")
             session.send_gateway_message(
                 f"You are not connected to this gateway! "
