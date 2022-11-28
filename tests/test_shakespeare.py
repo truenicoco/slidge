@@ -296,7 +296,7 @@ class TestNameSquatting(SlidgeTest):
         self.original_login = Session.login
         Session.login = login
         Gateway.REGISTRATION_MULTISTEP = True
-        config.PARTIAL_REGISTRATION_TIMEOUT = 1
+        config.PARTIAL_REGISTRATION_TIMEOUT = 0.01
 
     def tearDown(self):
         Gateway.REGISTRATION_MULTISTEP = False
@@ -305,7 +305,7 @@ class TestNameSquatting(SlidgeTest):
 
     def test_name_squatting(self):
         async def sleep():
-            await asyncio.sleep(3)
+            await asyncio.sleep(config.PARTIAL_REGISTRATION_TIMEOUT * 2)
 
         self.recv(
             """
