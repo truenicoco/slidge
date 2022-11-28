@@ -53,7 +53,7 @@ class AdhocProvider:
         )
 
     @admin_only
-    def _handle_info(self, iq: Iq, session: dict[str, Any]):
+    def _handle_info(self, _iq: Iq, session: dict[str, Any]):
         """
         List registered users for admins
         """
@@ -70,7 +70,7 @@ class AdhocProvider:
         return session
 
     @admin_only
-    def _handle_user_delete(self, iq: Iq, adhoc_session: dict[str, Any]):
+    def _handle_user_delete(self, _iq: Iq, adhoc_session: dict[str, Any]):
         form = self.xmpp["xep_0004"].make_form(
             title="Delete user",
             instructions="Enter the bare JID(s) of the user(s) you want to delete",
