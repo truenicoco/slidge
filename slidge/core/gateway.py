@@ -212,6 +212,43 @@ class BaseGateway(
 
         self.use_origin_id = False
 
+        self.remove_handler("Ping")
+        self.register_handler(
+            CoroutineCallback(
+                "Ping",
+                StanzaPath("iq@type=get/ping"),
+                self.__handle_ping,  # type:ignore
+            )
+        )
+
+    async def __handle_ping(self, iq: Iq):
+        ito = iq.get_to()
+
+        if ito == self.boundjid.bare:
+            iq.reply().send()
+
+        ifrom = iq.get_from()
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError("registration-required")
+
+        session = self.get_session_from_user(user)
+
+        try:
+            muc = await session.bookmarks.by_jid(ito)
+        except XMPPError:
+            pass
+        else:
+            muc.handle_ping(iq)
+            return
+
+        try:
+            await session.contacts.by_jid(ito)
+        except XMPPError:
+            pass
+        else:
+            iq.reply().send()
+
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
         Called when a task created by loop.create_task() raises an Exception

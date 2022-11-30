@@ -464,6 +464,50 @@ class TestMuc(SlidgeTest):
             """,
         )
 
+    def test_self_ping_disconnected(self):
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' id='s2c1' type='get'
+                to='room-private@aim.shakespeare.lit/SlidgeUser'>
+                <ping xmlns='urn:xmpp:ping'/>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq from='room-private@aim.shakespeare.lit/SlidgeUser' id='s2c1' type='error'
+                  to='romeo@montague.lit/gajim' >
+              <error type="cancel" by="room-private@aim.shakespeare.lit">
+                <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
+            </iq>
+            """,
+            use_values=False,
+        )
+
+    def test_self_ping_connected(self):
+        muc = self.get_private_muc()
+        muc.user_resources.add("gajim")
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' id='s2c1' type='get'
+                to='room-private@aim.shakespeare.lit/SlidgeUser'>
+                <ping xmlns='urn:xmpp:ping'/>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq xmlns="jabber:component:accept"
+                from="room-private@aim.shakespeare.lit/SlidgeUser"
+                id="s2c1"
+                type="result"
+                to="romeo@montague.lit/gajim">
+            </iq>
+            """,
+            use_values=False,
+        )
+
     # def test_origin_id(self):
     #     """
     #     this test is broken because of slixtest magic, but the behavior is actually good
