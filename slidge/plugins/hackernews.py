@@ -51,7 +51,7 @@ class Gateway(BaseGateway):
                     raise ValueError("Cookie does not seem valid")
 
 
-class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
+class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
     def __init__(self, user):
         super().__init__(user)
         self.http_session = aiohttp.ClientSession(

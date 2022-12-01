@@ -128,7 +128,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
         return contact
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Gateway, str, Roster, Contact]):
     fb_state: AndroidState
     mqtt: AndroidMQTT
     api: AndroidAPI

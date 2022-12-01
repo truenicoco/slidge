@@ -83,7 +83,7 @@ class ListenThread(Thread):
         self.stop_event.set()
 
 
-class Session(BaseSession[Contact, LegacyRoster, Gateway]):
+class Session(BaseSession[Gateway, str, LegacyRoster, Contact]):
     skype_token_path: Path
     sk: skpy.Skype
 

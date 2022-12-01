@@ -50,7 +50,7 @@ class Gateway(BaseGateway):
             raise ValueError("Y a que N!")
 
 
-class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
+class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
     def __init__(self, user):
         super(Session, self).__init__(user)
         self.counter = 0

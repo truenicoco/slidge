@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .client import Discord
 
 
-class Session(BaseSession["Contact", "Roster", "Gateway"]):
+class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
     def __init__(self, user):
         super().__init__(user)
         from .client import Discord
@@ -23,11 +23,8 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         self.send_lock = asyncio.Lock()
 
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(i: str) -> Union[int, str]:
-        try:
-            return int(i)
-        except ValueError:
-            return i
+    def xmpp_msg_id_to_legacy_msg_id(i: str):
+        return int(i)
 
     async def login(self):
         await self.discord.login(self.user.registration_form["token"])

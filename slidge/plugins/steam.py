@@ -93,7 +93,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
         task.add_done_callback(lambda f: method(f.result()))
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Gateway, int, Roster, Contact]):
     def __init__(self, user):
         super().__init__(user)
         store_dir = global_config.HOME_DIR / self.user.bare_jid
@@ -106,8 +106,8 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self.steam.username = self.user.registration_form["username"]
 
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(legacy_msg_id: Any) -> int:
-        return int(legacy_msg_id)
+    def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
+        return int(xmpp_msg_id)
 
     async def login(self):
         username = self.user.registration_form["username"]

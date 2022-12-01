@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Type, TypeVar, cast
 
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
@@ -19,7 +19,7 @@ else:
 
 def ignore_message_to_component_and_sent_carbons(func):
     @functools.wraps(func)
-    async def wrapped(self: T, msg: Message):
+    async def wrapped(self: SessionType, msg: Message):
         if msg.get_to() != self.xmpp.boundjid.bare:
             if (i := msg.get_id()) in self.ignore_messages:
                 self.log.debug("Ignored message: %s", i)
@@ -33,11 +33,11 @@ def ignore_message_to_component_and_sent_carbons(func):
     return wrapped
 
 
-T = TypeVar("T", bound="BaseSession")
+SessionType = TypeVar("SessionType", bound="BaseSession")
 
 
 class BaseSession(
-    Generic[LegacyContactType, LegacyRosterType, GatewayType],
+    Generic[GatewayType, LegacyMessageType, LegacyRosterType, LegacyContactType],
     metaclass=ABCSubclassableOnceAtMost,
 ):
     """
@@ -110,7 +110,7 @@ class BaseSession(
         :param i: The XMPP stanza ID
         :return: An ID that can be used to identify a message on the legacy network
         """
-        return i
+        return cast(LegacyMessageType, i)
 
     @classmethod
     def _from_user_or_none(cls, user):
@@ -129,7 +129,7 @@ class BaseSession(
         return cls._from_user_or_none(user)
 
     @classmethod
-    def from_stanza(cls: Type[T], s) -> T:
+    def from_stanza(cls: Type[SessionType], s) -> SessionType:
         """
         Get a user's :class:`.LegacySession` using the "from" field of a stanza
 
@@ -141,7 +141,7 @@ class BaseSession(
         return cls._from_user_or_none(user_store.get_by_stanza(s))
 
     @classmethod
-    def from_jid(cls: Type[T], jid: JID) -> T:
+    def from_jid(cls: Type[SessionType], jid: JID) -> SessionType:
         """
         Get a user's :class:`.LegacySession` using its jid
 
@@ -302,7 +302,7 @@ class BaseSession(
 
     @ignore_message_to_component_and_sent_carbons
     async def react_from_msg(self, m: Message):
-        react_to = m["reactions"]["id"]
+        react_to: str = m["reactions"]["id"]
         if (legacy_id := self.sent.inverse.get(react_to)) is None:
             log.debug("Cannot find the XMPP ID of this msg: %s", react_to)
             try:
@@ -323,7 +323,7 @@ class BaseSession(
 
     @ignore_message_to_component_and_sent_carbons
     async def retract_from_msg(self, m: Message):
-        xmpp_id = m["apply_to"]["id"]
+        xmpp_id: str = m["apply_to"]["id"]
         if (legacy_id := self.sent.inverse.get(xmpp_id)) is None:
             log.debug(
                 "Cannot find the XMPP ID of this msg: %s, cannot retract", xmpp_id
@@ -546,8 +546,6 @@ class BaseSession(
         """
         raise NotImplementedError
 
-
-SessionType = TypeVar("SessionType", bound=BaseSession)
 
 _sessions: dict[GatewayUser, BaseSession] = {}
 log = logging.getLogger(__name__)

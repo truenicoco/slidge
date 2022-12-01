@@ -18,7 +18,7 @@ from .contact import Contact, Roster
 from .gateway import Gateway
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Gateway, int, Roster, Contact]):
     def __init__(self, user):
         super().__init__(user)
         registration_form = {
@@ -48,10 +48,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
-        try:
-            return int(i)
-        except ValueError:
-            raise NotImplementedError("This is not a valid telegram msg ID")
+        return int(i)
 
     async def login(self):
         await self.tg.start()

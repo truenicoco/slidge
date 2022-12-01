@@ -147,7 +147,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
             return await self.by_legacy_id(username)
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Gateway, str, Roster, Contact]):
     def __init__(self, user):
         super().__init__(user)
         self.messages_waiting_for_echo = set[str]()

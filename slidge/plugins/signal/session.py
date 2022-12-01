@@ -39,7 +39,7 @@ def handle_unregistered_recipient(func):
     return wrapped
 
 
-class Session(BaseSession["Contact", "Roster", "Gateway"]):
+class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
     """
     Represents a signal account
     """
