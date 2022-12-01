@@ -142,8 +142,8 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
         await m.delete()
         await self.delete_futures[legacy_msg_id]
 
-    def update_reactions(self, message: di.Message):
-        self.contacts.by_discord_user(message.channel.recipient).carbon_react(
+    async def update_reactions(self, message: di.Message):
+        (await self.contacts.by_discord_user(message.channel.recipient)).carbon_react(
             message.id, self.get_my_legacy_reactions(message)
         )
 

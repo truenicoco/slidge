@@ -8,6 +8,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from ...util import BiDict
 from .session import Session
 
 
@@ -91,17 +92,38 @@ class Contact(LegacyContact[Session, "str"]):
 
 
 class Roster(LegacyRoster["Session", Contact, int]):
-    def by_discord_user(self, u: di.User):
-        return self.by_legacy_id(u.id)
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.usernames_to_ids = BiDict[str, int]()
 
-    @staticmethod
-    async def jid_username_to_legacy_id(discord_id: str):
-        try:
-            return int(discord_id)
-        except ValueError:
-            raise XMPPError(
-                "bad-request", text=f"Not a valid discord user ID: {discord_id}"
-            )
+    async def by_discord_user(self, u: di.User):
+        return await self.by_legacy_id(u.id)
+
+    async def jid_username_to_legacy_id(self, username: str):
+        user_id = self.usernames_to_ids.get(username)
+        if user_id is None:
+            for u in self.session.discord.users:
+                if str(u) == username:
+                    self.usernames_to_ids[username.lower()] = u.id
+                    return u.id
+            else:
+                raise XMPPError(
+                    "item-not-found",
+                    text=f"Could not find this discord user: {username}",
+                )
+        else:
+            return user_id
+
+    async def legacy_id_to_jid_username(self, discord_user_id: int) -> str:
+        username = self.usernames_to_ids.inverse.get(discord_user_id)
+        if username is None:
+            user = self.session.discord.get_user(discord_user_id)
+            if user is None:
+                raise XMPPError("item-not-found")
+            self.usernames_to_ids[str(user).lower()] = user.id
+            return str(user)
+        else:
+            return username
 
 
 log = logging.getLogger(__name__)

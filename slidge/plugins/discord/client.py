@@ -27,13 +27,13 @@ class Discord(di.Client):
             async with self.session.send_lock:
                 fut = self.session.send_futures.get(message.id)
             if fut is None:
-                self.session.contacts.by_discord_user(channel.recipient).carbon(
+                (await self.session.contacts.by_discord_user(channel.recipient)).carbon(
                     message.content
                 )
             else:
                 fut.set_result(True)
         else:
-            contact = self.session.contacts.by_discord_user(author)
+            contact = await self.session.contacts.by_discord_user(author)
             reply_to = message.reference.message_id if message.reference else None
 
             text = message.content
@@ -62,7 +62,7 @@ class Discord(di.Client):
 
     async def on_typing(self, channel, user, _when):
         if user != self.user and isinstance(channel, di.DMChannel):
-            self.session.contacts.by_discord_user(user).composing()
+            (await self.session.contacts.by_discord_user(user)).composing()
 
     async def on_message_edit(self, before: di.Message, after: di.Message):
         if not isinstance(after.channel, di.DMChannel):
@@ -72,13 +72,13 @@ class Discord(di.Client):
         if (author := after.author) == self.user:
             fut = self.session.edit_futures.get(after.id)
             if fut is None:
-                self.session.contacts.by_discord_user(
-                    after.channel.recipient
+                (
+                    await self.session.contacts.by_discord_user(after.channel.recipient)
                 ).carbon_correct(after.id, after.content)
             else:
                 fut.set_result(True)
         else:
-            self.session.contacts.by_discord_user(author).correct(
+            (await self.session.contacts.by_discord_user(author)).correct(
                 after.id, after.content
             )
 
@@ -88,13 +88,13 @@ class Discord(di.Client):
         if (author := m.author) == self.user:
             fut = self.session.delete_futures.get(m.id)
             if fut is None:
-                self.session.contacts.by_discord_user(
-                    m.channel.recipient
+                (
+                    await self.session.contacts.by_discord_user(m.channel.recipient)
                 ).carbon_retract(m.id)
             else:
                 fut.set_result(True)
         else:
-            self.session.contacts.by_discord_user(author).retract(m.id)
+            (await self.session.contacts.by_discord_user(author)).retract(m.id)
 
     async def on_reaction_add(
         self, reaction: di.Reaction, user: Union[di.User, di.ClientUser]
@@ -114,6 +114,8 @@ class Discord(di.Client):
             return
 
         if user == self.user:
-            self.session.update_reactions(message)
+            await self.session.update_reactions(message)
         else:
-            await self.session.contacts.by_discord_user(user).update_reactions(message)
+            await (await self.session.contacts.by_discord_user(user)).update_reactions(
+                message
+            )
