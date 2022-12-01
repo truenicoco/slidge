@@ -43,8 +43,8 @@ class Gateway(BaseGateway):
     SEARCH_FIELDS = [FormField(var="query", label="Term(s)")]
 
 
-class Contact(LegacyContact["Session"]):
-    legacy_id: str  # facebook username, as in facebook.com/name.surname123
+class Contact(LegacyContact["Session", str]):
+    # legacy_id = facebook username, as in facebook.com/name.surname123
 
     def __init__(self, *a, **k):
         super(Contact, self).__init__(*a, **k)
@@ -88,7 +88,7 @@ class Contact(LegacyContact["Session"]):
                     self.avatar = await response.read()
 
 
-class Roster(LegacyRoster[Contact, "Session"]):
+class Roster(LegacyRoster["Session", Contact, str]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.by_fb_id_dict: dict[int, Contact] = {}

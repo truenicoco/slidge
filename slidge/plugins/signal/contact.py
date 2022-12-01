@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Contact(LegacyContact["Session"]):
+class Contact(LegacyContact["Session", str]):
     CORRECTION = False
 
     def __init__(self, *a, **k):
@@ -115,7 +115,7 @@ def get_filename(attachment: sigapi.JsonAttachmentv1):
         return filename
 
 
-class Roster(LegacyRoster[Contact, "Session"]):
+class Roster(LegacyRoster["Session", Contact, str]):
     async def by_json_address(self, address: sigapi.JsonAddressv1):
         c = await self.by_legacy_id(address.uuid)
         if not c.added_to_roster or not c.profile_fetched:

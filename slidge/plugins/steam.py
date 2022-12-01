@@ -46,7 +46,7 @@ class Gateway(BaseGateway["Session"]):
     COMPONENT_AVATAR = "https://logos-download.com/wp-content/uploads/2016/05/Steam_icon_logo_logotype.png"
 
 
-class Contact(LegacyContact["Session"]):
+class Contact(LegacyContact["Session", int]):
     MARKS = False
     CORRECTION = False
     RETRACTION = False
@@ -71,7 +71,7 @@ class Contact(LegacyContact["Session"]):
         self.react(timestamp, self.contact_reactions[timestamp])
 
 
-class Roster(LegacyRoster[Contact, "Session"]):
+class Roster(LegacyRoster["Session", Contact, int]):
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return int(jid_username)

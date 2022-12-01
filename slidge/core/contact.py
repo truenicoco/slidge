@@ -22,12 +22,7 @@ from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 from slixmpp.plugins.xep_0363 import FileUploadError
 
 from ..util import SubclassableOnce
-from ..util.types import (
-    AvatarType,
-    LegacyContactIdType,
-    LegacyMessageType,
-    LegacyUserIdType,
-)
+from ..util.types import AvatarType, LegacyMessageType, LegacyUserIdType
 from ..util.xep_0030.stanza import DiscoInfo
 from ..util.xep_0292.stanza import VCard4
 from . import config
@@ -38,7 +33,7 @@ else:
     SessionType = TypeVar("SessionType")
 
 
-class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
+class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=SubclassableOnce):
     """
     This class centralizes actions in relation to a specific legacy contact.
 
@@ -94,7 +89,7 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
     def __init__(
         self,
         session: "SessionType",
-        legacy_id: LegacyContactIdType,
+        legacy_id: LegacyUserIdType,
         jid_username: str,
     ):
         """
@@ -888,7 +883,10 @@ class LegacyContact(Generic[SessionType], metaclass=SubclassableOnce):
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
 
 
-class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=SubclassableOnce):
+class LegacyRoster(
+    Generic[SessionType, LegacyContactType, LegacyUserIdType],
+    metaclass=SubclassableOnce,
+):
     """
     Virtual roster of a gateway user, that allows to represent all
     of their contacts as singleton instances (if used properly and not too bugged).
@@ -912,7 +910,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
 
         self.session = session
         self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
-        self._contacts_by_legacy_id: dict[LegacyContactIdType, LegacyContactType] = {}
+        self._contacts_by_legacy_id: dict[LegacyUserIdType, LegacyContactType] = {}
 
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())

@@ -60,7 +60,7 @@ class Gateway(BaseGateway):
             raise ValueError("Could not authenticate")
 
 
-class Contact(LegacyContact["Session"]):
+class Contact(LegacyContact["Session", str]):
     legacy_id: str
 
     MARKS = False
@@ -119,7 +119,7 @@ class Contact(LegacyContact["Session"]):
         )
 
 
-class Roster(LegacyRoster[Contact, "Session"]):
+class Roster(LegacyRoster["Session", Contact, str]):
     user_id_to_username: dict[str, str]
     direct_channel_id_to_username: dict[str, str]
 

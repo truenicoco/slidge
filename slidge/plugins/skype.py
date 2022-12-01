@@ -44,7 +44,7 @@ class Gateway(BaseGateway["Session"]):
                 thread.stop()
 
 
-class Contact(LegacyContact):
+class Contact(LegacyContact["Session", str]):
     def update_presence(self, status: skpy.SkypeUtils.Status):
         if status == skpy.SkypeUtils.Status.Offline:
             self.offline()

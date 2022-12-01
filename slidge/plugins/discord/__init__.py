@@ -47,7 +47,7 @@ class Gateway(BaseGateway[Session]):
             raise ValueError(str(e))
 
 
-class Contact(LegacyContact[Session]):
+class Contact(LegacyContact[Session, "str"]):
     MARKS = False
 
     @functools.cached_property
@@ -90,7 +90,7 @@ class Contact(LegacyContact[Session]):
         # relationship = u.relationship
 
 
-class Roster(LegacyRoster[Contact, "Session"]):
+class Roster(LegacyRoster["Session", Contact, int]):
     def by_discord_user(self, u: di.User):
         return self.by_legacy_id(u.id)
 

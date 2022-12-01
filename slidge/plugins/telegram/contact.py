@@ -19,7 +19,7 @@ async def noop():
     return
 
 
-class Contact(LegacyContact["Session"]):
+class Contact(LegacyContact["Session", int]):
     legacy_id: int
     # Telegram official clients have no XMPP presence equivalent, but a 'last seen' indication.
     CLIENT_TYPE = "phone"
@@ -182,9 +182,8 @@ class Contact(LegacyContact["Session"]):
                     self.avatar = f.read()
 
 
-class Roster(LegacyRoster["Contact", "Session"]):
-    @staticmethod
-    async def jid_username_to_legacy_id(jid_username: str) -> int:
+class Roster(LegacyRoster["Session", "Contact", int]):
+    async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return int(jid_username)
         except ValueError:
