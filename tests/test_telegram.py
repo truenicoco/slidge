@@ -100,7 +100,7 @@ async def test_ignore_read_marks_confirmation():
     class Contacts:
         c = Contact()
 
-        def by_legacy_id(self, _id):
+        async def by_legacy_id(self, _id):
             return self.c
 
     tg.session = MockSession()
@@ -108,10 +108,10 @@ async def test_ignore_read_marks_confirmation():
 
     await slidge.plugins.telegram.client.TelegramClient.handle_ChatReadInbox(tg, action)
     assert len(tg.session.sent_read_marks) == 0
-    assert tg.session.contacts.by_legacy_id(12345).carbons[0] == 123456789
+    assert (await tg.session.contacts.by_legacy_id(12345)).carbons[0] == 123456789
 
-    tg.session.contacts.by_legacy_id(12345).carbons = []
+    (await tg.session.contacts.by_legacy_id(12345)).carbons = []
     tg.session.sent_read_marks.add(123456789)
     await slidge.plugins.telegram.client.TelegramClient.handle_ChatReadInbox(tg, action)
     assert len(tg.session.sent_read_marks) == 0
-    assert len(tg.session.contacts.by_legacy_id(12345).carbons) == 0
+    assert len((await tg.session.contacts.by_legacy_id(12345)).carbons) == 0

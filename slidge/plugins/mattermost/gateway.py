@@ -136,7 +136,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
             if isinstance(user.username, Unset):
                 raise RuntimeError
             legacy_id = self.user_id_to_username[user_id] = user.username
-        return self.by_legacy_id(legacy_id)
+        return await self.by_legacy_id(legacy_id)
 
     async def by_direct_channel_id(self, channel_id: str):
         if (username := self.direct_channel_id_to_username.get(channel_id)) is None:
@@ -144,7 +144,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
                 if (await c.direct_channel_id()) == channel_id:
                     return c
         else:
-            return self.by_legacy_id(username)
+            return await self.by_legacy_id(username)
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
@@ -177,7 +177,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         for user in contact_mm_users:
             status: Status = statuses[user.id]
-            contact = self.contacts.by_legacy_id(user.username)
+            contact = await self.contacts.by_legacy_id(user.username)
             self.contacts.user_id_to_username[user.id] = user.username
             if user.nickname:
                 contact.name = user.nickname

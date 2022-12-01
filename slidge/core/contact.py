@@ -944,7 +944,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
             ] = c
         return c
 
-    def by_legacy_id(self, legacy_id: Any) -> LegacyContactType:
+    async def by_legacy_id(self, legacy_id: Any) -> LegacyContactType:
         """
         Retrieve a contact by their legacy_id
 
@@ -959,7 +959,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         if c is None:
             log.debug("Contact %s not found in roster", legacy_id)
             c = self._contact_cls(
-                self.session, legacy_id, self.legacy_id_to_jid_username(legacy_id)
+                self.session, legacy_id, await self.legacy_id_to_jid_username(legacy_id)
             )
             self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[
                 legacy_id
@@ -977,8 +977,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         """
         return await self.by_jid(s.get_to())
 
-    @staticmethod
-    def legacy_id_to_jid_username(legacy_id: Any) -> str:
+    async def legacy_id_to_jid_username(self, legacy_id: Any) -> str:
         """
         Convert a legacy ID to a valid 'user' part of a JID
 
@@ -990,8 +989,7 @@ class LegacyRoster(Generic[LegacyContactType, SessionType], metaclass=Subclassab
         """
         return str(legacy_id).translate(ESCAPE_TABLE)
 
-    @staticmethod
-    async def jid_username_to_legacy_id(jid_username: str) -> LegacyUserIdType:
+    async def jid_username_to_legacy_id(self, jid_username: str) -> LegacyUserIdType:
         """
         Convert a JID user part to a legacy ID.
 

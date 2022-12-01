@@ -193,7 +193,7 @@ class Gateway(BaseGateway):
             return
         else:
             uuid = args[0]
-        await session.contacts.by_legacy_id(uuid).get_identities()
+        await (await session.contacts.by_legacy_id(uuid)).get_identities()
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]

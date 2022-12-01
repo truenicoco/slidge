@@ -116,8 +116,8 @@ def get_filename(attachment: sigapi.JsonAttachmentv1):
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
-    def by_json_address(self, address: sigapi.JsonAddressv1):
-        c = self.by_legacy_id(address.uuid)
+    async def by_json_address(self, address: sigapi.JsonAddressv1):
+        c = await self.by_legacy_id(address.uuid)
         if not c.added_to_roster or not c.profile_fetched:
             self.session.xmpp.loop.create_task(c.update_and_add())
         return c

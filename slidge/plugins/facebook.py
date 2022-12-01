@@ -122,7 +122,7 @@ class Roster(LegacyRoster[Contact, "Session"]):
                 "Couldn't find friend in thread participants", t.all_participants
             )
 
-        contact = self.by_legacy_id(participant.messaging_actor.username)
+        contact = await self.by_legacy_id(participant.messaging_actor.username)
         await contact.populate_from_participant(participant)
         self.by_fb_id_dict[int(participant.id)] = contact
         return contact

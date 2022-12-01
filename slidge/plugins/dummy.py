@@ -55,23 +55,27 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         super(Session, self).__init__(user)
         self.counter = 0
         self.xmpp.loop.create_task(self.backfill())
-        self.contacts.by_legacy_id("bibi").set_vcard(
-            given="FirstBi",
-            surname="LastBi",
-            phone="+555",
-            full_name="Bi bi",
-            note="A fake friend, always there for you",
-            url="https://example.org",
-            email="bibi@prout.com",
-            country="Westeros",
-            locality="The place with the thing",
+        self.xmpp.loop.create_task(
+            self.contacts.by_legacy_id("bibi")
+        ).add_done_callback(
+            lambda c: c.result().set_vcard(
+                given="FirstBi",
+                surname="LastBi",
+                phone="+555",
+                full_name="Bi bi",
+                note="A fake friend, always there for you",
+                url="https://example.org",
+                email="bibi@prout.com",
+                country="Westeros",
+                locality="The place with the thing",
+            )
         )
 
     async def backfill(self):
         self.log.debug("CARBON")
         i = uuid.uuid1()
 
-        self.contacts.by_legacy_id("bibi").carbon(
+        (await self.contacts.by_legacy_id("bibi")).carbon(
             f"Sent by the component on behalf of the user, and this should reach MAM. Msg ID: {i}",
             legacy_id=i,
         )
@@ -88,7 +92,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
         await asyncio.sleep(1)
         self.send_gateway_status("Connected")
         for b, a in zip(BUDDIES, AVATARS):
-            c = self.contacts.by_legacy_id(b.lower())
+            c = await self.contacts.by_legacy_id(b.lower())
             c.name = b.title()
             c.avatar = a
             await c.add_to_roster()

@@ -41,7 +41,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if not u.is_friend():
                 self.log.debug(f"%s is not a friend", u)
                 continue
-            c = self.contacts.by_legacy_id(u.id)
+            c = await self.contacts.by_legacy_id(u.id)
             await c.update_info()
             await c.add_to_roster()
             # TODO: contribute to discord.py-self so that the presence information

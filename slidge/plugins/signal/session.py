@@ -87,7 +87,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         except sigexc.UnregisteredUserError:
             return
 
-        contact = self.contacts.by_json_address(address)
+        contact = await self.contacts.by_json_address(address)
         # the name will be updated once c.update_and_add(), triggered by by_json_address()
         # completes, but it's nicer to have a phone number instead of a UUID
         # in the meantime.
@@ -204,7 +204,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
         """
         profiles = await (await self.signal).list_contacts(account=self.phone)
         for profile in profiles.profiles:
-            contact = self.contacts.by_json_address(profile.address)
+            contact = await self.contacts.by_json_address(profile.address)
             await contact.update_info()
             await contact.add_to_roster()
             contact.online()
@@ -228,7 +228,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if sent_msg.group or sent_msg.groupV2:
                 return
 
-            contact = self.contacts.by_json_address(sent.destination)
+            contact = await self.contacts.by_json_address(sent.destination)
 
             await contact.carbon_send_attachments(sent_msg.attachments)
 
@@ -253,7 +253,7 @@ class Session(BaseSession["Contact", "Roster", "Gateway"]):
             if (delete := sent_msg.remoteDelete) is not None:
                 contact.carbon_retract(delete.target_sent_timestamp)
 
-        contact = self.contacts.by_json_address(msg.source)
+        contact = await self.contacts.by_json_address(msg.source)
 
         if (data := msg.data_message) is not None:
             if data.group or data.groupV2:

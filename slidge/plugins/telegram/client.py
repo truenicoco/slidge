@@ -57,7 +57,7 @@ class TelegramClient(aiotdlib.Client):
             if msg.sending_state is not None or msg.id in session.sent:
                 return
             content = msg.content
-            contact = session.contacts.by_legacy_id(msg.chat_id)
+            contact = await session.contacts.by_legacy_id(msg.chat_id)
             if isinstance(content, tgapi.MessageText):
                 contact.carbon(
                     content.text.text, msg.id, datetime.fromtimestamp(msg.date)
@@ -83,12 +83,12 @@ class TelegramClient(aiotdlib.Client):
             self.log.debug("Ignoring non-user sender")  # Does this happen?
             return
 
-        await session.contacts.by_legacy_id(sender.user_id).send_tg_message(msg)
+        await (await session.contacts.by_legacy_id(sender.user_id)).send_tg_message(msg)
 
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):
         if update.user_id == await self.get_my_id():
             return
-        contact = self.contacts.by_legacy_id(update.user_id)
+        contact = await self.contacts.by_legacy_id(update.user_id)
         if not contact.added_to_roster:
             self.log.debug("Ignoring presence of contact not in the roster")
             return
@@ -97,7 +97,7 @@ class TelegramClient(aiotdlib.Client):
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
         if not await self.is_private_chat(update.chat_id):
             return
-        self.contacts.by_legacy_id(update.chat_id).displayed(
+        (await self.contacts.by_legacy_id(update.chat_id)).displayed(
             update.last_read_outbox_message_id
         )
 
@@ -114,7 +114,7 @@ class TelegramClient(aiotdlib.Client):
             self.log.debug("Ignoring group (?) action: %s", action)
             return
 
-        self.contacts.by_legacy_id(chat_id).composing()
+        (await self.contacts.by_legacy_id(chat_id)).composing()
 
     async def handle_ChatReadInbox(self, action: tgapi.UpdateChatReadInbox):
         if not await self.is_private_chat(action.chat_id):
@@ -129,7 +129,7 @@ class TelegramClient(aiotdlib.Client):
             session.sent_read_marks.remove(msg_id)
         except KeyError:
             # slidge didn't send this read mark, so it comes from the official tg client
-            contact = session.contacts.by_legacy_id(action.chat_id)
+            contact = await session.contacts.by_legacy_id(action.chat_id)
             contact.carbon_read(msg_id)
 
     async def handle_MessageContent(self, action: tgapi.UpdateMessageContent):
@@ -148,7 +148,7 @@ class TelegramClient(aiotdlib.Client):
         try:
             fut = session.user_correction_futures.pop(action.message_id)
         except KeyError:
-            contact = session.contacts.by_legacy_id(action.chat_id)
+            contact = await session.contacts.by_legacy_id(action.chat_id)
             if action.message_id in self.session.sent:
                 contact.carbon_correct(action.message_id, new.text.text)
             else:
@@ -161,7 +161,7 @@ class TelegramClient(aiotdlib.Client):
         u = action.user
         if u.id == await self.get_my_id():
             return
-        contact = self.session.contacts.by_legacy_id(u.id)
+        contact = await self.session.contacts.by_legacy_id(u.id)
         await contact.update_info_from_user(u)
         await contact.add_to_roster()
 
@@ -171,7 +171,7 @@ class TelegramClient(aiotdlib.Client):
         if not await self.is_private_chat(update.chat_id):
             return
 
-        contact = self.session.contacts.by_legacy_id(update.chat_id)
+        contact = await self.session.contacts.by_legacy_id(update.chat_id)
         me = await self.get_my_id()
         if update.interaction_info is None:
             contact.react(update.message_id, [])
@@ -222,7 +222,7 @@ class TelegramClient(aiotdlib.Client):
                 future = self.session.delete_futures.pop(legacy_msg_id)
             except KeyError:
                 # FIXME: where do we filter out group chat messages here ?!
-                contact = self.session.contacts.by_legacy_id(update.chat_id)
+                contact = await self.session.contacts.by_legacy_id(update.chat_id)
                 if legacy_msg_id in self.session.sent:
                     contact.carbon_retract(legacy_msg_id)
                 else:

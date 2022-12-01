@@ -12,7 +12,8 @@ login process seem a little too exotic for my taste.
 """
 import asyncio
 from collections import defaultdict
-from typing import Any
+from functools import partial
+from typing import Any, Callable
 
 import steam.enums
 from slixmpp.exceptions import XMPPError
@@ -71,12 +72,25 @@ class Contact(LegacyContact["Session"]):
 
 
 class Roster(LegacyRoster[Contact, "Session"]):
-    @staticmethod
-    async def jid_username_to_legacy_id(jid_username: str) -> int:
+    async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return int(jid_username)
         except ValueError:
             raise XMPPError("bad-request")
+
+    def by_steam_user(self, steam_user: SteamUser) -> asyncio.Task[Contact]:
+        return self.by_steam_id(steam_user.steam_id)
+
+    def by_steam_id(self, steam_id: SteamID) -> asyncio.Task[Contact]:
+        return self.session.xmpp.loop.create_task(self.by_legacy_id(steam_id.id))
+
+    def by_steam_user_apply(self, steam_user: SteamUser, method: Callable):
+        task = self.by_steam_user(steam_user)
+        task.add_done_callback(lambda f: method(f.result()))
+
+    def by_steam_id_apply(self, steam_id: SteamID, method: Callable):
+        task = self.by_steam_id(steam_id)
+        task.add_done_callback(lambda f: method(f.result()))
 
 
 class Session(BaseSession[Contact, Roster, Gateway]):
@@ -139,7 +153,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
         for f in self.steam.friends:
             self.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
-            c = self.contacts.by_legacy_id(f.steam_id.id)
+            c = await self.contacts.by_legacy_id(f.steam_id.id)
             c.name = f.name
             c.avatar = f.get_avatar_url()
             await c.add_to_roster()
@@ -165,49 +179,63 @@ class Session(BaseSession[Contact, Roster, Gateway]):
 
     def on_friend_message(self, msg):
         self.log.debug("New friend message : %s", msg)
+        steam_user = self.steam.get_user(msg.body.steamid_friend)
         if (type_ := msg.body.chat_entry_type) == steam.enums.EChatEntryType.Typing:
-            user = self.steam.get_user(msg.body.steamid_friend)
-            self.contacts.by_legacy_id(user.steam_id.id).composing()
+            self.contacts.by_steam_user_apply(steam_user, Contact.composing)
         elif type_ == steam.enums.EChatEntryType.ChatMsg:
-            user = self.steam.get_user(msg.body.steamid_friend)
-            self.contacts.by_legacy_id(user.steam_id.id).send_text(
-                msg.body.message, legacy_msg_id=msg.body.rtime32_server_timestamp
+            self.contacts.by_steam_user_apply(
+                steam_user,
+                partial(
+                    Contact.send_text,
+                    body=msg.body.message,
+                    legacy_msg_id=msg.body.rtime32_server_timestamp,
+                ),
             )
 
     def on_friend_reaction(self, msg):
         self.log.debug("New friend reaction : %s", msg)
         body = msg.body
         timestamp = body.server_timestamp
+        emoji = emoji_translate.get(body.reaction) or "❓"
+
         if body.reactor == self.steam.steam_id:
             if body.reaction_type == k_EMessageReactionType_Emoticon:
-                contact = self.contacts.by_legacy_id(
-                    SteamID(msg.body.steamid_friend).id
+                contact_task = self.contacts.by_steam_id(
+                    SteamID(msg.body.steamid_friend)
                 )
-                emoji = emoji_translate.get(body.reaction)
-                if emoji is None:
-                    return
-                if body.is_add:
-                    contact.user_reactions[timestamp].add(emoji)
-                else:
-                    try:
-                        contact.user_reactions[timestamp].remove(emoji)
-                    except KeyError:
-                        self.log.warning("User removed a reaction we didn't know about")
-                contact.carbon_react(timestamp, contact.user_reactions[timestamp])
+
+                def callback(task: asyncio.Task[Contact]):
+                    c = task.result()
+                    if body.is_add:
+                        c.user_reactions[timestamp].add(emoji)
+                    else:
+                        try:
+                            c.user_reactions[timestamp].remove(emoji)
+                        except KeyError:
+                            self.log.warning(
+                                "User removed a reaction we didn't know about"
+                            )
+                    c.carbon_react(timestamp, c.user_reactions[timestamp])
+
+                contact_task.add_done_callback(callback)
         else:
             if body.reaction_type == k_EMessageReactionType_Emoticon:
-                contact = self.contacts.by_legacy_id(SteamID(msg.body.reactor).id)
-                emoji = emoji_translate.get(body.reaction) or "❓"
-                if body.is_add:
-                    contact.contact_reactions[timestamp].add(emoji)
-                else:
-                    try:
-                        contact.contact_reactions[timestamp].remove(emoji)
-                    except KeyError:
-                        self.log.warning(
-                            "Contact removed a reaction we didn't know about"
-                        )
-                contact.update_reactions(timestamp)
+                contact_task = self.contacts.by_steam_id(SteamID(msg.body.reactor))
+
+                def callback(task: asyncio.Task[Contact]):
+                    c = task.result()
+                    if body.is_add:
+                        c.contact_reactions[timestamp].add(emoji)
+                    else:
+                        try:
+                            c.contact_reactions[timestamp].remove(emoji)
+                        except KeyError:
+                            self.log.warning(
+                                "Contact removed a reaction we didn't know about"
+                            )
+                    c.update_reactions(timestamp)
+
+                contact_task.add_done_callback(callback)
 
     def on_persona_state(self, msg: MsgProto):
         persona_state = msg.body
@@ -216,8 +244,9 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             if f.friendid == self.steam.steam_id:
                 self.log.debug("This is me %s", self.steam.steam_id)
                 return
-            self.contacts.by_legacy_id(SteamID(f.friendid).id).update_status(
-                f.persona_state
+            self.contacts.by_steam_id_apply(
+                SteamID(f.friendid),
+                partial(Contact.update_status, persona_state=f.persona_state),
             )
 
     async def logout(self):

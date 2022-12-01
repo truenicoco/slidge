@@ -149,7 +149,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def add_contacts_to_roster(self):
         users = await self.tg.api.get_contacts()
         for id_ in users.user_ids:
-            contact = self.contacts.by_legacy_id(id_)
+            contact = await self.contacts.by_legacy_id(id_)
             await contact.add_to_roster()
             await contact.update_info_from_user()
 
@@ -186,7 +186,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             return
 
         await self.add_contacts_to_roster()
-        contact = self.contacts.by_legacy_id(user_id)
+        contact = await self.contacts.by_legacy_id(user_id)
         await contact.update_info_from_user()
         await contact.add_to_roster()
 

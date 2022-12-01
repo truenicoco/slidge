@@ -106,7 +106,7 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
 
         self.sk.subscribePresence()
         for contact in self.sk.contacts:
-            c = self.contacts.by_legacy_id(contact.id)
+            c = await self.contacts.by_legacy_id(contact.id)
             first = contact.name.first
             last = contact.name.last
             if first is not None and last is not None:
@@ -133,7 +133,7 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
             chat = event.msg.chat
             if isinstance(chat, skpy.SkypeSingleChat):
                 log.debug("this is a single chat with user: %s", chat.userIds[0])
-                contact = self.contacts.by_legacy_id(chat.userIds[0])
+                contact = await self.contacts.by_legacy_id(chat.userIds[0])
                 if msg.userId == self.sk.userId:
                     try:
                         fut = self.sent_by_user_to_ack.pop(msg.clientId)
@@ -156,7 +156,7 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
                         )  # non-blocking download / lambda because fileContent = property
                         await contact.send_file(filename=msg.file.name, input_file=file)
         elif isinstance(event, skpy.SkypeTypingEvent):
-            contact = self.contacts.by_legacy_id(event.userId)
+            contact = await self.contacts.by_legacy_id(event.userId)
             if event.active:
                 contact.composing()
             else:
@@ -168,7 +168,7 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
                 if (user_id := msg.userId) != self.sk.userId:
                     if log.isEnabledFor(logging.DEBUG):
                         log.debug("edit msg event: %s", pprint.pformat(vars(event)))
-                    contact = self.contacts.by_legacy_id(user_id)
+                    contact = await self.contacts.by_legacy_id(user_id)
                     msg_id = msg.clientId
                     log.debug("edited msg id: %s", msg_id)
                     if text := msg.plain:
@@ -185,7 +185,9 @@ class Session(BaseSession[Contact, LegacyRoster, Gateway]):
                 log.debug("chat update: %s", pprint.pformat(vars(event)))
         elif isinstance(event, skpy.SkypePresenceEvent):
             if event.userId != self.sk.userId:
-                self.contacts.by_legacy_id(event.userId).update_presence(event.status)
+                (await self.contacts.by_legacy_id(event.userId)).update_presence(
+                    event.status
+                )
 
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await asyncio.to_thread(event.ack)

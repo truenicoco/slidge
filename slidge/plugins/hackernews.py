@@ -104,7 +104,7 @@ class Session(BaseSession[LegacyContact, LegacyRoster, Gateway]):
             return (await r.json())["submitted"]
 
     async def send_own_and_reply(self, user_submission, reply_id):
-        contact: LegacyContact = self.contacts.by_legacy_id(reply_id)
+        contact: LegacyContact = await self.contacts.by_legacy_id(reply_id)
         date = datetime.fromtimestamp(user_submission["time"])
         contact.carbon(
             parse_comment_text(user_submission["text"]),
