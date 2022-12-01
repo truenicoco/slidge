@@ -470,10 +470,7 @@ class BaseGateway(
             user_store.remove_by_jid(j)
 
     async def _on_user_unregister(self, iq: Iq):
-        # Mypy: "Type[SessionType?]" has no attribute "kill_by_jid"
-        # I don't understand why ^ this question mark...
-        kill = self.session_cls.kill_by_jid  # type: ignore
-        await kill(iq.get_from())
+        await self.session_cls.kill_by_jid(iq.get_from())
 
     async def search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         """
