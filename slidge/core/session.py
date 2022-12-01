@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, Literal, Optional, Type, TypeVar, cast
 
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
@@ -81,7 +81,7 @@ class BaseSession(
         self.never_logged = True
 
     @staticmethod
-    def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: Any) -> str:
+    def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: LegacyMessageType) -> str:
         """
         Convert a legacy msg ID to a valid XMPP msg ID.
         Needed for read marks and message corrections.
@@ -486,7 +486,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def displayed(self, legacy_msg_id: Any, c: LegacyContactType):
+    async def displayed(self, legacy_msg_id: LegacyMessageType, c: LegacyContactType):
         """
         Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
 
@@ -500,7 +500,7 @@ class BaseSession(
         raise NotImplementedError
 
     async def correct(
-        self, text: str, legacy_msg_id: Any, c: LegacyContactType
+        self, text: str, legacy_msg_id: LegacyMessageType, c: LegacyContactType
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
@@ -526,7 +526,9 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def react(self, legacy_msg_id: Any, emojis: list[str], c: LegacyContactType):
+    async def react(
+        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: LegacyContactType
+    ):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
 
@@ -537,7 +539,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def retract(self, legacy_msg_id: Any, c: LegacyContactType):
+    async def retract(self, legacy_msg_id: LegacyMessageType, c: LegacyContactType):
         """
         Triggered when the user retracts (:xep:`0424`) a message.
 

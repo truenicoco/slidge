@@ -27,9 +27,9 @@ class Discord(di.Client):
             async with self.session.send_lock:
                 fut = self.session.send_futures.get(message.id)
             if fut is None:
-                (await self.session.contacts.by_discord_user(channel.recipient)).carbon(
-                    message.content
-                )
+                (
+                    await self.session.contacts.by_discord_user(channel.recipient)
+                ).send_text(message.content, carbon=True)
             else:
                 fut.set_result(True)
         else:
@@ -74,7 +74,7 @@ class Discord(di.Client):
             if fut is None:
                 (
                     await self.session.contacts.by_discord_user(after.channel.recipient)
-                ).carbon_correct(after.id, after.content)
+                ).correct(after.id, after.content, carbon=True)
             else:
                 fut.set_result(True)
         else:
@@ -90,7 +90,7 @@ class Discord(di.Client):
             if fut is None:
                 (
                     await self.session.contacts.by_discord_user(m.channel.recipient)
-                ).carbon_retract(m.id)
+                ).retract(m.id, carbon=True)
             else:
                 fut.set_result(True)
         else:

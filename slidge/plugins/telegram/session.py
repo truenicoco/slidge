@@ -205,13 +205,13 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
         else:
             self.log.debug("Remove reaction response: %s", r)
 
-    async def react(self, legacy_msg_id, emojis, c: "Contact"):
+    async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
         if len(emojis) == 0:
             await self.remove_reactions(legacy_msg_id, c)
             return
 
         if len(emojis) > 1:
-            c.carbon_react(legacy_msg_id)
+            c.react(legacy_msg_id, carbon=True)
             await self.remove_reactions(legacy_msg_id, c)
             self.send_gateway_message(
                 "Warning: unlike XMPP, telegram only accepts one reaction per message. "
@@ -237,7 +237,7 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
                 "Error: unlike XMPP, telegram does not allow arbitrary emojis to be used as reactions: "
                 f"{e.message}. Please pick your reaction in this list: {' '.join(available_emojis)}"
             )
-            c.carbon_react(legacy_msg_id)
+            c.react(legacy_msg_id, carbon=True)
         else:
             self.log.debug("Message reaction response: %s", r)
 

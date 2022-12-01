@@ -215,7 +215,7 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
                             self.log.warning(
                                 "User removed a reaction we didn't know about"
                             )
-                    c.carbon_react(timestamp, c.user_reactions[timestamp])
+                    c.react(timestamp, c.user_reactions[timestamp], carbon=True)
 
                 contact_task.add_done_callback(callback)
         else:
@@ -339,7 +339,7 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
             )
 
         c.user_reactions[legacy_msg_id] = new
-        c.carbon_react(legacy_msg_id, new)
+        c.react(legacy_msg_id, new, carbon=True)
 
     async def retract(self, legacy_msg_id: Any, c: Contact):
         pass

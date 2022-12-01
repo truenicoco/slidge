@@ -106,9 +106,8 @@ class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
     async def send_own_and_reply(self, user_submission, reply_id):
         contact: LegacyContact = await self.contacts.by_legacy_id(reply_id)
         date = datetime.fromtimestamp(user_submission["time"])
-        contact.carbon(
-            parse_comment_text(user_submission["text"]),
-            when=date,
+        contact.send_text(
+            parse_comment_text(user_submission["text"]), when=date, carbon=True
         )
         kid = await self.get_item(reply_id)
         contact.send_text(parse_comment_text(kid["text"]))

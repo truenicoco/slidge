@@ -223,10 +223,11 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
                         else:
                             raise RuntimeError("What?")
 
-                        contact.carbon(
+                        contact.send_text(
                             text,
-                            post_id,
-                            datetime.fromtimestamp(post["update_at"] / 1000),
+                            legacy_msg_id=post_id,
+                            when=datetime.fromtimestamp(post["update_at"] / 1000),
+                            carbon=True,
                         )
                 else:
                     contact = await self.contacts.by_mm_user_id(user_id)
@@ -271,7 +272,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
             if (c := await self.contacts.by_direct_channel_id(channel_id)) is None:
                 self.log.debug("Ignoring unknown channel")
             else:
-                c.carbon_read(last_msg_id)
+                c.displayed(last_msg_id, carbon=True)
         elif event.type == EventType.StatusChange:
             user_id = event.data["user_id"]
             if user_id == await self.mm_client.mm_id:
@@ -291,7 +292,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
                 ) is None:
                     self.log.debug("Ignoring edit in unknown channel")
                 else:
-                    c.carbon_correct(post["id"], post["message"])
+                    c.correct(post["id"], post["message"], carbon=True)
             else:
                 contact = await self.contacts.by_mm_user_id(post["user_id"])
                 if post["channel_id"] == await contact.direct_channel_id():
@@ -304,7 +305,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
                 ) is None:
                     self.log.debug("Ignoring edit in unknown channel")
                 else:
-                    c.carbon_retract(post["id"])
+                    c.retract(post["id"], carbon=True)
             else:
                 contact = await self.contacts.by_mm_user_id(post["user_id"])
                 if post["channel_id"] == await contact.direct_channel_id():
@@ -327,7 +328,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
                 contact = await self.contacts.by_direct_channel_id(
                     event.broadcast["channel_id"]
                 )
-                contact.carbon_react(legacy_msg_id, user_reactions_char)
+                contact.react(legacy_msg_id, user_reactions_char, carbon=True)
             else:
                 await (await self.contacts.by_mm_user_id(who)).update_reactions(
                     reaction["post_id"]

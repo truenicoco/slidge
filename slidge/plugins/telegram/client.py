@@ -59,8 +59,11 @@ class TelegramClient(aiotdlib.Client):
             content = msg.content
             contact = await session.contacts.by_legacy_id(msg.chat_id)
             if isinstance(content, tgapi.MessageText):
-                contact.carbon(
-                    content.text.text, msg.id, datetime.fromtimestamp(msg.date)
+                contact.send_text(
+                    content.text.text,
+                    legacy_msg_id=msg.id,
+                    when=datetime.fromtimestamp(msg.date),
+                    carbon=True,
                 )
             elif best_file := get_best_file(content):
                 file = await self.api.download_file(
@@ -71,11 +74,13 @@ class TelegramClient(aiotdlib.Client):
                     limit=0,
                 )
                 has_caption = (caption := content.caption) and (text := caption.text)
-                await contact.carbon_upload(
-                    filename=file.local.path, legacy_id=None if has_caption else msg.id
+                await contact.send_file(
+                    filename=file.local.path,
+                    legacy_msg_id=None if has_caption else msg.id,
+                    carbon=True,
                 )
                 if has_caption:
-                    contact.carbon(text, legacy_id=msg.id)
+                    contact.send_text(text, legacy_msg_id=msg.id, carbon=True)
             return
 
         sender = msg.sender_id
@@ -130,7 +135,7 @@ class TelegramClient(aiotdlib.Client):
         except KeyError:
             # slidge didn't send this read mark, so it comes from the official tg client
             contact = await session.contacts.by_legacy_id(action.chat_id)
-            contact.carbon_read(msg_id)
+            contact.displayed(msg_id, carbon=True)
 
     async def handle_MessageContent(self, action: tgapi.UpdateMessageContent):
         if not await self.is_private_chat(action.chat_id):
@@ -150,7 +155,7 @@ class TelegramClient(aiotdlib.Client):
         except KeyError:
             contact = await session.contacts.by_legacy_id(action.chat_id)
             if action.message_id in self.session.sent:
-                contact.carbon_correct(action.message_id, new.text.text)
+                contact.correct(action.message_id, new.text.text, carbon=True)
             else:
                 contact.correct(action.message_id, new.text.text)
         else:
@@ -175,7 +180,7 @@ class TelegramClient(aiotdlib.Client):
         me = await self.get_my_id()
         if update.interaction_info is None:
             contact.react(update.message_id, [])
-            contact.carbon_react(update.message_id, [])
+            contact.react(update.message_id, [], carbon=True)
         else:
             user_reactions = list[str]()
             contact_reactions = list[str]()
@@ -208,7 +213,7 @@ class TelegramClient(aiotdlib.Client):
                     )
 
             contact.react(update.message_id, contact_reactions)
-            contact.carbon_react(update.message_id, user_reactions)
+            contact.react(update.message_id, user_reactions, carbon=True)
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
         if not await self.is_private_chat(update.chat_id):
@@ -224,7 +229,7 @@ class TelegramClient(aiotdlib.Client):
                 # FIXME: where do we filter out group chat messages here ?!
                 contact = await self.session.contacts.by_legacy_id(update.chat_id)
                 if legacy_msg_id in self.session.sent:
-                    contact.carbon_retract(legacy_msg_id)
+                    contact.retract(legacy_msg_id, carbon=True)
                 else:
                     contact.retract(legacy_msg_id)
             else:

@@ -315,7 +315,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
                 fut = self.ack_futures.pop(meta.offline_threading_id)
             except KeyError:
                 log.debug("Received carbon %s - %s", meta.id, msg.text)
-                contact.carbon(body=msg.text, legacy_id=meta.id)
+                contact.send_text(body=msg.text, legacy_id=meta.id, carbon=True)
                 log.debug("Sent carbon")
                 self.sent_messages[thread_key.other_user_id].add(fb_msg)
             else:
@@ -393,7 +393,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
             except KeyError:
                 log.debug("Cannot find mid of %s", when)
                 continue
-            c.carbon_read(mid)
+            c.displayed(mid, carbon=True)
 
     async def on_fb_reaction(self, reaction: mqtt_t.Reaction):
         self.log.debug("Reaction: %s", reaction)
@@ -405,7 +405,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
             try:
                 f = self.reaction_futures.pop(mid)
             except KeyError:
-                contact.carbon_react(mid, reaction.reaction or "")
+                contact.react(mid, reaction.reaction or "", carbon=True)
             else:
                 f.set_result(None)
         else:
@@ -421,7 +421,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
             try:
                 f = self.unsend_futures.pop(mid)
             except KeyError:
-                contact.carbon_retract(mid)
+                contact.retract(mid, carbon=True)
             else:
                 f.set_result(None)
         else:
@@ -437,7 +437,7 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
         else:
             emoji = emojis[-1]
             if len(emojis) > 1:  # only reaction per msg on facebook
-                c.carbon_react(legacy_msg_id, emoji)
+                c.react(legacy_msg_id, emoji, carbon=True)
         f = self.reaction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.api.react(legacy_msg_id, emoji)
         await f

@@ -75,9 +75,9 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
         self.log.debug("CARBON")
         i = uuid.uuid1()
 
-        (await self.contacts.by_legacy_id("bibi")).carbon(
+        (await self.contacts.by_legacy_id("bibi")).send_text(
             f"Sent by the component on behalf of the user, and this should reach MAM. Msg ID: {i}",
-            legacy_id=i,
+            legacy_msg_id=i,
         )
 
     async def paused(self, c: LegacyContact):
@@ -172,7 +172,7 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
 
     async def later_carbon_delete(self, c: LegacyContact, trigger_msg_id: int):
         await asyncio.sleep(1)
-        c.carbon_retract(trigger_msg_id)
+        c.retract(trigger_msg_id, carbon=True)
 
     async def active(self, c: LegacyContact):
         log.debug("User is active for contact %s", c)
@@ -199,7 +199,7 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
     async def react(self, legacy_msg_id, emojis, c):
         if "😈" in emojis:
             c.send_text("That's forbidden")
-            c.carbon_react(legacy_msg_id, "")
+            c.react(legacy_msg_id, "", carbon=True)
             raise XMPPError("not-acceptable")
         else:
             c.react(legacy_msg_id, "♥")

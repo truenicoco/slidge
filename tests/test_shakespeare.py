@@ -188,11 +188,9 @@ class TestAimShakespeareBase(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        msg = juliet.send_text(body="What what?")
+        juliet.send_text(body="What what?")
 
-        # msg = self.next_sent()
-        #  ^ this would be better but works when the test is run alone and fails
-        # when all tests are run at once...
+        msg = self.next_sent()
 
         assert msg["from"] == f"juliet@aim.shakespeare.lit/{LegacyContact.RESOURCE}"
         assert msg["to"] == "romeo@montague.lit"
@@ -270,7 +268,8 @@ class TestAimShakespeareBase(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        msg = juliet.react("legacy1", "👋")
+        juliet.react("legacy1", "👋")
+        msg = self.next_sent()
         assert msg["reactions"]["id"] == "legacy1"
         for r in msg["reactions"]:
             assert r["value"] == "👋"
@@ -474,7 +473,7 @@ class TestPrivilegeOld(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.carbon("body")
+        juliet.send_text("body", carbon=True)
         self.send(
             """
             <message to="shakespeare.lit" from="aim.shakespeare.lit">
@@ -512,7 +511,7 @@ class TestPrivilege(SlidgeTest):
             JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
         )
 
-    def test_privilege_old(self):
+    def test_privilege(self):
         assert (
             self.xmpp["xep_0356"].granted_privileges["shakespeare.lit"] == Permissions()
         )
@@ -549,7 +548,7 @@ class TestPrivilege(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.carbon("body")
+        juliet.send_text("body", carbon=True)
         self.send(
             """
             <message to="shakespeare.lit" from="aim.shakespeare.lit">

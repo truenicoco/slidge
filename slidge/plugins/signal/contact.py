@@ -45,13 +45,14 @@ class Contact(LegacyContact["Session", str]):
         for attachment in attachments:
             filename = get_filename(attachment)
             with open(attachment.storedFilename, "rb") as f:
-                await self.carbon_upload(
+                await self.send_file(
                     filename=filename,
                     input_file=f,
                     content_type=attachment.contentType,
+                    carbon=True,
                 )
             if caption := attachment.caption:
-                self.carbon(caption)
+                self.send_text(caption, carbon=True)
 
     async def send_attachments(
         self,

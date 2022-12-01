@@ -94,8 +94,9 @@ async def test_ignore_read_marks_confirmation():
     class Contact:
         carbons = []
 
-        def carbon_read(self, msg_id):
-            self.carbons.append(msg_id)
+        def displayed(self, msg_id, *, carbon=False):
+            if carbon:
+                self.carbons.append(msg_id)
 
     class Contacts:
         c = Contact()

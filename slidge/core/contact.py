@@ -1,29 +1,13 @@
-import functools
 import logging
-from datetime import date, datetime, timezone
-from io import BytesIO
-from pathlib import Path
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Iterable,
-    Literal,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-)
+from datetime import date
+from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar
 
-import aiohttp
-from slixmpp import JID, Message
+from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
-from slixmpp.plugins.xep_0363 import FileUploadError
 
+from ..mixins import FullCarbonMixin
 from ..util import SubclassableOnce
-from ..util.types import AvatarType, LegacyMessageType, LegacyUserIdType
-from ..util.xep_0030.stanza import DiscoInfo
+from ..util.types import AvatarType, LegacyUserIdType
 from ..util.xep_0292.stanza import VCard4
 from . import config
 
@@ -33,7 +17,9 @@ else:
     SessionType = TypeVar("SessionType")
 
 
-class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=SubclassableOnce):
+class LegacyContact(
+    Generic[SessionType, LegacyUserIdType], FullCarbonMixin, metaclass=SubclassableOnce
+):
     """
     This class centralizes actions in relation to a specific legacy contact.
 
@@ -61,30 +47,15 @@ class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=Subclassab
             ...
     """
 
+    session: "SessionType"
+
     RESOURCE: str = "slidge"
     """
     A full JID, including a resource part is required for chat states (and maybe other stuff)
     to work properly. This is the name of the resource the contacts will use.
     """
 
-    AVATAR = True
-    RECEIPTS = True
-    MARKS = True
-    CHAT_STATES = True
-    UPLOAD = True
-    CORRECTION = True
-    REACTION = True
-    RETRACTION = True
-    REPLIES = True
-
-    """
-    A list of features advertised through service discovery and client capabilities.
-    """
-
-    CLIENT_TYPE = "pc"
-    """
-    https://xmpp.org/registrar/disco-categories.html#client
-    """
+    mtype = "chat"
 
     def __init__(
         self,
@@ -112,6 +83,8 @@ class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=Subclassab
         self._subscribe_to = True
 
         self.xmpp = session.xmpp
+        self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
+        self.jid.resource = self.RESOURCE
 
     def __repr__(self):
         return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
@@ -125,56 +98,9 @@ class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=Subclassab
             return "to"
         return "none"
 
-    def get_features(self):
-        features = []
-        if self.CHAT_STATES:
-            features.append("http://jabber.org/protocol/chatstates")
-        if self.RECEIPTS:
-            features.append("urn:xmpp:receipts")
-        if self.CORRECTION:
-            features.append("urn:xmpp:message-correct:0")
-        if self.MARKS:
-            features.append("urn:xmpp:chat-markers:0")
-        if self.UPLOAD:
-            features.append("jabber:x:oob")
-        if self.REACTION:
-            features.append("urn:xmpp:reactions:0")
-        if self.RETRACTION:
-            features.append("urn:xmpp:message-retract:0")
-        if self.REPLIES:
-            features.append("urn:xmpp:reply:0")
-        features.append("urn:ietf:params:xml:ns:vcard-4.0")
-
-        return features
-
-    def get_disco_info(self):
-        info = DiscoInfo()
-        for feature in self.get_features():
-            info.add_feature(feature)
-        info.add_identity(category="client", itype=self.CLIENT_TYPE)
-        return info
-
-    async def update_caps(self):
-        """
-        Configure slixmpp to correctly advertise this contact's capabilities.
-        """
-        jid = self.jid
-        xmpp = self.xmpp
-
-        add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
-        for f in self.get_features():
-            await add_feature(f)
-
-        await xmpp["xep_0115"].update_caps(jid=self.jid)
-
-    @property
-    def jid(self) -> JID:
-        """
-        Full JID (including the 'puppet' resource) of the contact
-        """
-        j = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
-        j.resource = self.RESOURCE
-        return j
+    def _send(self, stanza):
+        stanza["to"] = self.user.jid
+        stanza.send()
 
     @property
     def name(self):
@@ -285,92 +211,10 @@ class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=Subclassab
                     "for more info."
                 )
                 if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
-                    self.__send_presence(ptype="subscribe")
+                    self._send(self._make_presence(ptype="subscribe"))
                 return
 
         self.added_to_roster = True
-
-    def __send_presence(
-        self,
-        *,
-        ptype: Optional[str] = None,
-        show: Optional[str] = None,
-        status: Optional[str] = None,
-        last_seen: Optional[datetime] = None,
-    ):
-        p = self.xmpp.make_presence(
-            pfrom=self.jid,
-            pto=self.user.jid.bare,
-            pstatus=status,
-            pshow=show,
-            ptype=ptype,
-        )
-        if last_seen:
-            if config.LAST_SEEN_FALLBACK and not status:
-                p["status"] = f"Last seen {last_seen:%A %H:%M GMT}"
-            if last_seen.tzinfo is None:
-                last_seen = last_seen.astimezone(timezone.utc)
-            p["idle"]["since"] = last_seen
-        p.send()
-        return p
-
-    def online(
-        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
-    ):
-        """
-        Send an "online" presence from this contact to the user.
-
-        :param status: Arbitrary text, details of the status, eg: "Listening to Britney Spears"
-        :param last_seen: For :xep:`0319`
-        """
-        self.__send_presence(status=status, last_seen=last_seen)
-
-    def away(
-        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
-    ):
-        """
-        Send an "away" presence from this contact to the user.
-
-        This is a global status, as opposed to :meth:`.LegacyContact.inactive`
-        which concerns a specific conversation, ie a specific "chat window"
-
-        :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
-        :param last_seen: For :xep:`0319`
-        """
-        self.__send_presence(status=status, show="away", last_seen=last_seen)
-
-    def extended_away(
-        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
-    ):
-        """
-        Send an "extended away" presence from this contact to the user.
-
-        This is a global status, as opposed to :meth:`.LegacyContact.inactive`
-        which concerns a specific conversation, ie a specific "chat window"
-
-        :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
-        :param last_seen: For :xep:`0319`
-        """
-        self.__send_presence(status=status, show="xa", last_seen=last_seen)
-
-    def busy(
-        self, status: Optional[str] = None, *, last_seen: Optional[datetime] = None
-    ):
-        """
-        Send a "busy" presence from this contact to the user,
-
-        :param status: eg: "Trying to make sense of XEP-0100"
-        :param last_seen: For :xep:`0319`
-        """
-        self.__send_presence(status=status, show="busy", last_seen=last_seen)
-
-    def offline(self, *, last_seen: Optional[datetime] = None):
-        """
-        Send an "offline" presence from this contact to the user.
-
-        :param last_seen: For :xep:`0319`
-        """
-        self.__send_presence(ptype="unavailable", last_seen=last_seen)
 
     def unsubscribe(self):
         """
@@ -379,505 +223,7 @@ class LegacyContact(Generic[SessionType, LegacyUserIdType], metaclass=Subclassab
         their 'friends'".
         """
         for ptype in "unsubscribe", "unsubscribed", "unavailable":
-            self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)
-
-    def status(self, text: str):
-        """
-        Set a contact's status
-        """
-        self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, pstatus=text)
-
-    def __chat_state(self, state: str):
-        msg = self.xmpp.make_message(mfrom=self.jid, mto=self.user.jid, mtype="chat")
-        msg["chat_state"] = state
-        msg.enable("no-store")
-        msg.send()
-
-    def active(self):
-        """
-        Send an "active" chat state (:xep:`0085`) from this contact to the user.
-        """
-        self.__chat_state("active")
-
-    def composing(self):
-        """
-        Send a "composing" (ie "typing notification") chat state (:xep:`0085`) from this contact to the user.
-        """
-        self.__chat_state("composing")
-
-    def paused(self):
-        """
-        Send a "paused" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
-        """
-        self.__chat_state("paused")
-
-    def inactive(self):
-        """
-        Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
-        """
-        log.debug("%s go inactive", self)
-        self.__chat_state("inactive")
-
-    def gone(self):
-        """
-        Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
-        """
-        self.__chat_state("gone")
-
-    def __send_marker(
-        self,
-        legacy_msg_id: LegacyMessageType,
-        marker: Literal["acknowledged", "received", "displayed"],
-    ):
-        """
-        Send a message marker (:xep:`0333`) from this contact to the user.
-
-        NB: for the 'received' marker, this also sends a message receipt (:xep:`0184`)
-
-        :param legacy_msg_id: ID of the message this marker refers to
-        :param marker: The marker type
-
-        """
-        xmpp_id = self.session.sent.get(legacy_msg_id)
-        if xmpp_id is None:
-            log.debug("Cannot find the XMPP ID of this msg: %s", legacy_msg_id)
-        else:
-            if marker == "received":
-                receipt = self.xmpp.Message()
-                receipt["to"] = self.user.jid
-                receipt["receipt"] = xmpp_id
-                receipt["from"] = self.jid
-                receipt.send()
-            self.xmpp["xep_0333"].send_marker(
-                mto=self.user.jid,
-                id=xmpp_id,
-                marker=marker,
-                mfrom=self.jid,
-            )
-
-    def ack(self, legacy_msg_id: LegacyMessageType):
-        """
-        Send an "acknowledged" message marker (:xep:`0333`) from this contact to the user.
-
-        :param legacy_msg_id: The message this marker refers to
-        """
-        self.__send_marker(legacy_msg_id, "acknowledged")
-
-    def received(self, legacy_msg_id: LegacyMessageType):
-        """
-        Send a "received" message marker (:xep:`0333`) and a "message delivery receipt"
-        (:xep:`0184`)
-        from this contact to the user
-
-        :param legacy_msg_id: The message this marker refers to
-        """
-        self.__send_marker(legacy_msg_id, "received")
-
-    def displayed(self, legacy_msg_id: LegacyMessageType):
-        """
-        Send a "displayed" message marker (:xep:`0333`) from this contact to the user.
-
-        :param legacy_msg_id: The message this marker refers to
-        """
-        self.__send_marker(legacy_msg_id, "displayed")
-
-    def __make_message(self, mtype="chat", **kwargs) -> Message:
-        m = self.xmpp.make_message(
-            mfrom=self.jid, mto=self.user.jid, mtype=mtype, **kwargs
-        )
-        m.enable("markable")
-        return m
-
-    def __send_message(
-        self,
-        msg: Message,
-        legacy_msg_id: Optional[Any] = None,
-        when: Optional[datetime] = None,
-    ):
-        if legacy_msg_id is not None:
-            msg.set_id(self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id))
-        self._add_delay(msg, when)
-        msg.send()
-
-    def __make_reply(
-        self,
-        msg: Message,
-        reply_to_msg_id: Optional[LegacyMessageType],
-        reply_to_fallback_text: Optional[str] = None,
-    ):
-        if reply_to_msg_id is None:
-            return
-        xmpp_id = self.session.sent.get(
-            reply_to_msg_id
-        ) or self.session.legacy_msg_id_to_xmpp_msg_id(reply_to_msg_id)
-        msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
-        # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
-        msg["reply"]["to"] = self.user.jid
-        if reply_to_fallback_text:
-            msg["feature_fallback"].add_quoted_fallback(reply_to_fallback_text)
-
-    def send_text(
-        self,
-        body: str = "",
-        *,
-        chat_state: Optional[str] = "active",
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        when: Optional[datetime] = None,
-    ) -> Message:
-        """
-        Transmit a message from the contact to the user
-
-        :param body: Context of the message
-        :param chat_state: By default, will send an "active" chat state (:xep:`0085`) along with the
-            message. Set this to ``None`` if this is not desired.
-        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
-            user to the legacy network, specify this
-        :param reply_to_msg_id:
-        :param reply_to_fallback_text:
-        :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
-
-        :return: the XMPP message that was sent
-        """
-        msg = self.__make_message(mbody=body)
-        if self.CHAT_STATES and chat_state is not None:
-            msg["chat_state"] = chat_state
-        self.__make_reply(msg, reply_to_msg_id, reply_to_fallback_text)
-        self.__send_message(msg, legacy_msg_id, when)
-        return msg
-
-    async def __upload(
-        self,
-        filename: Union[Path, str],
-        content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
-    ):
-        if url is not None:
-            if input_file is not None:
-                raise TypeError("Either a URL or a file-like object")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as r:
-                    input_file = BytesIO(await r.read())
-        try:
-            return await self.xmpp["xep_0363"].upload_file(
-                filename=filename,
-                content_type=content_type,
-                input_file=input_file,
-                ifrom=config.UPLOAD_REQUESTER,
-            )
-        except FileUploadError as e:
-            log.warning(
-                "Something is wrong with the upload service, see the traceback below"
-            )
-            log.exception(e)
-
-    async def send_file(
-        self,
-        filename: Union[Path, str],
-        content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
-        *,
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        when: Optional[datetime] = None,
-        caption: Optional[str] = None,
-    ) -> Message:
-        """
-        Send a file using HTTP upload (:xep:`0363`)
-
-        :param filename: Filename to use or location on disk to the file to upload
-        :param content_type: MIME type, inferred from filename if not given
-        :param input_file: Optionally, a file like object instead of a file on disk.
-            filename will still be used to give the uploaded file a name
-        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
-            user to the legacy network, specify this
-        :param url: Optionally, a URL of a file that slidge will download and upload to the
-            default file upload service on the xmpp server it's running on. url and input_file
-            are mutually exclusive.
-        :param reply_to_msg_id:
-        :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
-        :param caption: an optional text that is linked to the file
-
-        :return: The msg stanza that was sent
-        """
-        msg = self.__make_message()
-        self.__make_reply(msg, reply_to_msg_id)
-        uploaded_url = await self.__upload(filename, content_type, input_file, url)
-        if uploaded_url is None:
-            if url is not None:
-                uploaded_url = url
-            else:
-                msg["body"] = (
-                    "I tried to send a file, but something went wrong. "
-                    "Tell your XMPP admin to check slidge logs."
-                )
-                self.__send_message(msg, legacy_msg_id, when)
-                return msg
-
-        msg["oob"]["url"] = uploaded_url
-        msg["body"] = uploaded_url
-        if caption:
-            self.__send_message(msg, None, when)
-            msg = self.send_text(caption, legacy_msg_id=legacy_msg_id, when=when)
-        else:
-            self.__send_message(msg, legacy_msg_id, when)
-        return msg
-
-    def __privileged_send(self, msg: Message, when: Optional[datetime] = None):
-        msg.set_from(self.user.jid.bare)
-        msg.enable("store")
-
-        self._add_delay(msg, when)
-
-        self.session.ignore_messages.add(msg.get_id())
-        try:
-            self.xmpp["xep_0356"].send_privileged_message(msg)
-        except PermissionError:
-            try:
-                self.xmpp["xep_0356_old"].send_privileged_message(msg)
-            except PermissionError:
-                log.warning(
-                    "Slidge does not have privileges to send message on behalf of user."
-                    "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
-                    "for more info."
-                )
-                return
-        return msg.get_id()
-
-    def carbon(
-        self,
-        body: str,
-        legacy_id: Optional[Any] = None,
-        when: Optional[datetime] = None,
-        *,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-    ):
-        """
-        Call this when the user sends a message to a legacy network contact.
-
-        This synchronizes the outgoing message history on the XMPP side, using
-        :xep:`0356` to impersonate the XMPP user and send a message from the user to
-        the contact. Thw XMPP server should in turn send carbons (:xep:`0280`) to online
-        XMPP clients +/- write the message in server-side archives (:xep:`0313`),
-        depending on the user's and the server's archiving policy.
-
-        :param body: Body of the message.
-        :param legacy_id: Legacy message ID
-        :param when: When was this message sent.
-        :param reply_to_msg_id:
-        :param reply_to_fallback_text:
-        """
-        # we use Message() directly because we need xmlns="jabber:client"
-        msg = Message()
-        msg["to"] = self.jid.bare
-        msg["type"] = "chat"
-        msg["body"] = body
-        self.__make_reply(msg, reply_to_msg_id, reply_to_fallback_text)
-        if legacy_id:
-            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
-            msg.set_id(xmpp_id)
-            self.session.sent[legacy_id] = xmpp_id
-
-        return self.__privileged_send(msg, when)
-
-    async def carbon_upload(
-        self,
-        filename: Union[Path, str],
-        content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
-        legacy_id: Optional[Any] = None,
-        when: Optional[datetime] = None,
-        *,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-    ):
-        msg = Message()
-        self.__make_reply(msg, reply_to_msg_id)
-        msg["to"] = self.jid.bare
-        msg["type"] = "chat"
-        uploaded_url = await self.__upload(filename, content_type, input_file, url)
-        if uploaded_url is None:
-            if url is not None:
-                uploaded_url = url
-            else:
-                log.warning("Carbon upload issue")
-                return
-        if legacy_id:
-            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
-            msg.set_id(xmpp_id)
-            self.session.sent[legacy_id] = xmpp_id
-
-        msg["oob"]["url"] = uploaded_url
-        msg["body"] = uploaded_url
-        return self.__privileged_send(msg, when)
-
-    def carbon_read(self, legacy_msg_id: Any, when: Optional[datetime] = None):
-        """
-        Synchronize user read state from official clients.
-
-        :param legacy_msg_id:
-        :param when:
-        """
-        # we use Message() directly because we need xmlns="jabber:client"
-        msg = Message()
-        msg["to"] = self.jid.bare
-        msg["type"] = "chat"
-        msg["displayed"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
-            legacy_msg_id
-        )
-
-        return self.__privileged_send(msg, when)
-
-    def carbon_correct(
-        self,
-        legacy_msg_id: LegacyMessageType,
-        text: str,
-        when: Optional[datetime] = None,
-        *,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-    ):
-        """
-        Call this when the user corrects their own (last) message from an official client
-
-        :param legacy_msg_id:
-        :param text: The new body of the message
-        :param when:
-        :param reply_to_msg_id:
-        """
-        if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
-            log.debug(
-                "Cannot find XMPP ID of msg '%s' corrected from the official client",
-                legacy_msg_id,
-            )
-            return
-        msg = Message()
-        self.__make_reply(msg, reply_to_msg_id)
-        msg.set_to(self.jid.bare)
-        msg.set_type("chat")
-        msg["replace"]["id"] = xmpp_id
-        msg["body"] = text
-        return self.__privileged_send(msg, when)
-
-    def carbon_react(
-        self,
-        legacy_msg_id: LegacyMessageType,
-        reactions: Iterable[str] = (),
-        when: Optional[datetime] = None,
-    ):
-        """
-        Call this to modify the user's own reactions (:xep:`0444`) about a message.
-
-        Can be called when the user reacts from the official client, or to modify a user's
-        reaction when the legacy network has constraints about acceptable reactions.
-
-        :param legacy_msg_id: Legacy message ID this refers to
-        :param reactions: iterable of emojis
-        :param when:
-        """
-        if xmpp_id := self.session.sent.inverse.get(str(legacy_msg_id)):
-            log.debug("This is a reaction to a carbon message")
-            xmpp_id = str(xmpp_id)
-        elif xmpp_id := self.session.sent.get(legacy_msg_id):
-            log.debug("This is a reaction to the user's own message")
-        else:
-            log.debug(
-                "Cannot determine which message this reaction refers to, attempting msg ID conversion"
-            )
-            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
-        msg = Message()
-        msg["to"] = self.jid.bare
-        msg["type"] = "chat"
-        self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=reactions)
-        return self.__privileged_send(msg, when)
-
-    def carbon_retract(
-        self, legacy_msg_id: LegacyMessageType, when: Optional[datetime] = None
-    ):
-        """
-        Call this when the user calls retracts (:xep:`0424`) a message from an official client
-
-        :param legacy_msg_id:
-        :param when:
-        :return:
-        """
-        if (xmpp_id := self.session.sent.inverse.get(str(legacy_msg_id))) is None:
-            if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
-                log.debug("Cannot find XMPP ID of retracted msg: %s", legacy_msg_id)
-                return
-
-        msg = Message()
-        msg.set_to(self.jid.bare)
-        msg.set_type("chat")
-        msg["apply_to"]["id"] = xmpp_id
-        msg["apply_to"].enable("retract")
-        return self.__privileged_send(msg, when)
-
-    def correct(self, legacy_msg_id: Any, new_text: str):
-        """
-        Call this when a legacy contact has modified his last message content.
-
-        Uses last message correction (:xep:`0308`)
-
-        :param legacy_msg_id: Legacy message ID this correction refers to
-        :param new_text: The new text
-        """
-        msg = self.__make_message()
-        msg["replace"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
-        msg["body"] = new_text
-        self.__send_message(msg)
-
-    def react(self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str] = ()):
-        """
-        Call this when a legacy contact reacts to a message
-
-        :param legacy_msg_id: The message which the reaction refers to.
-        :param emojis: A iterable of emojis used as reactions
-        :return:
-        """
-        if (xmpp_id := self.session.sent.get(legacy_msg_id)) is None:
-            log.debug(
-                "Cannot determine which message this reaction refers to, attempting msg ID conversion"
-            )
-            xmpp_id = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
-        msg = self.__make_message()
-        self.xmpp["xep_0444"].set_reactions(
-            msg,
-            to_id=xmpp_id,
-            reactions=emojis,
-        )
-        self.__send_message(msg)
-        return msg
-
-    def retract(self, legacy_msg_id: LegacyMessageType):
-        """
-        Call this when a legacy contact retracts (:XEP:`0424`) a message
-
-        :param legacy_msg_id: Legacy ID of the message to delete
-        """
-        self.xmpp["xep_0424"].send_retraction(
-            mto=self.user.jid,
-            mfrom=self.jid,
-            include_fallback=True,
-            fallback_text="I have deleted the message %s, but your XMPP client does not support that"
-            % legacy_msg_id,  # https://github.com/movim/movim/issues/1074
-            id=self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id),
-        )
-
-    @staticmethod
-    def _add_delay(msg: Message, when: Optional[datetime] = None):
-        if not when:
-            return
-        if when.tzinfo is None:
-            when = when.astimezone(timezone.utc)
-        if (
-            datetime.now().astimezone(timezone.utc) - when
-            > config.IGNORE_DELAY_THRESHOLD
-        ):
-            msg["delay"].set_stamp(when)
+            self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)  # type: ignore
 
 
 LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)

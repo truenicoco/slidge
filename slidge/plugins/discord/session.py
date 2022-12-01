@@ -91,7 +91,7 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
     async def paused(self, c: "Contact"):
         pass
 
-    async def displayed(self, legacy_msg_id: str, c: "Contact"):
+    async def displayed(self, legacy_msg_id: int, c: "Contact"):
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
@@ -143,8 +143,8 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
         await self.delete_futures[legacy_msg_id]
 
     async def update_reactions(self, message: di.Message):
-        (await self.contacts.by_discord_user(message.channel.recipient)).carbon_react(
-            message.id, self.get_my_legacy_reactions(message)
+        (await self.contacts.by_discord_user(message.channel.recipient)).react(
+            message.id, self.get_my_legacy_reactions(message), carbon=True
         )
 
     @staticmethod

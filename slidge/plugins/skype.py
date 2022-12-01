@@ -83,7 +83,7 @@ class ListenThread(Thread):
         self.stop_event.set()
 
 
-class Session(BaseSession[Gateway, str, LegacyRoster, Contact]):
+class Session(BaseSession[Gateway, int, LegacyRoster, Contact]):
     skype_token_path: Path
     sk: skpy.Skype
 
@@ -143,7 +143,7 @@ class Session(BaseSession[Gateway, str, LegacyRoster, Contact]):
                                 "Slidge did not send this message: %s",
                                 pprint.pformat(vars(event)),
                             )
-                        contact.carbon(msg.plain)
+                        contact.send_text(msg.plain, carbon=True)
                     else:
                         fut.set_result(msg)
                 else:

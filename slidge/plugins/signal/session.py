@@ -233,10 +233,11 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
             await contact.carbon_send_attachments(sent_msg.attachments)
 
             if (body := sent_msg.body) is not None:
-                contact.carbon(
+                contact.send_text(
                     body=body,
                     when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
                     legacy_id=sent_msg.timestamp,
+                    carbon=True,
                 )
             if (reaction := sent_msg.reaction) is not None:
                 try:
@@ -244,14 +245,15 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
                         (reaction.targetSentTimestamp, reaction.emoji)
                     )
                 except KeyError:
-                    contact.carbon_react(
+                    contact.react(
                         reaction.targetSentTimestamp,
                         () if reaction.remove else reaction.emoji,
+                        carbon=True,
                     )
                 else:
                     fut.set_result(None)
             if (delete := sent_msg.remoteDelete) is not None:
-                contact.carbon_retract(delete.target_sent_timestamp)
+                contact.retract(delete.target_sent_timestamp, carbon=True)
 
         contact = await self.contacts.by_json_address(msg.source)
 
@@ -416,7 +418,7 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
             emoji = emojis[-1]
             if len(emojis) > 1:
                 self.send_gateway_message("Only one reaction per message on signal")
-                c.carbon_react(legacy_msg_id, emoji)
+                c.react(legacy_msg_id, emoji, carbon=True)
             c.user_reactions[legacy_msg_id] = emoji
 
         response = await (await self.signal).react(
