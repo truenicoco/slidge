@@ -25,8 +25,8 @@ class Gateway(BaseGateway["Session"]):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
-        FormField(var="api_id", label="API ID", required=False),
-        FormField(var="api_hash", label="API hash", required=False),
+        FormField(var="api_id", label="API ID", required=True),
+        FormField(var="api_hash", label="API hash", required=True),
         FormField(var="", value="The fields below have not been tested", type="fixed"),
         FormField(var="bot_token", label="Bot token", required=False),
         FormField(var="first", label="First name", required=False),
