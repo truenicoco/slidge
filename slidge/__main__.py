@@ -79,6 +79,8 @@ def configure():
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
 
+    config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
+
     return unknown_argv
 
 
