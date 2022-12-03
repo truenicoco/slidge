@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import cryptography.fernet
+from slixmpp import JID
 
 from slidge.util import (
     SubclassableOnce,
@@ -93,6 +94,13 @@ def test_strip_delay(monkeypatch):
         @staticmethod
         def set_stamp(x):
             pass
+        @staticmethod
+        def set_from(x):
+            pass
+
+    class MockC:
+        class xmpp:
+            boundjid = JID("test")
 
     class MockMsg:
         delay_added = None
@@ -103,11 +111,11 @@ def test_strip_delay(monkeypatch):
             return MockDelay
 
     msg = MockMsg()
-    LegacyContact._add_delay(msg, datetime.now())
+    LegacyContact._add_delay(MockC, msg, datetime.now())
     assert not msg.delay_added
 
     monkeypatch.setattr(config, "IGNORE_DELAY_THRESHOLD", timedelta(seconds=0))
 
     msg = MockMsg()
-    LegacyContact._add_delay(msg, datetime.now())
+    LegacyContact._add_delay(MockC, msg, datetime.now())
     assert msg.delay_added

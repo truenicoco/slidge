@@ -167,8 +167,7 @@ class ContentMessageMixin(MessageMaker):
         self._add_reply_to(msg, reply_to_msg_id, reply_to_fallback_text)
         return msg
 
-    @staticmethod
-    def _add_delay(msg: Message, when: Optional[datetime]):
+    def _add_delay(self, msg: Message, when: Optional[datetime]):
         if when:
             if when.tzinfo is None:
                 when = when.astimezone(timezone.utc)
@@ -177,6 +176,7 @@ class ContentMessageMixin(MessageMaker):
                 > config.IGNORE_DELAY_THRESHOLD
             ):
                 msg["delay"].set_stamp(when)
+                msg["delay"].set_from(self.xmpp.boundjid.bare)
 
     def _add_reply_to(
         self,

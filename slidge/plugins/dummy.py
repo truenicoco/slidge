@@ -3,6 +3,7 @@ A pseudo legacy network, to easily test things
 """
 
 import asyncio
+import datetime
 import logging
 import uuid
 from pathlib import Path
@@ -75,9 +76,18 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
         self.log.debug("CARBON")
         i = uuid.uuid1()
 
-        (await self.contacts.by_legacy_id("bibi")).send_text(
-            f"Sent by the component on behalf of the user, and this should reach MAM. Msg ID: {i}",
+        baba = await self.contacts.by_legacy_id("baba")
+
+        baba.send_text(
+            f"You're bad!",
             legacy_msg_id=i,
+            when=datetime.datetime.now() - datetime.timedelta(hours=5),
+            carbon=True,
+        )
+        baba.send_text(
+            f"You're worse",
+            legacy_msg_id=i,
+            when=datetime.datetime.now() - datetime.timedelta(hours=4),
         )
 
     async def paused(self, c: LegacyContact):
