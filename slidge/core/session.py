@@ -263,6 +263,20 @@ class BaseSession(
         if m.get_to() != self.xmpp.boundjid.bare:
             await self.paused(await self.contacts.by_stanza(m))
 
+    def __xmpp_msg_id_to_legacy(self, xmpp_id: str):
+        sent = self.sent.inverse.get(xmpp_id)
+        if sent:
+            return sent
+
+        try:
+            return self.xmpp_msg_id_to_legacy_msg_id(xmpp_id)
+        except Exception as e:
+            log.debug(
+                "Couldn't convert xmpp msg ID to legacy ID, ignoring: %r, %s",
+                e,
+                e.args,
+            )
+
     @ignore_message_to_component_and_sent_carbons
     async def displayed_from_msg(self, m: Message):
         """
@@ -272,22 +286,15 @@ class BaseSession(
         :return:
         """
         displayed_msg_id = m["displayed"]["id"]
-        try:
-            legacy_msg_id = self.xmpp_msg_id_to_legacy_msg_id(displayed_msg_id)
-        except Exception as e:
-            log.debug(
-                "Couldn't convert xmpp msg ID to legacy ID, ignoring read mark: %r, %s",
-                e,
-                e.args,
-            )
-            return
-
-        await self.displayed(legacy_msg_id, await self.contacts.by_stanza(m))
+        if legacy := self.__xmpp_msg_id_to_legacy(displayed_msg_id):
+            await self.displayed(legacy, await self.contacts.by_stanza(m))
+        else:
+            log.debug("Ignored displayed marker from user")
 
     @ignore_message_to_component_and_sent_carbons
     async def correct_from_msg(self, m: Message):
         xmpp_id = m["replace"]["id"]
-        legacy_id = self.sent.inverse.get(xmpp_id)
+        legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
             new_legacy_msg_id = await self.send_text(
@@ -303,33 +310,24 @@ class BaseSession(
     @ignore_message_to_component_and_sent_carbons
     async def react_from_msg(self, m: Message):
         react_to: str = m["reactions"]["id"]
-        if (legacy_id := self.sent.inverse.get(react_to)) is None:
-            log.debug("Cannot find the XMPP ID of this msg: %s", react_to)
-            try:
-                legacy_id = self.xmpp_msg_id_to_legacy_msg_id(react_to)
-            except Exception as e:
-                log.warning(
-                    "Could not convert legacy ID, xmpp reaction was not sent: %s, %r, %s",
-                    m,
-                    e,
-                    e.args,
-                )
-                return
-        await self.react(
-            legacy_id,
-            [r["value"] for r in m["reactions"]],
-            await self.contacts.by_stanza(m),
-        )
+        legacy_id = self.__xmpp_msg_id_to_legacy(react_to)
+        if legacy_id:
+            await self.react(
+                legacy_id,
+                [r["value"] for r in m["reactions"]],
+                await self.contacts.by_stanza(m),
+            )
+        else:
+            log.debug("Ignored reaction from user")
 
     @ignore_message_to_component_and_sent_carbons
     async def retract_from_msg(self, m: Message):
         xmpp_id: str = m["apply_to"]["id"]
-        if (legacy_id := self.sent.inverse.get(xmpp_id)) is None:
-            log.debug(
-                "Cannot find the XMPP ID of this msg: %s, cannot retract", xmpp_id
-            )
-            return
-        await self.retract(legacy_id, await self.contacts.by_stanza(m))
+        legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
+        if legacy_id:
+            await self.retract(legacy_id, await self.contacts.by_stanza(m))
+        else:
+            log.debug("Ignored retraction from user")
 
     def send_gateway_status(
         self,
