@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Union
 from slixmpp import JID, Message, Presence
 
 if TYPE_CHECKING:
-    from ..core.gateway import BaseGateway
-    from ..core.session import BaseSession
-    from ..util.db import GatewayUser
+    from slidge.core.gateway import BaseGateway
+    from slidge.core.session import BaseSession
+    from slidge.util.db import GatewayUser
 
 
 class MetaBase(ABCMeta):

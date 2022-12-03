@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
-from ..mixins import FullCarbonMixin
 from ..util import SubclassableOnce
 from ..util.types import AvatarType, LegacyUserIdType
 from ..util.xep_0292.stanza import VCard4
 from . import config
+from .mixins import FullCarbonMixin
 
 if TYPE_CHECKING:
     from .session import SessionType

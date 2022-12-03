@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from ..core import config
+from .. import config
 from .base import BaseSender
 
 
