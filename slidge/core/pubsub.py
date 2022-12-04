@@ -4,7 +4,7 @@ import io
 import logging
 from copy import copy
 from pathlib import Path
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 import aiohttp
 from PIL import Image, UnidentifiedImageError
@@ -18,7 +18,7 @@ from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.types import JidStr, OptJidStr
 
 from ..util.db import user_store
-from ..util.types import AvatarType
+from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
 from . import config
 
@@ -92,9 +92,6 @@ class PepNick(PepItem):
         if nick is not None:
             nickname["nick"] = nick
         self.nick = nickname
-
-
-PepItemType = TypeVar("PepItemType", bound=PepItem)
 
 
 class PubSubComponent(BasePlugin):

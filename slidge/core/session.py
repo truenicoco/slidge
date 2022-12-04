@@ -1,20 +1,22 @@
 import functools
 import logging
-from typing import TYPE_CHECKING, Generic, Literal, Optional, Type, TypeVar, cast
+from typing import Generic, Optional, Type, cast
 
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
-from ..core.contact import LegacyContactType, LegacyRoster, LegacyRosterType
+from ..core.contact import LegacyRoster
 from ..util import ABCSubclassableOnceAtMost, BiDict
 from ..util.db import GatewayUser, user_store
-from ..util.types import LegacyMessageType
-
-if TYPE_CHECKING:
-    from slidge import SearchResult
-    from slidge.core.gateway import GatewayType
-else:
-    GatewayType = TypeVar("GatewayType")
+from ..util.types import (
+    GatewayType,
+    LegacyContactType,
+    LegacyMessageType,
+    LegacyRosterType,
+    PresenceShow,
+    SessionType,
+)
+from ..util.util import SearchResult
 
 
 def ignore_message_to_component_and_sent_carbons(func):
@@ -31,9 +33,6 @@ def ignore_message_to_component_and_sent_carbons(func):
             log.debug("Ignoring message to component: %s %s", self, msg)
 
     return wrapped
-
-
-SessionType = TypeVar("SessionType", bound="BaseSession")
 
 
 class BaseSession(
@@ -337,7 +336,7 @@ class BaseSession(
     def send_gateway_status(
         self,
         status: Optional[str] = None,
-        show=Optional[Literal["away", "chat", "dnd", "xa"]],
+        show=Optional[PresenceShow],
         **kwargs,
     ):
         """

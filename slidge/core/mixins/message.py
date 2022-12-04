@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import IO, Iterable, Literal, Optional, Union
+from typing import IO, Iterable, Optional, Union
 
 import aiohttp
 from slixmpp import Message
@@ -12,11 +12,8 @@ from slixmpp.types import MessageTypes
 from slidge.core import config
 from slidge.util.types import LegacyMessageType
 
+from ...util.types import ChatState, Marker, ProcessingHint
 from .base import BaseSender
-
-ChatState = Literal["active", "composing", "gone", "inactive", "paused"]
-ProcessingHint = Literal["no-store", "markable", "store"]
-Marker = Literal["acknowledged", "received", "displayed"]
 
 
 class MessageMaker(BaseSender):

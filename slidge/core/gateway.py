@@ -6,7 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Callable, Generic, Iterable, Optional, Sequence, Type, TypeVar
+from typing import Callable, Generic, Iterable, Optional, Sequence, Type
 
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message
@@ -707,9 +707,6 @@ class BaseGateway(
         for user in user_store.get_all():
             self.session_cls.from_jid(user.jid).shutdown()
             self.send_presence(ptype="unavailable", pto=user.jid)
-
-
-GatewayType = TypeVar("GatewayType", bound=BaseGateway)
 
 
 SLIXMPP_PLUGINS = [

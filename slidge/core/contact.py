@@ -1,20 +1,15 @@
 import logging
 from datetime import date
-from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar
+from typing import Any, Generic, Optional, Type
 
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..util import SubclassableOnce
-from ..util.types import AvatarType, LegacyUserIdType
+from ..util.types import AvatarType, LegacyContactType, LegacyUserIdType, SessionType
 from ..util.xep_0292.stanza import VCard4
 from . import config
 from .mixins import FullCarbonMixin
-
-if TYPE_CHECKING:
-    from .session import SessionType
-else:
-    SessionType = TypeVar("SessionType")
 
 
 class LegacyContact(
@@ -226,9 +221,6 @@ class LegacyContact(
             self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)  # type: ignore
 
 
-LegacyContactType = TypeVar("LegacyContactType", bound=LegacyContact)
-
-
 class LegacyRoster(
     Generic[SessionType, LegacyContactType, LegacyUserIdType],
     metaclass=SubclassableOnce,
@@ -348,8 +340,6 @@ class LegacyRoster(
         """
         return _unescape_node(jid_username)
 
-
-LegacyRosterType = TypeVar("LegacyRosterType", bound=LegacyRoster)
 
 ESCAPE_TABLE = "".maketrans(
     {v: k for k, v in JID_UNESCAPE_TRANSFORMATIONS.items()}  # type:ignore

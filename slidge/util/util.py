@@ -2,17 +2,9 @@ import dataclasses
 import logging
 import re
 from abc import ABCMeta
-from typing import Generic, Iterable, Literal, Optional, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
-field_type = Literal[
-    "boolean",
-    "fixed",
-    "text-single",
-    "jid-single",
-    "list-single",
-    "list-multi",
-    "text-private",
-]
+from .types import FieldType
 
 
 @dataclasses.dataclass
@@ -35,7 +27,7 @@ class FormField:
     For sensitive info that should not be displayed on screen while the user types.
     Forces field_type to "text-private"
     """
-    type: field_type = "text-single"
+    type: FieldType = "text-single"
     """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
     value: str = ""
     """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
@@ -49,7 +41,7 @@ class FormField:
             self.type = "text-private"
 
 
-KeyType = TypeVar("KeyType")  # FIXME: mypy does not correctly infer types with this...
+KeyType = TypeVar("KeyType")
 ValueType = TypeVar("ValueType")
 
 

@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, Optional
 from slixmpp import Message
 from slixmpp.exceptions import XMPPError
 
+from ..util.types import SessionType
+
 if TYPE_CHECKING:
-    from slidge import BaseGateway
-    from slidge.core.session import SessionType
+    from .gateway import BaseGateway
 
 
 class ChatCommandProvider:
