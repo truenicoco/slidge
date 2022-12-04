@@ -80,6 +80,11 @@ class BaseSession(
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.never_logged = True
 
+    def shutdown(self):
+        for c in self.contacts:
+            c.offline()
+        self.xmpp.loop.create_task(self.logout())
+
     @staticmethod
     def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: LegacyMessageType) -> str:
         """

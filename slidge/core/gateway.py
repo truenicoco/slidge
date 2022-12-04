@@ -705,10 +705,7 @@ class BaseGateway(
         """
         log.debug("Shutting down")
         for user in user_store.get_all():
-            session = self.session_cls.from_jid(user.jid)
-            for c in session.contacts:
-                c.offline()
-            self.loop.create_task(session.logout())
+            self.session_cls.from_jid(user.jid).shutdown()
             self.send_presence(ptype="unavailable", pto=user.jid)
 
 
