@@ -35,14 +35,6 @@ class Gateway(BaseGateway["Session"]):
     ):
         pass
 
-    def shutdown(self):
-        super().shutdown()
-        log.debug("Shutting down user threads")
-        for user in user_store.get_all():
-            session = self.session_cls.from_jid(user.jid)
-            if thread := session.thread:
-                thread.stop()
-
 
 class Contact(LegacyContact["Session", str]):
     def update_presence(self, status: skpy.SkypeUtils.Status):
@@ -94,6 +86,12 @@ class Session(BaseSession[Gateway, int, LegacyRoster, Contact]):
         self.sent_by_user_to_ack = dict[int, asyncio.Future]()
         self.unread_by_user = dict[int, skpy.SkypeMsg]()
         self.send_lock = Lock()
+
+    def shutdown(self):
+        super().shutdown()
+        log.debug("Shutting down user threads")
+        if thread := self.thread:
+            thread.stop()
 
     async def login(self):
         f = self.user.registration_form
