@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 
 from watchdog.observers import Observer
@@ -10,10 +12,11 @@ if __name__ == "__main__":
         patterns=["*.py"],
         ignore_patterns=["generated/*.py"],
     )
+    gopy_cmd = "gopy build -output=generated -no-make=true ."
     gopy_build = ShellCommandTrick(
-        shell_command='cd "$(dirname ${watch_src_path})" && \
-                       gopy build -output=generated -no-make=true . && \
-                       touch "$(dirname ${watch_src_path})/__init__.py"',
+        shell_command='cd "$(dirname ${watch_src_path})" && '
+        + gopy_cmd
+        + ' && touch "$(dirname ${watch_src_path})/__init__.py"',
         patterns=["*.go"],
         ignore_patterns=["generated/*.go"],
         drop_during_process=True,
@@ -25,6 +28,9 @@ if __name__ == "__main__":
     observer.start()
 
     try:
+        for dirpath, _, filenames in os.walk(path):
+            if "go.mod" in filenames:
+                subprocess.run(gopy_cmd, shell=True, cwd=dirpath)
         auto_restart.start()
         while observer.is_alive():
             observer.join(1)
