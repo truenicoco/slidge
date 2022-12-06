@@ -106,13 +106,10 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         """
         contact = self.contacts.by_legacy_id(receipt.JID)
         for message_id in receipt.MessageIDs:
-            if receipt.IsCarbon:
-                message_timestamp = datetime.fromtimestamp(receipt.Timestamp)
-                contact.carbon_read(legacy_msg_id=message_id, when=message_timestamp)
-            elif receipt.Kind == whatsapp.ReceiptDelivered:
+            if receipt.Kind == whatsapp.ReceiptDelivered:
                 contact.received(message_id)
             elif receipt.Kind == whatsapp.ReceiptRead:
-                contact.displayed(message_id)
+                contact.displayed(legacy_msg_id=message_id, carbon=receipt.IsCarbon)
 
     async def handle_message(self, message: whatsapp.Message):
         """
@@ -126,44 +123,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         message_timestamp = (
             datetime.fromtimestamp(message.Timestamp) if message.Timestamp > 0 else None
         )
-        if message.IsCarbon:
-            if message.Kind == whatsapp.MessagePlain:
-                contact.carbon(
-                    body=message.Body,
-                    legacy_id=message.ID,
-                    when=message_timestamp,
-                    reply_to_msg_id=message_reply_id,
-                    reply_to_fallback_text=message_reply_body,
-                )
-            elif message.Kind == whatsapp.MessageAttachment:
-                for ptr in message.Attachments:
-                    attachment = whatsapp.Attachment(handle=ptr)
-                    attachment_caption = (
-                        attachment.Caption if attachment.Caption != "" else None
-                    )
-                    await contact.carbon_upload(
-                        filename=attachment.Filename,
-                        content_type=attachment.MIME,
-                        input_file=BytesIO(initial_bytes=bytes(attachment.Data)),
-                        legacy_id=message.ID,
-                        reply_to_msg_id=message_reply_id,
-                        when=message_timestamp,
-                    )
-            elif message.Kind == whatsapp.MessageRevoke:
-                contact.carbon_retract(legacy_msg_id=message.ID, when=message_timestamp)
-            elif message.Kind == whatsapp.MessageReaction:
-                contact.carbon_react(
-                    legacy_msg_id=message.ID,
-                    reactions=message.Body,
-                    when=message_timestamp,
-                )
-        elif message.Kind == whatsapp.MessagePlain:
+        if message.Kind == whatsapp.MessagePlain:
             contact.send_text(
                 body=message.Body,
                 legacy_msg_id=message.ID,
                 when=message_timestamp,
                 reply_to_msg_id=message_reply_id,
                 reply_to_fallback_text=message_reply_body,
+                carbon=message.IsCarbon,
             )
         elif message.Kind == whatsapp.MessageAttachment:
             for ptr in message.Attachments:
@@ -179,11 +146,14 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                     reply_to_msg_id=message_reply_id,
                     when=message_timestamp,
                     caption=attachment_caption,
+                    carbon=message.IsCarbon,
                 )
         elif message.Kind == whatsapp.MessageRevoke:
-            contact.retract(message.ID)
+            contact.retract(legacy_msg_id=message.ID, carbon=message.IsCarbon)
         elif message.Kind == whatsapp.MessageReaction:
-            contact.react(legacy_msg_id=message.ID, emojis=message.Body)
+            contact.react(
+                legacy_msg_id=message.ID, emojis=message.Body, carbon=message.IsCarbon
+            )
 
     async def send_text(
         self,
