@@ -57,7 +57,7 @@ steam = ["steam", "asyncio-gevent"]
 slidge = 'slidge.__main__:main'
 
 [tool.mypy]
-exclude = "slidge.util.xep*"
+exclude = ["slidge.util.xep*", "slidge/plugins/whatsapp/generated"]
 ignore_missing_imports = true
 check_untyped_defs = true
 
