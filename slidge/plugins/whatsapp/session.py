@@ -30,6 +30,11 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
 
+    def shutdown(self):
+        for c in self.contacts:
+            c.offline()
+        self.xmpp.loop.create_task(self.disconnect())
+
     async def login(self):
         """
         Initiate login process and connect session to WhatsApp. Depending on existing state, login
