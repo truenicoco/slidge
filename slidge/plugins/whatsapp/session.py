@@ -4,10 +4,11 @@ from functools import wraps
 from io import BytesIO
 from mimetypes import guess_type
 from os.path import basename
-from typing import Any, Optional
+from typing import Optional
 
-from slidge import BaseSession, GatewayUser, LegacyContact, user_store
+from slidge import BaseSession, GatewayUser, user_store
 from slidge.plugins.whatsapp.generated import whatsapp, go
+
 from .config import Config
 from .gateway import Gateway
 from .contact import Contact, Roster
@@ -20,7 +21,7 @@ MESSAGE_PAIR_SUCCESS = (
 MESSAGE_LOGGED_OUT = "You have been logged out, please re-scan the QR code on your main device to log in."
 
 
-class Session(BaseSession[Contact, Roster, Gateway]):
+class Session(BaseSession[Gateway, str, Roster, Contact]):
     def __init__(self, user: GatewayUser):
         super().__init__(user)
         self.whatsapp = self.xmpp.whatsapp.Session(
@@ -79,17 +80,17 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             self.send_gateway_status("Logged out", show="away")
             await self.login()
         elif event == whatsapp.EventContactSync:
-            contact = self.contacts.by_legacy_id(data.Contact.JID)
+            contact = await self.contacts.by_legacy_id(data.Contact.JID)
             contact.name = data.Contact.Name
             if data.Contact.AvatarURL != "":
                 contact.avatar = data.Contact.AvatarURL
             await contact.add_to_roster()
         elif event == whatsapp.EventPresence:
-            self.contacts.by_legacy_id(data.Presence.JID).update_presence(
+            (await self.contacts.by_legacy_id(data.Presence.JID)).update_presence(
                 data.Presence.Away, data.Presence.LastSeen
             )
         elif event == whatsapp.EventChatState:
-            contact = self.contacts.by_legacy_id(data.ChatState.JID)
+            contact = await self.contacts.by_legacy_id(data.ChatState.JID)
             if data.ChatState.Kind == whatsapp.ChatStateComposing:
                 contact.composing()
             elif data.ChatState.Kind == whatsapp.ChatStatePaused:
@@ -103,7 +104,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         """
         Handle incoming delivered/read receipt, as propagated by the WhatsApp adapter.
         """
-        contact = self.contacts.by_legacy_id(receipt.JID)
+        contact = await self.contacts.by_legacy_id(receipt.JID)
         for message_id in receipt.MessageIDs:
             if receipt.Kind == whatsapp.ReceiptDelivered:
                 contact.received(message_id)
@@ -116,7 +117,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         types, including plain-text messages, media messages, reactions, etc., and may also include
         other aspects such as references to other messages for the purposes of quoting or correction.
         """
-        contact = self.contacts.by_legacy_id(message.JID)
+        contact = await self.contacts.by_legacy_id(message.JID)
         message_reply_id = message.ReplyID if message.ReplyID != "" else None
         message_reply_body = message.ReplyBody if message.ReplyBody != "" else None
         message_timestamp = (
@@ -157,7 +158,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def send_text(
         self,
         t: str,
-        c: LegacyContact,
+        c: Contact,
         *,
         reply_to_msg_id: Optional[str] = None,
         reply_to_fallback_text: Optional[str] = None,
@@ -178,7 +179,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
     async def send_file(
         self,
         u: str,
-        c: LegacyContact,
+        c: Contact,
         *,
         reply_to_msg_id: Optional[str] = None,
     ):
@@ -200,19 +201,19 @@ class Session(BaseSession[Contact, Roster, Gateway]):
         )
         return message_id
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: Contact):
         """
         WhatsApp has no equivalent to the "active" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: Contact):
         """
         WhatsApp has no equivalent to the "inactive" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: Contact):
         """
         Send "composing" chat state to given WhatsApp contact, signifying that a message is currently
         being composed.
@@ -221,7 +222,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStateComposing)
         )
 
-    async def paused(self, c: LegacyContact):
+    async def paused(self, c: Contact):
         """
         Send "paused" chat state to given WhatsApp contact, signifying that an (unsent) message is no
         longer being composed.
@@ -230,7 +231,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStatePaused)
         )
 
-    async def displayed(self, legacy_msg_id: Any, c: LegacyContact):
+    async def displayed(self, legacy_msg_id: str, c: Contact):
         """
         Send "read" receipt, signifying that the WhatsApp message sent has been displayed on the XMPP
         client.
@@ -241,7 +242,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             )
         )
 
-    async def react(self, legacy_msg_id: Any, emojis: list[str], c: LegacyContact):
+    async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
         """
         Send or remove emoji reaction to existing WhatsApp message. Noted that WhatsApp places
         restrictions on the number of emoji reactions a user can place on any given message; these
@@ -258,7 +259,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
                 )
             )
 
-    async def retract(self, legacy_msg_id: Any, c: LegacyContact):
+    async def retract(self, legacy_msg_id: str, c: Contact):
         """
         Request deletion (aka retraction) for a given WhatsApp message.
         """
@@ -268,7 +269,7 @@ class Session(BaseSession[Contact, Roster, Gateway]):
             )
         )
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
+    async def correct(self, text: str, legacy_msg_id: str, c: Contact):
         self.send_gateway_message(
             "Warning: WhatsApp does not support message editing at this point in time."
         )
