@@ -1,7 +1,7 @@
 from pathlib import Path
 from logging import getLogger
 
-from slidge import BaseGateway, GatewayUser, global_config, user_store
+from slidge import BaseGateway, GatewayUser, global_config
 from slidge.plugins.whatsapp.generated import whatsapp
 from .config import Config
 
@@ -28,7 +28,6 @@ class Gateway(BaseGateway):
 
     def __init__(self):
         super().__init__()
-        self.use_origin_id = True
         Path(Config.DB_PATH.parent).mkdir(exist_ok=True)
         self.whatsapp = whatsapp.NewGateway()
         self.whatsapp.SetLogHandler(handle_log)
@@ -36,14 +35,6 @@ class Gateway(BaseGateway):
         self.whatsapp.SkipVerifyTLS = Config.SKIP_VERIFY_TLS
         self.whatsapp.Name = "Slidge on " + str(global_config.JID)
         self.whatsapp.Init()
-
-    def shutdown(self):
-        for user in user_store.get_all():
-            session = self.session_cls.from_jid(user.jid)
-            for c in session.contacts:
-                c.offline()
-            self.loop.create_task(session.disconnect())
-            self.send_presence(ptype="unavailable", pto=user.jid)
 
     async def unregister(self, user: GatewayUser):
         self.whatsapp.DestroySession(
