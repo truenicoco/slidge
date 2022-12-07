@@ -8,11 +8,18 @@ packages:
   - libffi-dev
   - cython3
   - dh-virtualenv
+  - ca-certificates
+  - golang-src/bullseye-backports
+  - golang-go/bullseye-backports
+
+repositories:
+  bullseye-backports: http://deb.debian.org/debian bullseye-backports main
 
 environment:
   DEBFULLNAME: IGImonster
   EMAIL: igimonster@mailbox.org
-  PLUGINS: facebook signal telegram skype hackernews mattermost steam discord
+  GOBIN: /tmp/gobin
+  PLUGINS: facebook signal telegram skype hackernews mattermost steam discord whatsapp
   POETRY_EXTRAS: facebook signal telegram skype mattermost steam discord
 
 artifacts:
@@ -35,6 +42,12 @@ tasks:
       cd slidge
       ~/.local/bin/poetry export $(for p in $POETRY_EXTRAS; do echo -n "-E $p "; done) -o requirements.txt
       sudo apt-get install python3-virtualenv dh-virtualenv -y
+  - generate-gopy: |
+      go install github.com/go-python/gopy@latest
+      go install golang.org/x/tools/cmd/goimports@latest
+      sudo mv $GOBIN/gopy $GOBIN/goimports /usr/local/bin
+      sudo python3 -m pip install pybindgen
+      find slidge -name go.mod -execdir gopy build -vm=python3 -output=generated -no-make=true . ';'
   - generate-plugin-files: |
       cd slidge/debian
       mkdir -p etc
@@ -54,12 +67,12 @@ tasks:
       ls -la /usr/lib/slidge*
       sudo ls -la /etc/slidge*
       sudo mv /etc/slidge/conf.d/common.conf.example /etc/slidge/conf.d/common.conf
-      sudo mv /etc/slidge/mattermost.conf.example /etc/slidge/mattermost.conf
-      sudo systemctl cat slidge@mattermost.service
+      sudo mv /etc/slidge/whatsapp.conf.example /etc/slidge/whatsapp.conf
+      sudo systemctl cat slidge@whatsapp.service
       slidge --help
-      sudo systemctl enable --now slidge@mattermost
+      sudo systemctl enable --now slidge@whatsapp
       sleep 5
-      sudo journalctl -u slidge@mattermost --since yesterday
+      sudo journalctl -u slidge@whatsapp --since yesterday
       sudo apt remove slidge -y
       sudo ls -la /etc/slidge
       sudo ls -la /var/lib/slidge

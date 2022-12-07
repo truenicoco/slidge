@@ -1,3 +1,4 @@
 debian/etc/* /etc/slidge/
 debian/systemd/* /usr/lib/systemd/system/
 debian/common.conf.example /etc/slidge/conf.d/
+slidge/plugins/whatsapp/generated/* /usr/lib/slidge/lib/python3.9/site-packages/slidge/plugins/whatsapp/generated/
