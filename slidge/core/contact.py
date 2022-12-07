@@ -40,6 +40,11 @@ class LegacyContact(
                 contact = self.contacts.by_legacy_id(legacy_msg_event.from)
                 contact.composing()
             ...
+
+    Use ``carbon=True`` as a keyword arg for methods to represent an action FROM
+    the user TO the contact, typically when the user uses an official client to
+    do an action such as sending a message or marking as message as read.
+    This will use :xep:`0363` to impersonate the XMPP user in order.
     """
 
     session: "SessionType"

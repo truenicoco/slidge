@@ -8,7 +8,7 @@ for a plugin to work.
 
 The main slidge entrypoint will automatically detect which classes have been
 subclassed and use them automagically.
-Just subclass await, and launch your plugin with
+Just subclass away, and launch your plugin with
 ``slidge --legacy-network=your.importable.plugin``.
 
 .. autoclass:: slidge.BaseGateway
@@ -16,6 +16,7 @@ Just subclass await, and launch your plugin with
 
 .. autoclass:: slidge.BaseSession
   :members:
+  :inherited-members:
   :exclude-members: [from_stanza, from_jid, kill_by_jid, react_from_msg, send_from_msg, active_from_msg, inactive_from_msg, composing_from_msg, paused_from_msg, displayed_from_msg, correct_from_msg]
 
 You may get away with the generic versions of these twos, but depending on
@@ -26,8 +27,10 @@ Even if you use their generic implementations, you most likely will
 need to call the methods they provide.
 
 .. autoclass:: slidge.LegacyRoster
+  :inherited-members:
   :members:
 
 .. autoclass:: slidge.LegacyContact
+  :inherited-members:
   :members:
 

@@ -40,7 +40,7 @@ class BaseSession(
     metaclass=ABCSubclassableOnceAtMost,
 ):
     """
-    Represents a gateway user logged in to the network and performing actions.
+    Represents a gateway user logged in to the legacy network and performing actions.
 
     Will be instantiated automatically when a user sends an online presence to the gateway
     component, as per :xep:`0100`.

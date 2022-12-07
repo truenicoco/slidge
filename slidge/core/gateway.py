@@ -122,7 +122,7 @@ class BaseGateway(
     
     Handlers are coroutines with following signature:
     
-    .. code-block::python
+    .. code-block:: python
     
         async def _chat_command_xxx(*args, msg: Message, session: Optional[Session] = None)
             ...
@@ -130,6 +130,9 @@ class BaseGateway(
     The original :class:`slixmpp.stanza.Message` is also passed to the handler as the
     msg kwarg. If the command comes from a registered gateway user, its session attribute is also
     passed to the handler.
+    
+    Refer to the :class:`slixmpp.plugins.xep_0050.XEP_0050` for more details on how to use ad-hoc
+    commands.
     """
 
     WELCOME_MESSAGE = (
@@ -230,7 +233,7 @@ class BaseGateway(
 
         Stop the event loop and exit on unhandled exception.
 
-        The default :class:slixmpp.basexmpp.BaseXMPP` behaviour is just to
+        The default :class:`slixmpp.basexmpp.BaseXMPP` behaviour is just to
         log the exception, but we want to avoid undefined behaviour.
 
         :param exception: An unhandled :class:`Exception` object.
@@ -476,7 +479,7 @@ class BaseGateway(
 
     async def search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
         """
-        Prepare the search form using self.SEARCH_FIELDS
+        Prepare the search form using :attr:`.BaseSession.SEARCH_FIELDS`
         """
         user = user_store.get_by_jid(ifrom)
         if user is None:
@@ -520,7 +523,7 @@ class BaseGateway(
 
         Basic example:
 
-        .. code-block:python
+        .. code-block:: python
 
             def add_adhoc_commands(self):
                 self["xep_0050"].add_command(
@@ -557,7 +560,7 @@ class BaseGateway(
 
         Since :xep:`0077` is pretty limited in terms of validation, it is OK to validate
         anything that looks good here and continue the legacy auth process via direct messages
-        to the user (using :meth:`.BaseGateway.input` for instance)
+        to the user (using :meth:`.BaseGateway.input` for instance).
 
         :param user_jid: JID of the user that has just registered
         :param registration_form: A dict where keys are the :attr:`.FormField.var` attributes
@@ -571,7 +574,6 @@ class BaseGateway(
         stuff after a user has been removed from the permanent user_store.
 
         :param user:
-        :return:
         """
         pass
 
@@ -631,7 +633,7 @@ class BaseGateway(
         """
         Request arbitrary user input using a simple chat message, and await the result.
 
-        You shouldn't need to call directly bust instead user :meth:`.BaseSession.input`
+        You shouldn't need to call directly bust instead use :meth:`.BaseSession.input`
         to directly target a user.
 
         NB: When using this, the next message that the user sent to the component will
