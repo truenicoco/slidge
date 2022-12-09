@@ -302,6 +302,7 @@ class LegacyRoster(
             c = self._contact_cls(
                 self.session, legacy_id, await self.legacy_id_to_jid_username(legacy_id)
             )
+            await c.update_caps()
             self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[
                 legacy_id
             ] = c
