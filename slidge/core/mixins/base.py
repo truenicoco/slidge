@@ -23,5 +23,5 @@ class Base:
 
 
 class BaseSender(Base):
-    def _send(self, stanza: Union[Message, Presence]):
-        raise NotImplemented
+    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
+        raise NotImplementedError
