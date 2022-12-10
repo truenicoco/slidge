@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import IO, Iterable, Optional, Union
 
 import aiohttp
-from slixmpp import Message
+from slixmpp import JID, Message
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
 
@@ -18,84 +18,156 @@ from .base import BaseSender
 
 class MessageMaker(BaseSender):
     mtype: MessageTypes = NotImplemented
+    STRIP_SHORT_DELAY = False
+    USE_STANZA_ID = False
+    _is_composing = False
 
     def _make_message(
         self,
         state: Optional[ChatState] = None,
         hints: Iterable[ProcessingHint] = (),
-        **msg_kwargs,
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+        when: Optional[datetime] = None,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to_jid: Optional[JID] = None,
+        carbon=False,
+        **kwargs,
     ):
-        body = msg_kwargs.pop("mbody", None)
-        mfrom = msg_kwargs.pop("mfrom", self.jid)
-        mto = msg_kwargs.pop("mto", None)
-        msg = self.xmpp.Message(sfrom=mfrom, stype=self.mtype, sto=mto, **msg_kwargs)
+        body = kwargs.pop("mbody", None)
+        mfrom = kwargs.pop("mfrom", self.jid)
+        mto = kwargs.pop("mto", None)
+        if carbon:
+            # the msg needs to have jabber:client as xmlns, so
+            # we don't want to associate with the XML stream
+            msg_cls = Message  # type:ignore
+        else:
+            msg_cls = self.xmpp.Message  # type:ignore
+        msg = msg_cls(sfrom=mfrom, stype=self.mtype, sto=mto, **kwargs)
         if body:
+            if self._is_composing:
+                state = "active"
+                self._is_composing = False
             msg["body"] = body
         if state:
+            self._is_composing = state == "composing"
             msg["chat_state"] = state
         for hint in hints:
             msg.enable(hint)
+        self._set_msg_id(msg, legacy_msg_id)
+        self._add_delay(msg, when)
+        self._add_reply_to(msg, reply_to_msg_id, reply_to_fallback_text, reply_to_jid)
         return msg
+
+    def _set_msg_id(
+        self, msg: Message, legacy_msg_id: Optional[LegacyMessageType] = None
+    ):
+        if legacy_msg_id is not None:
+            msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
+            if self.USE_STANZA_ID:
+                msg["stanza_id"]["id"] = str(legacy_msg_id)
+                msg["stanza_id"]["by"] = self.muc.jid  # type: ignore
+
+    def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
+        return self.session.sent.get(
+            legacy_id
+        ) or self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
+
+    def _add_delay(self, msg: Message, when: Optional[datetime]):
+        if when:
+            if when.tzinfo is None:
+                when = when.astimezone(timezone.utc)
+            if self.STRIP_SHORT_DELAY:
+                delay = datetime.now().astimezone(timezone.utc) - when
+                if delay < config.IGNORE_DELAY_THRESHOLD:
+                    return
+            msg["delay"].set_stamp(when)
+            msg["delay"].set_from(self.xmpp.boundjid.bare)
+
+    def _add_reply_to(
+        self,
+        msg: Message,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to_author: Optional[JID] = None,
+    ):
+        if reply_to_msg_id is not None:
+            xmpp_id = self._legacy_to_xmpp(reply_to_msg_id)
+            msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
+            # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
+            if reply_to_author:
+                msg["reply"]["to"] = reply_to_author
+            if reply_to_fallback_text:
+                msg["feature_fallback"].add_quoted_fallback(reply_to_fallback_text)
 
 
 class ChatStateMixin(MessageMaker):
-    def _chat_state(self, state: ChatState):
-        msg = self._make_message(state=state, hints={"no-store"})
-        self._send(msg)
+    def _chat_state(self, state: ChatState, **kwargs):
+        msg = self._make_message(
+            state=state, hints={"no-store"}, carbon=kwargs.get("carbon")
+        )
+        self._send(msg, **kwargs)
 
-    def active(self):
+    def active(self, **kwargs):
         """
         Send an "active" chat state (:xep:`0085`) from this contact to the user.
         """
-        self._chat_state("active")
+        self._chat_state("active", **kwargs)
 
-    def composing(self):
+    def composing(self, **kwargs):
         """
         Send a "composing" (ie "typing notification") chat state (:xep:`0085`) from this contact to the user.
         """
-        self._chat_state("composing")
+        self._chat_state("composing", **kwargs)
 
-    def paused(self):
+    def paused(self, **kwargs):
         """
         Send a "paused" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
         """
-        self._chat_state("paused")
+        self._chat_state("paused", **kwargs)
 
-    def inactive(self):
+    def inactive(self, **kwargs):
         """
         Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
         """
-        self._chat_state("inactive")
+        self._chat_state("inactive", **kwargs)
 
-    def gone(self):
+    def gone(self, **kwargs):
         """
         Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
         """
-        self._chat_state("gone")
+        self._chat_state("gone", **kwargs)
 
 
 class MarkerMixin(MessageMaker):
+    is_group: bool = NotImplemented
+
     def _make_marker(
-        self, legacy_msg_id: LegacyMessageType, marker: Marker, **msg_kwargs
+        self, legacy_msg_id: LegacyMessageType, marker: Marker, carbon=False
     ):
-        msg = self._make_message(**msg_kwargs)
-        msg[marker]["id"] = self.session.sent.get(legacy_msg_id)
+        msg = self._make_message(carbon=carbon)
+        msg[marker]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         return msg
 
-    def _make_receipt(self, legacy_msg_id: LegacyMessageType):
-        msg = self._make_message()
-        msg["receipt"] = self.session.sent.get(legacy_msg_id)
+    def _make_receipt(self, legacy_msg_id: LegacyMessageType, carbon=False):
+        msg = self._make_message(carbon=carbon)
+        msg["receipt"] = self._legacy_to_xmpp(legacy_msg_id)
         return msg
 
-    def ack(self, legacy_msg_id: LegacyMessageType):
+    def ack(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
         Send an "acknowledged" message marker (:xep:`0333`) from this contact to the user.
 
         :param legacy_msg_id: The message this marker refers to
         """
-        self._send(self._make_marker(legacy_msg_id, "acknowledged"))
+        self._send(
+            self._make_marker(
+                legacy_msg_id, "acknowledged", carbon=kwargs.get("carbon")
+            ),
+            **kwargs,
+        )
 
-    def received(self, legacy_msg_id: LegacyMessageType):
+    def received(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
         Send a "received" message marker (:xep:`0333`) and a "message delivery receipt"
         (:xep:`0184`)
@@ -103,25 +175,28 @@ class MarkerMixin(MessageMaker):
 
         :param legacy_msg_id: The message this marker refers to
         """
-        self._send(self._make_receipt(legacy_msg_id))
-        self._send(self._make_marker(legacy_msg_id, "received"))
+        carbon = kwargs.get("carbon")
+        if not self.is_group:
+            # msg receipts are NOT RECOMMENDED for MUCs
+            self._send(self._make_receipt(legacy_msg_id, carbon=carbon), **kwargs)
+        self._send(
+            self._make_marker(legacy_msg_id, "received", carbon=carbon), **kwargs
+        )
 
-    def displayed(self, legacy_msg_id: LegacyMessageType):
+    def displayed(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
         Send a "displayed" message marker (:xep:`0333`) from this contact to the user.
 
         :param legacy_msg_id: The message this marker refers to
         """
-        self._send(self._make_marker(legacy_msg_id, "displayed"))
+        self._send(
+            self._make_marker(legacy_msg_id, "displayed", carbon=kwargs.get("carbon")),
+            **kwargs,
+        )
 
 
 class ContentMessageMixin(MessageMaker):
-    def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
-        return self.session.sent.get(
-            legacy_id
-        ) or self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
-
-    async def __upload(
+    async def _upload(
         self,
         filename: Union[Path, str],
         content_type: Optional[str] = None,
@@ -147,48 +222,6 @@ class ContentMessageMixin(MessageMaker):
             )
             log.exception(e)
 
-    def _make_bridged_message(
-        self,
-        state: Optional[ChatState] = "active",
-        hints: Iterable[ProcessingHint] = ("markable", "store"),
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        **msg_kwargs,
-    ):
-        msg = self._make_message(state=state, hints=hints, **msg_kwargs)
-        if legacy_msg_id is not None:
-            msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-        self._add_delay(msg, when)
-        self._add_reply_to(msg, reply_to_msg_id, reply_to_fallback_text)
-        return msg
-
-    def _add_delay(self, msg: Message, when: Optional[datetime]):
-        if when:
-            if when.tzinfo is None:
-                when = when.astimezone(timezone.utc)
-            if (
-                datetime.now().astimezone(timezone.utc) - when
-                > config.IGNORE_DELAY_THRESHOLD
-            ):
-                msg["delay"].set_stamp(when)
-                msg["delay"].set_from(self.xmpp.boundjid.bare)
-
-    def _add_reply_to(
-        self,
-        msg: Message,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-    ):
-        if reply_to_msg_id is not None:
-            xmpp_id = self._legacy_to_xmpp(reply_to_msg_id)
-            msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
-            # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
-            msg["reply"]["to"] = self.user.jid
-            if reply_to_fallback_text:
-                msg["feature_fallback"].add_quoted_fallback(reply_to_fallback_text)
-
     def send_text(
         self,
         body: str,
@@ -197,27 +230,31 @@ class ContentMessageMixin(MessageMaker):
         when: Optional[datetime] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
+        reply_to_jid: Optional[JID] = None,
+        **kwargs,
     ):
         """
-        Transmit a message from the contact to the user
+        Transmit a message from the entity to the user
 
         :param body: Context of the message
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
-        :param reply_to_msg_id:
-        :param reply_to_fallback_text:
         :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
-
-        :return: the XMPP message that was sent
+        :param reply_to_msg_id: Quote another message (:xep:`0461`)
+        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
+        :param reply_to_jid: JID of the quoted message author
         """
-        msg = self._make_bridged_message(
+        msg = self._make_message(
             mbody=body,
             legacy_msg_id=legacy_msg_id,
             when=when,
             reply_to_msg_id=reply_to_msg_id,
             reply_to_fallback_text=reply_to_fallback_text,
+            reply_to_jid=reply_to_jid,
+            hints={"markable", "store"},
+            carbon=kwargs.get("carbon"),
         )
-        self._send(msg)
+        self._send(msg, **kwargs)
 
     async def send_file(
         self,
@@ -229,8 +266,10 @@ class ContentMessageMixin(MessageMaker):
         url: Optional[str] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
+        reply_to_jid: Optional[JID] = None,
         when: Optional[datetime] = None,
         caption: Optional[str] = None,
+        **kwargs,
     ):
         """
         Send a file using HTTP upload (:xep:`0363`)
@@ -244,19 +283,21 @@ class ContentMessageMixin(MessageMaker):
         :param url: Optionally, a URL of a file that slidge will download and upload to the
             default file upload service on the xmpp server it's running on. url and input_file
             are mutually exclusive.
-        :param reply_to_msg_id:
-        :param reply_to_fallback_text:
+        :param reply_to_msg_id: Quote another message (:xep:`0461`)
+        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
+        :param reply_to_jid: JID of the quoted message author
         :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
         :param caption: an optional text that is linked to the file
-
-        :return: The msg stanza that was sent
         """
-        msg = self._make_bridged_message(
+        carbon = kwargs.pop("carbon", False)
+        msg = self._make_message(
             when=when,
             reply_to_msg_id=reply_to_msg_id,
             reply_to_fallback_text=reply_to_fallback_text,
+            reply_to_jid=reply_to_jid,
+            carbon=carbon,
         )
-        uploaded_url = await self.__upload(filename, content_type, input_file, url)
+        uploaded_url = await self._upload(filename, content_type, input_file, url)
         if uploaded_url is None:
             if url is not None:
                 uploaded_url = url
@@ -265,22 +306,22 @@ class ContentMessageMixin(MessageMaker):
                     "I tried to send a file, but something went wrong. "
                     "Tell your XMPP admin to check slidge logs."
                 )
-                if legacy_msg_id:
-                    msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-                self._send(msg)
+                self._set_msg_id(msg, legacy_msg_id)
+                self._send(msg, **kwargs)
                 return
 
         msg["oob"]["url"] = uploaded_url
         msg["body"] = uploaded_url
         if caption:
-            self._send(msg)
-            self.send_text(caption, legacy_msg_id=legacy_msg_id, when=when)
+            self._send(msg, carbon=carbon, **kwargs)
+            self.send_text(
+                caption, legacy_msg_id=legacy_msg_id, when=when, carbon=carbon, **kwargs
+            )
         else:
-            if legacy_msg_id:
-                msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-            self._send(msg)
+            self._set_msg_id(msg, legacy_msg_id)
+            self._send(msg, **kwargs)
 
-    def correct(self, legacy_msg_id: LegacyMessageType, new_text: str):
+    def correct(self, legacy_msg_id: LegacyMessageType, new_text: str, **kwargs):
         """
         Call this when a legacy contact has modified his last message content.
 
@@ -289,11 +330,13 @@ class ContentMessageMixin(MessageMaker):
         :param legacy_msg_id: Legacy message ID this correction refers to
         :param new_text: The new text
         """
-        msg = self._make_bridged_message(mbody=new_text)
+        msg = self._make_message(mbody=new_text, carbon=kwargs.get("carbon"))
         msg["replace"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-        self._send(msg)
+        self._send(msg, **kwargs)
 
-    def react(self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str] = ()):
+    def react(
+        self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str] = (), **kwargs
+    ):
         """
         Call this when a legacy contact reacts to a message
 
@@ -301,53 +344,31 @@ class ContentMessageMixin(MessageMaker):
         :param emojis: A iterable of emojis used as reactions
         :return:
         """
-        msg = self._make_bridged_message(hints={"store"})
+        msg = self._make_message(hints={"store"}, carbon=kwargs.get("carbon"))
         xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
         self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=emojis)
-        self._send(msg)
+        self._send(msg, **kwargs)
 
-    def retract(self, legacy_msg_id: LegacyMessageType):
+    def retract(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
         Call this when a legacy contact retracts (:XEP:`0424`) a message
 
         :param legacy_msg_id: Legacy ID of the message to delete
         """
-        msg = self._make_bridged_message(
+        msg = self._make_message(
             state=None,
             hints={"store"},
             mbody=f"I have deleted the message {legacy_msg_id}, "
             "but your XMPP client does not support that",
+            carbon=kwargs.get("carbon"),
         )
         msg.enable("fallback")
         msg["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         msg["apply_to"].enable("retract")
-        self._send(msg)
+        self._send(msg, **kwargs)
 
 
 class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
-    def _make_message_with_jabber_client_namespace(self, **stanza_kwargs):
-        return Message(
-            sfrom=self.user.jid, stype=self.mtype, sto=self.jid.bare, **stanza_kwargs
-        )
-
-    def _make_carbon(
-        self, legacy_msg_id: Optional[LegacyMessageType] = None, **msg_kwargs
-    ):
-        body = msg_kwargs.pop("mbody", None)
-        when = msg_kwargs.pop("when", None)
-        reply_to_msg = msg_kwargs.pop("reply_to_msg_id", None)
-        reply_to_fallback_text = msg_kwargs.pop("reply_to_fallback_text", None)
-        msg = self._make_message_with_jabber_client_namespace(**msg_kwargs)
-
-        if body:
-            msg["body"] = body
-        msg.enable("store")
-        if legacy_msg_id is not None:
-            msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-        self._add_delay(msg, when)
-        self._add_reply_to(msg, reply_to_msg, reply_to_fallback_text)
-        return msg
-
     def _privileged_send(self, msg: Message):
         self.session.ignore_messages.add(msg.get_id())
         try:
@@ -361,137 +382,6 @@ class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
                     "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
                     "for more info."
                 )
-                return
-        msg.get_id()
-
-    def send_text(
-        self,
-        body: str,
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        *,
-        when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        carbon=False,
-    ):
-        if carbon:
-            msg = self._make_carbon(
-                mbody=body,
-                legacy_msg_id=legacy_msg_id,
-                when=when,
-                reply_to_msg_id=reply_to_msg_id,
-                reply_to_fallback_text=reply_to_fallback_text,
-            )
-            self._privileged_send(msg)
-        else:
-            super().send_text(
-                body,
-                legacy_msg_id=legacy_msg_id,
-                when=when,
-                reply_to_msg_id=reply_to_msg_id,
-                reply_to_fallback_text=reply_to_fallback_text,
-            )
-
-    async def send_file(
-        self,
-        filename: Union[Path, str],
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        *,
-        content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        when: Optional[datetime] = None,
-        caption: Optional[str] = None,
-        carbon=False,
-    ):
-        if carbon:
-            msg = self._make_carbon(
-                when=when,
-                reply_to_msg_id=reply_to_msg_id,
-                reply_to_fallback_text=reply_to_fallback_text,
-            )
-            uploaded_url = await self.__upload(filename, content_type, input_file, url)
-            if uploaded_url is None:
-                if url is not None:
-                    uploaded_url = url
-                else:
-                    msg["body"] = (
-                        "I tried to send a file, but something went wrong. "
-                        "Tell your XMPP admin to check slidge logs."
-                    )
-                    if legacy_msg_id:
-                        msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-                    self._privileged_send(msg)
-                    return
-
-            msg["oob"]["url"] = uploaded_url
-            msg["body"] = uploaded_url
-            if caption:
-                self._privileged_send(msg)
-                self.send_text(
-                    caption, legacy_msg_id=legacy_msg_id, when=when, carbon=True
-                )
-            else:
-                if legacy_msg_id:
-                    msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
-                self._privileged_send(msg)
-        else:
-            await super().send_file(
-                filename=filename,
-                content_type=content_type,
-                input_file=input_file,
-                url=url,
-                legacy_msg_id=legacy_msg_id,
-                reply_to_msg_id=reply_to_msg_id,
-                reply_to_fallback_text=reply_to_fallback_text,
-                caption=caption,
-            )
-
-    def correct(self, legacy_msg_id: LegacyMessageType, new_text: str, *, carbon=False):
-        if carbon:
-            msg = self._make_carbon(mbody=new_text)
-            msg["replace"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-            self._privileged_send(msg)
-        else:
-            super().correct(legacy_msg_id, new_text)
-
-    def react(
-        self,
-        legacy_msg_id: LegacyMessageType,
-        emojis: Iterable[str] = (),
-        *,
-        carbon=False,
-    ):
-        if carbon:
-            xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
-            msg = self._make_carbon()
-            self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=emojis)
-            self._privileged_send(msg)
-        else:
-            super().react(legacy_msg_id, emojis)
-
-    def retract(self, legacy_msg_id: LegacyMessageType, *, carbon=False):
-        if carbon:
-            msg = self._make_carbon(
-                mbody=f"I have deleted the message {legacy_msg_id}, "
-                "but your XMPP client does not support that"
-            )
-            msg.enable("fallback")
-            msg["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-            msg["apply_to"].enable("retract")
-            self._privileged_send(msg)
-        else:
-            super().retract(legacy_msg_id)
-
-    def displayed(self, legacy_msg_id: LegacyMessageType, *, carbon=False):
-        if carbon:
-            msg = self._make_message_with_jabber_client_namespace()
-            msg["from"] = self.user.jid.bare
-            self._privileged_send(msg)
-        else:
-            super().displayed(legacy_msg_id)
 
 
 class MessageMixin(ChatStateMixin, MarkerMixin, ContentMessageMixin):

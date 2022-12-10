@@ -1,12 +1,18 @@
 import logging
-from datetime import date
-from typing import Any, Generic, Optional, Type
+from datetime import date, datetime
+from typing import Any, Generic, Optional, Type, Union
 
-from slixmpp import JID
+from slixmpp import JID, Message, Presence
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..util import SubclassableOnce
-from ..util.types import AvatarType, LegacyContactType, LegacyUserIdType, SessionType
+from ..util.types import (
+    AvatarType,
+    LegacyContactType,
+    LegacyMessageType,
+    LegacyUserIdType,
+    SessionType,
+)
 from ..util.xep_0292.stanza import VCard4
 from . import config
 from .mixins import FullCarbonMixin
@@ -56,6 +62,7 @@ class LegacyContact(
     """
 
     mtype = "chat"
+    is_group = False
 
     def __init__(
         self,
@@ -98,9 +105,46 @@ class LegacyContact(
             return "to"
         return "none"
 
-    def _send(self, stanza):
-        stanza["to"] = self.user.jid
-        stanza.send()
+    def _send(self, stanza: Union[Message, Presence], carbon=False, **send_kwargs):
+        if carbon and isinstance(stanza, Message):
+            stanza["to"] = self.jid.bare
+            stanza["from"] = self.user.jid
+            self._privileged_send(stanza)
+        else:
+            stanza["to"] = self.user.jid
+            stanza.send()
+
+    def send_text(
+        self,
+        body: str,
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+        *,
+        when: Optional[datetime] = None,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_self=False,
+        **kwargs,
+    ):
+        """
+        The contact sends a message to the user.
+
+        :param body:
+        :param legacy_msg_id:
+        :param when:
+        :param reply_to_msg_id: Quote another message (:xep:`0461`)
+        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
+        :param reply_self: Set to true is this is a self quote. If False, it means the
+            quoted author is the gateway user.
+        """
+        super().send_text(
+            body=body,
+            legacy_msg_id=legacy_msg_id,
+            when=when,
+            reply_to_msg_id=reply_to_msg_id,
+            reply_to_fallback_text=reply_to_fallback_text,
+            reply_to_jid=self.jid if reply_self else self.user.jid,
+            **kwargs,
+        )
 
     @property
     def name(self):

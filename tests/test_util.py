@@ -99,6 +99,8 @@ def test_strip_delay(monkeypatch):
             pass
 
     class MockC:
+        STRIP_SHORT_DELAY = True
+
         class xmpp:
             boundjid = JID("test")
 
