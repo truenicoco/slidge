@@ -1,11 +1,11 @@
-from .disco import DiscoMixin
+from .disco import BaseDiscoMixin, ChatterDiscoMixin
 from .message import MessageCarbonMixin, MessageMixin
 from .presence import PresenceMixin
 
 
-class FullMixin(DiscoMixin, MessageMixin, PresenceMixin):
+class FullMixin(ChatterDiscoMixin, MessageMixin, PresenceMixin):
     pass
 
 
-class FullCarbonMixin(DiscoMixin, MessageCarbonMixin, PresenceMixin):
+class FullCarbonMixin(ChatterDiscoMixin, MessageCarbonMixin, PresenceMixin):
     pass

@@ -5,7 +5,34 @@ from slidge.util.xep_0030.stanza.info import DiscoInfo
 from .base import Base
 
 
-class DiscoMixin(Base):
+class BaseDiscoMixin(Base):
+    DISCO_TYPE: str = NotImplemented
+    DISCO_CATEGORY: str = NotImplemented
+    DISCO_NAME: str = NotImplemented
+    DISCO_LANG = None
+
+    def features(self):
+        return []
+
+    def extended_features(self):
+        return
+
+    def get_disco_info(self):
+        info = DiscoInfo()
+        for feature in self.features():
+            info.add_feature(feature)
+        info.add_identity(
+            category=self.DISCO_CATEGORY,
+            itype=self.DISCO_TYPE,
+            name=self.DISCO_NAME,
+            lang=self.DISCO_LANG,
+        )
+        if x := self.extended_features():
+            info.append(x)
+        return info
+
+
+class ChatterDiscoMixin(BaseDiscoMixin):
     AVATAR = True
     RECEIPTS = True
     MARKS = True
@@ -16,10 +43,11 @@ class DiscoMixin(Base):
     RETRACTION = True
     REPLIES = True
 
-    CLIENT_TYPE = "pc"
-    CATEGORY = "client"
+    DISCO_TYPE = "pc"
+    DISCO_CATEGORY = "client"
+    DISCO_NAME = ""
 
-    def get_features(self):
+    def features(self):
         features = []
         if self.CHAT_STATES:
             features.append("http://jabber.org/protocol/chatstates")
@@ -38,22 +66,14 @@ class DiscoMixin(Base):
         if self.REPLIES:
             features.append("urn:xmpp:reply:0")
         features.append("urn:ietf:params:xml:ns:vcard-4.0")
-
         return features
-
-    def get_disco_info(self):
-        info = DiscoInfo()
-        for feature in self.get_features():
-            info.add_feature(feature)
-        info.add_identity(category=self.CATEGORY, itype=self.CLIENT_TYPE)
-        return info
 
     async def update_caps(self):
         jid = self.jid
         xmpp = self.xmpp
 
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
-        for f in self.get_features():
+        for f in self.features():
             await add_feature(f)
 
         await xmpp["xep_0115"].update_caps(jid=jid)
