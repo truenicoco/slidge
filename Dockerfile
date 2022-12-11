@@ -79,7 +79,7 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry export > r-base.txt
 RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
     pip install -r r-base.txt
-ARG PLUGIN="facebook signal telegram skype mattermost steam discord whatsapp"
+ARG PLUGIN="facebook signal telegram skype mattermost steam discord"
 RUN poetry export --extras "$PLUGIN" > r.txt || true
 RUN --mount=type=cache,id=slidge-pip-cache,target=/root/.cache/pip \
     pip install -r r.txt || true
