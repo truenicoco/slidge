@@ -5,7 +5,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import aiohttp
 import aiosignald.exc as sigexc
@@ -13,10 +13,12 @@ import aiosignald.generated as sigapi
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
+from slidge.core.muc.room import MucType
 
 if TYPE_CHECKING:
     from .contact import Contact, Roster
     from .gateway import Gateway
+    from .group import Bookmarks, MUC, Participant
 
 from . import config, txt
 
@@ -30,6 +32,7 @@ def handle_unregistered_recipient(func):
             sigexc.UnregisteredUserError,
             sigexc.IllegalArgumentException,
             sigexc.InternalError,
+            sigexc.InvalidGroupError,
         ) as e:
             raise XMPPError(
                 "item-not-found",
@@ -40,15 +43,7 @@ def handle_unregistered_recipient(func):
 
 
 class Session(
-    BaseSession[
-        "Gateway",
-        int,
-        "Roster",
-        "Contact",
-        LegacyBookmarks,
-        LegacyMUC,
-        LegacyParticipant,
-    ]
+    BaseSession["Gateway", int, "Roster", "Contact", "Bookmarks", "MUC", "Participant"]
 ):
     """
     Represents a signal account
@@ -66,7 +61,10 @@ class Session(
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
         self.reaction_ack_futures: dict[tuple[int, str], asyncio.Future[None]] = {}
+        self.user_uuid: asyncio.Future[str] = self.xmpp.loop.create_future()
+        self.user_nick: asyncio.Future[str] = self.xmpp.loop.create_future()
         self.connected = self.xmpp.loop.create_future()
+        self.sent_in_muc = dict[int, "MUC"]()
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
@@ -135,7 +133,18 @@ class Session(
                 raise
             await (await self.signal).subscribe(account=self.phone)
         await self.connected
+        sig = await self.signal
+        profile = await sig.get_profile(
+            account=self.phone, address=sigapi.JsonAddressv1(number=self.phone)
+        )
+        nick: str = profile.name or profile.profile_name or "SlidgeUser"
+        if nick is not None:
+            nick = nick.replace("\u0000", " ")
+        self.user_nick.set_result(nick)
+        self.user_uuid.set_result(profile.address.uuid)
+        self.bookmarks.set_username(nick)
         await self.add_contacts_to_roster()
+        await self.add_groups()
         return f"Connected as {self.phone}"
 
     async def on_websocket_connection_state(
@@ -219,6 +228,17 @@ class Session(
             await contact.add_to_roster()
             contact.online()
 
+    async def add_groups(self):
+        groups = await (await self.signal).list_groups(account=self.phone)
+        self.log.debug("GROUPS: %r", groups)
+        for group in groups.groups:
+            muc = await self.bookmarks.by_legacy_id(group.id)
+            muc.type = MucType.GROUP
+            muc.DISCO_NAME = group.title
+            muc.subject = group.description
+            muc.description = group.description
+            muc.n_participants = len(group.members)
+
     async def on_signal_message(self, msg: sigapi.IncomingMessagev1):
         """
         User has received 'something' from signal
@@ -240,7 +260,7 @@ class Session(
 
             contact = await self.contacts.by_json_address(sent.destination)
 
-            await contact.carbon_send_attachments(sent_msg.attachments)
+            await contact.send_attachments(sent_msg.attachments, carbon=True)
 
             if (body := sent_msg.body) is not None:
                 contact.send_text(
@@ -268,76 +288,119 @@ class Session(
         contact = await self.contacts.by_json_address(msg.source)
 
         if (data := msg.data_message) is not None:
-            if data.group or data.groupV2:
+            if data.group:
                 return
+
+            if data.groupV2:
+                muc = await self.bookmarks.by_legacy_id(data.groupV2.id)
+                entity = await muc.get_participant_by_contact(contact)
+            else:
+                entity = contact
+
+            reply_self = False
             if (quote := data.quote) is None:
                 reply_to_msg_id = None
+                reply_to_fallback_text = None
+                reply_to_author = None
             else:
                 reply_to_msg_id = quote.id
-            text = data.body
-            msg_id = data.timestamp
-            await contact.send_attachments(
-                data.attachments,
-                legacy_msg_id=None if text else msg_id,
+                reply_to_fallback_text = quote.text
+                reply_self = quote.author.uuid == msg.source.uuid
+
+                if data.groupV2:
+                    reply_to_author = await muc.get_participant(muc.user_nick)
+                else:
+                    reply_to_author = None
+
+            kwargs = dict(
                 reply_to_msg_id=reply_to_msg_id,
+                reply_to_author=reply_to_author,
+                reply_to_fallback_text=reply_to_fallback_text,
+                reply_self=reply_self,
+                when=datetime.fromtimestamp(msg.data_message.timestamp / 1000),
+            )
+
+            msg_id = data.timestamp
+            text = data.body
+            await entity.send_attachments(
+                data.attachments, legacy_msg_id=None if text else msg_id, **kwargs
             )
             if text:
-                contact.send_text(
-                    body=text,
-                    legacy_msg_id=msg_id,
-                    reply_to_msg_id=reply_to_msg_id,
-                    when=datetime.fromtimestamp(msg.data_message.timestamp / 1000),
-                )
+                entity.send_text(body=text, legacy_msg_id=msg_id, **kwargs)
             if (reaction := data.reaction) is not None:
                 self.log.debug("Reaction: %s", reaction)
                 if reaction.remove:
-                    contact.react(reaction.targetSentTimestamp)
+                    entity.react(reaction.targetSentTimestamp)
                 else:
-                    contact.react(reaction.targetSentTimestamp, reaction.emoji)
+                    entity.react(reaction.targetSentTimestamp, reaction.emoji)
             if (delete := data.remoteDelete) is not None:
-                contact.retract(delete.target_sent_timestamp)
+                entity.retract(delete.target_sent_timestamp)
 
         if (typing_message := msg.typing_message) is not None:
-            if typing_message.group_id:
-                return
+            if g := typing_message.group_id:
+                muc = await self.bookmarks.by_legacy_id(g)
+                entity = await muc.get_participant_by_contact(contact)
+            else:
+                entity = contact
+
             action = typing_message.action
             if action == "STARTED":
-                contact.active()
-                contact.composing()
+                entity.active()
+                entity.composing()
             elif action == "STOPPED":
-                contact.paused()
+                entity.paused()
 
         if (receipt_message := msg.receipt_message) is not None:
             type_ = receipt_message.type
             if type_ == "DELIVERY":
                 for t in msg.receipt_message.timestamps:
-                    contact.received(t)
+                    entity = await self.__get_entity_by_sent_msg_id(contact, t)
+                    entity.received(t)
             elif type_ == "READ":
-                for t in msg.receipt_message.timestamps:
-                    contact.displayed(t)
+                # no need to mark all messages read, just the last one, see
+                # "8.1. Optimizations" in XEP-0333
+                t = max(msg.receipt_message.timestamps)
+                entity = await self.__get_entity_by_sent_msg_id(contact, t)
+                entity.displayed(t)
+
+    async def __get_entity_by_sent_msg_id(self, contact: "Contact", t: int):
+        self.log.debug("Looking for %s in %s", t, self.sent_in_muc)
+        group = self.sent_in_muc.get(t)
+        if group:
+            return await group.get_participant_by_contact(contact)
+        return contact
 
     @handle_unregistered_recipient
     async def send_text(
         self,
-        t: str,
-        c: "Contact",
+        text: str,
+        chat: Union["Contact", "MUC"],
         *,
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
+        reply_to: Optional[Union["Contact", "Participant"]] = None,
     ) -> int:
+        address, group = self._get_args_from_entity(chat)
         if reply_to_msg_id is None:
             quote = None
+        elif reply_to is None:
+            quote = None
+            self.log.warning(
+                "An XMPP client did not include reply to=, so we cannot make a quote here."
+            )
         else:
             quote = sigapi.JsonQuotev1(
                 id=reply_to_msg_id,
-                author=c.signal_address,
-                text=""  # not sure what this accomplishes? does not seem to have any effect,
-                # but must not be None or NullPointerException
+                author=sigapi.JsonAddressv1(uuid=await self.user_uuid)
+                if reply_to is None
+                else reply_to.signal_address,
+                text=reply_to_fallback_text or "",
             )
         response = await (await self.signal).send(
             account=self.phone,
-            recipientAddress=c.signal_address,
-            messageBody=t,
+            recipientAddress=address,
+            recipientGroupId=group,
+            messageBody=text,
             quote=quote,
         )
         result = response.results[0]
@@ -345,34 +408,39 @@ class Session(
         if result.networkFailure or result.proof_required_failure:
             raise XMPPError(str(result))
         elif result.identityFailure:
+            chat = cast("Contact", chat)
             s = await self.signal
             identities = (
                 await s.get_identities(
                     account=self.phone,
-                    address=c.signal_address,
+                    address=chat.signal_address,
                 )
             ).identities
             ans = await self.input(
-                f"The identity of {c.legacy_id} has changed. "
+                f"The identity of {chat.legacy_id} has changed. "
                 f"Do you want to trust all their identities and resend the message?"
             )
             if ans.lower().startswith("y"):
                 for i in identities:
                     await (await self.signal).trust(
                         account=self.phone,
-                        address=c.signal_address,
+                        address=chat.signal_address,
                         safety_number=i.safety_number,
                     )
-                await self.send_text(t, c, reply_to_msg_id=reply_to_msg_id)
+                await self.send_text(text, chat, reply_to_msg_id=reply_to_msg_id)
             else:
                 raise XMPPError(str(result))
-        return response.timestamp
+        legacy_msg_id = response.timestamp
+        if group:
+            self.sent_in_muc[legacy_msg_id] = cast("MUC", chat)
+        return legacy_msg_id
 
     @handle_unregistered_recipient
-    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
+    async def send_file(self, url: str, chat: "Contact", *, reply_to_msg_id=None):
         s = await self.signal
+        address, group = self._get_args_from_entity(chat)
         async with aiohttp.ClientSession() as client:
-            async with client.get(url=u) as r:
+            async with client.get(url=url) as r:
                 with tempfile.TemporaryDirectory(
                     dir=config.SIGNALD_SOCKET.parent,
                 ) as d:
@@ -384,7 +452,8 @@ class Session(
                         )  # temp file is 0600 https://stackoverflow.com/a/10541972/5902284
                         signal_r = await s.send(
                             account=self.phone,
-                            recipientAddress=c.signal_address,
+                            recipientAddress=address,
+                            recipientGroupId=group,
                             attachments=[sigapi.JsonAttachmentv1(filename=f.name)],
                         )
                         return signal_r.timestamp
@@ -395,25 +464,56 @@ class Session(
     async def inactive(self, c: "Contact"):
         pass
 
+    @staticmethod
+    def _get_args_from_entity(e):
+        if e.is_group:
+            address = None
+            group = e.legacy_id
+        else:
+            address = e.signal_address
+            group = None
+        return address, group
+
     @handle_unregistered_recipient
     async def composing(self, c: "Contact"):
         self.log.debug("COMPOSING %s", c)
+        address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
             account=self.phone,
-            address=c.signal_address,
+            address=address,
+            group=group,
             typing=True,
         )
 
     @handle_unregistered_recipient
-    async def displayed(self, legacy_msg_id: int, c: "Contact"):
+    async def displayed(self, legacy_msg_id: int, entity: Union["Contact", "MUC"]):
+        if entity.is_group:
+            entity = cast("MUC", entity)
+            address = entity.sent.get(legacy_msg_id)
+            if address is None:
+                self.log.debug(
+                    "Ignoring read mark %s in %s", legacy_msg_id, entity.sent
+                )
+                return
+        else:
+            entity = cast("Contact", entity)
+            address = entity.signal_address
+
         await (await self.signal).mark_read(
             account=self.phone,
-            to=c.signal_address,
+            to=address,
             timestamps=[legacy_msg_id],
         )
 
     @handle_unregistered_recipient
-    async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
+    async def react(
+        self, legacy_msg_id: int, emojis: list[str], c: Union["Contact", "MUC"]
+    ):
+        address, group = self._get_args_from_entity(c)
+        if group:
+            return
+        c = cast("Contact", c)
+
         remove = len(emojis) == 0
         if remove:
             try:
@@ -434,6 +534,7 @@ class Session(
         response = await (await self.signal).react(
             username=self.phone,
             recipientAddress=c.signal_address,
+            recipientGroupId=group,
             reaction=sigapi.JsonReactionv1(
                 emoji=emoji,
                 remove=remove,
@@ -457,9 +558,13 @@ class Session(
 
     @handle_unregistered_recipient
     async def retract(self, legacy_msg_id: int, c: "Contact"):
+        address, group = self._get_args_from_entity(c)
         try:
             await (await self.signal).remote_delete(
-                account=self.phone, address=c.signal_address, timestamp=legacy_msg_id
+                account=self.phone,
+                address=address,
+                group=group,
+                timestamp=legacy_msg_id,
             )
         except sigexc.SignaldException as e:
             raise XMPPError(text=f"Something went wrong during remote delete: {e}")

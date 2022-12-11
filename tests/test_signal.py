@@ -1,13 +1,13 @@
 import tempfile
 from pathlib import Path
 
-from slixmpp import JID, Presence
+from slixmpp import JID
 
 from aiosignald import exc
 
 import slidge.plugins.signal as plugin
 import slidge.plugins.signal.gateway
-from slidge.plugins.signal.contact import get_filename
+from slidge.plugins.signal.util import get_filename
 from slidge.util.test import SlidgeTest
 from slidge import *
 from aiosignald import generated as sigapi

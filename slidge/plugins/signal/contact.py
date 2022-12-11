@@ -1,7 +1,5 @@
 import functools
 import logging
-from datetime import datetime
-from mimetypes import guess_extension
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
@@ -11,11 +9,14 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from .util import AttachmentSenderMixin
+
 if TYPE_CHECKING:
+    from .group import Participant
     from .session import Session
 
 
-class Contact(LegacyContact["Session", str]):
+class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
     CORRECTION = False
 
     def __init__(self, *a, **k):
@@ -40,41 +41,6 @@ class Contact(LegacyContact["Session", str]):
             raise XMPPError("not-found")
         identities = r.identities
         self.session.send_gateway_message(str(identities))
-
-    async def carbon_send_attachments(self, attachments: list[sigapi.JsonAttachmentv1]):
-        for attachment in attachments:
-            filename = get_filename(attachment)
-            with open(attachment.storedFilename, "rb") as f:
-                await self.send_file(
-                    filename=filename,
-                    input_file=f,
-                    content_type=attachment.contentType,
-                    carbon=True,
-                )
-            if caption := attachment.caption:
-                self.send_text(caption, carbon=True)
-
-    async def send_attachments(
-        self,
-        attachments: list[sigapi.JsonAttachmentv1],
-        /,
-        legacy_msg_id: Optional[int] = None,
-        reply_to_msg_id: Optional[int] = None,
-        when: Optional[datetime] = None,
-    ):
-        last_attachment_i = len(attachments) - 1
-        for i, attachment in enumerate(attachments):
-            filename = get_filename(attachment)
-            with open(attachment.storedFilename, "rb") as f:
-                await self.send_file(
-                    filename=filename,
-                    input_file=f,
-                    content_type=attachment.contentType,
-                    legacy_msg_id=legacy_msg_id if i == last_attachment_i else None,
-                    reply_to_msg_id=reply_to_msg_id,
-                    when=when,
-                    caption=attachment.caption,
-                )
 
     async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
         if profile is None:
@@ -105,23 +71,20 @@ class Contact(LegacyContact["Session", str]):
         await self.add_to_roster()
 
 
-def get_filename(attachment: sigapi.JsonAttachmentv1):
-    if f := attachment.customFilename:
-        return f
-    else:
-        filename = attachment.id or "unnamed"
-        ext = guess_extension(attachment.contentType)
-        if ext is not None:
-            filename += ext
-        return filename
-
-
 class Roster(LegacyRoster["Session", Contact, str]):
+    async def by_uuid(self, uuid: str):
+        return await self.by_json_address(sigapi.JsonAddressv1(uuid=uuid))
+
     async def by_json_address(self, address: sigapi.JsonAddressv1):
         c = await self.by_legacy_id(address.uuid)
         if not c.added_to_roster or not c.profile_fetched:
-            self.session.xmpp.loop.create_task(c.update_and_add())
+            await c.update_and_add()
         return c
+
+    # @staticmethod
+    async def jid_username_to_legacy_id(self, jid_username: str):
+        if jid_username in self.session.bookmarks.known_groups:
+            raise XMPPError("bad-request", "This is a group ID, not a contact ID")
 
 
 log = logging.getLogger(__name__)
