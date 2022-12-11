@@ -34,7 +34,7 @@ class FeatureFallBack(ElementBase):
         end = self["fallback_body"]["end"]
         body = self.parent()["body"]
         if start <= end:
-            return body[start:end+1]
+            return body[start:end]
         else:
             return ""
 
