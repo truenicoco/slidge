@@ -9,7 +9,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-from .util import get_best_file
+from .util import TelegramToXMPPMixin
 
 if TYPE_CHECKING:
     from .session import Session
@@ -19,13 +19,13 @@ async def noop():
     return
 
 
-class Contact(LegacyContact["Session", int]):
-    legacy_id: int
-    # Telegram official clients have no XMPP presence equivalent, but a 'last seen' indication.
+class Contact(LegacyContact["Session", int], TelegramToXMPPMixin):
     CLIENT_TYPE = "phone"
+    session: "Session"  # type:ignore
 
     def __init__(self, *a, **k):
-        super(Contact, self).__init__(*a, **k)
+        super().__init__(*a, **k)
+        self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
 
     async def _expire_online(self, timestamp: Union[int, float]):
@@ -71,50 +71,6 @@ class Contact(LegacyContact["Session", int]):
                 "Last seen recently" if global_config.LAST_SEEN_FALLBACK else None,
                 last_seen=datetime.now(),
             )
-
-    async def send_tg_message(self, msg: tgapi.Message):
-        content = msg.content
-        reply_to = msg.reply_to_message_id
-        if not reply_to:
-            # if reply_to = 0, telegram really means "None"
-            reply_to = None
-        if isinstance(content, tgapi.MessageText):
-            # TODO: parse formatted text to markdown
-            formatted_text = content.text
-            self.send_text(
-                body=formatted_text.text,
-                legacy_msg_id=msg.id,
-                reply_to_msg_id=reply_to,
-            )
-        elif isinstance(content, tgapi.MessageAnimatedEmoji):
-            emoji = content.animated_emoji.sticker.emoji
-            self.send_text(
-                body=emoji,
-                legacy_msg_id=msg.id,
-                reply_to_msg_id=reply_to,
-            )
-        elif best_file := get_best_file(content):
-            await self.send_tg_file(
-                best_file, content.caption, msg.id, reply_to=reply_to
-            )
-        else:
-            self.send_text(
-                "/me tried to send an unsupported content. "
-                "Please report this: https://todo.sr.ht/~nicoco/slidge"
-            )
-            self.session.log.warning("Ignoring content: %s", type(content))
-
-    async def send_tg_file(self, best_file, caption, msg_id, reply_to=None):
-        query = tgapi.DownloadFile.construct(
-            file_id=best_file.id, synchronous=True, priority=1
-        )
-        best_file_downloaded: tgapi.File = await self.session.tg.request(query)
-        await self.send_file(
-            best_file_downloaded.local.path,
-            legacy_msg_id=msg_id,
-            caption=caption.text,
-            reply_to_msg_id=reply_to,
-        )
 
     async def update_info_from_user(self, user: Optional[tgapi.User] = None):
         if user is None:
@@ -185,9 +141,14 @@ class Contact(LegacyContact["Session", int]):
 class Roster(LegacyRoster["Session", "Contact", int]):
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
-            return int(jid_username)
+            tg_id = int(jid_username)
         except ValueError:
-            raise XMPPError("bad-request")
+            raise XMPPError("bad-request", "This is not a telegram user ID")
+        else:
+            if tg_id > 0:
+                return tg_id
+            else:
+                raise XMPPError("bad-request", "This looks like a telegram group ID")
 
 
 log = logging.getLogger(__name__)

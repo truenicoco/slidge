@@ -1,7 +1,7 @@
 import asyncio
 import functools
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import aiotdlib
 from aiotdlib import api as tgapi
@@ -9,6 +9,8 @@ from aiotdlib import api as tgapi
 from .util import get_best_file
 
 if TYPE_CHECKING:
+    from .contact import Contact
+    from .group import MUC, Participant
     from .session import Session
 
 
@@ -17,6 +19,7 @@ class TelegramClient(aiotdlib.Client):
         super().__init__(parse_mode=aiotdlib.ClientParseMode.MARKDOWN, **kw)
         self.session = session
         self.contacts = session.contacts
+        self.bookmarks = session.bookmarks
         self.log = self.session.log
 
         async def input_(prompt):
@@ -47,8 +50,7 @@ class TelegramClient(aiotdlib.Client):
             return
 
         if not await self.is_private_chat(msg.chat_id):
-            self.log.debug("Ignoring group message")
-            return
+            return await self.handle_group_message(msg)
 
         session = self.session
         if msg.is_outgoing:
@@ -90,6 +92,18 @@ class TelegramClient(aiotdlib.Client):
 
         await (await session.contacts.by_legacy_id(sender.user_id)).send_tg_message(msg)
 
+    async def handle_group_message(self, msg: tgapi.Message):
+        self.log.debug("MUC message: %s", msg)
+        if msg.is_outgoing:
+            if msg.sending_state is not None or msg.id in self.session.sent:
+                return
+
+        muc = await self.bookmarks.by_legacy_id(msg.chat_id)
+        participant = await muc.participant_by_tg_user(
+            await self.api.get_user(msg.sender_id.user_id)
+        )
+        await participant.send_tg_message(msg)
+
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):
         if update.user_id == await self.get_my_id():
             return
@@ -100,26 +114,33 @@ class TelegramClient(aiotdlib.Client):
         contact.update_status(update.status)
 
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
-        if not await self.is_private_chat(update.chat_id):
-            return
-        (await self.contacts.by_legacy_id(update.chat_id)).displayed(
-            update.last_read_outbox_message_id
-        )
+        if await self.is_private_chat(update.chat_id):
+            contact = await self.contacts.by_legacy_id(update.chat_id)
+            contact.displayed(update.last_read_outbox_message_id)
+        else:
+            muc = await self.bookmarks.by_legacy_id(update.chat_id)
+            async for p in muc.get_participants():
+                p.displayed(update.last_read_outbox_message_id)
 
     async def handle_ChatAction(self, action: tgapi.UpdateChatAction):
-        if not await self.is_private_chat(action.chat_id):
-            return
-
         sender = action.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
             self.log.debug("Ignoring action: %s", action)
             return
 
-        if (chat_id := action.chat_id) != sender.user_id:
-            self.log.debug("Ignoring group (?) action: %s", action)
-            return
+        chat_id = action.chat_id
+        user_id = sender.user_id
+        if chat_id == user_id:
+            composer: Union[
+                "Contact", "Participant"
+            ] = await self.contacts.by_legacy_id(chat_id)
+        else:
+            muc: MUC = await self.bookmarks.by_legacy_id(chat_id)
+            composer = await muc.participant_by_tg_user(
+                await self.api.get_user(user_id)
+            )
 
-        (await self.contacts.by_legacy_id(chat_id)).composing()
+        composer.composing()
 
     async def handle_ChatReadInbox(self, action: tgapi.UpdateChatReadInbox):
         if not await self.is_private_chat(action.chat_id):
@@ -138,9 +159,6 @@ class TelegramClient(aiotdlib.Client):
             contact.displayed(msg_id, carbon=True)
 
     async def handle_MessageContent(self, action: tgapi.UpdateMessageContent):
-        if not await self.is_private_chat(action.chat_id):
-            return
-
         new = action.new_content
         if isinstance(new, tgapi.MessagePhoto):
             # Happens when the user send a picture, looks safe to ignore
@@ -150,14 +168,25 @@ class TelegramClient(aiotdlib.Client):
             self.log.warning("Ignoring message update: %s", new)
             return
         session = self.session
+        corrected_msg_id = action.message_id
+        chat_id = action.chat_id
         try:
             fut = session.user_correction_futures.pop(action.message_id)
         except KeyError:
-            contact = await session.contacts.by_legacy_id(action.chat_id)
-            if action.message_id in self.session.sent:
-                contact.correct(action.message_id, new.text.text, carbon=True)
+            if await self.is_private_chat(chat_id):
+                contact = await session.contacts.by_legacy_id(chat_id)
+                if action.message_id in self.session.sent:
+                    contact.correct(corrected_msg_id, new.text.text, carbon=True)
+                else:
+                    contact.correct(corrected_msg_id, new.text.text)
             else:
-                contact.correct(action.message_id, new.text.text)
+                if action.message_id not in self.session.muc_sent_msg_ids:
+                    muc = await session.bookmarks.by_legacy_id(chat_id)
+                    msg = await self.api.get_message(chat_id, corrected_msg_id)
+                    participant = await muc.participant_by_tg_user(
+                        await self.api.get_user(msg.sender_id.user_id)
+                    )
+                    participant.correct(action.message_id, new.text.text)
         else:
             self.log.debug("User correction confirmation received")
             fut.set_result(None)
@@ -217,9 +246,6 @@ class TelegramClient(aiotdlib.Client):
             contact.react(update.message_id, user_reactions, carbon=True)
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
-        if not await self.is_private_chat(update.chat_id):
-            return
-
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
             self.log.debug("Ignoring non permanent delete")
             return
@@ -227,12 +253,19 @@ class TelegramClient(aiotdlib.Client):
             try:
                 future = self.session.delete_futures.pop(legacy_msg_id)
             except KeyError:
-                # FIXME: where do we filter out group chat messages here ?!
-                contact = await self.session.contacts.by_legacy_id(update.chat_id)
-                if legacy_msg_id in self.session.sent:
-                    contact.retract(legacy_msg_id, carbon=True)
+                if self.is_private_chat(update.chat_id):
+                    contact = await self.session.contacts.by_legacy_id(update.chat_id)
+                    if legacy_msg_id in self.session.sent:
+                        contact.retract(legacy_msg_id, carbon=True)
+                    else:
+                        contact.retract(legacy_msg_id)
                 else:
-                    contact.retract(legacy_msg_id)
+                    muc = await self.session.bookmarks.by_legacy_id(update.chat_id)
+                    msg = await self.api.get_message(update.chat_id, legacy_msg_id)
+                    participant = await muc.participant_by_tg_user_id(
+                        msg.sender_id.user_id
+                    )
+                    participant.retract(legacy_msg_id)
             else:
                 future.set_result(update)
 
