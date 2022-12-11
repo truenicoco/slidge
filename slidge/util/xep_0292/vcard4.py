@@ -39,7 +39,6 @@ class VCard4Provider(BasePlugin):
 
     def get_vcard(self, jid: JidStr, requested_by: JidStr) -> Optional[VCard4]:
         vcard = self._vcards.get(JID(jid).bare)
-        log.debug("VCARDS: %s", self._vcards)
         if vcard:
             if auth := vcard.authorized_jids:
                 if JID(requested_by).bare in auth:

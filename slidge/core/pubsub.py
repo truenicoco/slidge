@@ -147,7 +147,6 @@ class PubSubComponent(BasePlugin):
 
     async def _on_got_online(self, p: Presence):
         from_ = p.get_from()
-        # async with self.xmpp["xep_0115"].lock:
         ver_string = p["caps"]["ver"]
         info = None
         if ver_string:
@@ -156,7 +155,6 @@ class PubSubComponent(BasePlugin):
         if info is None:
             info = await self.xmpp.plugin["xep_0030"].get_info(from_)
         features = info["features"]
-        log.debug("features of %s: %s", from_, features)
         if AvatarMetadata.namespace + "+notify" in features:
             try:
                 pep_avatar = self._get_authorized_avatar(p)
@@ -203,11 +201,9 @@ class PubSubComponent(BasePlugin):
         store: dict[JID, PepItemType], stanza: Union[Iq, Presence]
     ) -> PepItemType:
         item = store.get(stanza.get_to())
-        log.debug("pep ava: %s", item)
         if item is None:
             raise XMPPError("item-not-found")
 
-        log.debug("auth: %s - %s", item.authorized_jid, stanza.get_from().bare)
         if item.authorized_jid is not None:
             if stanza.get_from().bare != item.authorized_jid:
                 raise XMPPError("item-not-found")
@@ -228,7 +224,6 @@ class PubSubComponent(BasePlugin):
             self._reply_with_payload(iq, pep_avatar.data, pep_avatar.id)
         else:
             for item in requested_items:
-                log.debug("item id: %s", item["id"])
                 if item["id"] == pep_avatar.id:
                     self._reply_with_payload(iq, pep_avatar.data, pep_avatar.id)
                     return
@@ -243,7 +238,6 @@ class PubSubComponent(BasePlugin):
             self._reply_with_payload(iq, pep_avatar.metadata, pep_avatar.id)
         else:
             for item in requested_items:
-                log.debug("item id: %s", item["id"])
                 if item["id"] == pep_avatar.id:
                     self._reply_with_payload(iq, pep_avatar.metadata, pep_avatar.id)
                     return
