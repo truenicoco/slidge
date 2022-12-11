@@ -199,7 +199,7 @@ class BaseGateway(
             for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
         }
 
-        self.use_origin_id = config.USE_ORIGIN_ID
+        self.use_origin_id = False
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """

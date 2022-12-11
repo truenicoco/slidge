@@ -106,9 +106,3 @@ LAST_SEEN_FALLBACK__DOC = (
     "to display the last seen information in the presence status. Useful for clients that "
     "do not implement XEP-0319."
 )
-
-USE_ORIGIN_ID = False
-USE_ORIGIN_ID__DOC = (
-    "Append an origin-id to all stanzas. This should not be necessary but some clients "
-    "rely on this origin id) for reactions and retractions."
-)
