@@ -128,7 +128,11 @@ class Roster(LegacyRoster["Session", Contact, str]):
         return contact
 
 
-class Session(BaseSession[Gateway, str, Roster, Contact]):
+class Session(
+    BaseSession[
+        Gateway, str, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
+    ]
+):
     fb_state: AndroidState
     mqtt: AndroidMQTT
     api: AndroidAPI
@@ -230,16 +234,11 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
         pass
 
     async def send_text(
-        self,
-        t: str,
-        c: Contact,
-        *,
-        reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
+        self, text: str, chat: Contact, *, reply_to_msg_id=None, **kwargs
     ) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
-            target=(fb_id := await c.fb_id()),
-            message=t,
+            target=(fb_id := await chat.fb_id()),
+            message=text,
             is_group=False,
             reply_to=reply_to_msg_id,
         )
@@ -253,18 +252,18 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
         self.sent_messages[fb_id].add(fb_msg)
         return fb_msg.mid
 
-    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
+    async def send_file(self, url: str, chat: Contact, reply_to_msg_id=None, **kwargs):
         async with aiohttp.ClientSession() as s:
-            async with s.get(u) as r:
+            async with s.get(url) as r:
                 data = await r.read()
         oti = self.mqtt.generate_offline_threading_id()
         fut = self.ack_futures[oti] = self.xmpp.loop.create_future()
         resp = await self.api.send_media(
             data=data,
-            file_name=u.split("/")[-1],
-            mimetype=guess_type(u)[0] or "application/octet-stream",
+            file_name=url.split("/")[-1],
+            mimetype=guess_type(url)[0] or "application/octet-stream",
             offline_threading_id=oti,
-            chat_id=await c.fb_id(),
+            chat_id=await chat.fb_id(),
             is_group=False,
             reply_to=reply_to_msg_id,
         )

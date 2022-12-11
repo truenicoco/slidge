@@ -9,7 +9,7 @@ from asyncio import Future
 from typing import Callable, Generic, Iterable, Optional, Sequence, Type
 
 import qrcode
-from slixmpp import JID, ComponentXMPP, Iq, Message
+from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Message, StanzaPath
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
@@ -21,6 +21,7 @@ from ..util.xep_0292.vcard4 import VCard4Provider
 from . import config
 from .adhoc import AdhocProvider
 from .chat_command import ChatCommandProvider
+from .disco import Disco
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
 
@@ -112,6 +113,7 @@ class BaseGateway(
         "help": "_chat_command_help",
         "register": "_chat_command_register",
         "contacts": "_chat_command_list_contacts",
+        "groups": "_chat_command_list_groups",
     }
     CHAT_COMMANDS: dict[str, str] = {}
     """
@@ -189,9 +191,18 @@ class BaseGateway(
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
         self.vcard: VCard4Provider = self["xep_0292_provider"]
+        self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
+        self.plugin["xep_0030"].add_identity(
+            category="conference",
+            name="Slidged rooms",
+            itype="text",
+            jid=self.boundjid,
+        )
 
         self.adhoc = AdhocProvider(self)
         self.add_adhoc_commands()
+
+        self.disco = Disco(self)
 
         self.chat_commands = chat = ChatCommandProvider(self)
         self._chat_commands: dict[str, Callable] = {
@@ -294,6 +305,7 @@ class BaseGateway(
         async def correct(m): await get_session(m).correct_from_msg(m)
         async def react(m): await get_session(m).react_from_msg(m)
         async def retract(m): await get_session(m).retract_from_msg(m)
+        async def groupchat_join(p): await get_session(p).join_groupchat(p)
         # fmt: on
 
         self.add_event_handler("legacy_message", msg)
@@ -305,6 +317,21 @@ class BaseGateway(
         self.add_event_handler("message_correction", correct)
         self.add_event_handler("reactions", react)
         self.add_event_handler("message_retract", retract)
+
+        self.add_event_handler("groupchat_join", groupchat_join)
+        self.add_event_handler("groupchat_message", msg)
+
+        self.register_handler(
+            CoroutineCallback(
+                f"muc#admin-{self.jid}",
+                StanzaPath(f"iq/mucadmin_query"),
+                self._handle_admin,  # type: ignore
+            )
+        )
+
+    async def _handle_admin(self, iq: Iq):
+        log.debug("MUC ADMIN request %s", iq)
+        raise XMPPError("not-authorized")
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
@@ -713,6 +740,7 @@ class BaseGateway(
 
 SLIXMPP_PLUGINS = [
     "xep_0030",  # Service discovery
+    "xep_0045",  # Multi-User Chat
     "xep_0050",  # Adhoc commands
     "xep_0055",  # Jabber search
     "xep_0066",  # Out of Band Data

@@ -63,9 +63,10 @@ class MessageMaker(BaseSender):
         self, msg: Message, legacy_msg_id: Optional[LegacyMessageType] = None
     ):
         if legacy_msg_id is not None:
-            msg.set_id(self._legacy_to_xmpp(legacy_msg_id))
+            i = self._legacy_to_xmpp(legacy_msg_id)
+            msg.set_id(i)
             if self.USE_STANZA_ID:
-                msg["stanza_id"]["id"] = str(legacy_msg_id)
+                msg["stanza_id"]["id"] = i
                 msg["stanza_id"]["by"] = self.muc.jid  # type: ignore
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
@@ -93,7 +94,7 @@ class MessageMaker(BaseSender):
     ):
         if reply_to_msg_id is not None:
             xmpp_id = self._legacy_to_xmpp(reply_to_msg_id)
-            msg["reply"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(xmpp_id)
+            msg["reply"]["id"] = xmpp_id
             # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
             if reply_to_author:
                 msg["reply"]["to"] = reply_to_author
@@ -251,7 +252,7 @@ class ContentMessageMixin(MessageMaker):
             reply_to_msg_id=reply_to_msg_id,
             reply_to_fallback_text=reply_to_fallback_text,
             reply_to_jid=reply_to_jid,
-            hints={"markable", "store"},
+            hints=kwargs.get("hints") or {"markable", "store"},
             carbon=kwargs.get("carbon"),
         )
         self._send(msg, **kwargs)

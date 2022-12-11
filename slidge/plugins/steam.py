@@ -93,7 +93,11 @@ class Roster(LegacyRoster["Session", Contact, int]):
         task.add_done_callback(lambda f: method(f.result()))
 
 
-class Session(BaseSession[Gateway, int, Roster, Contact]):
+class Session(
+    BaseSession[
+        Gateway, int, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
+    ]
+):
     def __init__(self, user):
         super().__init__(user)
         store_dir = global_config.HOME_DIR / self.user.bare_jid
@@ -252,29 +256,22 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
     async def logout(self):
         pass
 
-    async def send_text(
-        self,
-        t: str,
-        c: Contact,
-        *,
-        reply_to_msg_id=None,
-        reply_to_fallback_text=None,
-    ):
-        if not t:
+    async def send_text(self, text: str, chat: Contact, **k):
+        if not text:
             return
         job_id = self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
-                "steamid": SteamID(c.legacy_id),
+                "steamid": SteamID(chat.legacy_id),
                 "chat_entry_type": steam.enums.EChatEntryType.ChatMsg,
-                "message": t,
+                "message": text,
             },
         )
         f = self.job_futures[job_id] = self.xmpp.loop.create_future()
         return (await f).server_timestamp
 
-    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
-        return await self.send_text(u, c)
+    async def send_file(self, url: str, chat: Contact, **k):
+        return await self.send_text(url, chat)
 
     async def active(self, c: Contact):
         pass

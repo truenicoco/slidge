@@ -129,5 +129,22 @@ class ChatCommandProvider:
             self.xmpp.event("user_register", msg)
             msg.reply(f"Success!").send()
 
+    @staticmethod
+    async def _chat_command_list_groups(
+        *_args, msg: Message, session: Optional["SessionType"]
+    ):
+        if session is None:
+            msg.reply("Register to the gateway first!").send()
+        else:
+            groups = sorted(
+                session.bookmarks,
+                key=lambda m: m.DISCO_NAME.casefold() if m.DISCO_NAME else "",
+            )
+            if groups:
+                t = "\n".join(f"{m.DISCO_NAME}: xmpp:{m.jid}?join" for m in groups)
+                msg.reply(t).send()
+            else:
+                msg.reply("No groups!").send()
+
 
 log = logging.getLogger(__name__)

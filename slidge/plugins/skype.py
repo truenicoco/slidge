@@ -75,7 +75,17 @@ class ListenThread(Thread):
         self.stop_event.set()
 
 
-class Session(BaseSession[Gateway, int, LegacyRoster, Contact]):
+class Session(
+    BaseSession[
+        Gateway,
+        int,
+        LegacyRoster,
+        Contact,
+        LegacyBookmarks,
+        LegacyMUC,
+        LegacyParticipant,
+    ]
+):
     skype_token_path: Path
     sk: skpy.Skype
 
@@ -190,17 +200,10 @@ class Session(BaseSession[Gateway, int, LegacyRoster, Contact]):
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await asyncio.to_thread(event.ack)
 
-    async def send_text(
-        self,
-        t: str,
-        c: LegacyContact,
-        *,
-        reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
-    ):
-        chat = self.sk.contacts[c.legacy_id].chat
+    async def send_text(self, text: str, chat: LegacyContact, **k):
+        skype_chat = self.sk.contacts[chat.legacy_id].chat
         self.send_lock.acquire()
-        msg = await asyncio.to_thread(chat.sendMsg, t)
+        msg = await asyncio.to_thread(skype_chat.sendMsg, text)
         if log.isEnabledFor(logging.DEBUG):
             log.debug("Sent msg: %s", pprint.pformat(vars(msg)))
         future = asyncio.Future[skpy.SkypeMsg]()
@@ -214,14 +217,14 @@ class Session(BaseSession[Gateway, int, LegacyRoster, Contact]):
             self.thread.stop()
             self.thread.join()
 
-    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_file(self, url: str, chat: LegacyContact, **kwargs):
         async with aiohttp.ClientSession() as session:
-            async with session.get(u) as response:
+            async with session.get(url) as response:
                 file_bytes = await response.read()
-        fname = u.split("/")[-1]
+        fname = url.split("/")[-1]
         fname_lower = fname.lower()
         await asyncio.to_thread(
-            self.sk.contacts[c.legacy_id].chat.sendFile,
+            self.sk.contacts[chat.legacy_id].chat.sendFile,
             io.BytesIO(file_bytes),
             fname,
             any(fname_lower.endswith(x) for x in (".png", ".jpg", ".gif", ".jpeg")),

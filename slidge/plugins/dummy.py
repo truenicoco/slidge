@@ -3,11 +3,12 @@ A pseudo legacy network, to easily test things
 """
 
 import asyncio
-import datetime
 import logging
 import uuid
+from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -15,6 +16,63 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
+
+
+class Bookmarks(LegacyBookmarks):
+    @staticmethod
+    async def jid_local_part_to_legacy_id(local_part):
+        if local_part not in {"prout-1", "prout2"}:
+            raise XMPPError("not-found")
+        return local_part
+
+
+class MUC(LegacyMUC["Session", str, "Participant", str]):
+    session: "Session"
+    msg_ids = defaultdict(int)  # type: ignore
+
+    async def join(self, p):
+        self.user_nick = "SomeNick"
+        await super().join(p)
+
+    async def fill_history(
+        self,
+        full_jid: JID,
+        maxchars: Optional[int] = None,
+        maxstanzas: Optional[int] = None,
+        seconds: Optional[int] = None,
+        since: Optional[int] = None,
+    ):
+        if maxchars is not None and maxchars == 0:
+            return
+        part = await self.get_participant("someone")
+        log.debug("PART")
+        for i in range(10, 0, -1):
+            log.debug("HISTORY")
+            part.send_text(
+                "history",
+                f"-{i}",
+                when=datetime.now() - timedelta(hours=i),
+                full_jid=full_jid,
+            )
+
+    async def get_participants(self):
+        if self.legacy_id == "prout-1":
+            for nick in "anon1", "anon2":
+                yield Participant(self, nick)
+                break
+        elif self.legacy_id == "prout2":
+            for nick in "anon1", "anon2", "anon3", "anon4":
+                yield Participant(self, nick)
+
+    async def send_text(self, text: str) -> str:
+        self.msg_ids[self.legacy_id] += 1
+        i = self.msg_ids[self.legacy_id]
+        self.xmpp.loop.create_task(self.session.muc_later(self, text, i))
+        return str(self.msg_ids[self.legacy_id])
+
+
+class Participant(LegacyParticipant[MUC]):
+    pass
 
 
 class Gateway(BaseGateway):
@@ -51,7 +109,19 @@ class Gateway(BaseGateway):
             raise ValueError("Y a que N!")
 
 
-class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
+class Roster(LegacyRoster):
+    @staticmethod
+    async def jid_username_to_legacy_id(jid_username: str):
+        if jid_username not in BUDDIES + ["bubu"]:
+            raise XMPPError("not-found")
+        return jid_username
+
+
+class Session(
+    BaseSession[
+        Gateway, int, LegacyRoster, LegacyContact, LegacyBookmarks, MUC, Participant
+    ]
+):
     def __init__(self, user):
         super(Session, self).__init__(user)
         self.counter = 0
@@ -71,6 +141,22 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
                 locality="The place with the thing",
             )
         )
+        self.xmpp.loop.create_task(self.add_groups())
+
+    async def add_groups(self):
+        muc = await self.bookmarks.by_legacy_id("prout-1")
+        muc.n_participants = 45
+        await self.bookmarks.by_legacy_id("prout2")
+        muc.n_participants = 885
+
+    async def muc_later(self, muc: MUC, text: str, trigger_msg_id: int):
+        replier = await muc.get_participant("anon1")
+        log.debug("REPLIER: %s", replier)
+        await asyncio.sleep(0.5)
+        replier.composing()
+        await asyncio.sleep(0.5)
+        replier.send_text("prout", trigger_msg_id * 1000)
+        # next(muc.participants).send_text("I agree. Ain't that great?")
 
     async def backfill(self):
         self.log.debug("CARBON")
@@ -81,13 +167,13 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
         baba.send_text(
             f"You're bad!",
             legacy_msg_id=i,
-            when=datetime.datetime.now() - datetime.timedelta(hours=5),
+            when=datetime.now() - timedelta(hours=5),
             carbon=True,
         )
         baba.send_text(
             f"You're worse",
             legacy_msg_id=i,
-            when=datetime.datetime.now() - datetime.timedelta(hours=4),
+            when=datetime.now() - timedelta(hours=4),
         )
 
     async def paused(self, c: LegacyContact):
@@ -114,41 +200,50 @@ class Session(BaseSession[Gateway, int, LegacyRoster, LegacyContact]):
 
     async def send_text(
         self,
-        t: str,
-        c: LegacyContact,
+        text: str,
+        chat: Union[LegacyContact, MUC],
         *,
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
+        reply_to=None,
     ):
+        if isinstance(chat, MUC):
+            await chat.send_text(text)
+            return
+
         log.debug("REPLY FALLBACK: %r", reply_to_fallback_text)
         i = self.counter
         self.counter = i + 1
 
-        if t == "crash":
+        if text == "crash":
             raise RuntimeError("PANIC!!!")
-        if t == "crash2":
+        if text == "crash2":
             self.xmpp.loop.create_task(self.crash())
-        elif t == "delete":
-            self.xmpp.loop.create_task(self.later_carbon_delete(c, i))
-        elif t == "nick":
-            c.name = "NEWNAME"
-        elif t == "avatar":
-            c.avatar = ASSETS_DIR / "5x5.png"
-        elif t == "nonick":
-            c.name = None
+        elif text == "delete":
+            self.xmpp.loop.create_task(self.later_carbon_delete(chat, i))
+        elif text == "nick":
+            chat.name = "NEWNAME"
+        elif text == "avatar":
+            chat.avatar = ASSETS_DIR / "5x5.png"
+        elif text == "nonick":
+            chat.name = None
         else:
-            self.xmpp.loop.create_task(self.later(c, i, body=t))
+            self.xmpp.loop.create_task(self.later(chat, i, body=text))
 
         return i
 
     async def crash(self):
         raise RuntimeError("PANIC222!!!")
 
-    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None) -> int:
+    async def send_file(self, url: str, chat: Union[LegacyContact, MUC], **k) -> int:
         i = self.counter
         self.counter = i + 1
-        c.send_text(u)
-        await c.send_file(ASSETS_DIR / "buddy1.png", caption="This is a caption")
+        if isinstance(chat, MUC):
+            replier = await chat.get_participant("uploader")
+        else:
+            replier = chat  # type: ignore
+        replier.send_text(url)
+        await replier.send_file(ASSETS_DIR / "buddy1.png", caption="This is a caption")
         return i
 
     async def later(self, c: LegacyContact, trigger_msg_id: int, body: str):

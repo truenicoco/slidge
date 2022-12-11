@@ -57,20 +57,21 @@ class Session(BaseSession):
 
     async def send_text(
         self,
-        t: str,
-        c: LegacyContact,
+        text: str,
+        chat: LegacyContact,
         *,
+        reply_to=None,
         reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
+        reply_to_fallback_text: Optional[str] = None
     ):
-        if c.jid_username == "juliet":
-            text_received_by_juliet.append((t, c))
+        if chat.jid_username == "juliet":
+            text_received_by_juliet.append((text, chat))
         assert self.user.bare_jid == "romeo@montague.lit"
         assert self.user.jid == JID("romeo@montague.lit")
-        c.send_text("I love you")
+        chat.send_text("I love you")
         return 0
 
-    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_file(self, url: str, chat: LegacyContact, *, reply_to_msg_id=None):
         pass
 
     async def active(self, c: LegacyContact):
@@ -100,7 +101,7 @@ class Roster(LegacyRoster):
         if jid_username == "juliet":
             return 123
         else:
-            raise XMPPError(text="Not found", condition="item-not-found")
+            raise XMPPError(text="Only juliet", condition="item-not-found")
 
     @staticmethod
     def legacy_id_to_jid_username(legacy_id: int) -> str:
@@ -108,6 +109,15 @@ class Roster(LegacyRoster):
             return "juliet"
         else:
             raise RuntimeError
+
+
+class Bookmarks(LegacyBookmarks):
+    @staticmethod
+    async def jid_local_part_to_legacy_id(local_part):
+        if local_part != "room":
+            raise XMPPError("not-found")
+        else:
+            return local_part
 
 
 class TestAimShakespeareBase(SlidgeTest):
@@ -379,6 +389,101 @@ class TestAimShakespeareBase(SlidgeTest):
             use_values=False,
         )
 
+    def test_disco_component(self):
+        self.recv(
+            f"""
+            <iq type="get" from="test@localhost/gajim" to="{self.xmpp.boundjid.bare}" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="conference" type="text" name="Slidged rooms" />
+                <identity category="account" type="registered" name="SLIDGE TEST" />
+                <identity category="pubsub" type="pep" name="SLIDGE TEST" />
+                <identity category="gateway" type="" name="SLIDGE TEST" />
+                <feature var="jabber:iq:search" />
+                <feature var="jabber:iq:register" />
+                <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+                <feature var="http://jabber.org/protocol/pubsub#event" />
+                <feature var="http://jabber.org/protocol/pubsub#retrieve-items" />
+                <feature var="http://jabber.org/protocol/pubsub#persistent-items" />
+                <feature var="http://jabber.org/protocol/muc" />
+                <feature var="http://jabber.org/protocol/commands" />
+              </query>
+            </iq>
+            """
+        )
+
+    def test_disco_local_part_unregistered(self):
+        self.recv(
+            f"""
+            <iq type="get" from="test@localhost/gajim" to="juliet@{self.xmpp.boundjid.bare}" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="error" from="juliet@aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+              <error xmlns="jabber:client" type="cancel">
+                <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
+            </iq>
+            """
+        )
+
+    def test_disco_registered_existing_contact(self):
+        self.recv(
+            f"""
+            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}/slidge" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="result"
+                from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+              <identity category="client" type="pc" />
+                <feature var="http://jabber.org/protocol/chatstates" />
+                <feature var="urn:xmpp:receipts" />
+                <feature var="urn:xmpp:message-correct:0" />
+                <feature var="urn:xmpp:chat-markers:0" />
+                <feature var="jabber:x:oob" />
+                <feature var="urn:xmpp:reactions:0" />
+                <feature var="urn:xmpp:message-retract:0" />
+                <feature var="urn:xmpp:reply:0" />
+                <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+              </query>
+            </iq>
+            """,
+        )
+
+    def test_non_existing_contact(self):
+        self.recv(
+            f"""
+            <message from="romeo@montague.lit/gajim" to="nope@{self.xmpp.boundjid.bare}/slidge" id="123">
+              <body>DSAD</body>
+            </message>
+            """
+        )
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept" type="error" from="nope@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+              <error xmlns="jabber:client" type="cancel">
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet</text>
+              </error>
+            </message>
+            """,
+            use_values=False,
+        )
+
 
 class TestNameSquatting(SlidgeTest):
     plugin = globals()
@@ -482,7 +587,7 @@ class TestPrivilegeOld(SlidgeTest):
                   <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@shakespeare.lit">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
-    				<markable xmlns="urn:xmpp:chat-markers:0"/>
+                    <markable xmlns="urn:xmpp:chat-markers:0"/>
                   </message>
                 </forwarded>
               </privilege>

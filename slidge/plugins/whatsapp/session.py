@@ -4,9 +4,9 @@ from functools import wraps
 from io import BytesIO
 from mimetypes import guess_type
 from os.path import basename
-from typing import Optional
+from typing import Optional, Union
 
-from slidge import BaseSession, GatewayUser, user_store
+from slidge import *
 from slidge.plugins.whatsapp.generated import go, whatsapp
 
 from .config import Config
@@ -21,7 +21,11 @@ MESSAGE_PAIR_SUCCESS = (
 MESSAGE_LOGGED_OUT = "You have been logged out, please re-scan the QR code on your main device to log in."
 
 
-class Session(BaseSession[Gateway, str, Roster, Contact]):
+class Session(
+    BaseSession[
+        Gateway, str, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
+    ]
+):
     def __init__(self, user: GatewayUser):
         super().__init__(user)
         self.whatsapp = self.xmpp.whatsapp.Session(
@@ -157,17 +161,17 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
 
     async def send_text(
         self,
-        t: str,
-        c: Contact,
-        *,
+        text: str,
+        chat: Union[Contact, LegacyMUC],
         reply_to_msg_id: Optional[str] = None,
         reply_to_fallback_text: Optional[str] = None,
+        **_,
     ):
         """
         Send outgoing plain-text message to given WhatsApp contact.
         """
         message_id = whatsapp.GenerateMessageID()
-        message = whatsapp.Message(ID=message_id, JID=c.legacy_id, Body=t)
+        message = whatsapp.Message(ID=message_id, JID=chat.legacy_id, Body=text)
         if reply_to_msg_id is not None:
             message.ReplyID = reply_to_msg_id
         if reply_to_fallback_text is not None:
@@ -178,23 +182,23 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
 
     async def send_file(
         self,
-        u: str,
-        c: Contact,
-        *,
+        url: str,
+        chat: Union[Contact, LegacyMUC],
         reply_to_msg_id: Optional[str] = None,
+        **_,
     ):
         """
         Send outgoing media message (i.e. audio, image, document) to given WhatsApp contact.
         """
         message_id = whatsapp.GenerateMessageID()
         message_attachment = whatsapp.Attachment(
-            MIME=guess_type(u)[0], Filename=basename(u), URL=u
+            MIME=guess_type(url)[0], Filename=basename(url), URL=url
         )
         self.whatsapp.SendMessage(
             whatsapp.Message(
                 Kind=whatsapp.MessageAttachment,
                 ID=message_id,
-                JID=c.legacy_id,
+                JID=chat.legacy_id,
                 ReplyID=reply_to_msg_id if reply_to_msg_id is not None else "",
                 Attachments=whatsapp.Slice_whatsapp_Attachment([message_attachment]),
             )

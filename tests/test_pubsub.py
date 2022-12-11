@@ -37,6 +37,7 @@ class TestPubSubDisco(SlixTest):
                 <identity category="account" type="registered" />
                 <identity category="pubsub" type="pep" />
                 <feature var="http://jabber.org/protocol/shim" />
+                <feature var="http://jabber.org/protocol/shim#SubID" />
                 <feature var="jabber:x:data" />
                 <feature var="http://jabber.org/protocol/caps" />
                 <feature var="http://jabber.org/protocol/pubsub#event" />

@@ -5,12 +5,24 @@ import discord as di
 
 from slidge import *
 
+from ...util.types import Chat
+
 if TYPE_CHECKING:
     from . import Contact, Gateway, Roster
     from .client import Discord
 
 
-class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
+class Session(
+    BaseSession[
+        "Gateway",
+        int,
+        "Roster",
+        "Contact",
+        LegacyBookmarks,
+        LegacyMUC,
+        LegacyParticipant,
+    ]
+):
     def __init__(self, user):
         super().__init__(user)
         from .client import Discord
@@ -50,21 +62,21 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
 
     async def send_text(
         self,
-        t: str,
-        c: "Contact",
-        *,
+        text: str,
+        chat,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
+        **kwargs,
     ):
         async with self.send_lock:
             mid = (
-                await c.discord_user.send(
-                    t,
+                await chat.discord_user.send(
+                    text,
                     reference=None
                     if reply_to_msg_id is None
                     else di.MessageReference(
                         message_id=reply_to_msg_id,
-                        channel_id=c.direct_channel_id,
+                        channel_id=chat.direct_channel_id,
                     ),
                 )
             ).id
@@ -75,9 +87,9 @@ class Session(BaseSession["Gateway", int, "Roster", "Contact"]):
     async def logout(self):
         await self.discord.close()
 
-    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None):
+    async def send_file(self, url: str, chat: Chat, **kwargs):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
-        await c.discord_user.send(u)
+        await chat.discord_user.send(url)
 
     async def active(self, c: "Contact"):
         pass

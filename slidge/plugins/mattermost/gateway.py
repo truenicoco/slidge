@@ -147,7 +147,11 @@ class Roster(LegacyRoster["Session", Contact, str]):
             return await self.by_legacy_id(username)
 
 
-class Session(BaseSession[Gateway, str, Roster, Contact]):
+class Session(
+    BaseSession[
+        Gateway, str, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
+    ]
+):
     def __init__(self, user):
         super().__init__(user)
         self.messages_waiting_for_echo = set[str]()
@@ -337,17 +341,10 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
     async def logout(self):
         pass
 
-    async def send_text(
-        self,
-        t: str,
-        c: Contact,
-        *,
-        reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
-    ):
+    async def send_text(self, text: str, chat: Contact, **k):
         async with self.send_lock:
             try:
-                msg_id = await self.mm_client.send_message_to_user(c.legacy_id, t)
+                msg_id = await self.mm_client.send_message_to_user(chat.legacy_id, text)
             except ContactNotFound:
                 raise XMPPError(
                     "recipient-unavailable", text="Cannot find this mattermost user"
@@ -356,9 +353,9 @@ class Session(BaseSession[Gateway, str, Roster, Contact]):
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, u: str, c: Contact, *, reply_to_msg_id=None):
-        channel_id = await c.direct_channel_id()
-        file_id = await self.mm_client.upload_file(channel_id, u)
+    async def send_file(self, url: str, chat: Contact, **k):
+        channel_id = await chat.direct_channel_id()
+        file_id = await self.mm_client.upload_file(channel_id, url)
         return await self.mm_client.send_message_with_file(channel_id, file_id)
 
     async def active(self, c: Contact):

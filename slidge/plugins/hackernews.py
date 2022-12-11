@@ -51,7 +51,7 @@ class Gateway(BaseGateway):
                     raise ValueError("Cookie does not seem valid")
 
 
-class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
+class Session(BaseSession):
     def __init__(self, user):
         super().__init__(user)
         self.http_session = aiohttp.ClientSession(
@@ -119,16 +119,9 @@ class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
     async def logout(self):
         pass
 
-    async def send_text(
-        self,
-        t: str,
-        c: LegacyContact,
-        *,
-        reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
-    ):
-        goto = f"threads?id={self.hn_username}#{c.legacy_id}"
-        url = f"{REPLY_URL}?id={c.legacy_id}&goto={goto}"
+    async def send_text(self, text: str, chat: LegacyContact, **k):
+        goto = f"threads?id={self.hn_username}#{chat.legacy_id}"
+        url = f"{REPLY_URL}?id={chat.legacy_id}&goto={goto}"
         async with self.http_session.get(url) as r:
             if r.status != 200:
                 raise XMPPError(text="Couldn't get the post reply web page from HN")
@@ -144,8 +137,8 @@ class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
 
         form_dict = {
             "hmac": match.group(1),
-            "parent": c.legacy_id,
-            "text": t,
+            "parent": chat.legacy_id,
+            "text": text,
             "goto": goto,
         }
 
@@ -173,7 +166,7 @@ class Session(BaseSession[Gateway, str, LegacyRoster, LegacyContact]):
 
     # none of the following make sense in a HN context,
     # this is just to avoid raising NotImplementedErrors
-    async def send_file(self, u: str, c: LegacyContact, *, reply_to_msg_id=None):
+    async def send_file(self, *a, **k):
         pass
 
     async def active(self, c: LegacyContact):

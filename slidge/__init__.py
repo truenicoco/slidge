@@ -3,6 +3,7 @@ import slixmpp.plugins
 from .core import config as global_config
 from .core.contact import LegacyContact, LegacyRoster
 from .core.gateway import BaseGateway
+from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from .core.session import BaseSession
 from .util import (
     FormField,
@@ -24,8 +25,12 @@ __all__ = [
     "BaseGateway",
     "BaseSession",
     "GatewayUser",
+    "LegacyBookmarks",
+    "LegacyMUC",
     "LegacyContact",
+    "LegacyParticipant",
     "LegacyRoster",
+    "MucType",
     "FormField",
     "SearchResult",
     "user_store",

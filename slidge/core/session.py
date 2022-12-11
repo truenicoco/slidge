@@ -1,34 +1,47 @@
 import functools
 import logging
-from typing import Generic, Optional, Type, cast
+from typing import Generic, Optional, Type, Union, cast
 
-from slixmpp import JID, Message
+from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 
-from ..core.contact import LegacyRoster
 from ..util import ABCSubclassableOnceAtMost, BiDict
 from ..util.db import GatewayUser, user_store
 from ..util.types import (
+    BookmarksType,
+    Chat,
     GatewayType,
     LegacyContactType,
     LegacyMessageType,
+    LegacyMUCType,
+    LegacyParticipantType,
     LegacyRosterType,
     PresenceShow,
     SessionType,
 )
 from ..util.util import SearchResult
+from .contact import LegacyRoster
+from .muc.bookmarks import LegacyBookmarks
+from .muc.room import LegacyMUC
 
 
-def ignore_message_to_component_and_sent_carbons(func):
+def ignore_sent_carbons(func):
+    @functools.wraps(func)
+    async def wrapped(self: SessionType, msg: Message):
+        if (i := msg.get_id()) in self.ignore_messages:
+            self.log.debug("Ignored sent carbon: %s", i)
+            self.ignore_messages.remove(i)
+        else:
+            return await func(self, msg)
+
+    return wrapped
+
+
+def ignore_message_to_component(func):
     @functools.wraps(func)
     async def wrapped(self: SessionType, msg: Message):
         if msg.get_to() != self.xmpp.boundjid.bare:
-            if (i := msg.get_id()) in self.ignore_messages:
-                self.log.debug("Ignored message: %s", i)
-                self.ignore_messages.remove(i)
-            else:
-                log.debug("FUNC: %s", func)
-                return await func(self, msg)
+            return await func(self, msg)
         else:
             log.debug("Ignoring message to component: %s %s", self, msg)
 
@@ -36,7 +49,15 @@ def ignore_message_to_component_and_sent_carbons(func):
 
 
 class BaseSession(
-    Generic[GatewayType, LegacyMessageType, LegacyRosterType, LegacyContactType],
+    Generic[
+        GatewayType,
+        LegacyMessageType,
+        LegacyRosterType,
+        LegacyContactType,
+        BookmarksType,
+        LegacyMUCType,
+        LegacyParticipantType,
+    ],
     metaclass=ABCSubclassableOnceAtMost,
 ):
     """
@@ -70,18 +91,24 @@ class BaseSession(
         self.log = logging.getLogger(user.bare_jid)
 
         self.user = user
-        self.sent: BiDict[
-            LegacyMessageType, str
-        ] = BiDict()  # TODO: set a max size for this
+        self.sent = BiDict[LegacyMessageType, str]()  # TODO: set a max size for this
+        # message ids (*not* stanza-ids), needed for last msg correction
+        self.muc_sent_msg_ids = BiDict[LegacyMessageType, str]()
 
         self.ignore_messages = set[str]()
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
         self.never_logged = True
 
+        self.bookmarks: BookmarksType = LegacyBookmarks.get_self_or_unique_subclass()(
+            self
+        )
+
     def shutdown(self):
         for c in self.contacts:
             c.offline()
+        for m in self.bookmarks:
+            m.shutdown()
         self.xmpp.loop.create_task(self.logout())
 
     @staticmethod
@@ -181,7 +208,8 @@ class BaseSession(
         del user
         del session
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
+    @ignore_sent_carbons
     async def send_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -189,41 +217,90 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m["replace"]["id"] or m["apply_to"]["id"]:
-            # ignore last message correction and retraction (handled by a specific method)
+        # we MUST not use `if m["replace"]["id"]` because it adds the tag if not
+        # present. this is a problem for MUC echoed messages
+        if m.xml.find("{urn:xmpp:message-correct:0}replace") is not None:
+            # ignore last message correction (handled by a specific method)
+            return
+        if m.xml.find("{urn:xmpp:fasten:0}apply-to") is not None:
+            # ignore message retraction (handled by a specific method)
             return
 
-        contact: LegacyContactType = await self.contacts.by_stanza(m)
+        e = await self.__get_entity(m)
+        self.log.debug("Entity %r", e)
 
-        url = m["oob"]["url"]
+        if m.xml.find("{jabber:x:oob}x") is not None:
+            url = m["oob"]["url"]
+        else:
+            url = None
+
         text = m["body"]
-        if (
-            m["feature_fallback"]["for"] == self.xmpp["xep_0461"].namespace
-            and contact.REPLIES
+        if m.xml.find("{urn:xmpp:feature-fallback:0}fallback") is not None and (
+            e.is_group or e.REPLIES
         ):
             text = m["feature_fallback"].get_stripped_body()
             reply_fallback = m["feature_fallback"].get_fallback_body()
         else:
             reply_fallback = None
 
+        # Testing with `is None` is mandatory since a reply element have no
+        # 'data' but only attributes, so the ElementTree is "false-ish".
+        # Grrrrr this took me some time to figure out.
+        reply_to = None
+        if m.xml.find("{urn:xmpp:reply:0}reply") is not None:
+            reply_to_msg_xmpp_id = self.__xmpp_msg_id_to_legacy(m["reply"]["id"])
+            reply_to_jid = JID(m["reply"]["to"])
+            if m["type"] == "chat":
+                if reply_to_jid.bare != self.user.jid.bare:
+                    try:
+                        reply_to = await self.contacts.by_jid(reply_to_jid)
+                    except XMPPError:
+                        pass
+            elif m["type"] == "groupchat":
+                nick = reply_to_jid.resource
+                try:
+                    muc = await self.bookmarks.by_jid(reply_to_jid)
+                except XMPPError:
+                    pass
+                else:
+                    if nick != muc.user_nick:
+                        reply_to = await muc.get_participant(reply_to_jid.resource)
+        else:
+            reply_to_msg_xmpp_id = None
+            reply_to = None
+
+        kwargs = dict(
+            reply_to_msg_id=reply_to_msg_xmpp_id,
+            reply_to_fallback_text=reply_fallback,
+            reply_to=reply_to,
+        )
+
         if url:
-            legacy_msg_id = await self.send_file(
-                url, contact, reply_to_msg_id=m["reply"]["id"] or None
-            )
+            legacy_msg_id = await self.send_file(url, e, **kwargs)
         elif text:
-            legacy_msg_id = await self.send_text(
-                text,
-                contact,
-                reply_to_msg_id=m["reply"]["id"] or None,
-                reply_to_fallback_text=reply_fallback,
-            )
+            legacy_msg_id = await self.send_text(text, e, **kwargs)
         else:
             log.debug("Ignoring %s", m)
             return
-        if legacy_msg_id is not None:
-            self.sent[legacy_msg_id] = m.get_id()
 
-    @ignore_message_to_component_and_sent_carbons
+        if isinstance(e, LegacyMUC):
+            await e.echo(m, legacy_msg_id)
+            if legacy_msg_id is not None:
+                self.muc_sent_msg_ids[legacy_msg_id] = m.get_id()
+        else:
+            if legacy_msg_id is not None:
+                self.sent[legacy_msg_id] = m.get_id()
+
+    async def __get_entity(self, m: Message):
+        if m.get_type() == "groupchat":
+            muc = await self.bookmarks.by_jid(m.get_to())
+            if m.get_from().resource not in muc.user_resources:
+                raise XMPPError("not-acceptable", "You are not connected to this chat")
+            return muc
+        else:
+            return await self.contacts.by_jid(m.get_to())
+
+    @ignore_message_to_component
     async def active_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -231,10 +308,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m.get_to() != self.xmpp.boundjid.bare:
-            await self.active(await self.contacts.by_stanza(m))
+        await self.active(await self.__get_entity(m))
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
     async def inactive_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -242,10 +318,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m.get_to() != self.xmpp.boundjid.bare:
-            await self.inactive(await self.contacts.by_stanza(m))
+        await self.inactive(await self.__get_entity(m))
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
     async def composing_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -253,10 +328,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m.get_to() != self.xmpp.boundjid.bare:
-            await self.composing(await self.contacts.by_stanza(m))
+        await self.composing(await self.__get_entity(m))
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
     async def paused_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -264,8 +338,7 @@ class BaseSession(
         :param m:
         :return:
         """
-        if m.get_to() != self.xmpp.boundjid.bare:
-            await self.paused(await self.contacts.by_stanza(m))
+        await self.paused(await self.__get_entity(m))
 
     def __xmpp_msg_id_to_legacy(self, xmpp_id: str):
         sent = self.sent.inverse.get(xmpp_id)
@@ -281,7 +354,8 @@ class BaseSession(
                 e.args,
             )
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
+    @ignore_sent_carbons
     async def displayed_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -289,49 +363,69 @@ class BaseSession(
         :param m:
         :return:
         """
+        e = await self.__get_entity(m)
         displayed_msg_id = m["displayed"]["id"]
         if legacy := self.__xmpp_msg_id_to_legacy(displayed_msg_id):
-            await self.displayed(legacy, await self.contacts.by_stanza(m))
+            await self.displayed(legacy, e)
+            if e.is_group:
+                await e.echo(m, None)
         else:
-            log.debug("Ignored displayed marker from user")
+            log.debug("Ignored displayed marker for msg: %r", displayed_msg_id)
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
+    @ignore_sent_carbons
     async def correct_from_msg(self, m: Message):
+        e = await self.__get_entity(m)
         xmpp_id = m["replace"]["id"]
-        legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
+        if isinstance(e, LegacyMUC):
+            legacy_id = self.muc_sent_msg_ids.inverse.get(xmpp_id)
+        else:
+            legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
+
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            new_legacy_msg_id = await self.send_text(
-                m["body"], await self.contacts.by_stanza(m)
-            )
+            new_legacy_msg_id = await self.send_text(m["body"], e)
         else:
-            new_legacy_msg_id = await self.correct(
-                m["body"], legacy_id, await self.contacts.by_stanza(m)
-            )
-        if new_legacy_msg_id is not None:
-            self.sent[new_legacy_msg_id] = m.get_id()
+            new_legacy_msg_id = await self.correct(m["body"], legacy_id, e)
+        if isinstance(e, LegacyMUC):
+            if new_legacy_msg_id is not None:
+                self.muc_sent_msg_ids[new_legacy_msg_id] = m.get_id()
+            await e.echo(m, new_legacy_msg_id)
+        else:
+            if new_legacy_msg_id is not None:
+                self.sent[new_legacy_msg_id] = m.get_id()
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
+    @ignore_sent_carbons
     async def react_from_msg(self, m: Message):
+        e = await self.__get_entity(m)
         react_to: str = m["reactions"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(react_to)
         if legacy_id:
-            await self.react(
-                legacy_id,
-                [r["value"] for r in m["reactions"]],
-                await self.contacts.by_stanza(m),
-            )
+            await self.react(legacy_id, [r["value"] for r in m["reactions"]], e)
+            if e.is_group:
+                await e.echo(m, None)
         else:
             log.debug("Ignored reaction from user")
 
-    @ignore_message_to_component_and_sent_carbons
+    @ignore_message_to_component
+    @ignore_sent_carbons
     async def retract_from_msg(self, m: Message):
+        e = await self.__get_entity(m)
         xmpp_id: str = m["apply_to"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id:
-            await self.retract(legacy_id, await self.contacts.by_stanza(m))
+            await self.retract(legacy_id, e)
+            if e.is_group:
+                await e.echo(m, None)
         else:
             log.debug("Ignored retraction from user")
+
+    async def join_groupchat(self, p: Presence):
+        muc = await self.bookmarks.by_jid(p.get_to())
+        log.debug("BOOKMARKS: %r", self.bookmarks.__class__)
+        log.debug("JOIN MUC: %r -- %r -- %r", muc, muc.join, muc.__class__)
+        await muc.join(p)
 
     def send_gateway_status(
         self,
@@ -416,22 +510,28 @@ class BaseSession(
 
     async def send_text(
         self,
-        t: str,
-        c: LegacyContactType,
+        text: str,
+        chat: Chat,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
+        reply_to: Optional[Union["LegacyContactType", "LegacyParticipantType"]] = None,
     ) -> Optional[LegacyMessageType]:
         """
-        Triggered when the user sends a text message from xmpp to a bridged contact, e.g.
-        to ``translated_user_name@slidge.example.com``.
+        Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
+        to ``translated_user_name@slidge.example.com``, or ``translated_group_name@slidge.example.com``
 
         Override this and implement sending a message to the legacy network in this method.
 
-        :param t: Content of the message
-        :param c: Recipient of the message
-        :param reply_to_msg_id:
-        :param reply_to_fallback_text:
+        :param text: Content of the message
+        :param chat: Recipient of the message. :class:`.LegacyContact` instance for 1:1 chat,
+            :class:`.MUC` instance for groups.
+        :param reply_to_msg_id: A legacy message ID if the message references (quotes)
+            another message (:xep:`0461`)
+        :param reply_to_fallback_text: Content of the quoted text. Not necessarily set
+            by XMPP clients
+        :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
+            1:1 chat, :class:`LegacyParticipant` instance for groups.
 
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
@@ -440,23 +540,28 @@ class BaseSession(
 
     async def send_file(
         self,
-        u: str,
-        c: LegacyContactType,
+        url: str,
+        chat: Chat,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to: Optional[Union[LegacyContactType, "LegacyParticipantType"]] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user has sends a file using HTTP Upload (:xep:`0363`)
 
-        :param u: URL of the file
-        :param c: Recipient of the file
-        :param reply_to_msg_id:
+        :param url: URL of the file
+        :param chat: See :meth:`.BaseSession.send_text`
+        :param reply_to_msg_id: See :meth:`.BaseSession.send_text`
+        :param reply_to_fallback_text: See :meth:`.BaseSession.send_text`
+        :param reply_to: See :meth:`.BaseSession.send_text`
+
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """
         raise NotImplementedError
 
-    async def active(self, c: LegacyContactType):
+    async def active(self, c: Chat):
         """
         Triggered when the user sends an 'active' chat state to the legacy network (:xep:`0085`)
 
@@ -464,7 +569,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def inactive(self, c: LegacyContactType):
+    async def inactive(self, c: Chat):
         """
         Triggered when the user sends an 'inactive' chat state to the legacy network (:xep:`0085`)
 
@@ -472,7 +577,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def composing(self, c: LegacyContactType):
+    async def composing(self, c: Chat):
         """
         Triggered when the user starts typing in the window of a legacy contact (:xep:`0085`)
 
@@ -480,7 +585,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def paused(self, c: LegacyContactType):
+    async def paused(self, c: Chat):
         """
         Triggered when the user pauses typing in the window of a legacy contact (:xep:`0085`)
 
@@ -488,7 +593,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def displayed(self, legacy_msg_id: LegacyMessageType, c: LegacyContactType):
+    async def displayed(self, legacy_msg_id: LegacyMessageType, c: Chat):
         """
         Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
 
@@ -502,7 +607,7 @@ class BaseSession(
         raise NotImplementedError
 
     async def correct(
-        self, text: str, legacy_msg_id: LegacyMessageType, c: LegacyContactType
+        self, text: str, legacy_msg_id: LegacyMessageType, c: Chat
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
@@ -528,20 +633,18 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def react(
-        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: LegacyContactType
-    ):
+    async def react(self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: Chat):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
 
         :param legacy_msg_id: ID of the message the user reacts to
         :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
             An empty string means "no reaction", ie, remove all reactions if any were present before
-        :param c: Contact the reaction refers to
+        :param c: Contact or MUC the reaction refers to
         """
         raise NotImplementedError
 
-    async def retract(self, legacy_msg_id: LegacyMessageType, c: LegacyContactType):
+    async def retract(self, legacy_msg_id: LegacyMessageType, c: Chat):
         """
         Triggered when the user retracts (:xep:`0424`) a message.
 

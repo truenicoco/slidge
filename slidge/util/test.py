@@ -18,7 +18,8 @@ from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
 
-from .. import BaseGateway, BaseSession, LegacyContact, LegacyRoster, user_store
+from slidge import *
+
 from ..core import config
 
 
@@ -50,6 +51,10 @@ class SlidgeTest(SlixTest):
         LegacyRoster._subclass = find_subclass(self.plugin, LegacyRoster, base_ok=True)
         LegacyContact._subclass = find_subclass(
             self.plugin, LegacyContact, base_ok=True
+        )
+        LegacyMUC._subclass = find_subclass(self.plugin, LegacyMUC, base_ok=True)
+        LegacyBookmarks._subclass = find_subclass(
+            self.plugin, LegacyBookmarks, base_ok=True
         )
 
         self.xmpp = BaseGateway.get_self_or_unique_subclass()()
@@ -90,6 +95,8 @@ class SlidgeTest(SlixTest):
         BaseGateway.reset_subclass()
         LegacyRoster.reset_subclass()
         LegacyContact.reset_subclass()
+        LegacyMUC.reset_subclass()
+        LegacyBookmarks.reset_subclass()
         user_store._users = None
 
     def next_sent(self):

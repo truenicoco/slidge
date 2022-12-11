@@ -12,13 +12,18 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from ...util.types import Chat
 from . import config
 from .client import TelegramClient
 from .contact import Contact, Roster
 from .gateway import Gateway
 
 
-class Session(BaseSession[Gateway, int, Roster, Contact]):
+class Session(
+    BaseSession[
+        Gateway, int, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
+    ]
+):
     def __init__(self, user):
         super().__init__(user)
         registration_form = {
@@ -65,16 +70,16 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
 
     async def send_text(
         self,
-        t: str,
-        c: "Contact",
-        *,
+        text: str,
+        chat: Chat,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
+        **kwargs,
     ) -> int:
-        t = escape(t)
+        text = escape(text)
         try:
             result = await self.tg.send_text(
-                chat_id=c.legacy_id, text=t, reply_to_message_id=reply_to_msg_id
+                chat_id=chat.legacy_id, text=text, reply_to_message_id=reply_to_msg_id
             )
         except tgapi.BadRequest as e:
             if e.code == 400:
@@ -85,32 +90,38 @@ class Session(BaseSession[Gateway, int, Roster, Contact]):
         self.log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
 
-    async def send_file(self, u: str, c: "Contact", *, reply_to_msg_id=None) -> int:
-        type_, _ = guess_type(u)
+    async def send_file(
+        self,
+        url: str,
+        chat: Chat,
+        reply_to_msg_id=None,
+        **kwargs,
+    ) -> int:
+        type_, _ = guess_type(url)
         if type_ is not None:
             type_, subtype = type_.split("/")
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(u) as response:
+            async with session.get(url) as response:
                 response.raise_for_status()
                 with tempfile.NamedTemporaryFile() as file:
                     bytes_ = await response.read()
                     file.write(bytes_)
                     if type_ == "image":
                         result = await self.tg.send_photo(
-                            chat_id=c.legacy_id, photo=file.name
+                            chat_id=chat.legacy_id, photo=file.name
                         )
                     elif type_ == "video":
                         result = await self.tg.send_video(
-                            chat_id=c.legacy_id, video=file.name
+                            chat_id=chat.legacy_id, video=file.name
                         )
                     elif type_ == "audio":
                         result = await self.tg.send_audio(
-                            chat_id=c.legacy_id, audio=file.name
+                            chat_id=chat.legacy_id, audio=file.name
                         )
                     else:
                         result = await self.tg.send_document(
-                            c.legacy_id, document=file.name
+                            chat.legacy_id, document=file.name
                         )
 
         return result.id
