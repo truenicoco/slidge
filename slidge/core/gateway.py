@@ -360,7 +360,7 @@ class BaseGateway(
 
         self.register_handler(
             CoroutineCallback(
-                f"muc#admin-{self.jid}",
+                f"muc#admin",
                 StanzaPath(f"iq/mucadmin_query"),
                 self._handle_admin,  # type: ignore
             )
