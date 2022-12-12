@@ -22,16 +22,16 @@ It's a work in progress, but it should make
 It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
 instant messaging features:
 
-|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] |
-|------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|
-| Signal     | N/A          | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       |
-| Telegram   | ✅           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       |
-| Discord    | ❌           | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       |
-| Steam      | ✅           | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      |
-| Mattermost | ✅           | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       |
-| Facebook   | ❌           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       |
-| Skype      | ✅           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       |
-| WhatsApp   | ✅           | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       |
+|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | Groups[⁹] |
+|------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|-----------|
+| Signal     | N/A          | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ~         |
+| Telegram   | ✅           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ~         |
+| Discord    | ❌           | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       | ❌         |
+| Steam      | ✅           | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      | ❌         |
+| Mattermost | ✅           | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       | ❌         |
+| Facebook   | ❌           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ❌         |
+| Skype      | ✅           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       | ❌         |
+| WhatsApp   | ✅           | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ❌         |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence
@@ -42,6 +42,7 @@ instant messaging features:
 [⁶]: https://xmpp.org/extensions/xep-0444.html
 [⁷]: https://xmpp.org/extensions/xep-0424.html
 [⁸]: https://xmpp.org/extensions/xep-0461.html
+[⁹]: https://xmpp.org/extensions/xep-0045.html
 
 
 This table may not be entirely accurate, but **in theory**, stuff marked ✅ works.
@@ -56,10 +57,8 @@ documentation page for more info.
 Status
 ------
 
-Slidge is beta-grade software.
-Right now, only direct messages are implemented, no group chat stuff at all.
-Direct messaging does (more or less) work though.
-Any contribution whatsoever (testing, patches, suggestions, beer, …) is more than welcome.
+Slidge is **beta**-grade software for 1:1 chats.
+Group chat support is **experimental**.
 
 Try slidge and give us some
 feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
