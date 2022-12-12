@@ -98,6 +98,10 @@ class BaseGateway(
     
     Plugins should implement search by overriding :meth:`.BaseSession.search`, effectively
     restricting search to registered users by default.
+    
+    If there is only one field, it can also be used via the ``jabber:iq:gateway`` protocol
+    described in :xep:`0100`. Limitation: this only works if the search request returns
+    one result item, and if this item has a 'jid' var.
     """
     SEARCH_TITLE: str = "Search for legacy contacts"
     """
@@ -365,10 +369,43 @@ class BaseGateway(
                 self._handle_admin,  # type: ignore
             )
         )
+        self.register_handler(
+            CoroutineCallback(
+                f"iq:gateway",
+                StanzaPath(f"iq/gateway"),
+                self._handle_gateway_iq,  # type: ignore
+            )
+        )
 
     async def _handle_admin(self, iq: Iq):
         log.debug("MUC ADMIN request %s", iq)
         raise XMPPError("not-authorized")
+
+    async def _handle_gateway_iq(self, iq: Iq):
+        user = user_store.get_by_jid(iq.get_from())
+        if user is None:
+            raise XMPPError("not-authorized", "Register to the gateway first")
+
+        if len(self.SEARCH_FIELDS) > 1:
+            raise XMPPError("not-implemented", "Use jabber search for this gateway")
+
+        field = self.SEARCH_FIELDS[0]
+
+        reply = iq.reply()
+        if iq["type"] == "get":
+            reply["gateway"]["desc"] = self.SEARCH_TITLE
+            reply["gateway"]["prompt"] = field.label
+        elif iq["type"] == "set":
+            prompt = iq["gateway"]["prompt"]
+            session = self.session_cls.from_user(user)
+            result = await session.search({field.var: prompt})
+            if result is None or not result.items:
+                raise XMPPError("item-not-found")
+            if len(result.items) > 1:
+                raise XMPPError("bad-request", "More than 1 result")
+            reply["gateway"]["jid"] = result.items[0]["jid"]
+
+        reply.send()
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)

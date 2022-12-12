@@ -1,9 +1,11 @@
 import logging
 
-from slixmpp import JID, Iq, Message, Presence
+from slixmpp import JID, Iq, Message, Presence, register_stanza_plugin
 from slixmpp.plugins.base import BasePlugin
 
 from slidge.core import config
+
+from . import stanza
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,8 @@ class XEP_0100(BasePlugin):
         )
 
         self.xmpp.add_event_handler("message", self.on_message)
+
+        register_stanza_plugin(Iq, stanza.Gateway)
 
     def plugin_end(self):
         if not self.xmpp.is_component:

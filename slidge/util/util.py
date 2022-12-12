@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import re
 from abc import ABCMeta
-from typing import Generic, Iterable, Optional, TypeVar
+from typing import Collection, Generic, Optional, TypeVar
 
 from .types import FieldType
 
@@ -61,8 +61,8 @@ class BiDict(Generic[KeyType, ValueType], dict[KeyType, ValueType]):
 
 @dataclasses.dataclass
 class SearchResult:
-    fields: Iterable[FormField]
-    items: Iterable[dict[str, str]]
+    fields: Collection[FormField]
+    items: Collection[dict[str, str]]
 
 
 class SubclassableOnce(type):

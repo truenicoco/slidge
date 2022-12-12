@@ -32,6 +32,9 @@ reactions_received_by_juliet = []
 class Gateway(BaseGateway):
     COMPONENT_NAME = "SLIDGE TEST"
 
+    SEARCH_FIELDS = [FormField(var="leg", label="Enter the legacy ID")]
+    SEARCH_TITLE = "Search for legacy contacts"
+
     async def unregister(self, user: GatewayUser):
         unregistered.append(user)
 
@@ -44,7 +47,11 @@ class Session(BaseSession):
         pass
 
     async def search(self, form_values: Dict[str, str]):
-        pass
+        if form_values["leg"] == "exists":
+            return SearchResult(
+                fields=[FormField(var="jid", label="JID", type="jid-single")],
+                items=[{"jid": "exists@example.com"}],
+            )
 
     def __init__(self, user):
         super().__init__(user)
@@ -127,6 +134,61 @@ class TestAimShakespeareBase(SlidgeTest):
         super().setUp()
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+
+    def test_jabber_iq_gateway(self):
+        self.recv(
+            """
+            <iq type='get' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
+              <query xmlns='jabber:iq:gateway'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+                <query xmlns='jabber:iq:gateway'>
+                  <desc>{Gateway.SEARCH_TITLE}</desc>
+                  <prompt>{Gateway.SEARCH_FIELDS[0].label}</prompt>
+                </query>
+            </iq>
+            """
+        )
+        self.recv(
+            """
+            <iq type='set' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
+              <query xmlns='jabber:iq:gateway'>
+                <prompt>exists</prompt>
+              </query>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+              <query xmlns='jabber:iq:gateway'>
+                <jid>exists@example.com</jid>
+              </query>
+            </iq>
+            """
+        )
+        self.recv(
+            """
+            <iq type='set' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
+              <query xmlns='jabber:iq:gateway'>
+                <prompt>not-exists</prompt>
+              </query>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+              <error xmlns="jabber:client" type="cancel">
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+              </error>
+            </iq>
+            """
         )
 
     def test_from_romeo_to_eve(self):
