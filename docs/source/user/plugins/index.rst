@@ -4,6 +4,7 @@ Plugins
 .. toctree::
    signal
    telegram
+   whatsapp
    mattermost
    facebook
    discord
