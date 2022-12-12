@@ -369,6 +369,8 @@ class BaseGateway(
                 self._handle_admin,  # type: ignore
             )
         )
+
+        self.plugin["xep_0030"].add_feature("jabber:iq:gateway")
         self.register_handler(
             CoroutineCallback(
                 f"iq:gateway",

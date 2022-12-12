@@ -469,6 +469,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 <identity category="gateway" type="" name="SLIDGE TEST" />
                 <feature var="jabber:iq:search" />
                 <feature var="jabber:iq:register" />
+                <feature var="jabber:iq:gateway" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
                 <feature var="http://jabber.org/protocol/pubsub#event" />
                 <feature var="http://jabber.org/protocol/pubsub#retrieve-items" />
