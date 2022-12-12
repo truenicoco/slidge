@@ -112,11 +112,8 @@ class ConfigModule:
             if o.upper() == o and not o.startswith("_") and "__" not in o
         }
 
-    def set_conf(self, args=None):
-        if args is None:
-            args, rest = self.parser.parse_known_args()
-        else:
-            rest = None
+    def set_conf(self, argv=None):
+        args, rest = self.parser.parse_known_args(argv)
         self.update_dynamic_defaults(args)
         for name in self._list_options():
             value = getattr(args, name.lower())

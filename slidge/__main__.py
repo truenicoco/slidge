@@ -104,7 +104,7 @@ def main():
             f"_{config.LEGACY_MODULE.split('.')[-1].upper()}_"
         )
         logging.debug("Env var prefix: %s", ConfigModule.ENV_VAR_PREFIX)
-        ConfigModule(plugin_config_obj).set_conf()
+        ConfigModule(plugin_config_obj).set_conf(unknown_argv)
     else:
         if unknown_argv:
             raise RuntimeError("Some arguments have not been recognized", unknown_argv)

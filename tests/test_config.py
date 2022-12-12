@@ -86,16 +86,14 @@ def test_slidge_conf():
 
 def test_set_conf(monkeypatch):
     monkeypatch.setenv("SLIDGE_USER_JID_VALIDATOR", "cloup")
-    args = main.get_parser().parse_args(
-        [
-            "-c",
-            str(Path(__file__).parent.parent / "confs" / "slidge-example.ini"),
-            "--legacy-module=slidge.plugins.dummy",
-            "--jid=test.localhost",
-            "--ignore-delay-threshold=200",
-        ]
-    )
-    main.get_configurator().set_conf(args)
+    argv = [
+        "-c",
+        str(Path(__file__).parent.parent / "confs" / "slidge-example.ini"),
+        "--legacy-module=slidge.plugins.dummy",
+        "--jid=test.localhost",
+        "--ignore-delay-threshold=200",
+    ]
+    main.get_configurator().set_conf(argv)
     assert config.SERVER == "localhost"
     assert config.ADMINS == ["test@localhost"]
     assert isinstance(config.ADMINS[0], JID)
