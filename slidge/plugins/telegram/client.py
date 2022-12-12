@@ -253,19 +253,24 @@ class TelegramClient(aiotdlib.Client):
             try:
                 future = self.session.delete_futures.pop(legacy_msg_id)
             except KeyError:
-                if self.is_private_chat(update.chat_id):
+                if await self.is_private_chat(update.chat_id):
                     contact = await self.session.contacts.by_legacy_id(update.chat_id)
                     if legacy_msg_id in self.session.sent:
                         contact.retract(legacy_msg_id, carbon=True)
                     else:
                         contact.retract(legacy_msg_id)
                 else:
-                    muc = await self.session.bookmarks.by_legacy_id(update.chat_id)
-                    msg = await self.api.get_message(update.chat_id, legacy_msg_id)
-                    participant = await muc.participant_by_tg_user_id(
-                        msg.sender_id.user_id
-                    )
-                    participant.retract(legacy_msg_id)
+                    return
+                    # FIXME: does not work because we need to fetch the participant,
+                    #        the DeleteMessage payload has not author info,
+                    #        and we cannot get_message() anymore
+                    # We should probably use MUC moderation tools here
+                    # muc = await self.session.bookmarks.by_legacy_id(update.chat_id)
+                    # msg = await self.api.get_message(update.chat_id, legacy_msg_id)
+                    # participant = await muc.participant_by_tg_user_id(
+                    #     msg.sender_id.user_id
+                    # )
+                    # participant.retract(legacy_msg_id)
             else:
                 future.set_result(update)
 
