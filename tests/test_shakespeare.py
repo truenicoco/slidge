@@ -35,6 +35,8 @@ class Gateway(BaseGateway):
     SEARCH_FIELDS = [FormField(var="leg", label="Enter the legacy ID")]
     SEARCH_TITLE = "Search for legacy contacts"
 
+    GROUPS = True
+
     async def unregister(self, user: GatewayUser):
         unregistered.append(user)
 

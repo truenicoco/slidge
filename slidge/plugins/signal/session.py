@@ -14,6 +14,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 from slidge.core.muc.room import MucType
+from slidge.util.util import is_valid_phone_number
 
 if TYPE_CHECKING:
     from .contact import Contact, Roster

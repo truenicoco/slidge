@@ -79,6 +79,7 @@ class Gateway(BaseGateway):
     COMPONENT_NAME = "The great legacy network (slidge)"
     COMPONENT_AVATAR = ASSETS_DIR / "gateway.png"
     COMPONENT_TYPE = "aim"
+    GROUPS = True
     REGISTRATION_INSTRUCTIONS = (
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."

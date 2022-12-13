@@ -44,6 +44,8 @@ class Gateway(BaseGateway["Session"]):
         FormField(var="last", label="Last name", required=False),
     ]
 
+    GROUPS = True
+
     def __init__(self):
         super().__init__()
         if config.TDLIB_PATH is None:

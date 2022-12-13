@@ -422,6 +422,10 @@ class BaseSession(
             log.debug("Ignored retraction from user")
 
     async def join_groupchat(self, p: Presence):
+        if not self.xmpp.GROUPS:
+            raise XMPPError(
+                "not-implemented", "This gateway does not implement multi-user chats."
+            )
         muc = await self.bookmarks.by_jid(p.get_to())
         log.debug("BOOKMARKS: %r", self.bookmarks.__class__)
         log.debug("JOIN MUC: %r -- %r -- %r", muc, muc.join, muc.__class__)

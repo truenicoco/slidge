@@ -151,6 +151,8 @@ class BaseGateway(
     yet still open a functional chat window on incoming messages from components.
     """
 
+    GROUPS = False
+
     def __init__(self):
         super().__init__(
             config.JID,
@@ -195,13 +197,14 @@ class BaseGateway(
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
         self.vcard: VCard4Provider = self["xep_0292_provider"]
-        self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
-        self.plugin["xep_0030"].add_identity(
-            category="conference",
-            name="Slidged rooms",
-            itype="text",
-            jid=self.boundjid,
-        )
+        if self.GROUPS:
+            self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
+            self.plugin["xep_0030"].add_identity(
+                category="conference",
+                name="Slidged rooms",
+                itype="text",
+                jid=self.boundjid,
+            )
 
         self.adhoc = AdhocProvider(self)
         self.add_adhoc_commands()

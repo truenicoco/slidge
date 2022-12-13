@@ -45,6 +45,8 @@ class Gateway(BaseGateway):
         "get_identities": "_chat_command_get_identities",
     }
 
+    GROUPS = True
+
     def __init__(self):
         super().__init__()
         self.signal: asyncio.Future[Signal] = self.loop.create_future()

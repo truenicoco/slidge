@@ -13,6 +13,7 @@ from slidge.util.types import LegacyMessageType
 
 class Gateway(BaseGateway):
     COMPONENT_NAME = "SLIDGE TEST"
+    GROUPS = True
 
 
 class Session(BaseSession):
