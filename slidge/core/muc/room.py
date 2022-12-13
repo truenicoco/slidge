@@ -301,7 +301,7 @@ class LegacyMUC(
         seconds: Optional[int] = None,
         since: Optional[int] = None,
     ):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 def set_origin_id(msg: Message, origin_id: str):
