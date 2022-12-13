@@ -36,26 +36,39 @@ class TelegramToXMPPMixin:
         content = msg.content
         reply_to = msg.reply_to_message_id
         if reply_to:
-            reply_to_msg = await self.session.tg.api.get_message(self.chat_id, reply_to)
-            reply_to_content = reply_to_msg.content
-            sender_user_id = reply_to_msg.sender_id.user_id
-            reply_self = sender_user_id == msg.sender_id.user_id
-            if self.is_group and not reply_self:
-                muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
-                reply_to_author = await muc.participant_by_tg_user_id(sender_user_id)
-            else:
+            try:
+                reply_to_msg = await self.session.tg.api.get_message(
+                    self.chat_id, reply_to
+                )
+            except tgapi.NotFound:
+                # apparently in telegram it is possible to "reply-to" messages that have been deleted
+                # TODO: mention in the body that this is reply to a deleted message
+                reply_to = None
+                reply_to_fallback = None
                 reply_to_author = None
-
-            if isinstance(reply_to_content, tgapi.MessageText):
-                reply_to_fallback = reply_to_content.text.text
-            elif isinstance(reply_to_content, tgapi.MessageAnimatedEmoji):
-                reply_to_fallback = reply_to_content.animated_emoji.sticker.emoji
-            elif isinstance(reply_to_content, tgapi.MessageSticker):
-                reply_to_fallback = reply_to_content.sticker.emoji
-            elif best_file := get_best_file(reply_to_content):
-                reply_to_fallback = f"Attachment {best_file.id}"
+                reply_self = False
             else:
-                reply_to_fallback = "[unsupported by slidge]"
+                reply_to_content = reply_to_msg.content
+                sender_user_id = reply_to_msg.sender_id.user_id
+                reply_self = sender_user_id == msg.sender_id.user_id
+                if self.is_group and not reply_self:
+                    muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+                    reply_to_author = await muc.participant_by_tg_user_id(
+                        sender_user_id
+                    )
+                else:
+                    reply_to_author = None
+
+                if isinstance(reply_to_content, tgapi.MessageText):
+                    reply_to_fallback = reply_to_content.text.text
+                elif isinstance(reply_to_content, tgapi.MessageAnimatedEmoji):
+                    reply_to_fallback = reply_to_content.animated_emoji.sticker.emoji
+                elif isinstance(reply_to_content, tgapi.MessageSticker):
+                    reply_to_fallback = reply_to_content.sticker.emoji
+                elif best_file := get_best_file(reply_to_content):
+                    reply_to_fallback = f"Attachment {best_file.id}"
+                else:
+                    reply_to_fallback = "[unsupported by slidge]"
         else:
             # if reply_to = 0, telegram really means "None"
             reply_to = None
