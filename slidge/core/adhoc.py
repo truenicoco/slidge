@@ -85,7 +85,7 @@ class AdhocProvider:
             only_users=True,
         )
 
-    async def get_items(self, jid, node, iq):
+    async def get_items(self, jid: JID, node: str, iq: Iq):
         all_items = self.xmpp.plugin["xep_0030"].static.get_items(jid, node, None, None)
         log.debug("Static items: %r", all_items)
         if not all_items:
@@ -105,7 +105,7 @@ class AdhocProvider:
                 continue
             elif restricted_item in self._only_users and not user:
                 continue
-            elif restricted_item is self._only_nonusers and user:
+            elif restricted_item in self._only_nonusers and user:
                 continue
 
             filtered_items.append(item)
