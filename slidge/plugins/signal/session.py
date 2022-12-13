@@ -86,7 +86,12 @@ class Session(
     async def search(self, form_values: dict[str, str]):
         phone = form_values.get("phone")
         if phone is None:
-            raise ValueError("Empty phone")
+            raise XMPPError("bad-request", "Please enter a phone number")
+
+        if not is_valid_phone_number(phone):
+            raise XMPPError(
+                "bad-request", "This does not look like a valid phone number"
+            )
 
         try:
             address = await (await self.signal).resolve_address(
