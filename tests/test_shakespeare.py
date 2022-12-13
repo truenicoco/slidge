@@ -188,6 +188,7 @@ class TestAimShakespeareBase(SlidgeTest):
             <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
               <error xmlns="jabber:client" type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No contact was found with the info you provided.</text>
               </error>
             </iq>
             """

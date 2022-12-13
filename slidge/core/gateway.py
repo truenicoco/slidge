@@ -405,9 +405,13 @@ class BaseGateway(
             session = self.session_cls.from_user(user)
             result = await session.search({field.var: prompt})
             if result is None or not result.items:
-                raise XMPPError("item-not-found")
+                raise XMPPError(
+                    "item-not-found", "No contact was found with the info you provided."
+                )
             if len(result.items) > 1:
-                raise XMPPError("bad-request", "More than 1 result")
+                raise XMPPError(
+                    "bad-request", "Your search yielded more than one result."
+                )
             reply["gateway"]["jid"] = result.items[0]["jid"]
 
         reply.send()
