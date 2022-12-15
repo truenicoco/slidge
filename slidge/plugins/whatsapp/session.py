@@ -8,6 +8,8 @@ from os.path import basename
 from shelve import open
 from typing import Optional, Union
 
+from slixmpp.exceptions import XMPPError
+
 from slidge import (
     BaseSession,
     GatewayUser,
@@ -60,7 +62,10 @@ class Session(
         might either return having initiated the Linked Device registration process in the background,
         or will re-connect to a previously existing Linked Device session.
         """
-        self.whatsapp.Login()
+        try:
+            self.whatsapp.Login()
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def logout(self):
         """
@@ -68,7 +73,10 @@ class Session(
         require pairing on next login. For simply disconnecting the active session, look at the
         :meth:`.Session.disconnect` function.
         """
-        self.whatsapp.Logout()
+        try:
+            self.whatsapp.Logout()
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
         remove(self.user_shelf_path)
 
     async def disconnect(self):
@@ -76,7 +84,10 @@ class Session(
         Disconnect the active WhatsApp session. This will not remove any local or remote state, and
         will thus allow previously authenticated sessions to re-authenticate without needing to pair.
         """
-        self.whatsapp.Disconnect()
+        try:
+            self.whatsapp.Disconnect()
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def handle_event(self, event, ptr):
         """
@@ -91,10 +102,16 @@ class Session(
             self.send_gateway_message(MESSAGE_PAIR_SUCCESS)
             with open(str(self.user_shelf_path)) as shelf:
                 shelf["device_id"] = data.PairDeviceID
-            self.whatsapp.FetchRoster(refresh=True)
+            try:
+                self.whatsapp.FetchRoster(refresh=True)
+            except RuntimeError as err:
+                Gateway.log.error("Failed refreshing roster on pair: %s", str(err))
         elif event == whatsapp.EventConnected:
             self.send_gateway_status("Logged in", show="chat")
-            self.whatsapp.FetchRoster(refresh=Config.ALWAYS_SYNC_ROSTER)
+            try:
+                self.whatsapp.FetchRoster(refresh=Config.ALWAYS_SYNC_ROSTER)
+            except RuntimeError as err:
+                Gateway.log.error("Failed refreshing roster on connect: %s", str(err))
         elif event == whatsapp.EventLoggedOut:
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
@@ -193,7 +210,10 @@ class Session(
         if reply_to_fallback_text is not None:
             message.ReplyBody = strip_quote_prefix(reply_to_fallback_text)
             message.Body = message.Body.lstrip()
-        self.whatsapp.SendMessage(message)
+        try:
+            self.whatsapp.SendMessage(message)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
         return message_id
 
     async def send_file(
@@ -210,15 +230,17 @@ class Session(
         message_attachment = whatsapp.Attachment(
             MIME=guess_type(url)[0], Filename=basename(url), URL=url
         )
-        self.whatsapp.SendMessage(
-            whatsapp.Message(
-                Kind=whatsapp.MessageAttachment,
-                ID=message_id,
-                JID=chat.legacy_id,
-                ReplyID=reply_to_msg_id if reply_to_msg_id is not None else "",
-                Attachments=whatsapp.Slice_whatsapp_Attachment([message_attachment]),
-            )
+        message = whatsapp.Message(
+            Kind=whatsapp.MessageAttachment,
+            ID=message_id,
+            JID=chat.legacy_id,
+            ReplyID=reply_to_msg_id if reply_to_msg_id is not None else "",
+            Attachments=whatsapp.Slice_whatsapp_Attachment([message_attachment]),
         )
+        try:
+            self.whatsapp.SendMessage(message)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
         return message_id
 
     async def active(self, c: Contact):
@@ -238,29 +260,35 @@ class Session(
         Send "composing" chat state to given WhatsApp contact, signifying that a message is currently
         being composed.
         """
-        self.whatsapp.SendChatState(
-            whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStateComposing)
-        )
+        state = whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStateComposing)
+        try:
+            self.whatsapp.SendChatState(state)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def paused(self, c: Contact):
         """
         Send "paused" chat state to given WhatsApp contact, signifying that an (unsent) message is no
         longer being composed.
         """
-        self.whatsapp.SendChatState(
-            whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStatePaused)
-        )
+        state = whatsapp.ChatState(JID=c.legacy_id, Kind=whatsapp.ChatStatePaused)
+        try:
+            self.whatsapp.SendChatState(state)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def displayed(self, legacy_msg_id: str, c: Contact):
         """
         Send "read" receipt, signifying that the WhatsApp message sent has been displayed on the XMPP
         client.
         """
-        self.whatsapp.SendReceipt(
-            whatsapp.Receipt(
-                MessageIDs=go.Slice_string([legacy_msg_id]), JID=c.legacy_id
-            )
+        receipt = whatsapp.Receipt(
+            MessageIDs=go.Slice_string([legacy_msg_id]), JID=c.legacy_id
         )
+        try:
+            self.whatsapp.SendReceipt(receipt)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
         """
@@ -269,25 +297,29 @@ class Session(
         restrictions are currently not observed by this function.
         """
         for emoji in emojis if len(emojis) > 0 else [""]:
-            self.whatsapp.SendMessage(
-                whatsapp.Message(
-                    Kind=whatsapp.MessageReaction,
-                    ID=legacy_msg_id,
-                    JID=c.legacy_id,
-                    Body=emoji,
-                    IsCarbon=legacy_msg_id in self.sent,
-                )
+            message = whatsapp.Message(
+                Kind=whatsapp.MessageReaction,
+                ID=legacy_msg_id,
+                JID=c.legacy_id,
+                Body=emoji,
+                IsCarbon=legacy_msg_id in self.sent,
             )
+            try:
+                self.whatsapp.SendMessage(message)
+            except RuntimeError as err:
+                raise XMPPError(text=str(err))
 
     async def retract(self, legacy_msg_id: str, c: Contact):
         """
         Request deletion (aka retraction) for a given WhatsApp message.
         """
-        self.whatsapp.SendMessage(
-            whatsapp.Message(
-                Kind=whatsapp.MessageRevoke, ID=legacy_msg_id, JID=c.legacy_id
-            )
+        message = whatsapp.Message(
+            Kind=whatsapp.MessageRevoke, ID=legacy_msg_id, JID=c.legacy_id
         )
+        try:
+            self.whatsapp.SendMessage(message)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def correct(self, text: str, legacy_msg_id: str, c: Contact):
         self.send_gateway_message(
