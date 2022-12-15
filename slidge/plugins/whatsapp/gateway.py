@@ -20,7 +20,7 @@ WELCOME_MESSAGE = (
 class Gateway(BaseGateway):
     COMPONENT_NAME = "WhatsApp (slidge)"
     COMPONENT_TYPE = "whatsapp"
-    COMPONENT_AVATAR = "https://www.whatsapp.com/apple-touch-icon..png"
+    COMPONENT_AVATAR = "https://www.whatsapp.com/apple-touch-icon.png"
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     WELCOME_MESSAGE = WELCOME_MESSAGE
     REGISTRATION_FIELDS = []

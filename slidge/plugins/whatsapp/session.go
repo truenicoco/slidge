@@ -89,16 +89,23 @@ func (s *Session) Login() error {
 
 // Logout disconnects and removes the current linked device locally and initiates a logout remotely.
 func (s *Session) Logout() error {
-	if s.client.Store.ID == nil {
+	if s.client == nil || s.client.Store.ID == nil {
 		return nil
 	}
 
-	return s.client.Logout()
+	err := s.client.Logout()
+	s.client = nil
+
+	return err
 }
 
 // Disconnects detaches the current connection to WhatsApp without removing any linked device state.
 func (s *Session) Disconnect() error {
-	s.client.Disconnect()
+	if s.client != nil {
+		s.client.Disconnect()
+		s.client = nil
+	}
+
 	return nil
 }
 
@@ -106,6 +113,10 @@ func (s *Session) Disconnect() error {
 // specified within. In general, different message kinds require different fields to be set; see the
 // documentation for the [Message] type for more information.
 func (s *Session) SendMessage(message Message) error {
+	if s.client == nil || s.client.Store.ID == nil {
+		return fmt.Errorf("Cannot send message for unauthenticated session")
+	}
+
 	jid, err := types.ParseJID(message.JID)
 	if err != nil {
 		return fmt.Errorf("Could not parse sender JID for message: %s", err)
@@ -185,6 +196,10 @@ func (s *Session) SendMessage(message Message) error {
 // SendChatState sends the given chat state notification (e.g. composing message) to WhatsApp for the
 // contact specified within.
 func (s *Session) SendChatState(state ChatState) error {
+	if s.client == nil || s.client.Store.ID == nil {
+		return fmt.Errorf("Cannot send chat state for unauthenticated session")
+	}
+
 	jid, err := types.ParseJID(state.JID)
 	if err != nil {
 		return fmt.Errorf("Could not parse sender JID for chat state: %s", err)
@@ -203,9 +218,13 @@ func (s *Session) SendChatState(state ChatState) error {
 
 // SendReceipt sends a read receipt to WhatsApp for the message IDs specified within.
 func (s *Session) SendReceipt(receipt Receipt) error {
+	if s.client == nil || s.client.Store.ID == nil {
+		return fmt.Errorf("Cannot send receipt for unauthenticated session")
+	}
+
 	jid, err := types.ParseJID(receipt.JID)
 	if err != nil {
-		return fmt.Errorf("Could not parse sender JID for chat state: %s", err)
+		return fmt.Errorf("Could not parse sender JID for receipt: %s", err)
 	}
 
 	ids := append([]types.MessageID{}, receipt.MessageIDs...)
@@ -216,6 +235,10 @@ func (s *Session) SendReceipt(receipt Receipt) error {
 // If `refresh` is `true`, FetchRoster will pull application state from the remote service and
 // synchronize any contacts found with the adapter.
 func (s *Session) FetchRoster(refresh bool) error {
+	if s.client == nil || s.client.Store.ID == nil {
+		return fmt.Errorf("Cannot fetch roster for unauthenticated session")
+	}
+
 	// Synchronize remote application state with local state if requested.
 	if refresh {
 		err := s.client.FetchAppState(appstate.WAPatchCriticalUnblockLow, false, false)
@@ -310,6 +333,7 @@ func (s *Session) handleEvent(evt interface{}) {
 		if err := s.client.Store.Delete(); err != nil {
 			s.gateway.logger.Warnf("Unable to delete local device state on logout: %s", err)
 		}
+		s.client = nil
 		s.propagateEvent(EventLoggedOut, nil)
 	case *events.PairSuccess:
 		if s.client.Store.ID == nil {
