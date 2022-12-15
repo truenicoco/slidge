@@ -71,7 +71,7 @@ func newContactSyncEvent(c *whatsmeow.Client, jid types.JID, info types.ContactI
 		return EventUnknown, nil
 	}
 
-	if p, _ := c.GetProfilePictureInfo(jid, false, ""); p != nil {
+	if p, _ := c.GetProfilePictureInfo(jid, nil); p != nil {
 		contact.AvatarURL = p.URL
 	}
 

@@ -11,8 +11,8 @@ github.com/mattn/go-sqlite3 v1.14.16 h1:yOQRA0RpS5PFz/oikGwBEqvAWhWg5ufRz4ETLjwp
 github.com/mattn/go-sqlite3 v1.14.16/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 go.mau.fi/libsignal v0.0.0-20221015105917-d970e7c3c9cf h1:mzPxXBgDPHKDHMVV1tIWh7lwCiRpzCsXC0gNRX+K07c=
 go.mau.fi/libsignal v0.0.0-20221015105917-d970e7c3c9cf/go.mod h1:XCjaU93vl71YNRPn059jMrK0xRDwVO5gKbxoPxow9mQ=
-go.mau.fi/whatsmeow v0.0.0-20221117205735-357841c4ff30 h1:AVHEkGJSI6NsdbxVs9YEGPFR68uru1Ke/hH72EqzGpk=
-go.mau.fi/whatsmeow v0.0.0-20221117205735-357841c4ff30/go.mod h1:2yweL8nczvtlIxkrvCb0y8xiO13rveX9lJPambwYV/E=
+go.mau.fi/whatsmeow v0.0.0-20221213225758-70ef67df3c68 h1:uieThnMYyFDdUNDrHxauuZOW5ip+igWhHwyWFNjA2Sw=
+go.mau.fi/whatsmeow v0.0.0-20221213225758-70ef67df3c68/go.mod h1:2yweL8nczvtlIxkrvCb0y8xiO13rveX9lJPambwYV/E=
 golang.org/x/crypto v0.0.0-20221012134737-56aed061732a h1:NmSIgad6KjE6VvHciPZuNRTKxGhlPfD6OA87W/PLkqg=
 golang.org/x/crypto v0.0.0-20221012134737-56aed061732a/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
