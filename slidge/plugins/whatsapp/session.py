@@ -105,13 +105,13 @@ class Session(
             try:
                 self.whatsapp.FetchRoster(refresh=True)
             except RuntimeError as err:
-                Gateway.log.error("Failed refreshing roster on pair: %s", str(err))
+                self.log.error("Failed refreshing roster on pair: %s", str(err))
         elif event == whatsapp.EventConnected:
             self.send_gateway_status("Logged in", show="chat")
             try:
                 self.whatsapp.FetchRoster(refresh=Config.ALWAYS_SYNC_ROSTER)
             except RuntimeError as err:
-                Gateway.log.error("Failed refreshing roster on connect: %s", str(err))
+                self.log.error("Failed refreshing roster on connect: %s", str(err))
         elif event == whatsapp.EventLoggedOut:
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
