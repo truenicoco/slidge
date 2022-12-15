@@ -3,10 +3,19 @@ from datetime import datetime
 from functools import wraps
 from io import BytesIO
 from mimetypes import guess_type
+from os import remove
 from os.path import basename
+from shelve import open
 from typing import Optional, Union
 
-from slidge import *
+from slidge import (
+    BaseSession,
+    GatewayUser,
+    LegacyBookmarks,
+    LegacyMUC,
+    LegacyParticipant,
+    global_config,
+)
 from slidge.plugins.whatsapp.generated import go, whatsapp
 
 from .config import Config
@@ -28,9 +37,15 @@ class Session(
 ):
     def __init__(self, user: GatewayUser):
         super().__init__(user)
-        self.whatsapp = self.xmpp.whatsapp.Session(
-            whatsapp.LinkedDevice(ID=self.user.registration_form.get("device_id", ""))
+        self.user_shelf_path = (
+            global_config.HOME_DIR / "whatsapp" / (self.user.bare_jid + ".shelf")
         )
+        with open(str(self.user_shelf_path)) as shelf:
+            try:
+                device = whatsapp.LinkedDevice(ID=shelf["device_id"])
+            except KeyError:
+                device = whatsapp.LinkedDevice()
+        self.whatsapp = self.xmpp.whatsapp.Session(device)
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
 
@@ -54,6 +69,7 @@ class Session(
         :meth:`.Session.disconnect` function.
         """
         self.whatsapp.Logout()
+        remove(self.user_shelf_path)
 
     async def disconnect(self):
         """
@@ -73,11 +89,11 @@ class Session(
             await self.send_qr(data.QRCode)
         elif event == whatsapp.EventPairSuccess:
             self.send_gateway_message(MESSAGE_PAIR_SUCCESS)
-            self.user.registration_form["device_id"] = data.PairDeviceID
-            user_store.add(self.user.jid, self.user.registration_form)
+            with open(str(self.user_shelf_path)) as shelf:
+                shelf["device_id"] = data.PairDeviceID
             self.whatsapp.FetchRoster(refresh=True)
         elif event == whatsapp.EventConnected:
-            self.send_gateway_status("Logged in")
+            self.send_gateway_status("Logged in", show="chat")
             self.whatsapp.FetchRoster(refresh=Config.ALWAYS_SYNC_ROSTER)
         elif event == whatsapp.EventLoggedOut:
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
