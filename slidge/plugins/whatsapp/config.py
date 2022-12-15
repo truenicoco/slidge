@@ -10,7 +10,7 @@ class Config:
     DB_PATH = global_config.HOME_DIR / "whatsapp" / "whatsapp.db"
     DB_PATH__DOC = "The path to the database used for the WhatsApp plugin."
 
-    ALWAYS_SYNC_ROSTER = True
+    ALWAYS_SYNC_ROSTER = False
     ALWAYS_SYNC_ROSTER__DOC = (
         "Whether or not to perform a full sync of the WhatsApp roster on startup."
     )
