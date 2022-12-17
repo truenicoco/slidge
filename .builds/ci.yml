@@ -13,7 +13,7 @@ secrets:
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
   RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
-  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord whatsapp
+  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord
   DOCKER_BUILDKIT: "1"
 artifacts:
   - ./slidge/dist/slidge-0.0.0.dev0-py3-none-any.whl
@@ -55,7 +55,7 @@ tasks:
       docker buildx create --use
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
-        export ARGS="--cache-from $NAME --platform linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS
