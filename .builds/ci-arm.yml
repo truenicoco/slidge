@@ -38,13 +38,6 @@ tasks:
   - black: |
       cd slidge
       poetry run black --check slidge
-  - docs: |
-      set +x
-      curl -X POST -d "branches=master" -d "token=$(cat .rtd-slidge)" $RTD_URL
-      set -x
-      cd slidge/docs/
-      make html
-      tar czf ~/slidge-docs.tar.gz build
   - docker-setup: |
       sudo service docker start
       sudo addgroup build docker
@@ -55,37 +48,9 @@ tasks:
       docker buildx create --use
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
-        export ARGS="--cache-from $NAME --platform linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
+        export ARGS="--cache-from $NAME --platform linux/arm64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS
-        fi
-      done
-  - release: |
-      if ! test -f ~/.pypi-token; then
-        echo "We don't have access to secrets, publishing is not possible, exiting."
-        exit 0
-      fi
-      cd slidge
-      for TAG in $(git tag --points-at HEAD); do
-        if [[ $TAG == v* ]] ; then
-          VER=$(echo $TAG | cut -c2-)
-      
-          set +x
-          export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
-          set -x
-          
-          sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
-          poetry build
-          poetry publish
-      
-          for LEGACY in $PLUGINS; do
-            docker buildx build \
-              --build-arg PLUGIN=$LEGACY \
-              --push \
-              --platform linux/arm64,linux/amd64 \
-              --tag $REGISTRY_PREFIX-$LEGACY:$VER \
-              --target slidge .
-          done
         fi
       done
