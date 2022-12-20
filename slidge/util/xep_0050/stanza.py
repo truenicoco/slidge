@@ -170,3 +170,11 @@ class Command(ElementBase):
         xml.attrib['type'] = ntype
         xml.text = msg
         self.xml.append(xml)
+
+
+class Note(ElementBase):
+    name = 'note'
+    namespace = 'http://jabber.org/protocol/commands'
+    plugin_attrib = 'note'
+    interfaces = {'type'}
+    

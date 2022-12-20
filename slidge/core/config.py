@@ -106,3 +106,6 @@ LAST_SEEN_FALLBACK__DOC = (
     "to display the last seen information in the presence status. Useful for clients that "
     "do not implement XEP-0319."
 )
+
+QR_TIMEOUT = 30
+QR_TIMEOUT__DOC = "Timeout for QR code flashing confirmation."

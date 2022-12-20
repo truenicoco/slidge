@@ -68,6 +68,10 @@ class GatewayUser:
     def __repr__(self):
         return f"<User {self.bare_jid}>"
 
+    def __post_init__(self):
+        if self.registration_date is None:
+            self.registration_date = datetime.datetime.now()
+
     @property
     def jid(self) -> JID:
         """
@@ -87,6 +91,9 @@ class GatewayUser:
         :return: Value of the field
         """
         return self.registration_form.get(field, default)
+
+    def commit(self):
+        user_store.commit(self)
 
 
 class UserStore:
@@ -144,6 +151,10 @@ class UserStore:
         )
         self._users.sync()
         log.debug("Store: %s", self._users)
+
+    def commit(self, user: GatewayUser):
+        self._users[user.bare_jid] = user
+        self._users.sync()
 
     def get(self, _gateway_jid, _node, ifrom: JID, iq) -> Optional[GatewayUser]:
         """
