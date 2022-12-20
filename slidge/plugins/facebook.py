@@ -19,9 +19,11 @@ from maufbapi.thrift import ThriftObject
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant, ParticipantNode, Thread
 from maufbapi.types.graphql.responses import FriendshipStatus
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
+from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired
 
 
 class Gateway(BaseGateway):
@@ -31,6 +33,7 @@ class Gateway(BaseGateway):
         FormField(var="password", label="Password", required=True, private=True),
     ]
     REGISTRATION_MULTISTEP = True
+    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
 
     ROSTER_GROUP = "Facebook"
 
@@ -41,6 +44,48 @@ class Gateway(BaseGateway):
     SEARCH_TITLE = "Search in your facebook friends"
     SEARCH_INSTRUCTIONS = "Enter something that can be used to search for one of your friends, eg, a first name"
     SEARCH_FIELDS = [FormField(var="query", label="Term(s)")]
+
+    def __init__(self):
+        super().__init__()
+        self._pending_reg = dict[str, AndroidAPI]()
+
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
+        s = AndroidState()
+        x = ProxyHandler(None)
+        api = AndroidAPI(state=s, proxy_handler=x)
+        s.generate(random.randbytes(30))  # type: ignore
+        await api.mobile_config_sessionless()
+        try:
+            await api.login(
+                email=registration_form["email"], password=registration_form["password"]
+            )
+        except maufbapi.http.errors.TwoFactorRequired:
+            self._pending_reg[user_jid.bare] = api
+        except maufbapi.http.errors.OAuthException as e:
+            raise XMPPError("not-authorized", text=str(e))
+        else:
+            save_state(user_jid.bare, api.state)
+            raise TwoFactorNotRequired
+
+    async def validate_two_factor_code(self, user: GatewayUser, code):
+        api = self._pending_reg.pop(user.bare_jid)
+        try:
+            await api.login_2fa(email=user.registration_form["email"], code=code)
+        except maufbapi.http.errors as e:
+            raise XMPPError("not-authorized", text=str(e))
+        save_state(user.bare_jid, api.state)
+
+
+def get_shelf_path(user_bare_jid):
+    return str(global_config.HOME_DIR / user_bare_jid)
+
+
+def save_state(user_bare_jid: str, state: AndroidState):
+    shelf_path = get_shelf_path(user_bare_jid)
+    with shelve.open(shelf_path) as shelf:
+        shelf["state"] = state
 
 
 class Contact(LegacyContact["Session", str]):
@@ -133,14 +178,12 @@ class Session(
         Gateway, str, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
     ]
 ):
-    fb_state: AndroidState
     mqtt: AndroidMQTT
     api: AndroidAPI
     me: maufbapi.types.graphql.OwnInfo
 
     def __init__(self, user):
         super().__init__(user)
-        self.shelf_path = global_config.HOME_DIR / self.user.bare_jid
 
         # keys = "offline thread ID"
         self.ack_futures = dict[int, asyncio.Future[FacebookMessage]]()
@@ -153,43 +196,17 @@ class Session(
         self.sent_messages = defaultdict[int, Messages](Messages)
         self.received_messages = defaultdict[int, Messages](Messages)
 
-    async def login_from_scratch(self):
-        s = AndroidState()
-        x = ProxyHandler(None)
-        self.api = api = AndroidAPI(state=s, proxy_handler=x)
-        s.generate(random.randbytes(30))  # type: ignore
-        await api.mobile_config_sessionless()
-        try:
-            login = await api.login(
-                email=self.user.registration_form["email"],
-                password=self.user.registration_form["password"],
-            )
-        except maufbapi.http.errors.IncorrectPassword:
-            self.send_gateway_message("Incorrect password")
-            raise
-        except maufbapi.http.errors.TwoFactorRequired:
-            code = await self.input(
-                "Reply to this message with your 2 factor authentication code"
-            )
-            login = await api.login_2fa(
-                email=self.user.registration_form["email"], code=code
-            )
-        log.debug("Login output: %s", login)
-        return api.state
+    async def input_2fa(self):
+        return await self.input(
+            "Enter your 2FA code (anything will do if you don't have 2FA enabled)"
+        )
 
     async def login(self):
         shelf: shelve.Shelf[AndroidState]
-        with shelve.open(str(self.shelf_path)) as shelf:
-            try:
-                self.fb_state = s = shelf["state"]
-            except KeyError:
-                self.fb_state = shelf["state"] = await self.login_from_scratch()
-            else:
-                try:
-                    x = ProxyHandler(None)
-                    self.api = AndroidAPI(state=s, proxy_handler=x)
-                except AttributeError:
-                    self.fb_state = shelf["state"] = await self.login_from_scratch()
+        with shelve.open(get_shelf_path(self.user.bare_jid)) as shelf:
+            s = shelf["state"]
+        x = ProxyHandler(None)
+        self.api = AndroidAPI(state=s, proxy_handler=x)
         self.mqtt = AndroidMQTT(self.api.state, proxy_handler=self.api.proxy_handler)
         self.me = await self.api.get_self()
         self.me.id = int(self.me.id)  # bug in maufbapi?
