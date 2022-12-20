@@ -14,6 +14,7 @@ from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
+from slidge.core.adhoc import RegistrationType
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
@@ -84,30 +85,30 @@ class Gateway(BaseGateway):
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."
     )
-    REGISTRATION_FIELDS = list(BaseGateway.REGISTRATION_FIELDS) + [
-        FormField(
-            var="something_else",
-            label="Some optional stuff not covered by jabber:iq:register",
-            required=False,
-            private=False,
-        ),
-        FormField(
-            var="device",
-            type="list-single",
-            label="What do you want to do?",
-            options=[
-                {"label": "Choice #1", "value": "choice1"},
-                {"label": "Choice #2", "value": "choice2"},
-            ],
-            required=True,
-        ),
-    ]
+    REGISTRATION_TYPE = RegistrationType.QRCODE
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
         if registration_form["username"] != "n":
-            raise ValueError("Y a que N!")
+            raise XMPPError("bad-request", "Y a que N!")
+
+    async def validate_two_factor_code(self, user, code):
+        if code != "8":
+            raise XMPPError("not-authorized", text="Wrong code! It's 8.")
+
+    async def get_qr_text(self, user: GatewayUser) -> str:
+        self.loop.create_task(self.later_confirm_qr(user))
+        return "dummy:///SLIDGE-IS-GREAT-AGAIN/prout"
+
+    async def later_confirm_qr(self, user: GatewayUser):
+        await asyncio.sleep(1)
+        exc = (
+            XMPPError("bad-request", "Ben non")
+            if user.registration_form["password"] == "n"
+            else None
+        )
+        await self.confirm_qr(user.bare_jid, exc)
 
 
 class Roster(LegacyRoster):
