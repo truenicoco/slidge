@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import typing
 from datetime import datetime
@@ -7,32 +8,27 @@ from slixmpp import JID, Iq
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
+from slidge.core.adhoc import RegistrationType
 
 from ...util import is_valid_phone_number
 from . import config
+from .client import CredentialsValidation
 
 if typing.TYPE_CHECKING:
     from .session import Session
 
-REGISTRATION_INSTRUCTIONS = """You can visit https://my.telegram.org/apps to get an API ID and an API HASH
-
-This is the only tested login method, but other methods (password, bot token, 2FA...)
-should work too, in theory at least.
-"""
+REGISTRATION_INSTRUCTIONS = (
+    "You need to create a telegram account in an official telegram client.\n\n"
+    "Then you can enter your phone number here, and you will receive a confirmation code "
+    "in the official telegram client. "
+    "You can uninstall the telegram client after this if you want."
+)
 
 
 class Gateway(BaseGateway["Session"]):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
-    REGISTRATION_FIELDS = [
-        FormField(var="phone", label="Phone number", required=True),
-        FormField(var="api_id", label="API ID", required=True),
-        FormField(var="api_hash", label="API hash", required=True),
-        FormField(var="", value="The fields below have not been tested", type="fixed"),
-        FormField(var="bot_token", label="Bot token", required=False),
-        FormField(var="first", label="First name", required=False),
-        FormField(var="last", label="Last name", required=False),
-    ]
-    REGISTRATION_MULTISTEP = True
+    REGISTRATION_FIELDS = [FormField(var="phone", label="Phone number", required=True)]
+    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
     ROSTER_GROUP = "Telegram"
     COMPONENT_NAME = "Telegram (slidge)"
     COMPONENT_TYPE = "telegram"
@@ -50,6 +46,22 @@ class Gateway(BaseGateway["Session"]):
         super().__init__()
         if config.TDLIB_PATH is None:
             config.TDLIB_PATH = global_config.HOME_DIR / "tdlib"
+        self._pending_registrations = dict[
+            str, tuple[asyncio.Task[CredentialsValidation], CredentialsValidation]
+        ]()
+        if not config.API_ID:
+            self.REGISTRATION_FIELDS.extend(
+                [
+                    FormField(
+                        var="info",
+                        type="fixed",
+                        label="Get API id and hash on https://my.telegram.org/apps",
+                    ),
+                    FormField(var="api_id", label="API ID", required=True),
+                    FormField(var="api_hash", label="API Hash", required=True),
+                ]
+            )
+        log.debug("CONFIG %s", vars(config))
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]
@@ -57,9 +69,28 @@ class Gateway(BaseGateway["Session"]):
         phone = registration_form.get("phone")
         if not is_valid_phone_number(phone):
             raise ValueError("Not a valid phone number")
+        tg_client = CredentialsValidation(registration_form)  # type: ignore
+        auth_task = self.loop.create_task(tg_client.start())
+        self._pending_registrations[user_jid.bare] = auth_task, tg_client
 
-    async def unregister(self, user):
-        pass
+    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+        auth_task, tg_client = self._pending_registrations.pop(user.bare_jid)
+        tg_client.code_future.set_result(code)
+        try:
+            await asyncio.wait_for(auth_task, config.REGISTRATION_AUTH_CODE_TIMEOUT)
+        except asyncio.TimeoutError:
+            raise XMPPError(
+                "not-authorized",
+                text="Something went wrong when trying to authenticate you on the "
+                "telegram network. Please retry and/or contact your slidge admin.",
+            )
+        await tg_client.stop()
+
+    async def unregister(self, user: GatewayUser):
+        session = self.session_cls.from_user(user)
+        # FIXME: this effectively removes user data from disk, but crashes slidge.
+        await session.tg.start()
+        await session.tg.api.log_out()
 
     def add_adhoc_commands(self):
         self.adhoc.add_command(

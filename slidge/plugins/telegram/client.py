@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Union
 import aiotdlib
 from aiotdlib import api as tgapi
 
+from . import config
 from .util import get_best_file
 
 if TYPE_CHECKING:
@@ -14,9 +15,35 @@ if TYPE_CHECKING:
     from .session import Session
 
 
+def get_base_kwargs(user_reg_form: dict):
+    return dict(
+        phone_number=user_reg_form["phone"],
+        api_id=user_reg_form.get("api_id") or config.API_ID,
+        api_hash=user_reg_form.get("api_hash") or config.API_HASH,
+        database_encryption_key=config.TDLIB_KEY,
+        files_directory=config.TDLIB_PATH,
+    )
+
+
+class CredentialsValidation(aiotdlib.Client):
+    def __init__(self, registration_form: dict):
+        super().__init__(**get_base_kwargs(registration_form))
+        self.code_future: asyncio.Future[
+            str
+        ] = asyncio.get_running_loop().create_future()
+        self._auth_get_code = self._get_code
+        self._auth_get_password = self._get_code
+
+    async def _get_code(self):
+        return await self.code_future
+
+
 class TelegramClient(aiotdlib.Client):
-    def __init__(self, session: "Session", **kw):
-        super().__init__(parse_mode=aiotdlib.ClientParseMode.MARKDOWN, **kw)
+    def __init__(self, session: "Session"):
+        super().__init__(
+            parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
+            **get_base_kwargs(session.user.registration_form),
+        )
         self.session = session
         self.contacts = session.contacts
         self.bookmarks = session.bookmarks

@@ -40,9 +40,6 @@ class Session(
 ):
     def __init__(self, user):
         super().__init__(user)
-        registration_form = {
-            k: v if v != "" else None for k, v in self.user.registration_form.items()
-        }
         self.sent_read_marks = set[int]()
         self.ack_futures = dict[int, asyncio.Future]()
         self.user_correction_futures = dict[int, asyncio.Future]()
@@ -50,22 +47,7 @@ class Session(
 
         self.my_name: asyncio.Future[str] = self.xmpp.loop.create_future()
 
-        i = registration_form.get("api_id")
-        if i is not None:
-            # makes testing easier to make api_id optional
-            i = int(i)  # type:ignore
-
-        self.tg = TelegramClient(
-            self,
-            api_id=i,
-            api_hash=registration_form.get("api_hash"),
-            phone_number=registration_form["phone"],
-            bot_token=registration_form.get("bot_token"),
-            first_name=registration_form.get("first"),
-            last_name=registration_form.get("last"),
-            database_encryption_key=config.TDLIB_KEY,
-            files_directory=config.TDLIB_PATH,
-        )
+        self.tg = TelegramClient(self)
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
