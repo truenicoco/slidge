@@ -34,13 +34,13 @@ services:
       context: .
       target: slidge-telegram-dev
     command:
-      - --config=/slidge-example.ini
+      - --config=/slidge-tg.ini
       - --legacy-module=slidge.plugins.telegram
       - --jid=telegram.localhost
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./confs/slidge-tg.ini:/slidge-tg.ini
     depends_on:
       - prosody
     network_mode: service:prosody

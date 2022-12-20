@@ -12,3 +12,5 @@ persistent/
 .old
 requirements*
 slidge/plugins/whatsapp/generated
+confs/slidge-tg.ini
+
