@@ -15,6 +15,8 @@ from slixmpp.plugins.xep_0004 import Form
 from slidge import *
 from slidge.util import is_valid_phone_number
 
+from ...core.adhoc import RegistrationType
+
 if TYPE_CHECKING:
     from .session import Session
 
@@ -29,7 +31,7 @@ class Gateway(BaseGateway):
     )
     REGISTRATION_INSTRUCTIONS = txt.REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = txt.REGISTRATION_FIELDS
-    REGISTRATION_MULTISTEP = True
+    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
 
     ROSTER_GROUP = "Signal"
 
@@ -209,10 +211,21 @@ class Gateway(BaseGateway):
                     "not-allowed",
                     text="Someone is already using this phone number on this server.\n",
                 )
-        if registration_form.get("device") == "primary" and not registration_form.get(
-            "name"
-        ):
-            raise ValueError(txt.NAME_REQUIRED)
+        signal = await self.signal
+        try:
+            await signal.register(phone, captcha=registration_form.get("captcha"))
+        except sigexc.CaptchaRequiredError:
+            raise XMPPError(
+                "not-acceptable",
+                "Please fill the captcha to register your phone number.",
+                etype="modify",
+            )
+
+    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+        signal = await self.signal
+        phone = user.registration_form.get("phone")
+        await signal.verify(phone, code)
+        await signal.set_profile(account=phone, name=user.registration_form.get("name"))
 
     async def unregister(self, user: GatewayUser):
         try:

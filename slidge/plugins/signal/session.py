@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .gateway import Gateway
     from .group import Bookmarks, MUC, Participant
 
-from . import config, txt
+from . import config
 
 
 def handle_unregistered_recipient(func):
@@ -117,27 +117,7 @@ class Session(
         Attempt to listen to incoming events for this account,
         or pursue the registration process if needed.
         """
-        try:
-            await (await self.signal).subscribe(account=self.phone)
-        except sigexc.NoSuchAccountError:
-            device = self.user.registration_form["device"]
-            try:
-                if device == "primary":
-                    await self.register()
-                elif device == "secondary":
-                    await self.link()
-                else:
-                    # This should never happen
-                    self.send_gateway_status("Disconnected", show="dnd")
-                    raise TypeError("Unknown device type", device)
-            except sigexc.SignaldException as e:
-                self.xmpp.send_message(
-                    mto=self.user.jid,
-                    mbody=f"Something went wrong: {e}",
-                    mfrom=self.xmpp.boundjid,
-                )
-                raise
-            await (await self.signal).subscribe(account=self.phone)
+        await (await self.signal).subscribe(account=self.phone)
         await self.connected
         sig = await self.signal
         profile = await sig.get_profile(
@@ -162,63 +142,6 @@ class Session(
             and not self.connected.done()
         ):
             self.connected.set_result(True)
-
-    async def register(self):
-        self.send_gateway_status("Registering…", show="dnd")
-        try:
-            await (await self.signal).register(self.phone)
-        except sigexc.CaptchaRequiredError:
-            self.send_gateway_status("Captcha required", show="dnd")
-            captcha = await self.input(txt.CAPTCHA_REQUIRED)
-            await (await self.signal).register(self.phone, captcha=captcha)
-        sms_code = await self.input(
-            f"Reply to this message with the code you have received by SMS at {self.phone}.",
-        )
-        await (await self.signal).verify(account=self.phone, code=sms_code)
-        await (await self.signal).set_profile(
-            account=self.phone, name=self.user.registration_form["name"]
-        )
-        self.send_gateway_message(txt.REGISTER_SUCCESS)
-
-    async def send_linking_qrcode(self):
-        self.send_gateway_status("QR scan needed", show="dnd")
-        resp = await (await self.signal).generate_linking_uri()
-        await self.send_qr(resp.uri)
-        self.xmpp.send_message(
-            mto=self.user.jid,
-            mbody=f"Use this URI or QR code on another signal device to "
-            f"finish linking your XMPP account\n{resp.uri}",
-            mfrom=self.xmpp.boundjid,
-        )
-        return resp
-
-    async def link(self):
-        resp = await self.send_linking_qrcode()
-        try:
-            await (await self.signal).finish_link(
-                device_name=self.user.registration_form["device_name"],
-                session_id=resp.session_id,
-            )
-        except sigexc.ScanTimeoutError:
-            while True:
-                r = await self.input(txt.LINK_TIMEOUT)
-                if r in ("cancel", "link"):
-                    break
-                else:
-                    self.send_gateway_message("Please reply either 'link' or 'cancel'")
-            if r == "cancel":
-                raise
-            elif r == "link":
-                await self.link()  # TODO: set a max number of attempts
-        except sigexc.SignaldException as e:
-            self.xmpp.send_message(
-                mto=self.user.jid,
-                mbody=f"Something went wrong during the linking process: {e}.",
-                mfrom=self.xmpp.boundjid,
-            )
-            raise
-        else:
-            self.send_gateway_message(txt.LINK_SUCCESS)
 
     async def logout(self):
         await (await self.signal).unsubscribe(account=self.phone)
