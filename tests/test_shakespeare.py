@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import logging
 from copy import copy
@@ -19,7 +18,6 @@ from slidge.util.xep_0356.permissions import (
     RosterAccess,
 )
 from slidge.core import config
-from slidge.core import session
 
 
 received_presences: list[Optional[Presence]] = []
@@ -71,7 +69,7 @@ class Session(BaseSession):
         *,
         reply_to=None,
         reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None
+        reply_to_fallback_text: Optional[str] = None,
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
@@ -378,7 +376,9 @@ class TestAimShakespeareBase(SlidgeTest):
                 to='requester@domain'
                 from='{self.xmpp.boundjid.bare}' id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands' />
+                     node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit" node="jabber:iq:register" name="Register to the gateway"/>
+              </query>
             </iq>
             """
         )
@@ -402,6 +402,7 @@ class TestAimShakespeareBase(SlidgeTest):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
+                <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
               </query>
             </iq>
             """
@@ -429,6 +430,7 @@ class TestAimShakespeareBase(SlidgeTest):
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit" node="info" name="List registered users" />
                 <item jid="aim.shakespeare.lit" node="delete_user" name="Delete a user" />
+                <item jid="aim.shakespeare.lit" node="jabber:iq:register" name="Register to the gateway"/>
               </query>
             </iq>
             """
@@ -549,53 +551,6 @@ class TestAimShakespeareBase(SlidgeTest):
             """,
             use_values=False,
         )
-
-
-class TestNameSquatting(SlidgeTest):
-    plugin = globals()
-
-    def setUp(self):
-        super().setUp()
-
-        async def login(*args, **kwargs):
-            raise RuntimeError
-
-        self.original_login = Session.login
-        Session.login = login
-        Gateway.REGISTRATION_MULTISTEP = True
-        config.PARTIAL_REGISTRATION_TIMEOUT = 0.01
-
-    def tearDown(self):
-        Gateway.REGISTRATION_MULTISTEP = False
-        config.PARTIAL_REGISTRATION_TIMEOUT = 3600
-        Session.login = self.original_login
-
-    def test_name_squatting(self):
-        async def sleep():
-            await asyncio.sleep(config.PARTIAL_REGISTRATION_TIMEOUT * 2)
-
-        self.recv(
-            """
-            <iq from="bard@shakespeare.lit" type='set' id='reg2'>
-              <query xmlns='jabber:iq:register'>
-                <username>bill</username>
-                <password>Calliope</password>
-                <email>bard@shakespeare.lit</email>
-              </query>
-            </iq>
-            """
-        )
-        self.send(
-            """
-            <iq type='result' id='reg2' to="bard@shakespeare.lit"/>
-            """
-        )
-        user = user_store.get(None, None, JID("bard@shakespeare.lit"), None)
-        assert user is not None
-        assert user in session._sessions
-        self.xmpp.loop.run_until_complete(sleep())
-        assert user_store.get(None, None, JID("bard@shakespeare.lit"), None) is None
-        assert user not in session._sessions
 
 
 class TestPrivilegeOld(SlidgeTest):

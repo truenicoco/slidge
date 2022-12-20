@@ -19,7 +19,7 @@ from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
 from . import config
-from .adhoc import AdhocProvider
+from .adhoc import AdhocProvider, RegistrationType
 from .chat_command import ChatCommandProvider
 from .disco import Disco
 from .pubsub import PubSubComponent
@@ -65,11 +65,14 @@ class BaseGateway(
     The text presented to a user that wants to register (or modify) their legacy account
     configuration.
     """
-    REGISTRATION_MULTISTEP = False
+    REGISTRATION_TYPE = RegistrationType.SINGLE_STEP_FORM
     """
-    If the network requires a multistep registration, set this to True to prevent name
-    squatting. Registrations that did not successfully login withing SLIDGE_PARTIAL_REGISTRATION_TIMEOUT
-    seconds will automatically be removed from the user_store.
+    SINGLE_STEP_FORM: 1 step, 1 form, compatible with :xep:`0077` (in-band registration)
+    
+    QRCODE: The registration requires flashing a QR code in an official client.
+    See :meth:`.BaseGateway.`
+    
+    TWO_FACTOR_CODE: The registration requires confirming login with a 2FA code
     """
 
     COMPONENT_NAME: str = NotImplemented
@@ -116,6 +119,7 @@ class BaseGateway(
         "find": "_chat_command_search",
         "help": "_chat_command_help",
         "register": "_chat_command_register",
+        "unregister": "_chat_command_unregister",
         "contacts": "_chat_command_list_contacts",
         "groups": "_chat_command_list_groups",
     }
@@ -151,6 +155,12 @@ class BaseGateway(
     yet still open a functional chat window on incoming messages from components.
     """
 
+    REGISTRATION_2FA_TITLE = "Enter your 2FA code"
+    REGISTRATION_2FA_INSTRUCTIONS = (
+        "You should have received something via email or SMS, or something"
+    )
+    REGISTRATION_QR_INSTRUCTIONS = "Flash this code or follow this link"
+
     GROUPS = False
 
     def __init__(self):
@@ -164,6 +174,8 @@ class BaseGateway(
                 "xep_0077": {
                     "form_fields": None,
                     "form_instructions": self.REGISTRATION_INSTRUCTIONS,
+                    "enable_subscription": self.REGISTRATION_TYPE
+                    == RegistrationType.SINGLE_STEP_FORM,
                 },
                 "xep_0100": {
                     "component_name": self.COMPONENT_NAME,
@@ -227,6 +239,8 @@ class BaseGateway(
                 self.__handle_ping,  # type:ignore
             )
         )
+
+        self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
     async def __handle_ping(self, iq: Iq):
         ito = iq.get_to()
@@ -320,8 +334,7 @@ class BaseGateway(
             "user_remove",
         )
         self["xep_0077"].api.register(
-            self._make_registration_form,
-            "make_registration_form",
+            self.make_registration_form, "make_registration_form"
         )
         self["xep_0077"].api.register(self._user_validate, "user_validate")
         self["xep_0077"].api.register(self._user_modify, "user_modify")
@@ -475,7 +488,7 @@ class BaseGateway(
 
         self.loop.create_task(w())
 
-    async def _make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
+    async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         self._raise_if_not_allowed_jid(iq.get_from())
         reg = iq["register"]
         user = user_store.get_by_stanza(iq)
@@ -524,7 +537,7 @@ class BaseGateway(
         reply.set_payload(reg)
         return reply
 
-    async def _user_prevalidate(self, ifrom: JID, form_dict: dict[str, Optional[str]]):
+    async def user_prevalidate(self, ifrom: JID, form_dict: dict[str, Optional[str]]):
         """
         Pre validate a registration form using the content of self.REGISTRATION_FIELDS
         before passing it to the plugin custom validation logic.
@@ -542,7 +555,7 @@ class BaseGateway(
         log.debug("User validate: %s", ifrom.bare)
         form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
         self._raise_if_not_allowed_jid(ifrom)
-        await self._user_prevalidate(ifrom, form_dict)
+        await self.user_prevalidate(ifrom, form_dict)
         log.info("New user: %s", ifrom.bare)
         user_store.add(ifrom, form_dict)
 
@@ -554,7 +567,7 @@ class BaseGateway(
         """
         user = user_store.get_by_jid(ifrom)
         log.debug("Modify user: %s", user)
-        await self._user_prevalidate(ifrom, form_dict)
+        await self.user_prevalidate(ifrom, form_dict)
         user_store.add(ifrom, form_dict)
 
     async def _on_user_register(self, iq: Iq):
@@ -567,22 +580,7 @@ class BaseGateway(
                 mfrom=self.boundjid.bare,
             )
         session.send_gateway_message(self.WELCOME_MESSAGE)
-        if self.REGISTRATION_MULTISTEP:
-            asyncio.create_task(self.__registration_timeout(session))
         await self._login_wrap(session)
-
-    async def __registration_timeout(self, session: "SessionType"):
-        await asyncio.sleep(config.PARTIAL_REGISTRATION_TIMEOUT)
-        if session.never_logged:
-            u = session.user
-            j = u.jid
-            log.warning(
-                "%s has never completed their registration, "
-                "the have been unregistered",
-                u,
-            )
-            await self.session_cls.kill_by_jid(j)
-            user_store.remove_by_jid(j)
 
     async def _on_user_unregister(self, iq: Iq):
         await self.session_cls.kill_by_jid(iq.get_from())
@@ -820,6 +818,48 @@ class BaseGateway(
             self.session_cls.from_jid(user.jid).shutdown()
             self.send_presence(ptype="unavailable", pto=user.jid)
 
+    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+        """
+        Called when the user enters their 2FA code.
+
+        Should raise the appropriate ``XMPPError`` if the login fails
+
+        :param user: The gateway user whose registration is pending
+            Use their ``.bare_jid`` and/or``.registration_form`` attributes
+            to get what you need
+        :param code: The code they entered, either via "chatbot" message or
+            adhoc command
+        """
+        raise NotImplementedError
+
+    async def get_qr_text(self, user: GatewayUser) -> str:
+        """
+        Plugins should call this to complete registration with QR codes
+
+        :param user: The not-yet-fully-registered GatewayUser.
+            Use its ``.bare_jid`` and/or``.registration_form`` attributes
+            to get what you need
+        """
+        raise NotImplementedError
+
+    async def confirm_qr(
+        self, user_bare_jid: str, exception: Optional[Exception] = None
+    ):
+        """
+        Plugins should call this to complete registration with QR codes
+
+        :param user_bare_jid: The not-yet-fully-registered ``GatewayUser`` instance
+            Use their ``.bare_jid`` and/or``.registration_form`` attributes
+            to get what you need
+        :param exception: Optionally, an XMPPError to be raised to **not** confirm
+            QR code flashing.
+        """
+        fut = self.qr_pending_registrations[user_bare_jid]
+        if exception is None:
+            fut.set_result(True)
+        else:
+            fut.set_exception(exception)
+
 
 SLIXMPP_PLUGINS = [
     "xep_0030",  # Service discovery
@@ -836,6 +876,7 @@ SLIXMPP_PLUGINS = [
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
     "xep_0199",  # XMPP Ping
+    "xep_0221",  # Data Forms Media Element
     "xep_0280",  # Carbons
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction

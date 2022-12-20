@@ -5,6 +5,7 @@
 import logging
 import ssl
 
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import BasePlugin
 from slixmpp.stanza import Iq, StreamFeatures
 from slixmpp.xmlstream import JID, StanzaBase, register_stanza_plugin
@@ -67,6 +68,7 @@ class XEP_0077(BasePlugin):
         "order": 50,
         "form_fields": {"username", "password"},
         "form_instructions": "Enter your credentials",
+        "enable_subscription": True,
     }
     _user_store: dict[str, dict[str, str]]
 
@@ -147,6 +149,11 @@ class XEP_0077(BasePlugin):
 
     async def _handle_registration(self, iq: StanzaBase):
         if iq["type"] == "get":
+            if not self.enable_subscription:
+                raise XMPPError(
+                    "bad-request",
+                    text="You must use adhoc commands to register to this gateway.",
+                )
             await self._send_form(iq)
         elif iq["type"] == "set":
             form_dict = iq["register"]["form"].get_values() or iq["register"]
@@ -167,6 +174,12 @@ class XEP_0077(BasePlugin):
                     reply.send()
                     self.xmpp.event("user_unregister", iq)
                 return
+
+            if not self.enable_subscription:
+                raise XMPPError(
+                    "bad-request",
+                    text="You must use adhoc commands to register to this gateway.",
+                )
 
             if self.form_fields is not None:
                 for field in self.form_fields:
