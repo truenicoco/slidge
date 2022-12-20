@@ -13,9 +13,10 @@ login process seem a little too exotic for my taste.
 import asyncio
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import steam.enums
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 from steam.client import SteamClient
 from steam.client.user import SteamUser
@@ -28,6 +29,7 @@ from steam.protobufs.steammessages_friendmessages_pb2 import (
 from steam.steamid import SteamID
 
 from slidge import *
+from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired
 from slidge.util import BiDict
 
 
@@ -37,6 +39,7 @@ class Gateway(BaseGateway["Session"]):
         FormField(var="username", label="Steam username", required=True),
         FormField(var="password", label="Password", private=True, required=True),
     ]
+    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
 
     ROSTER_GROUP = "Steam"
 
@@ -44,6 +47,58 @@ class Gateway(BaseGateway["Session"]):
     COMPONENT_TYPE = "steam"
 
     COMPONENT_AVATAR = "https://logos-download.com/wp-content/uploads/2016/05/Steam_icon_logo_logotype.png"
+
+    def __init__(self):
+        super().__init__()
+        self._pending_registrations = dict[str, tuple[SteamClient, EResult]]()
+        # we store logged clients on registration to get it
+        self.steam_clients = dict[str, SteamClient]()
+
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, Optional[str]]
+    ):
+        username = registration_form["username"]
+        password = registration_form["password"]
+
+        store_dir = global_config.HOME_DIR / user_jid.bare
+        store_dir.mkdir(exist_ok=True)
+
+        client = SteamClient()
+        client.set_credential_location(store_dir)
+
+        login_result = client.login(username, password)
+        if login_result == EResult.InvalidPassword:
+            raise ValueError("Invalid password")
+        elif login_result == EResult.OK:
+            self.steam_clients[user_jid.bare] = client
+            raise TwoFactorNotRequired
+        elif login_result in (
+            EResult.AccountLogonDenied,
+            EResult.AccountLoginDeniedNeedTwoFactor,
+        ):
+            self._pending_registrations[user_jid.bare] = client, login_result
+        else:
+            raise ValueError(f"Login problem: {login_result}")
+
+    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+        username = user.registration_form["username"]
+        password = user.registration_form["password"]
+
+        client, login_result = self._pending_registrations.pop(user.bare_jid)
+        if login_result == EResult.AccountLogonDenied:
+            # 2FA by mail (?)
+            login_result = client.login(username, password, auth_code=code)
+        elif login_result == EResult.AccountLoginDeniedNeedTwoFactor:
+            # steam guard (?)
+            login_result = client.login(username, password, two_factor_code=code)
+
+        if login_result != EResult.OK:
+            raise XMPPError(
+                "forbidden", etype="auth", text=f"Could not login: {login_result}"
+            )
+
+        # store the client, so it's picked up on Sessions.login(), without re-auth
+        self.steam_clients[user.bare_jid] = client
 
 
 class Contact(LegacyContact["Session", int]):
@@ -105,55 +160,39 @@ class Session(
 
         self.job_futures = dict[str, asyncio.Future[Any]]()
 
-        self.steam = SteamClient()
-        self.steam.set_credential_location(store_dir)
-        self.steam.username = self.user.registration_form["username"]
+        client = self.xmpp.steam_clients.pop(user.bare_jid, None)
+        if client is None:
+            self.steam = SteamClient()
+            self.log.debug("Creating steam client, %s", store_dir)
+            self.steam.set_credential_location(store_dir)
+        else:
+            # in case the session is created just after successful registration
+            self.log.debug("Using found client: %s - %s", client, client.logged_on)
+            self.steam = client
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
         return int(xmpp_msg_id)
 
     async def login(self):
-        username = self.user.registration_form["username"]
-        password = self.user.registration_form["password"]
-
-        # self.steam.on(SteamClient.EVENT_CHAT_MESSAGE, self.on_steam_msg)
         self.steam.on(EMsg.ClientPersonaState, self.on_persona_state)
         self.steam.on("FriendMessagesClient.IncomingMessage#1", self.on_friend_message)
         self.steam.on("FriendMessagesClient.MessageReaction#1", self.on_friend_reaction)
         self.steam.on(EMsg.ServiceMethodResponse, self.on_service_method_response)
 
-        login_result = self.steam.relogin()
+        if not self.steam.logged_on:
+            # if just after registration, we're already logged on
+            self.log.debug("Client is not logged on")
+            login_result = self.steam.login(
+                self.user.registration_form["username"],
+                self.user.registration_form["password"],
+            )
+            self.log.debug("Re-login result: %s", login_result)
 
-        self.log.debug("Re-login result: %s", login_result)
-
-        if login_result != EResult.OK:
-            login_result = self.steam.login(username, password)
-
-            self.log.debug("Login result: %s", login_result)
-
-            if login_result == EResult.AccountLogonDenied:
-                # 2FA by mail (?)
-                code = await self.input("Enter the code you received by email")
-                login_result = self.steam.login(
-                    self.user.registration_form["username"],
-                    self.user.registration_form["password"],
-                    auth_code=code,
-                )
-            elif login_result == EResult.AccountLoginDeniedNeedTwoFactor:
-                # steam guard (?)
-                code = await self.input("Enter your 2FA code")
-                login_result = self.steam.login(
-                    self.user.registration_form["username"],
-                    self.user.registration_form["password"],
-                    two_factor_code=code,
-                )
-
-        self.log.debug("Login result: %s", login_result)
-        if login_result == EResult.OK:
-            self.log.debug("Login success")
-        else:
-            raise RuntimeError("Could not connect to steam")
+            if login_result == EResult.OK:
+                self.log.debug("Login success")
+            else:
+                raise RuntimeError("Could not connect to steam")
 
         for f in self.steam.friends:
             self.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
