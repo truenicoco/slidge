@@ -1,16 +1,19 @@
 import asyncio
 import functools
 import logging
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
+import qrcode
 from aiosignald import SignaldAPI
 from slixmpp import JID, Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form
+from slixmpp.plugins.xep_0004 import FormField as AdhocFormField
 
 from slidge import *
 from slidge.util import is_valid_phone_number
@@ -69,6 +72,12 @@ class Gateway(BaseGateway):
 
     def add_adhoc_commands(self):
         self.adhoc.add_command(
+            node="link",
+            name="Link slidge to your signal account",
+            handler=self._handle_link_slidge,
+            only_nonusers=True,
+        )
+        self.adhoc.add_command(
             node="linked_devices",
             name="Get linked devices",
             handler=self._handle_linked_devices,
@@ -80,6 +89,100 @@ class Gateway(BaseGateway):
             handler=self._handle_add_device1,
             only_users=True,
         )
+
+    async def _handle_link_slidge(self, iq: Iq, adhoc_session: dict[str, Any]):
+        user = user_store.get_by_stanza(iq)
+        if user is not None:
+            raise XMPPError(
+                "bad-request", text="You are already registered to this gateway."
+            )
+
+        form = self["xep_0004"].make_form(
+            "form",
+            "Enter a device name to identify your slidge session in the official signal app. "
+            "Prepare to scan the QR code that you will see on the next step.",
+        )
+        form.add_field(
+            var="phone",
+            ftype="text-single",
+            label="Your phone number in international format",
+            required=True,
+        )
+        form.add_field(
+            var="device",
+            ftype="text-single",
+            label="Name of this device",
+            value="slidge",
+            required=True,
+        )
+
+        adhoc_session["payload"] = form
+        adhoc_session["has_next"] = True
+        adhoc_session["next"] = self._handle_link_slidge2
+
+        return adhoc_session
+
+    async def _handle_link_slidge2(self, form: Form, adhoc_session: dict[str, Any]):
+        resp = await (await self.signal).generate_linking_uri()
+        qr_text = resp.uri
+
+        qr = qrcode.make(qr_text)
+        with tempfile.NamedTemporaryFile(suffix=".png") as f:
+            qr.save(f.name)
+            img_url = await self.plugin["xep_0363"].upload_file(
+                filename=Path(f.name), ifrom=global_config.UPLOAD_REQUESTER
+            )
+
+        msg = self.make_message(mto=adhoc_session["from"])
+        msg.set_from(self.boundjid.bare)
+        msg["oob"]["url"] = img_url
+        msg["body"] = img_url
+        msg.send()
+
+        msg = self.make_message(mto=adhoc_session["from"])
+        msg.set_from(self.boundjid.bare)
+        msg["body"] = qr_text
+        msg.send()
+        form_values = form.get_values()
+
+        form = self.plugin["xep_0004"].make_form(
+            title="Flash this",
+            instructions="Flash this QR in the official signal app",
+        )
+        img = AdhocFormField()
+        img["media"]["height"] = "200"
+        img["media"]["width"] = "200"
+        img["media"]["alt"] = "The thing to flash"
+        img["media"].add_uri(img_url, itype="image/png")
+        form.append(img)
+
+        adhoc_session["payload"] = form
+        adhoc_session["has_next"] = True
+        adhoc_session["next"] = self._handle_link_slidge3
+        adhoc_session["device"] = form_values["device"]
+        adhoc_session["phone"] = form_values["phone"]
+        adhoc_session["signal_session_id"] = resp.session_id
+        return adhoc_session
+
+    async def _handle_link_slidge3(self, _payload, adhoc_session: dict[str, Any]):
+        try:
+            await (await self.signal).finish_link(
+                device_name=adhoc_session["device"],
+                session_id=adhoc_session["signal_session_id"],
+            )
+        except sigexc.ScanTimeoutError:
+            raise XMPPError(
+                "not-authorized", "You took too much time to scan. Please retry."
+            )
+        except sigexc.SignaldException as e:
+            raise XMPPError("not-authorized", f"Something went wrong: {e}.")
+        user_store.add(adhoc_session["from"], {"phone": adhoc_session["phone"]})
+
+        adhoc_session["has_next"] = False
+        adhoc_session["next"] = None
+        adhoc_session["payload"] = None
+        adhoc_session["notes"] = [("info", "Success!")]
+        return adhoc_session
 
     async def _handle_linked_devices(self, iq: Iq, adhoc_session: dict[str, Any]):
         user = user_store.get_by_stanza(iq)
