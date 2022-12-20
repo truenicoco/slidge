@@ -33,7 +33,17 @@ class Gateway(BaseGateway["Session"]):
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
-        pass
+        try:
+            await asyncio.to_thread(
+                skpy.Skype,
+                registration_form["username"],
+                registration_form["password"],
+                str(global_config.HOME_DIR / user_jid.bare),
+            )
+        except skpy.SkypeApiException:
+            raise XMPPError("bad-request")
+        except skpy.SkypeAuthException:
+            raise XMPPError("forbidden", etype="auth")
 
 
 class Contact(LegacyContact["Session", str]):
