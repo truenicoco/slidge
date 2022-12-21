@@ -1,13 +1,14 @@
+version: "3.9"
 services:
   prosody:
     build:
       context: .
       target: prosody-dev
     ports:
-      - "127.0.0.1:5222:5222"
-      - "127.0.0.1:5281:5281"
-      - "127.0.0.1:8888:80"
-      - "127.0.0.1:8065:8065"
+      - 127.0.0.1:5222:5222
+      - 127.0.0.1:5281:5281
+      - 127.0.0.1:8888:80
+      - 127.0.0.1:8065:8065
     volumes:
       - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
       - ./confs/mod_privilege.lua:/var/lib/prosody/custom_plugins/share/lua/5.2/mod_privilege.lua
@@ -20,18 +21,18 @@ services:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.dummy
       - --jid=dummy.localhost
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
 
   slidge-telegram:
     build:
       context: .
-      target: slidge-dev
+      target: slidge-telegram-dev
     command:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.telegram
@@ -42,7 +43,7 @@ services:
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
+    network_mode: service:prosody
 
   slidge-signal:
     build:
@@ -52,6 +53,7 @@ services:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.signal
       - --jid=signal.localhost
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
@@ -60,7 +62,6 @@ services:
     depends_on:
       - prosody
       - signald
-    network_mode: "service:prosody"
 
   slidge-facebook:
     build:
@@ -76,7 +77,7 @@ services:
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
+    network_mode: service:prosody
 
   slidge-skype:
     build:
@@ -86,13 +87,13 @@ services:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.skype
       - --jid=skype.localhost
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
 
   slidge-hackernews:
     build:
@@ -108,7 +109,7 @@ services:
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
+    network_mode: service:prosody
 
   slidge-mattermost:
     build:
@@ -118,13 +119,13 @@ services:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.mattermost
       - --jid=mattermost.localhost
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
 
   slidge-steam:
     build:
@@ -140,7 +141,7 @@ services:
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
+    network_mode: service:prosody
 
   slidge-discord:
     build:
@@ -151,39 +152,53 @@ services:
       - --legacy-module=slidge.plugins.discord
       - --jid=discord.localhost
       - --discord-verbose
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
 
   slidge-whatsapp:
     build:
       context: .
-      target: slidge-dev
+      target: slidge-whatsapp-dev
     command:
       - --config=/slidge-example.ini
       - --legacy-module=slidge.plugins.whatsapp
       - --jid=whatsapp.localhost
     environment:
       SLIDGE__WHATSAPP_SKIP_VERIFY_TLS: "true"
+    network_mode: service:prosody
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
-    network_mode: "service:prosody"
 
   signald:
-    image: signald/signald:0.23.0
+    image: docker.io/signald/signald:0.23.0
     volumes:
       - ./persistent/signald:/signald
     environment:
       - SIGNALD_TRUST_ALL_KEYS:true
       - SIGNALD_TRUST_NEW_KEYS:true
+
+  postgresql:
+    environment:
+      POSTGRES_DB: movim
+      POSTGRES_PASSWORD: BAD
+      POSTGRES_USER: movim
+    image: docker.io/library/postgres:14-alpine
+    volumes:
+      - ./persistent/movim/postgres/data:/var/lib/postgresql/data:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   movim:
     environment:
@@ -195,33 +210,25 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_USER: movim
       POSTGRES_PASSWORD: BAD
-    image: movim/movim:0.21rc2
+    image: docker.io/movim/movim:0.21rc2
+    network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:rw
-    network_mode: "service:prosody"
     depends_on:
-      - postgresql
+      postgresql:
+        condition: service_healthy
 
   nginx:
-    image: nginx:mainline-alpine
+    image: docker.io/library/nginx:mainline-alpine
+    network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:ro
       - ./confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    network_mode: "service:prosody"
     depends_on:
       - movim
 
-  postgresql:
-    environment:
-      POSTGRES_DB: movim
-      POSTGRES_PASSWORD: BAD
-      POSTGRES_USER: movim
-    image: postgres:14-alpine
-    volumes:
-      - ./persistent/movim/postgres/data:/var/lib/postgresql/data:rw
-
   mattermost:
-    image: mattermost/mattermost-preview
-    network_mode: "service:prosody"
+    image: docker.io/mattermost/mattermost-preview
+    network_mode: service:prosody
     volumes:
       - ./confs/mattermost-mysql-darwin.cnf:/etc/mysql/mysql.conf.d/slidge.cnf

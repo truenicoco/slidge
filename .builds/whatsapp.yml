@@ -12,13 +12,11 @@ secrets:
   - dc710d9d-8043-4e1d-9837-b35bfa02800a
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
-  RTD_URL: https://readthedocs.org/api/v2/webhook/slidge/206885/
   PLUGINS: whatsapp
   DOCKER_BUILDKIT: "1"
 artifacts:
   - ./slidge/dist/slidge-0.0.0.dev0-py3-none-any.whl
   - ./slidge/dist/slidge-0.0.0.dev0.tar.gz
-  - ./slidge-docs.tar.gz
 tasks:
   - setup-poetry: |
       curl -sSL https://install.python-poetry.org | python3 -
@@ -48,7 +46,7 @@ tasks:
       docker buildx create --use
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
-        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --target slidge-$LEGACY ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS
@@ -61,11 +59,10 @@ tasks:
           VER=$(echo $TAG | cut -c2-)
           for LEGACY in $PLUGINS; do
             docker buildx build \
-              --build-arg PLUGIN=$LEGACY \
               --push \
               --platform linux/arm64,linux/amd64 \
               --tag $REGISTRY_PREFIX-$LEGACY:$VER \
-              --target slidge .
+              --target slidge-$LEGACY .
           done
         fi
       done
