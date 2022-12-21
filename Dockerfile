@@ -9,16 +9,20 @@ RUN python3 -m venv /venv && python3 -m pip install wheel
 RUN curl -fL https://install.python-poetry.org | python3 -
 
 WORKDIR /build
-COPY . /build
+# only copy files used to define dependencies, so this is steps can be in cache
+# as long as we don't touch the deps
+COPY poetry.lock /build
+COPY pyproject.toml /build
 
 RUN poetry export --extras="signal facebook telegram skype mattermost steam discord" > requirements.txt && \
     python3 -m pip install --requirement requirements.txt
 
-RUN mv -f /build/slidge /venv/lib/python3.9/site-packages/slidge && \
-    rm -Rf /build
+RUN rm -Rf /build
 
-## Base execution stage for Slidge; most plugins can run in this stage with `SLIDGE_LEGACY_MODULE` set.
-FROM docker.io/library/python:3.9-slim AS slidge
+## Minimal runtime environment for slidge
+# We re-use this for plugins that need extra dependencies, but copy the ./slidge
+# dir as the last step to be docker cache-friendly
+FROM docker.io/library/python:3.9-slim AS base
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
@@ -31,6 +35,11 @@ COPY --from=builder /venv /venv
 STOPSIGNAL SIGINT
 USER slidge
 
+## Base execution stage for Slidge; most plugins can run in this stage with `SLIDGE_LEGACY_MODULE` set.
+FROM base as slidge
+# copy late to be cache-friendly
+COPY slidge /venv/lib/python3.9/site-packages/slidge
+
 ENTRYPOINT ["python", "-m", "slidge"]
 
 ## Plugin-specific build stages. Certain plugins require additional dependencies and/or preparation,
@@ -41,7 +50,7 @@ ENV SLIDGE_LEGACY_MODULE=slidge.plugins.signal
 FROM slidge AS slidge-facebook
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.facebook
 
-FROM slidge AS slidge-telegram
+FROM base AS slidge-telegram
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.telegram
 
 USER root
@@ -58,6 +67,8 @@ RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
 
 USER slidge
 
+COPY slidge /venv/lib/python3.9/site-packages/slidge
+
 FROM slidge AS slidge-skype
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.skype
 
@@ -70,7 +81,7 @@ ENV SLIDGE_LEGACY_MODULE=slidge.plugins.mattermost
 FROM slidge AS slidge-discord
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.discord
 
-FROM slidge AS slidge-whatsapp
+FROM base AS slidge-whatsapp
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.whatsapp
 ENV GOBIN="/usr/local/bin"
 
@@ -89,6 +100,8 @@ RUN rm -Rf /root/go
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false golang
 
 USER slidge
+
+COPY slidge /venv/lib/python3.9/site-packages/slidge
 
 ## Prosody execution environment for local development.
 FROM docker.io/library/debian:stable AS prosody-dev
