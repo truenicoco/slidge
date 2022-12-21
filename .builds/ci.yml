@@ -55,7 +55,7 @@ tasks:
       docker buildx create --use
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
-        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --build-arg PLUGIN=$LEGACY --tag $NAME --target slidge ."
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --target slidge-$LEGACY ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS
@@ -70,22 +70,21 @@ tasks:
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           VER=$(echo $TAG | cut -c2-)
-      
+
           set +x
           export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
           set -x
-          
+
           sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
           poetry build
           poetry publish
-      
+
           for LEGACY in $PLUGINS; do
             docker buildx build \
-              --build-arg PLUGIN=$LEGACY \
               --push \
               --platform linux/arm64,linux/amd64 \
               --tag $REGISTRY_PREFIX-$LEGACY:$VER \
-              --target slidge .
+              --target slidge-$LEGACY .
           done
         fi
       done
