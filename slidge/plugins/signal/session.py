@@ -266,7 +266,9 @@ class Session(
 
             contact = await self.contacts.by_json_address(sent.destination)
 
-            await contact.send_attachments(sent_msg.attachments, carbon=True)
+            await contact.send_attachments(
+                sent_msg.attachments, sent_msg.timestamp, carbon=True
+            )
 
             if (body := sent_msg.body) is not None:
                 contact.send_text(
