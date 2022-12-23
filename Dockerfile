@@ -61,16 +61,16 @@ FROM base AS slidge-telegram
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.telegram
 
 USER root
+# libc++ required by tdlib
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    git g++ cmake make gperf zlib1g-dev libssl-dev
-
-RUN git clone --depth 1 https://github.com/pylakey/td /td && mkdir -p /td/build && cd /td/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -DTD_ENABLE_LTO=ON .. && \
-    CMAKE_BUILD_PARALLEL_LEVEL=$(grep -c processor /proc/cpuinfo) cmake --build . --target install && \
-    rm -Rf /td
-
-RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    git g++ cmake make
+    libc++1
+# aiotdlib ships useless Mac OS dylibs and does not include arm64 binaries
+RUN cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib/ && \
+    rm *.dylib && \
+    if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      rm *amd64.so && \
+      wget https://slidge.im/libtdjson_linux_arm64.so; \
+    fi
 
 USER slidge
 
