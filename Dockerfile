@@ -61,6 +61,9 @@ ENV SLIDGE_LEGACY_MODULE=slidge.plugins.signal
 FROM slidge AS slidge-facebook
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.facebook
 
+FROM slidge AS slidge-steam
+ENV SLIDGE_LEGACY_MODULE=slidge.plugins.steam
+
 FROM base AS slidge-telegram
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.telegram
 
