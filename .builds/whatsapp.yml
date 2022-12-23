@@ -43,7 +43,7 @@ tasks:
       docker buildx create --use
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
-        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --target slidge-$LEGACY ."
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --build-arg SLIDGE_PLUGIN=$LEGACY --target slidge-$LEGACY ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS

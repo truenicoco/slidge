@@ -18,8 +18,12 @@ WORKDIR /build
 # as long as we don't touch the deps.
 COPY poetry.lock pyproject.toml /build/
 
-RUN poetry export --extras="signal facebook telegram skype mattermost steam discord" > requirements.txt && \
-    python3 -m pip install --requirement requirements.txt
+# default=install all deps.
+ARG SLIDGE_PLUGIN="signal facebook telegram skype mattermost steam discord"
+
+# some plugins don't have specific deps, so --extras=PLUGIN fails: fallback to slidge core deps
+RUN poetry export --extras="$SLIDGE_PLUGIN" > requirements.txt || poetry export > requirements.txt
+RUN python3 -m pip install --requirement requirements.txt
 
 ## Minimal runtime environment for slidge
 # We re-use this for plugins that need extra dependencies, but copy the ./slidge
