@@ -3,10 +3,14 @@ FROM docker.io/library/python:3.9-slim AS builder
 ENV PATH="/venv/bin:/root/.local/bin:$PATH"
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ca-certificates curl
+    ca-certificates curl python3-slixmpp-lib
 
 RUN python3 -m venv /venv && python3 -m pip install wheel
 RUN curl -fL https://install.python-poetry.org | python3 -
+
+# copy compiled stringprep module
+RUN mkdir -p /venv/lib/python3.9/site-packages/slixmpp
+RUN cp /usr/lib/python3/dist-packages/slixmpp/* /venv/lib/python3.9/site-packages/slixmpp/
 
 WORKDIR /build
 
@@ -23,6 +27,10 @@ RUN poetry export --extras="signal facebook telegram skype mattermost steam disc
 FROM docker.io/library/python:3.9-slim AS base
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
+
+# required by compiled stringprep module
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    libidn11
 
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge
