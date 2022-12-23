@@ -1,6 +1,4 @@
-from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime
-from functools import wraps
 from io import BytesIO
 from mimetypes import guess_type
 from os import remove
@@ -12,6 +10,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import (
     BaseSession,
+    FormField,
     GatewayUser,
     LegacyBookmarks,
     LegacyMUC,
@@ -25,6 +24,7 @@ from ...util import is_valid_phone_number
 from .config import Config
 from .contact import Contact, Roster
 from .gateway import Gateway
+from .util import make_sync
 
 MESSAGE_PAIR_SUCCESS = (
     "Pairing successful! You might need to repeat this process in the future if the Linked Device is "
