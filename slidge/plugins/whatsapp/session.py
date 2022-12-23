@@ -16,10 +16,12 @@ from slidge import (
     LegacyBookmarks,
     LegacyMUC,
     LegacyParticipant,
+    SearchResult,
     global_config,
 )
 from slidge.plugins.whatsapp.generated import go, whatsapp
 
+from ...util import is_valid_phone_number
 from .config import Config
 from .contact import Contact, Roster
 from .gateway import Gateway
@@ -327,7 +329,17 @@ class Session(
         )
 
     async def search(self, form_values: dict[str, str]):
-        self.send_gateway_message("Searching on WhatsApp has not been implemented yet.")
+        """
+        Does not do much, bust helps client provide better integration,
+        notably via jabber:iq:gateway requests
+        """
+        phone = form_values["phone"]
+        if not is_valid_phone_number(phone):
+            raise XMPPError("bad-request", "Not a valid phone number")
+        return SearchResult(
+            fields=[FormField("phone"), FormField("jid", type="jid-single")],
+            items=[{"phone": phone, "jid": phone + "@" + self.xmpp.boundjid.bare}],
+        )
 
 
 def make_sync(func, loop):
