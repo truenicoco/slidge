@@ -2,7 +2,7 @@ Configure the XMPP server
 =========================
 
 Slidge requires a running and properly configured XMPP server running and accepting
-component connections.
+component connections and uses different containers/processes for each gateway.
 
 Slidge uses :XEP:`0363` (HTTP File Upload) to receive files from your contacts.
 For some networks, this is also required to receive QR codes to scan in official apps.
@@ -76,22 +76,50 @@ In prosody the easiest option is to use the
 ejabberd
 --------
 
+Slidge uses different containers/processes for each gateway. Therefore administrators
+should setup these steps for each individual gateway. This is because each gateway
+makes use of an individual JID (such as telegram.example.com, whatsapp.example.com, etc).
+Only exceptions are the 'mod_http_upload', 'mod_privilege' and 'mod_roster', these modules
+stay the same for each gateway you add. So, there is no need to repeat these steps for new gateways.
+
+
 Add the slidge component
 ************************
 
 Add this block to your ejabberd configuration file, in the ``listen`` section.
-Change the port, hostname and secret accordingly.
+Change the 'port', 'hosts' and 'secret' accordingly.
+Note: The port does not need to be forwarded (opened to the internet) as in this documentation,
+we expect slidge to be on the same host as the XMPP server.
 
 .. code-block:: yaml
 
     listen:
       -
         ip: 127.0.0.1
-        port: 5233
+        port: 5347
         module: ejabberd_service
-          hosts:
-            superduper.example.com:
-              password: secret
+        hosts:
+          superduper.example.com:
+            password: secret
+
+
+.. code-block:: yaml
+
+        hosts:
+          superduper.example.com:
+
+The 'hosts' domain can be any given subdomain as long as the domain is pointing to the server's ip running ejabberd.
+Example: Telegram.example.com, whatsapp.example.com etc.
+
+The subdomain's FQDN (example.com) should be listed under the top level 'hosts'.
+Example:
+
+.. code-block:: yaml
+
+hosts:
+  - example.com
+
+These same principles also apply to ACL.
 
 ACL
 ***
@@ -126,7 +154,7 @@ Upload component
 ejabberd's HTTP upload will not let the component directly request upload slots,
 so you need to use a pseudo user on the component domain, eg,
 ``slidge@superduper.example.com`` and use slidge's
-``--upload-requester=slidge@superduper.example.com`` `config`_ option.
+``--upload-requester=slidge@superduper.example.com`` option.
 
 .. code-block:: yaml
 
@@ -139,12 +167,12 @@ so you need to use a pseudo user on the component domain, eg,
           /upload: mod_http_upload
 
     modules:
-        docroot: /ejabberd/upload
+      mod_http_upload:
+        docroot: /ejabberd/upload     # Can be any path as long as ejabberd has Read and Write access to the directory.
         put_url: "https://@HOST@:5443/upload"
         access:
-          - local
-        access:
-          - slidge
+          - allow: local
+          - allow: slidge
 
 
 To get more information about component configuration, see `ejabberd's docs

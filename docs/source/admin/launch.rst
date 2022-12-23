@@ -92,25 +92,33 @@ Temporarily login as the system user (as root):
 
     su slidge --shell /bin/bash
 
+Enable the slidge user to create podman instances (as slidge user):
+
+.. code-block:: bash
+
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+
 Create the podman container (as the slidge user):
 
 .. code-block:: bash
 
     podman run --rm --detach \
-       --name superduper \                          # friendly name of the conainter
-       --volume /var/lib/slidge:/var/lib/slidge \   # persistent data
-       --volume /etc/slidge:/etc/slidge \           # config files
+       --name superduper \                          # friendly name of the container
+       --volume /var/lib/slidge:/var/lib/slidge \   # Map directory for persistent data from host to container
+       --volume /etc/slidge:/etc/slidge \           # Map config directory from host to container
        --log-driver journald \                      # logs in journalctl
        --label "io.containers.autoupdate=image" \   # auto-update via podman dedicated mechanism
        --network=host \                             # make localhost available
        docker.io/nicocool84/slidge-superduper:latest \
-       --config=/etc/slidge/superduper.conf         # specific config file for this gateway
+       --config=/etc/slidge/superduper.conf         # specific config file for this gateway.
+                                                    # Every gateway should have a separate config file located in this
+                                                    # directory and pointed to using podman.
 
 Create, launch and enable automatic launch of the container as a systemd service (as the slidge user):
 
 .. code-block:: bash
 
-    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    mkdir -p ~/.config/systemd/user
     podman generate systemd --new --name superduper > $HOME/.config/systemd/user/superduper.service
     systemctl --user daemon-reload
     systemctl --user enable --now superduper
