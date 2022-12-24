@@ -318,6 +318,20 @@ func (s *Session) handleEvent(evt interface{}) {
 		if err := s.client.SendPresence(types.PresenceAvailable); err != nil {
 			s.gateway.logger.Warnf("Failed to send available presence: %s", err)
 		}
+	case *events.HistorySync:
+		switch evt.Data.GetSyncType() {
+		case proto.HistorySync_PUSH_NAME:
+			for _, n := range evt.Data.Pushnames {
+				jid, err := types.ParseJID(n.GetId())
+				if err != nil {
+					continue
+				}
+				s.propagateEvent(newContactSyncEvent(s.client, jid, types.ContactInfo{FullName: n.GetPushname()}))
+				if err = s.client.SubscribePresence(jid); err != nil {
+					s.gateway.logger.Warnf("Failed to subscribe to presence for %s", jid)
+				}
+			}
+		}
 	case *events.Message:
 		s.propagateEvent(newMessageEvent(s.client, evt))
 	case *events.Receipt:
