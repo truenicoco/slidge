@@ -1,5 +1,6 @@
 from logging import getLogger
 from pathlib import Path
+from shelve import open
 
 from slidge import BaseGateway, GatewayUser, global_config
 from slidge.plugins.whatsapp.generated import whatsapp
@@ -37,9 +38,17 @@ class Gateway(BaseGateway):
         self.whatsapp.Init()
 
     async def unregister(self, user: GatewayUser):
-        self.whatsapp.DestroySession(
-            whatsapp.LinkedDevice(ID=user.registration_form.get("device_id", ""))
+        user_shelf_path = (
+            global_config.HOME_DIR / "whatsapp" / (user.bare_jid + ".shelf")
         )
+        with open(str(user_shelf_path)) as shelf:
+            try:
+                device = whatsapp.LinkedDevice(ID=shelf["device_id"])
+                self.whatsapp.CleanupSession(device)
+            except KeyError:
+                pass
+            except RuntimeError as err:
+                log.error("Failed to clean up WhatsApp session: %s", err)
 
 
 def handle_log(level, msg: str):

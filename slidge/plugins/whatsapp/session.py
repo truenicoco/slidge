@@ -48,7 +48,7 @@ class Session(
                 device = whatsapp.LinkedDevice(ID=shelf["device_id"])
             except KeyError:
                 device = whatsapp.LinkedDevice()
-        self.whatsapp = self.xmpp.whatsapp.Session(device)
+        self.whatsapp = self.xmpp.whatsapp.NewSession(device)
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
         self._connected: asyncio.Future[str] = self.xmpp.loop.create_future()

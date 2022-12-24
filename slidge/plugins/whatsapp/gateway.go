@@ -79,42 +79,15 @@ type Gateway struct {
 	SkipVerifyTLS bool   // Whether or not our internal HTTP client will skip TLS certificate verification.
 
 	// Internal variables.
-	sessions   map[LinkedDevice]*Session
 	container  *sqlstore.Container
 	httpClient *http.Client
 	logger     walog.Logger
 }
 
-// Session returns a new or existing Session for the LinkedDevice given. If the linked device does
-// not have a valid ID, a pair operation will be required, as described in [Session.Login].
-func (w *Gateway) Session(device LinkedDevice) *Session {
-	if _, ok := w.sessions[device]; !ok {
-		w.sessions[device] = &Session{
-			device:  device,
-			gateway: w,
-		}
-	}
-	return w.sessions[device]
-}
-
-// DestroySession removes stored data for all sessions related to the given linked device. If given
-// an empty device ID, this function will not perform any processing.
-func (w *Gateway) DestroySession(device LinkedDevice) error {
-	if _, ok := w.sessions[device]; !ok {
-		w.logger.Infof("Destroying session with no attached device")
-		return nil
-	}
-
-	// Attempt to log out and clean up session, but don't fail the process entirely, as this may have
-	// already happened out-of-band.
-	if err := w.sessions[device].Logout(); err != nil {
-		w.logger.Warnf("Failed to logout when destroying session: %s", err)
-	} else if err = w.CleanupSession(device); err != nil {
-		w.logger.Warnf("Failed to clean up session: %s", err)
-	}
-
-	delete(w.sessions, device)
-	return nil
+// NewSession returns a new for the LinkedDevice given. If the linked device does not have a valid
+// ID, a pair operation will be required, as described in [Session.Login].
+func (w *Gateway) NewSession(device LinkedDevice) *Session {
+	return &Session{device: device, gateway: w}
 }
 
 // CleanupSession will remove all invalid and obsolete references to the given device, and should be
@@ -179,5 +152,5 @@ func (w *Gateway) SetLogHandler(h HandleLogFunc) {
 // NewGateway returns a new, un-initialized Gateway. This function should always be followed by calls
 // to [Gateway.Init], assuming a valid [Gateway.DBPath] is set.
 func NewGateway() *Gateway {
-	return &Gateway{sessions: make(map[LinkedDevice]*Session)}
+	return &Gateway{}
 }
