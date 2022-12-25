@@ -108,12 +108,16 @@ RUN go install github.com/go-python/gopy@latest && \
 
 RUN python -m pip install pybindgen
 
-COPY slidge /venv/lib/python3.9/site-packages/slidge
-RUN cd /venv/lib/python3.9/site-packages/slidge/plugins/whatsapp && \
+COPY slidge/plugins/whatsapp /whatsapp
+RUN cd /whatsapp && \
     gopy build -output=generated -no-make=true .
 
 RUN rm -Rf /root/go
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false golang
+
+COPY slidge /venv/lib/python3.9/site-packages/slidge
+RUN rm -rf /venv/lib/python3.9/site-packages/slidge/plugins/whatsapp && \
+    mv /whatsapp /venv/lib/python3.9/site-packages/slidge/plugins/
 
 USER slidge
 
