@@ -259,6 +259,7 @@ class LegacyContact(
                 return
 
         self.added_to_roster = True
+        self._send_last_presence()
 
     def unsubscribe(self):
         """

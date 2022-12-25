@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -5,13 +6,24 @@ from .. import config
 from .base import BaseSender
 
 
+@dataclass
+class _CachedPresence:
+    presence_kwargs: dict[str, str]
+    last_seen: Optional[datetime] = None
+
+
 class PresenceMixin(BaseSender):
+    _last_presence: Optional[_CachedPresence] = None
+
     def _make_presence(
         self,
         *,
         last_seen: Optional[datetime] = None,
         **presence_kwargs,
     ):
+        self._last_presence = _CachedPresence(
+            last_seen=last_seen, presence_kwargs=presence_kwargs
+        )
         p = self.xmpp.make_presence(pfrom=self.jid, **presence_kwargs)
         if last_seen:
             if config.LAST_SEEN_FALLBACK and not presence_kwargs.get("pstatus"):
@@ -20,6 +32,13 @@ class PresenceMixin(BaseSender):
                 last_seen = last_seen.astimezone(timezone.utc)
             p["idle"]["since"] = last_seen
         return p
+
+    def _send_last_presence(self):
+        if (cache := self._last_presence) is None:
+            return
+        self._send(
+            self._make_presence(last_seen=cache.last_seen, **cache.presence_kwargs)
+        )
 
     def online(
         self,
