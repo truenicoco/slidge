@@ -115,6 +115,6 @@ class PresenceMixin(BaseSender):
         """
         self._send(
             self._make_presence(
-                pstatus=status, pshow="unavailable", last_seen=last_seen
+                pstatus=status, ptype="unavailable", last_seen=last_seen
             )
         )
