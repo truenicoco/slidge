@@ -21,6 +21,7 @@ from ..util.db import user_store
 from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
 from . import config
+from .cache import avatar_cache
 
 VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
@@ -38,14 +39,12 @@ class PepAvatar(PepItem):
         self.id: Optional[str] = None
 
     async def set_avatar(self, avatar: AvatarType):
-        if isinstance(avatar, bytes):
+        if isinstance(avatar, str):
+            return await self.set_avatar_from_url(avatar)
+        elif isinstance(avatar, bytes):
             img = Image.open(io.BytesIO(avatar))
         elif isinstance(avatar, Path):
             img = Image.open(avatar)
-        elif isinstance(avatar, str):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(avatar) as response:
-                    img = Image.open(io.BytesIO(await response.read()))
         else:
             raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
 
@@ -80,6 +79,23 @@ class PepAvatar(PepItem):
 
         data = AvatarData()
         data.set_value(avatar_bytes)
+        self.data = data
+
+    async def set_avatar_from_url(self, url: str):
+        avatar = await avatar_cache.get_avatar(url)
+        metadata = AvatarMetadata()
+        self.id = avatar.hash
+        metadata.add_info(
+            id=avatar.hash,
+            itype="image/png",
+            ibytes=len(avatar.data),
+            height=str(avatar.height),
+            width=str(avatar.width),
+        )
+        self.metadata = metadata
+
+        data = AvatarData()
+        data.set_value(avatar.data)
         self.data = data
 
 

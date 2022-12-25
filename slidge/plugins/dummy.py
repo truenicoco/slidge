@@ -316,12 +316,9 @@ class Session(
 
 
 BUDDIES = ["baba", "bibi"]
-AVATARS = []
-
-with (ASSETS_DIR / "buddy1.png").open("rb") as fp:
-    AVATARS.append(fp.read())
+AVATARS = ["https://wallpapercave.com/wp/PSksftM.jpg"]
 
 with (ASSETS_DIR / "buddy2.png").open("rb") as fp:
-    AVATARS.append(fp.read())
+    AVATARS.append(fp.read())  # type:ignore
 
 log = logging.getLogger(__name__)

@@ -11,6 +11,7 @@ import configargparse
 
 from slidge import BaseGateway
 from slidge.core import config
+from slidge.core.cache import avatar_cache
 from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
 
@@ -79,6 +80,8 @@ def configure():
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
 
+    avatar_cache.set_dir(h / "slidge_avatars")
+
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 
     return unknown_argv
@@ -139,6 +142,7 @@ def main():
         else:
             logging.debug("Gateway is not connected, no need to clean up")
         user_store.close()
+        avatar_cache.close()
         logging.info("Successful clean shut down")
     logging.debug("Exiting with code %s", return_code)
     exit(return_code)
