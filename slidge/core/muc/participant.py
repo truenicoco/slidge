@@ -90,6 +90,18 @@ class LegacyParticipant(
         nick_change=False,
         presence_id: Optional[str] = None,
     ):
+        """
+        Called when the user joins a MUC, as a mechanism
+        to indicate to the joining XMPP client the list of "participants".
+        (done internally by slidge)
+
+        :param full_jid: Set this to only send to a specific user XMPP resource.
+        :param status: a presence message, eg "having a bug, watching the game"
+        :param last_seen: when the participant was last online :xep:`0319` (Last User Interaction in Presence)
+        :param nick_change: Used when the user joins and the MUC renames them (code 210)
+        :param presence_id: set the presence ID. used internally by slidge
+        """
+        #  MUC status codes: https://xmpp.org/extensions/xep-0045.html#registrar-statuscodes
         p = self._make_presence(
             pstatus=status,
             last_seen=last_seen,
@@ -112,7 +124,7 @@ class LegacyParticipant(
         **kwargs,
     ):
         """
-        The participant sends a message in a group chat.
+        The participant sends a message in their corresponding group chat.
 
         :param body:
         :param legacy_msg_id:
