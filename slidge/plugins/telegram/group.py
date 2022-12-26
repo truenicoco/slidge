@@ -78,6 +78,9 @@ class MUC(LegacyMUC["Session", int, "Participant", int]):
     async def participant_by_tg_user(self, user: tgapi.User) -> "Participant":
         return await Participant.by_tg_user(self, user)
 
+    async def participant_system(self) -> "Participant":
+        return await self.get_participant("")
+
     async def participant_by_tg_user_id(self, user_id: int) -> "Participant":
         return await Participant.by_tg_user(
             self, await self.session.tg.api.get_user(user_id)

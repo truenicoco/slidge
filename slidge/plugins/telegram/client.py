@@ -114,7 +114,8 @@ class TelegramClient(aiotdlib.Client):
 
         sender = msg.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
-            self.log.debug("Ignoring non-user sender")  # Does this happen?
+            # Does this happen?
+            self.log.warning("Ignoring chat sender in direct message: %s", msg)
             return
 
         await (await session.contacts.by_legacy_id(sender.user_id)).send_tg_message(msg)
@@ -126,9 +127,13 @@ class TelegramClient(aiotdlib.Client):
                 return
 
         muc = await self.bookmarks.by_legacy_id(msg.chat_id)
-        participant = await muc.participant_by_tg_user(
-            await self.api.get_user(msg.sender_id.user_id)
-        )
+        sender = msg.sender_id
+        if isinstance(sender, tgapi.MessageSenderUser):
+            participant = await muc.participant_by_tg_user(
+                await self.api.get_user(sender.user_id)
+            )
+        else:
+            participant = await muc.participant_system()
         await participant.send_tg_message(msg)
 
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):

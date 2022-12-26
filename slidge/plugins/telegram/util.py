@@ -49,13 +49,27 @@ class TelegramToXMPPMixin:
                 reply_self = False
             else:
                 reply_to_content = reply_to_msg.content
-                sender_user_id = reply_to_msg.sender_id.user_id
-                reply_self = sender_user_id == msg.sender_id.user_id
+                reply_to_sender = reply_to_msg.sender_id
+                if isinstance(reply_to_sender, tgapi.MessageSenderUser):
+                    sender_user_id = reply_to_sender.user_id
+                    reply_self = (
+                        isinstance(msg.sender_id, tgapi.MessageSenderUser)
+                        and sender_user_id == msg.sender_id.user_id
+                    )
+                elif isinstance(reply_to_sender, tgapi.MessageSenderChat):
+                    reply_self = isinstance(msg.sender_id, tgapi.MessageSenderChat)
+                    sender_user_id = None
+                else:
+                    raise RuntimeError("This should not happen")
+
                 if self.is_group and not reply_self:
                     muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
-                    reply_to_author = await muc.participant_by_tg_user_id(
-                        sender_user_id
-                    )
+                    if sender_user_id is None:
+                        reply_to_author = await muc.participant_system()
+                    else:
+                        reply_to_author = await muc.participant_by_tg_user_id(
+                            sender_user_id
+                        )
                 else:
                     reply_to_author = None
 
