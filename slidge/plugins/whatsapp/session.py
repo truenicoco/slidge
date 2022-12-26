@@ -20,7 +20,7 @@ from slidge import (
 )
 from slidge.plugins.whatsapp.generated import go, whatsapp
 
-from .config import Config
+from . import config
 from .contact import Contact, Roster
 from .gateway import Gateway
 
@@ -109,7 +109,7 @@ class Session(
         elif event == whatsapp.EventConnected:
             self.send_gateway_status("Logged in", show="chat")
             try:
-                self.whatsapp.FetchRoster(refresh=Config.ALWAYS_SYNC_ROSTER)
+                self.whatsapp.FetchRoster(refresh=config.ALWAYS_SYNC_ROSTER)
             except RuntimeError as err:
                 self.log.error("Failed refreshing roster on connect: %s", str(err))
         elif event == whatsapp.EventLoggedOut:

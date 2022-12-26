@@ -4,7 +4,7 @@ from pathlib import Path
 from slidge import BaseGateway, GatewayUser, global_config
 from slidge.plugins.whatsapp.generated import whatsapp
 
-from .config import Config
+from . import config
 
 REGISTRATION_INSTRUCTIONS = (
     "Continue and scan the resulting QR codes on your main device to complete registration. "
@@ -28,11 +28,11 @@ class Gateway(BaseGateway):
 
     def __init__(self):
         super().__init__()
-        Path(Config.DB_PATH.parent).mkdir(exist_ok=True)
+        Path(config.DB_PATH.parent).mkdir(exist_ok=True)
         self.whatsapp = whatsapp.NewGateway()
         self.whatsapp.SetLogHandler(handle_log)
-        self.whatsapp.DBPath = str(Config.DB_PATH)
-        self.whatsapp.SkipVerifyTLS = Config.SKIP_VERIFY_TLS
+        self.whatsapp.DBPath = str(config.DB_PATH)
+        self.whatsapp.SkipVerifyTLS = config.SKIP_VERIFY_TLS
         self.whatsapp.Name = "Slidge on " + str(global_config.JID)
         self.whatsapp.Init()
 
