@@ -6,7 +6,6 @@ from copy import copy
 from pathlib import Path
 from typing import Optional, Union
 
-import aiohttp
 from PIL import Image, UnidentifiedImageError
 from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
