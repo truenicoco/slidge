@@ -112,7 +112,40 @@ class ConfigModule:
             if o.upper() == o and not o.startswith("_") and "__" not in o
         }
 
-    def set_conf(self, argv=None):
+    def set_conf(self, argv: Optional[list[str]] = None):
+        if argv is not None:
+            # this is ugly, but necessary because for plugin config, we used
+            # remaining argv.
+            # when using (a) .ini file(s), for bool options, we end-up with
+            # remaining pseudo-argv such as --some-bool-opt=true when we really
+            # should have just --some-bool-opt
+            # TODO: get rid of configargparse and make this cleaner
+            options_long = {o.name: o for o in self.options}
+            no_explicit_bool = []
+            skip_next = False
+            for a, aa in zip(argv, argv[1:] + [""]):
+                if skip_next:
+                    skip_next = False
+                    continue
+                if "=" in a:
+                    real_name, _value = a.split("=")
+                    opt: Optional[Option] = options_long.get(
+                        _argv_to_option_name(real_name)
+                    )
+                    if opt and opt.type is bool:
+                        a = real_name
+                else:
+                    upper = _argv_to_option_name(a)
+                    opt = options_long.get(upper)
+                    if opt and opt.type is bool:
+                        if _argv_to_option_name(aa) not in options_long:
+                            log.debug("Removing %s from argv", aa)
+                            skip_next = True
+
+                no_explicit_bool.append(a)
+            log.warning("Removed boolean values from %s to %s", argv, no_explicit_bool)
+            argv = no_explicit_bool
+
         args, rest = self.parser.parse_known_args(argv)
         self.update_dynamic_defaults(args)
         for name in self._list_options():
@@ -122,7 +155,7 @@ class ConfigModule:
         return args, rest
 
     @cached_property
-    def options(self):
+    def options(self) -> list[Option]:
         res = []
         for opt in self._list_options():
             res.append(Option(self, opt))
@@ -143,6 +176,10 @@ def _is_optional(t):
         if len(args) == 2 and isinstance(None, args[1]):
             return True
     return False
+
+
+def _argv_to_option_name(arg: str):
+    return arg.upper().removeprefix("--").replace("-", "_")
 
 
 log = logging.getLogger(__name__)

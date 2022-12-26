@@ -7,6 +7,7 @@ from slixmpp import JID
 
 from slidge import __main__ as main
 from slidge.core import config
+from slidge.util.conf import ConfigModule
 
 
 def test_get_parser(monkeypatch):
@@ -23,6 +24,9 @@ def test_get_parser(monkeypatch):
 
         OPTIONAL: Optional[str] = None
         OPTIONAL__DOC = "not required"
+
+        SOME_BOOL = False
+        SOME_BOOL__DOC = "a bool"
 
     monkeypatch.setattr(main, "config", Config)
     parser = main.get_parser()
@@ -58,12 +62,31 @@ def test_get_parser(monkeypatch):
             "b",
             "--optional",
             "prout",
+            "--some-bool",
         ]
     )
     assert args.required == "some_value"
     assert args.required_int == 45
     assert args.multiple == ["a", "b"]
     assert args.optional == "prout"
+    assert args.some_bool
+
+
+def test_bool(monkeypatch, tmp_path):
+    class Config:
+        SOME_BOOL = False
+        SOME_BOOL__DOC = "a bool"
+
+    configurator = ConfigModule(Config)
+
+    configurator.set_conf([])
+    assert not Config.SOME_BOOL
+
+    configurator.set_conf(["--some-bool", "true"])
+    assert Config.SOME_BOOL
+
+    configurator.set_conf(["--some-bool=true"])
+    assert Config.SOME_BOOL
 
 
 def test_slidge_conf():
