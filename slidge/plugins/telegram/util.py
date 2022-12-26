@@ -114,7 +114,13 @@ class TelegramToXMPPMixin:
         elif best_file := get_best_file(content):
             await self.send_tg_file(best_file, content.caption.text, **kwargs)
         elif isinstance(content, tgapi.MessageBasicGroupChatCreate):
+            # TODO: work out how to map this to group invitation
             pass
+        elif isinstance(content, tgapi.MessageChatAddMembers):
+            muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+            for user_id in content.member_user_ids:
+                participant = await muc.participant_by_tg_user_id(user_id)
+                participant.online()
         else:
             self.send_text(
                 "/me tried to send an unsupported content. "
