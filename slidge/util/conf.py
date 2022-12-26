@@ -143,7 +143,7 @@ class ConfigModule:
                             skip_next = True
 
                 no_explicit_bool.append(a)
-            log.warning("Removed boolean values from %s to %s", argv, no_explicit_bool)
+            log.debug("Removed boolean values from %s to %s", argv, no_explicit_bool)
             argv = no_explicit_bool
 
         args, rest = self.parser.parse_known_args(argv)
