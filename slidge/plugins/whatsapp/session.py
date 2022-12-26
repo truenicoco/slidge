@@ -1,3 +1,4 @@
+import asyncio
 from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime
 from functools import wraps
@@ -50,6 +51,7 @@ class Session(
         self.whatsapp = self.xmpp.whatsapp.Session(device)
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
+        self._connected: asyncio.Future[str] = self.xmpp.loop.create_future()
 
     def shutdown(self):
         for c in self.contacts:
@@ -66,6 +68,7 @@ class Session(
             self.whatsapp.Login()
         except RuntimeError as err:
             raise XMPPError(text=str(err))
+        return await self._connected
 
     async def logout(self):
         """
@@ -107,12 +110,13 @@ class Session(
             except RuntimeError as err:
                 self.log.error("Failed refreshing roster on pair: %s", str(err))
         elif event == whatsapp.EventConnected:
-            self.send_gateway_status("Logged in", show="chat")
             try:
                 self.whatsapp.FetchRoster(refresh=config.ALWAYS_SYNC_ROSTER)
             except RuntimeError as err:
                 self.log.error("Failed refreshing roster on connect: %s", str(err))
+            self._connected.set_result("Connected")
         elif event == whatsapp.EventLoggedOut:
+            self._connected = self.xmpp.loop.create_future()
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
             await self.login()
