@@ -113,16 +113,25 @@ class Session(
         )
 
     async def login(self):
-        """
-        Attempt to listen to incoming events for this account,
-        or pursue the registration process if needed.
-        """
         await (await self.signal).subscribe(account=self.phone)
         await self.connected
         sig = await self.signal
-        profile = await sig.get_profile(
-            account=self.phone, address=sigapi.JsonAddressv1(number=self.phone)
-        )
+        # TODO: store the account UUID on registration so we don't have to do that
+        try:
+            # sometimes doesn't work with own phone number
+            profile = await sig.get_profile(
+                account=self.phone, address=sigapi.JsonAddressv1(number=self.phone)
+            )
+        except sigexc.ProfileUnavailableError:
+            accounts = await sig.list_accounts()
+            for a in accounts.accounts:
+                if a.address.number == self.phone:
+                    profile = await sig.get_profile(
+                        account=self.phone, address=a.address
+                    )
+                    break
+            else:
+                raise RuntimeError("Could not find the signal address of your")
         nick: str = profile.name or profile.profile_name or "SlidgeUser"
         if nick is not None:
             nick = nick.replace("\u0000", " ")
