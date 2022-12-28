@@ -376,7 +376,15 @@ class Session(
         return legacy_msg_id
 
     @handle_unregistered_recipient
-    async def send_file(self, url: str, chat: "Contact", *, reply_to_msg_id=None):
+    async def send_file(
+        self,
+        url: str,
+        chat: "Contact",
+        *,
+        reply_to_msg_id=None,
+        reply_to_fallback_text=None,
+        reply_to: Optional[Union["Contact", "Participant"]] = None,
+    ):
         s = await self.signal
         address, group = self._get_args_from_entity(chat)
         async with aiohttp.ClientSession() as client:
