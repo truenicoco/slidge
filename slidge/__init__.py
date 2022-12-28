@@ -13,6 +13,7 @@ from .util import (
     xep_0077,
     xep_0100,
     xep_0292,
+    xep_0313,
     xep_0356,
     xep_0356_old,
     xep_0461,

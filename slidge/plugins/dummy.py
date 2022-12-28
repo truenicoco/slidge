@@ -37,25 +37,17 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
         self.user_nick = "SomeNick"
         await super().join(p)
 
-    async def fill_history(
-        self,
-        full_jid: JID,
-        maxchars: Optional[int] = None,
-        maxstanzas: Optional[int] = None,
-        seconds: Optional[int] = None,
-        since: Optional[datetime] = None,
-    ):
-        if maxchars is not None and maxchars == 0:
-            return
+    async def backfill(self):
         part = await self.get_participant("someone")
         log.debug("PART")
         for i in range(10, 0, -1):
             log.debug("HISTORY")
+            ui = uuid.uuid4()
             part.send_text(
-                "history",
-                f"-{i}",
-                when=datetime.now() - timedelta(hours=i),
-                full_jid=full_jid,
+                f"history {i} {ui}",
+                f"-{i}-{ui}",
+                when=datetime.now() - timedelta(seconds=i),
+                archive_only=True,
             )
 
     async def get_participants(self):

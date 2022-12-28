@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
-from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from slidge import *
@@ -122,17 +121,10 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
     async def get_tg_chat(self):
         return await self.session.tg.get_chat(self.legacy_id)
 
-    async def fill_history(
-        self,
-        full_jid: JID,
-        maxchars: Optional[int] = None,
-        maxstanzas: Optional[int] = None,
-        seconds: Optional[int] = None,
-        since: Optional[datetime] = None,
-    ):
-        for m in await self.fetch_history(config.GROUP_HISTORY_MAXIMUM_MESSAGES, since):
+    async def backfill(self):
+        for m in await self.fetch_history(config.GROUP_HISTORY_MAXIMUM_MESSAGES):
             part = await self.participant_by_sender_id(m.sender_id)
-            await part.send_tg_message(m, full_jid=full_jid)
+            await part.send_tg_message(m, archive_only=True)
 
     async def fetch_history(self, n: int, since: Optional[datetime] = None):
         tg = self.session.tg
@@ -180,6 +172,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
 class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):
     contact: "Contact"
     session: "Session"  # type:ignore
+    muc: "MUC"
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)

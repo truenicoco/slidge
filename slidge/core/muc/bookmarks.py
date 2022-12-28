@@ -47,6 +47,7 @@ class LegacyBookmarks(
             legacy_id = await self.jid_local_part_to_legacy_id(local_part)
             self.session.log.debug("%r is group %r", local_part, legacy_id)
             muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
+            await muc.backfill()
             self.session.log.debug("MUC created: %r", muc)
             self._mucs_by_legacy_id[legacy_id] = muc
             self._mucs_by_bare_jid[bare] = muc
@@ -67,6 +68,7 @@ class LegacyBookmarks(
                 legacy_id=legacy_id,
                 jid=jid,
             )
+            await muc.backfill()
             self.log.debug("MUC CLASS: %s", self._muc_class)
 
             self._mucs_by_legacy_id[legacy_id] = muc

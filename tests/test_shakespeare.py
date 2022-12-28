@@ -483,6 +483,8 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="http://jabber.org/protocol/pubsub#persistent-items" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/commands" />
+                <feature var="urn:xmpp:mam:2"/>
+           		<feature var="urn:xmpp:mam:2#extended"/>
               </query>
             </iq>
             """

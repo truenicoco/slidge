@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import aiotdlib.api as tgapi
 
 if TYPE_CHECKING:
+    from .group import MUC
     from .session import Session
 
 
@@ -36,6 +37,7 @@ class TelegramToXMPPMixin:
     session: "Session"  # type:ignore
     chat_id: int
     is_group: bool = NotImplemented
+    muc: "MUC"
 
     def send_text(self, *a, **k):
         raise NotImplemented
@@ -74,12 +76,12 @@ class TelegramToXMPPMixin:
                     raise RuntimeError("This should not happen")
 
                 if self.is_group and not reply_self:
-                    muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+                    muc = self.muc
                     if sender_user_id is None:
                         reply_to_fallback = ""
                         reply_to_author = await muc.participant_system()
                     elif sender_user_id == await self.session.tg.get_my_id():
-                        reply_to_author = self.session.user.jid
+                        reply_to_author = await muc.get_user_participant()
                         reply_to_fallback = f"{muc.user_nick}:\n"
                     else:
                         reply_to_author = await muc.participant_by_tg_user_id(
@@ -134,14 +136,14 @@ class TelegramToXMPPMixin:
             # TODO: work out how to map this to group invitation
             pass
         elif isinstance(content, tgapi.MessageChatAddMembers):
-            muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+            muc = self.muc
             for user_id in content.member_user_ids:
                 participant = await muc.participant_by_tg_user_id(user_id)
                 participant.online()
         elif isinstance(content, tgapi.MessagePinMessage):
             if await self.session.tg.is_private_chat(msg.chat_id):
                 return
-            muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+            muc = self.muc
             await muc.update_subject_from_msg()
         elif isinstance(content, tgapi.MessageCustomServiceAction):
             self.send_text(body=content.text, **kwargs)

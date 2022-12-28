@@ -217,6 +217,8 @@ class BaseGateway(
         self.vcard: VCard4Provider = self["xep_0292_provider"]
         if self.GROUPS:
             self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
+            self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")
+            self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2#extended")
             self.plugin["xep_0030"].add_identity(
                 category="conference",
                 name="Slidged rooms",
@@ -243,6 +245,27 @@ class BaseGateway(
                 "Ping",
                 StanzaPath("iq@type=get/ping"),
                 self.__handle_ping,  # type:ignore
+            )
+        )
+        self.register_handler(
+            CoroutineCallback(
+                "MAM_query",
+                StanzaPath("iq@type=set/mam"),
+                self.__handle_mam,  # type:ignore
+            )
+        )
+        self.register_handler(
+            CoroutineCallback(
+                "MAM_get_from",
+                StanzaPath("iq@type=get/mam"),
+                self.__handle_mam_get_form,  # type:ignore
+            )
+        )
+        self.register_handler(
+            CoroutineCallback(
+                "MAM_get_meta",
+                StanzaPath("iq@type=get/mam_metadata"),
+                self.__handle_mam_metadata,  # type:ignore
             )
         )
 
@@ -275,6 +298,63 @@ class BaseGateway(
             pass
         else:
             iq.reply().send()
+
+    async def get_muc_from_iq(self, iq: Iq):
+        ito = iq.get_to()
+
+        if ito == self.boundjid.bare:
+            raise XMPPError(
+                text="No MAM on the component itself, use a JID with a resource"
+            )
+
+        ifrom = iq.get_from()
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError("registration-required")
+
+        session = self.get_session_from_user(user)
+
+        return await session.bookmarks.by_jid(ito)
+
+    async def __handle_mam(self, iq: Iq):
+        muc = await self.get_muc_from_iq(iq)
+        await muc.send_mam(iq)
+
+    async def __handle_mam_get_form(self, iq: Iq):
+        ito = iq.get_to()
+
+        if ito == self.boundjid.bare:
+            raise XMPPError(
+                text="No MAM on the component itself, use a JID with a resource"
+            )
+
+        ifrom = iq.get_from()
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError("registration-required")
+
+        session = self.get_session_from_user(user)
+
+        await session.bookmarks.by_jid(ito)
+
+        reply = iq.reply()
+        form = self.plugin["xep_0004"].make_form()
+        form.add_field(ftype="hidden", var="FORM_TYPE", value="urn:xmpp:mam:2")
+        form.add_field(ftype="jid-single", var="with")
+        form.add_field(ftype="text-single", var="start")
+        form.add_field(ftype="text-single", var="end")
+        form.add_field(ftype="text-single", var="before-id")
+        form.add_field(ftype="text-single", var="after-id")
+        form.add_field(ftype="boolean", var="include-groupchat")
+        field = form.add_field(ftype="list-multi", var="ids")
+        field["validate"]["datatype"] = "xs:string"
+        field["validate"]["open"] = True
+        reply["mam"].append(form)
+        reply.send()
+
+    async def __handle_mam_metadata(self, iq: Iq):
+        muc = await self.get_muc_from_iq(iq)
+        await muc.archive.send_metadata(iq)
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -356,19 +436,25 @@ class BaseGateway(
         self.add_event_handler("gateway_message", self._on_gateway_message_private)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
-        get_session = self.get_session_from_stanza
+
+        async def get_session(m, cb):
+            if m.get_from().server == self.boundjid.bare:
+                log.debug("Ignoring echo")
+                return
+            s = self.get_session_from_stanza(m)
+            await cb(s, m)
 
         # fmt: off
-        async def msg(m): await get_session(m).send_from_msg(m)
-        async def disp(m): await get_session(m).displayed_from_msg(m)
-        async def active(m): await get_session(m).active_from_msg(m)
-        async def inactive(m): await get_session(m).inactive_from_msg(m)
-        async def composing(m): await get_session(m).composing_from_msg(m)
-        async def paused(m): await get_session(m).paused_from_msg(m)
-        async def correct(m): await get_session(m).correct_from_msg(m)
-        async def react(m): await get_session(m).react_from_msg(m)
-        async def retract(m): await get_session(m).retract_from_msg(m)
-        async def groupchat_join(p): await get_session(p).join_groupchat(p)
+        async def msg(m): await get_session(m, BaseSession.send_from_msg)
+        async def disp(m): await get_session(m, BaseSession.displayed_from_msg)
+        async def active(m): await get_session(m, BaseSession.active_from_msg)
+        async def inactive(m): await get_session(m, BaseSession.inactive_from_msg)
+        async def composing(m): await get_session(m, BaseSession.composing_from_msg)
+        async def paused(m): await get_session(m, BaseSession.paused_from_msg)
+        async def correct(m): await get_session(m, BaseSession.correct_from_msg)
+        async def react(m): await get_session(m, BaseSession.react_from_msg)
+        async def retract(m): await get_session(m, BaseSession.retract_from_msg)
+        async def groupchat_join(p): await get_session(p, BaseSession.join_groupchat)
         # fmt: on
 
         self.add_event_handler("legacy_message", msg)
@@ -872,6 +958,7 @@ SLIXMPP_PLUGINS = [
     "xep_0045",  # Multi-User Chat
     "xep_0050",  # Adhoc commands
     "xep_0055",  # Jabber search
+    "xep_0059",  # Result Set Management
     "xep_0066",  # Out of Band Data
     "xep_0077",  # In-band registration
     "xep_0084",  # User Avatar
@@ -879,6 +966,7 @@ SLIXMPP_PLUGINS = [
     "xep_0100",  # Gateway interaction
     "xep_0106",  # JID Escaping
     "xep_0115",  # Entity capabilities
+    "xep_0122",  # Data Forms Validation
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
     "xep_0199",  # XMPP Ping
@@ -886,6 +974,7 @@ SLIXMPP_PLUGINS = [
     "xep_0280",  # Carbons
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction
+    "xep_0313",  # Message Archive Management
     "xep_0319",  # Last User Interaction in Presence
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints

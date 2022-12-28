@@ -71,12 +71,17 @@ class LegacyParticipant(
         self,
         stanza: Union[Message, Presence],
         full_jid: Optional[JID] = None,
+        archive_only=False,
         **send_kwargs,
     ):
         if full_jid:
             stanza["to"] = full_jid
             stanza.send()
         else:
+            if isinstance(stanza, Message) and stanza["hint"] != "no-store":
+                self.muc.archive.add(stanza)
+            if archive_only:
+                return
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
@@ -133,6 +138,8 @@ class LegacyParticipant(
         :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
         :param reply_self: Set to true is this is a self quote
         :param reply_to_author: The participant that was quoted
+        :param archive_only: Do not send this message to user, but store it in the archive.
+            Meant to be used on room instance creation, to populate its message history.
         """
         if reply_self:
             reply_to_jid = self.jid

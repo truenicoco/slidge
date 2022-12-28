@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import IO, Iterable, Optional, Union
+from uuid import uuid4
 
 import aiohttp
 from slixmpp import JID, Message
@@ -68,6 +69,9 @@ class MessageMaker(BaseSender):
             if self.USE_STANZA_ID:
                 msg["stanza_id"]["id"] = i
                 msg["stanza_id"]["by"] = self.muc.jid  # type: ignore
+        elif self.USE_STANZA_ID:
+            msg["stanza_id"]["id"] = str(uuid4())
+            msg["stanza_id"]["by"] = self.muc.jid  # type: ignore
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
         return self.session.sent.get(

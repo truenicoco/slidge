@@ -1,10 +1,13 @@
 import logging
 from copy import copy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, AsyncIterable, Generic, Optional
+from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
+from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.stanza import Error as BaseError
 from slixmpp.xmlstream import ET
 
@@ -17,6 +20,7 @@ from ...util.types import (
 )
 from ..mixins.base import ReactionRecipientMixin
 from ..mixins.disco import BaseDiscoMixin
+from .archive import MessageArchive
 
 if TYPE_CHECKING:
     from ..contact import LegacyContact
@@ -54,6 +58,18 @@ class LegacyMUC(
     DISCO_CATEGORY = "conference"
     DISCO_NAME = "unnamed-room"
 
+    STABLE_ARCHIVE = False
+    """
+    Because legacy events like reactions, editions, etc. don't all map to a stanza
+    with a proper legacy ID, slidge usually cannot guarantee the stability of the archive
+    across restarts.
+    
+    Set this to True if you know what you're doing, but realistically, this can't
+    be set to True until archive is permanently stored on disk by slidge.
+    
+    This is just a flag on archive responses that most clients ignore anyway.
+    """
+
     def __init__(self, session: SessionType, legacy_id: LegacyGroupIdType, jid: JID):
         from .participant import LegacyParticipant
 
@@ -78,6 +94,8 @@ class LegacyMUC(
         self._subject = ""
         self.subject_setter = "unknown"
 
+        self.archive: MessageArchive = MessageArchive()
+
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
 
@@ -99,6 +117,15 @@ class LegacyMUC(
             self.log.warning(
                 "Received 'leave group' request but resource was not listed. %s", p
             )
+
+    async def backfill(self):
+        """
+        Override this if the legacy network provide server-side archive.
+        In it, send history messages using ``self.get_participant().send*``,
+        with the ``archive_only=True`` kwarg.
+
+        """
+        return
 
     @property
     def subject(self):
@@ -122,6 +149,8 @@ class LegacyMUC(
             "http://jabber.org/protocol/muc",
             "http://jabber.org/protocol/muc#stable_id",
             "http://jabber.org/protocol/muc#self-ping-optimization",
+            "urn:xmpp:mam:2",
+            "urn:xmpp:mam:2#extended",
             "urn:xmpp:sid:0",
             "muc_persistent",
         ]
@@ -235,17 +264,25 @@ class LegacyMUC(
         self.log.debug(f"Origin: %r ", origin_id)
 
         m.set_from(self.user_muc_jid)
+        self.archive.add(m)
+
+        msg = copy(m)
+        msg.set_id(m.get_id())
+        if origin_id:
+            # because of slixmpp internal magic, we need to do this to ensure the origin_id
+            # is present
+            set_origin_id(msg, origin_id)
+        if legacy_msg_id:
+            msg["stanza_id"]["id"] = str(legacy_msg_id)
+        else:
+            msg["stanza_id"]["id"] = str(uuid4())
+        msg["stanza_id"]["by"] = self.jid
+
         for user_full_jid in self.user_full_jids():
             self.log.debug("Echoing to %s", user_full_jid)
-            msg = copy(m)
+            msg = copy(msg)
             msg.set_to(user_full_jid)
-            msg.set_id(m.get_id())
 
-            if origin_id:
-                set_origin_id(msg, origin_id)
-            if legacy_msg_id:
-                msg["stanza_id"]["id"] = str(legacy_msg_id)
-                msg["stanza_id"]["by"] = self.jid
             msg.send()
 
     async def join(self, join_presence: Presence):
@@ -290,10 +327,10 @@ class LegacyMUC(
         if seconds:
             since = datetime.now() - timedelta(seconds=seconds)
         if equals_zero(maxchars) or equals_zero(maxstanzas):
-            log.debug("Joining client does not want any MUC history")
+            log.debug("Joining client does not want any old-school MUC history-on-join")
         else:
             log.debug("Filling history %s")
-            await self.fill_history(
+            await self._fill_history(
                 user_full_jid,
                 maxchars=maxchars,
                 maxstanzas=maxstanzas,
@@ -318,15 +355,121 @@ class LegacyMUC(
     async def get_participants(self) -> AsyncIterable[LegacyParticipantType]:
         yield NotImplemented
 
-    async def fill_history(
+    async def _fill_history(
         self,
         full_jid: JID,
         maxchars: Optional[int] = None,
         maxstanzas: Optional[int] = None,
         seconds: Optional[int] = None,
-        since=None,
+        since: Optional[datetime] = None,
     ):
-        raise NotImplementedError
+        """
+        Old-style history join
+
+        :param full_jid:
+        :param maxchars:
+        :param maxstanzas:
+        :param seconds:
+        :param since:
+        :return:
+        """
+        if since is None:
+            if seconds is None:
+                start_date = datetime.now(tz=timezone.utc) - timedelta(days=1)
+            else:
+                start_date = datetime.now(tz=timezone.utc) - timedelta(seconds=seconds)
+        else:
+            start_date = since or datetime.now(tz=timezone.utc) - timedelta(days=1)
+
+        history_messages = list(
+            self.archive.get_all(start_date=start_date, end_date=None)
+        )
+
+        if maxstanzas:
+            history_messages = history_messages[-maxstanzas:]
+
+        for h_msg in history_messages:
+            msg = h_msg.stanza_component_ns
+            msg["delay"]["stamp"] = h_msg.when
+            msg.set_to(full_jid)
+            msg.send()
+
+    async def send_mam(self, iq: Iq):
+        form_values = iq["mam"]["form"].get_values()
+
+        start_date = str_to_datetime_or_none(form_values.get("start"))
+        end_date = str_to_datetime_or_none(form_values.get("end"))
+
+        after_id = form_values.get("after-id")
+        before_id = form_values.get("before-id")
+
+        sender = form_values.get("with")
+
+        ids = form_values.get("ids") or ()
+
+        if max_str := iq["mam"]["rsm"]["max"]:
+            try:
+                max_results = int(max_str)
+            except ValueError:
+                max_results = None
+        else:
+            max_results = None
+
+        after_id_rsm = iq["mam"]["rsm"]["after"]
+        after_id = after_id_rsm or after_id
+
+        before_rsm = iq["mam"]["rsm"]["before"]
+        if before_rsm is True and max_results is not None:
+            last_page_n = max_results
+        else:
+            last_page_n = None
+
+        first = None
+        last = None
+        count = 0
+
+        it = self.archive.get_all(
+            start_date, end_date, before_id, after_id, ids, last_page_n, sender
+        )
+
+        if iq["mam"]["flip_page"]:
+            it = reversed(list(it))
+
+        for history_msg in it:
+            last = xmpp_id = history_msg.id
+            if first is None:
+                first = xmpp_id
+
+            wrapper_msg = self.xmpp.make_message(mfrom=self.jid, mto=iq.get_from())
+            wrapper_msg["mam_result"]["queryid"] = iq["mam"]["queryid"]
+            wrapper_msg["mam_result"]["id"] = xmpp_id
+            wrapper_msg["mam_result"].append(history_msg.forwarded())
+
+            wrapper_msg.send()
+            count += 1
+
+            if max_results and count == max_results:
+                break
+
+        if max_results:
+            try:
+                next(it)
+            except StopIteration:
+                complete = True
+            else:
+                complete = False
+        else:
+            complete = True
+
+        reply = iq.reply()
+        if not self.STABLE_ARCHIVE:
+            reply["mam_fin"]["stable"] = "false"
+        if complete:
+            reply["mam_fin"]["complete"] = "true"
+        reply["mam_fin"]["rsm"]["first"] = first
+        reply["mam_fin"]["rsm"]["last"] = last
+        reply["mam_fin"]["rsm"]["count"] = str(count)
+        reply.send()
 
 
 def set_origin_id(msg: Message, origin_id: str):
@@ -347,6 +490,15 @@ def equals_zero(x):
         return False
     else:
         return x == 0
+
+
+def str_to_datetime_or_none(date: Optional[str]):
+    if date is None:
+        return
+    try:
+        return str_to_datetime(date)
+    except ValueError:
+        return None
 
 
 log = logging.getLogger(__name__)
