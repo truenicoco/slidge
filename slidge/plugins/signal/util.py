@@ -4,9 +4,6 @@ import aiosignald.generated as sigapi
 
 
 class AttachmentSenderMixin:
-    async def send_file(self, *a, **k):
-        raise NotImplementedError
-
     async def send_attachments(
         self, attachments: list[sigapi.JsonAttachmentv1], legacy_msg_id: int, **kwargs
     ):
@@ -14,7 +11,7 @@ class AttachmentSenderMixin:
         for i, attachment in enumerate(attachments):
             filename = get_filename(attachment)
             with open(attachment.storedFilename, "rb") as f:
-                await self.send_file(
+                await self.send_file(  # type:ignore
                     filename=filename,
                     input_file=f,
                     content_type=attachment.contentType,
