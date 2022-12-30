@@ -24,6 +24,7 @@ class Bookmarks(LegacyBookmarks):
 
 
 class MUC(LegacyMUC["Session", int, "Participant", int]):
+    MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
 
     async def join(self, join_presence):
@@ -48,7 +49,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int]):
                         supergroup_id=chat.type_.supergroup_id,
                         filter_=None,
                         offset=0,
-                        limit=10,
+                        limit=self.MAX_SUPER_GROUP_PARTICIPANTS,
                         skip_validation=True,
                     )
                 ).members
