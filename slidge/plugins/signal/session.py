@@ -161,10 +161,8 @@ class Session(
         """
         profiles = await (await self.signal).list_contacts(account=self.phone)
         for profile in profiles.profiles:
-            contact = await self.contacts.by_json_address(profile.address)
-            await contact.update_info()
-            await contact.add_to_roster()
-            contact.online()
+            # contacts are added automatically if their profile could be resolved
+            await self.contacts.by_json_address(profile.address)
 
     async def add_groups(self):
         groups = await (await self.signal).list_groups(account=self.phone)

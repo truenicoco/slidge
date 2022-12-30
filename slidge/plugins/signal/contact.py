@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import logging
 from pathlib import Path
@@ -23,7 +24,7 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
         super().__init__(*a, **k)
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
-        self.profile_fetched = False
+        self.xmpp.loop.create_task(self._update_info())
 
     @functools.cached_property
     def signal_address(self):
@@ -42,16 +43,34 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
         identities = r.identities
         self.session.send_gateway_message(str(identities))
 
-    async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
-        if profile is None:
+    async def get_profile(self, max_attempts=10, sleep=1, exp=2):
+        attempts = 0
+        while attempts < max_attempts:
             try:
                 profile = await (await self.session.signal).get_profile(
                     account=self.session.phone, address=self.signal_address
                 )
             except sigexc.ProfileUnavailableError as e:
-                log.debug("Could not fetch the profile of a contact: %s", e.message)
+                log.debug(
+                    "Could not fetch the profile of a contact: %s, retrying later...",
+                    e.message,
+                )
+            else:
+                if profile.profile_name or profile.name or profile.contact_name:
+                    return profile
+            attempts += 1
+            await asyncio.sleep(sleep * attempts**exp)
+
+    async def _update_info(self, profile: Optional[sigapi.Profilev1] = None):
+        if profile is None:
+            profile = await self.get_profile()
+            if profile is None:
+                log.warning(
+                    "Could not update avatar, nickname, and phone of %s",
+                    self.signal_address,
+                )
                 return
-            self.profile_fetched = True
+
         nick = profile.name or profile.profile_name
         if nick is not None:
             nick = nick.replace("\u0000", " ")
@@ -65,10 +84,8 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
         )
 
         self.set_vcard(full_name=nick, phone=address.number, note=profile.about)
-
-    async def update_and_add(self):
-        await self.update_info()
         await self.add_to_roster()
+        self.online()
 
 
 class Roster(LegacyRoster["Session", Contact, str]):
@@ -76,12 +93,8 @@ class Roster(LegacyRoster["Session", Contact, str]):
         return await self.by_json_address(sigapi.JsonAddressv1(uuid=uuid))
 
     async def by_json_address(self, address: sigapi.JsonAddressv1):
-        c = await self.by_legacy_id(address.uuid)
-        if not c.added_to_roster or not c.profile_fetched:
-            await c.update_and_add()
-        return c
+        return await self.by_legacy_id(address.uuid)
 
-    # @staticmethod
     async def jid_username_to_legacy_id(self, jid_username: str):
         if jid_username in self.session.bookmarks.known_groups:
             raise XMPPError("bad-request", "This is a group ID, not a contact ID")
