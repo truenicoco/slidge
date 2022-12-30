@@ -29,6 +29,7 @@ const (
 	EventMessage
 	EventChatState
 	EventReceipt
+	EventCall
 )
 
 // EventPayload represents the collected payloads for all event types handled by the overarching
@@ -42,6 +43,7 @@ type EventPayload struct {
 	Message      Message
 	ChatState    ChatState
 	Receipt      Receipt
+	Call         Call
 }
 
 // A Contact represents any entity that be communicated with directly in WhatsApp. This typically
@@ -424,4 +426,30 @@ func newReceiptEvent(evt *events.Receipt) (EventKind, *EventPayload) {
 	}
 
 	return EventReceipt, &EventPayload{Receipt: receipt}
+}
+
+// CallState represents the state of the call to synchronize with.
+type CallState int
+
+// The calls tates handled by the overarching session event handler.
+const (
+	CallMissed CallState = 1 + iota
+)
+
+// A Call represents an incoming or outgoing voice/video call made over WhatsApp. Full support for
+// calls is currently not implemented, and this structure contains the bare minimum data required
+// for notifying on missed calls.
+type Call struct {
+	State     CallState
+	JID       string
+	Timestamp int64
+}
+
+// NewCallEvent returns event data meant for [Session.propagateEvent] for the call metadata given.
+func newCallEvent(state CallState, meta types.BasicCallMeta) (EventKind, *EventPayload) {
+	return EventCall, &EventPayload{Call: Call{
+		State:     state,
+		JID:       meta.From.ToNonAD().String(),
+		Timestamp: meta.Timestamp.Unix(),
+	}}
 }

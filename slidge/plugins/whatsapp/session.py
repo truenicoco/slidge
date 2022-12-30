@@ -137,6 +137,14 @@ class Session(
                 contact.paused()
         elif event == whatsapp.EventReceipt:
             await self.handle_receipt(data.Receipt)
+        elif event == whatsapp.EventCall:
+            contact = await self.contacts.by_legacy_id(data.Call.JID)
+            if data.Call.State == whatsapp.CallMissed:
+                text = "Missed call"
+            text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
+            if data.Call.Timestamp > 0:
+                text = text + f" at {datetime.fromtimestamp(data.Call.Timestamp)}"
+            self.send_gateway_message(text)
         elif event == whatsapp.EventMessage:
             await self.handle_message(data.Message)
 

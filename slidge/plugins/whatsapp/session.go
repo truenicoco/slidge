@@ -340,6 +340,10 @@ func (s *Session) handleEvent(evt interface{}) {
 		s.propagateEvent(newContactSyncEvent(s.client, evt.JID, types.ContactInfo{FullName: evt.NewPushName}))
 	case *events.ChatPresence:
 		s.propagateEvent(newChatStateEvent(evt))
+	case *events.CallTerminate:
+		if evt.Reason == "timeout" {
+			s.propagateEvent(newCallEvent(CallMissed, evt.BasicCallMeta))
+		}
 	case *events.LoggedOut:
 		s.client.Disconnect()
 		if err := s.client.Store.Delete(); err != nil {
