@@ -179,7 +179,13 @@ services:
       - prosody
 
   signald:
-    image: docker.io/signald/signald:0.23.0
+    image: docker.io/signald/signald:0.23.1
+    command:
+      - -v
+      - -s
+      - /signald/signald.sock
+      - -d
+      - /signald/
     volumes:
       - ./persistent/signald:/signald
     environment:
