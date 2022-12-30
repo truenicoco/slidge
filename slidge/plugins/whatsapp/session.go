@@ -258,9 +258,7 @@ func (s *Session) FetchRoster(refresh bool) error {
 			s.gateway.logger.Warnf("Failed to subscribe to presence for %s", jid)
 		}
 
-		if refresh {
-			go s.propagateEvent(newContactSyncEvent(s.client, jid, info))
-		}
+		go s.propagateEvent(newContactSyncEvent(s.client, jid, info))
 	}
 
 	return nil

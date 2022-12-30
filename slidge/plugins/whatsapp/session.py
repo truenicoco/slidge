@@ -127,9 +127,8 @@ class Session(
                 contact.avatar = data.Contact.AvatarURL
             await contact.add_to_roster()
         elif event == whatsapp.EventPresence:
-            (await self.contacts.by_legacy_id(data.Presence.JID)).update_presence(
-                data.Presence.Away, data.Presence.LastSeen
-            )
+            contact = await self.contacts.by_legacy_id(data.Presence.JID)
+            contact.update_presence(data.Presence.Away, data.Presence.LastSeen)
         elif event == whatsapp.EventChatState:
             contact = await self.contacts.by_legacy_id(data.ChatState.JID)
             if data.ChatState.Kind == whatsapp.ChatStateComposing:
