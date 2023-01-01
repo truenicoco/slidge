@@ -179,11 +179,15 @@ class AdhocProvider:
         List registered users for admins
         """
         form = self.xmpp["xep_0004"].make_form("result", "Component info")
-        form.add_field(
-            ftype="jid-multi",
-            label="Users",
-            value=[u.bare_jid for u in user_store.get_all()],
-        )
+        form.add_reported("jid", label="JID", type="jid-single")
+        form.add_reported("joined", label="Join date", type="text")
+        for u in user_store.get_all():
+            d = u.registration_date
+            if d is None:
+                joined = ""
+            else:
+                joined = d.isoformat(timespec="seconds")
+            form.add_item({"jid": u.bare_jid, "joined": joined})
 
         session["payload"] = form
         session["has_next"] = False
