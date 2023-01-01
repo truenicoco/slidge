@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
@@ -26,10 +27,40 @@ class Bookmarks(LegacyBookmarks):
 class MUC(LegacyMUC["Session", int, "Participant", int]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
+    name = "unnamed"
 
     async def join(self, join_presence):
         self.user_nick = await self.session.my_name
+        await self.update_subject_from_msg()
         await super().join(join_presence)
+
+    async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
+        if msg is None:
+            try:
+                msg = await self.session.tg.api.get_chat_pinned_message(self.legacy_id)
+                self.log.debug("Pinned message: %s", type(msg.content))
+            except tgapi.NotFound:
+                self.log.debug("Pinned message not found?")
+                return
+        content = msg.content
+        if not isinstance(content, (tgapi.MessagePhoto, tgapi.MessageText)):
+            return
+
+        sender_id = msg.sender_id
+        self.subject_date = datetime.fromtimestamp(msg.date, tz=timezone.utc)
+        if isinstance(sender_id, tgapi.MessageSenderUser):
+            if sender_id.user_id == await self.session.tg.get_my_id():
+                self.subject_setter = self.user_nick
+            else:
+                contact = await self.session.contacts.by_legacy_id(sender_id.user_id)
+                self.subject_setter = contact.name
+        else:
+            self.subject_setter = self.name
+
+        if isinstance(content, tgapi.MessagePhoto):
+            self.subject = content.caption.text
+        if isinstance(content, tgapi.MessageText):
+            self.subject = content.text.text
 
     async def get_participants(self):
         self.log.debug("Getting participants")

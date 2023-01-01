@@ -121,6 +121,11 @@ class TelegramToXMPPMixin:
             for user_id in content.member_user_ids:
                 participant = await muc.participant_by_tg_user_id(user_id)
                 participant.online()
+        elif isinstance(content, tgapi.MessagePinMessage):
+            if await self.session.tg.is_private_chat(msg.chat_id):
+                return
+            muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
+            await muc.update_subject_from_msg()
         else:
             self.send_text(
                 "/me tried to send an unsupported content. "
