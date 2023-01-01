@@ -40,9 +40,7 @@ class LegacyMUC(
     metaclass=ABCSubclassableOnceAtMost,
 ):
     user_nick = "SlidgeUser"
-    subject_setter = "slidge"
-    subject = ""
-    subject_date = None
+    subject_date: Optional[datetime] = None
     n_participants: Optional[int] = None
     max_history_fetch = 100
     description = ""
@@ -75,8 +73,11 @@ class LegacyMUC(
             "presence_unavailable", self._on_presence_unavailable
         )
 
+        self._subject = ""
+        self.subject_setter = "unknown"
+
     def __repr__(self):
-        return f"<MUC '{self.subject}' / '{self.legacy_id}' - {self.jid}>"
+        return f"<MUC '{self.legacy_id}' - {self.jid}>"
 
     def _on_presence_unavailable(self, p: Presence):
         pto = p.get_to()
@@ -96,6 +97,23 @@ class LegacyMUC(
             self.log.warning(
                 "Received 'leave group' request but resource was not listed. %s", p
             )
+
+    @property
+    def subject(self):
+        return self._subject
+
+    @subject.setter
+    def subject(self, s: str):
+        if s != self._subject:
+            self.update_subject(s)
+        self._subject = s
+
+    def update_subject(self, subject: Optional[str] = None):
+        self._subject = subject or ""
+        for r in self.user_resources:
+            to = copy(self.user.jid)
+            to.resource = r
+            self._make_subject_message(to).send()
 
     def features(self):
         features = [
@@ -155,6 +173,7 @@ class LegacyMUC(
 
     def _make_subject_message(self, user_full_jid: JID):
         subject_setter = copy(self.jid)
+        log.debug("subject setter: %s", self.subject_setter)
         subject_setter.resource = self.subject_setter
         msg = self.xmpp.make_message(
             mto=user_full_jid,
