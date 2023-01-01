@@ -193,36 +193,23 @@ class Gateway(BaseGateway):
             account=user.registration_form["phone"]
         )
 
-        # TODO: uncomment this when https://dev.gajim.org/gajim/gajim/-/issues/10857 is fixed
-        # There are probably other clients that handle this just fine and this would make more sense
-        # to use this, but I think targeting gajim compatibility when there are easy workarounds
-        # is OK
-        # form = self["xep_0004"].make_form("result", "Linked devices")
-        # form.add_reported("id", label="ID", type="fixed")
-        # form.add_reported("name", label="Name", type="fixed")
-        # form.add_reported("created", label="Created", type="fixed")
-        # form.add_reported("last_seen", label="Last seen", type="fixed")
-        # for d in devices.devices:
-        #     form.add_item(
-        #         {
-        #             "name": d.name,
-        #             "id": str(d.id),
-        #             "created": datetime.fromtimestamp(d.created / 1000).isoformat(),
-        #             "last_seen": datetime.fromtimestamp(d.lastSeen / 1000).isoformat(),
-        #         }
-        #     )
-        #
-        # adhoc_session["payload"] = form
-        adhoc_session["notes"] = [
-            (
-                "info",
-                f"Name: {d.name} / "
-                f"ID: {d.id} / "
-                f"Created: {datetime.fromtimestamp(d.created / 1000).isoformat()} / "
-                f"Last seen: {datetime.fromtimestamp(d.lastSeen / 1000).isoformat()}",
+        # does not work in gajim https://dev.gajim.org/gajim/gajim/-/issues/10857 is fixed
+        form = self["xep_0004"].make_form("result", "Linked devices")
+        form.add_reported("id", label="ID", type="fixed")
+        form.add_reported("name", label="Name", type="fixed")
+        form.add_reported("created", label="Created", type="fixed")
+        form.add_reported("last_seen", label="Last seen", type="fixed")
+        for d in devices.devices:
+            form.add_item(
+                {
+                    "name": d.name,
+                    "id": str(d.id),
+                    "created": datetime.fromtimestamp(d.created / 1000).isoformat(),
+                    "last_seen": datetime.fromtimestamp(d.lastSeen / 1000).isoformat(),
+                }
             )
-            for d in devices.devices
-        ]
+
+        adhoc_session["payload"] = form
         adhoc_session["has_next"] = False
 
         return adhoc_session
