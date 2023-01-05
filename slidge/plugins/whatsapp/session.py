@@ -114,7 +114,12 @@ class Session(
                 self.whatsapp.FetchRoster(refresh=config.ALWAYS_SYNC_ROSTER)
             except RuntimeError as err:
                 self.log.error("Failed refreshing roster on connect: %s", str(err))
-            self._connected.set_result("Connected")
+            try:
+                self._connected.set_result("Connected")
+            except asyncio.InvalidStateError:
+                self.log.warning(
+                    "We thought we were connected but apparently we weren't?"
+                )
         elif event == whatsapp.EventLoggedOut:
             self._connected = self.xmpp.loop.create_future()
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
