@@ -236,7 +236,7 @@ class BaseSession(
 
         text = m["body"]
         if m.xml.find("{urn:xmpp:feature-fallback:0}fallback") is not None and (
-            e.is_group or e.REPLIES
+            isinstance(e, LegacyMUC) or e.REPLIES  # type: ignore
         ):
             text = m["feature_fallback"].get_stripped_body()
             reply_fallback = m["feature_fallback"].get_fallback_body()
@@ -291,7 +291,7 @@ class BaseSession(
             if legacy_msg_id is not None:
                 self.sent[legacy_msg_id] = m.get_id()
 
-    async def __get_entity(self, m: Message):
+    async def __get_entity(self, m: Message) -> Union[LegacyContactType, LegacyMUCType]:
         if m.get_type() == "groupchat":
             muc = await self.bookmarks.by_jid(m.get_to())
             if m.get_from().resource not in muc.user_resources:
@@ -365,8 +365,8 @@ class BaseSession(
         """
         e = await self.__get_entity(m)
         displayed_msg_id = m["displayed"]["id"]
-        if not e.is_group and self.xmpp.MARK_ALL_MESSAGES:
-            to_mark = e.get_msg_xmpp_id_up_to(displayed_msg_id)
+        if not isinstance(e, LegacyMUC) and self.xmpp.MARK_ALL_MESSAGES:
+            to_mark = e.get_msg_xmpp_id_up_to(displayed_msg_id)  # type: ignore
             if to_mark is None:
                 log.debug("Can't mark all messages up to %s", displayed_msg_id)
                 to_mark = [displayed_msg_id]
@@ -375,7 +375,7 @@ class BaseSession(
         for xmpp_id in to_mark:
             if legacy := self.__xmpp_msg_id_to_legacy(xmpp_id):
                 await self.displayed(legacy, e)
-                if e.is_group:
+                if isinstance(e, LegacyMUC):
                     await e.echo(m, None)
             else:
                 log.debug("Ignored displayed marker for msg: %r", xmpp_id)
@@ -424,7 +424,7 @@ class BaseSession(
         legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id:
             await self.retract(legacy_id, e)
-            if e.is_group:
+            if isinstance(e, LegacyMUC):
                 await e.echo(m, None)
         else:
             log.debug("Ignored retraction from user")
