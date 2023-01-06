@@ -99,6 +99,7 @@ def save_state(user_bare_jid: str, state: AndroidState):
 
 class Contact(LegacyContact["Session", str]):
     # legacy_id = facebook username, as in facebook.com/name.surname123
+    REACTIONS_SINGLE_EMOJI = True
 
     def __init__(self, *a, **k):
         super(Contact, self).__init__(*a, **k)
@@ -449,12 +450,11 @@ class Session(
         return await self.send_text(text, c)
 
     async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
+        # only reaction per msg on facebook, but this is handled by slidge core
         if len(emojis) == 0:
             emoji = None
         else:
             emoji = emojis[-1]
-            if len(emojis) > 1:  # only reaction per msg on facebook
-                c.react(legacy_msg_id, emoji, carbon=True)
         f = self.reaction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.api.react(legacy_msg_id, emoji)
         await f
