@@ -7,7 +7,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-from .util import TelegramToXMPPMixin
+from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 
 if TYPE_CHECKING:
     from .contact import Contact
@@ -24,7 +24,7 @@ class Bookmarks(LegacyBookmarks):
         return int(local_part.replace("group", ""))
 
 
-class MUC(LegacyMUC["Session", int, "Participant", int]):
+class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     name = "unnamed"

@@ -243,34 +243,16 @@ class Session(
             await self.remove_reactions(legacy_msg_id, c)
             return
 
-        if len(emojis) > 1:
-            c.react(legacy_msg_id, carbon=True)
-            await self.remove_reactions(legacy_msg_id, c)
-            self.send_gateway_message(
-                "Warning: unlike XMPP, telegram only accepts one reaction per message. "
-                f"Your reactions have been removed."
-            )
-            return
-
-        emoji = emojis[-1]
-
+        # we never have more than 1 emoji, slidge core makes sure of that
         try:
             r = await self.tg.api.set_message_reaction(
                 chat_id=c.legacy_id,
                 message_id=legacy_msg_id,
-                reaction=remove_emoji_variation_selector_16(emoji),
+                reaction=remove_emoji_variation_selector_16(emojis[0]),
                 is_big=False,
             )
         except BadRequest as e:
-            available = await self.tg.api.get_message_available_reactions(
-                chat_id=c.legacy_id, message_id=legacy_msg_id
-            )
-            available_emojis = [a.reaction for a in available.reactions]
-            self.send_gateway_message(
-                "Error: unlike XMPP, telegram does not allow arbitrary emojis to be used as reactions: "
-                f"{e.message}. Please pick your reaction in this list: {' '.join(available_emojis)}"
-            )
-            c.react(legacy_msg_id, carbon=True)
+            raise XMPPError("bad-request", text=e.message)
         else:
             self.log.debug("Message reaction response: %s", r)
 

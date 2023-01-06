@@ -9,7 +9,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
-from .util import TelegramToXMPPMixin
+from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 
 if TYPE_CHECKING:
     from .session import Session
@@ -19,7 +19,7 @@ async def noop():
     return
 
 
-class Contact(LegacyContact["Session", int], TelegramToXMPPMixin):
+class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMPPMixin):
     CLIENT_TYPE = "phone"
     session: "Session"  # type:ignore
 

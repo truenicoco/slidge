@@ -21,6 +21,17 @@ def get_best_file(content: tgapi.MessageContent):
         return content.document.document
 
 
+class AvailableEmojisMixin:
+    session: "Session"
+    chat_id: int
+
+    async def available_emojis(self, legacy_msg_id):
+        available = await self.session.tg.api.get_message_available_reactions(
+            chat_id=self.chat_id, message_id=legacy_msg_id
+        )
+        return {a.reaction for a in available.reactions}
+
+
 class TelegramToXMPPMixin:
     session: "Session"  # type:ignore
     chat_id: int
