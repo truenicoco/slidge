@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class Contact(LegacyContact["Session", str]):
     # WhatsApp only allows message editing in Beta versions of their app, and support is uncertain.
     CORRECTION = False
+    REACTIONS_SINGLE_EMOJI = True
 
     def update_presence(self, away: bool, last_seen_timestamp: int):
         last_seen = (

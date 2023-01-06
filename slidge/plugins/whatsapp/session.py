@@ -310,22 +310,21 @@ class Session(
 
     async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
         """
-        Send or remove emoji reaction to existing WhatsApp message. Noted that WhatsApp places
-        restrictions on the number of emoji reactions a user can place on any given message; these
-        restrictions are currently not observed by this function.
+        Send or remove emoji reaction to existing WhatsApp message.
+        Slidge core makes sure that the emojis parameter is always empty or a
+        *single* emoji.
         """
-        for emoji in emojis if len(emojis) > 0 else [""]:
-            message = whatsapp.Message(
-                Kind=whatsapp.MessageReaction,
-                ID=legacy_msg_id,
-                JID=c.legacy_id,
-                Body=emoji,
-                IsCarbon=legacy_msg_id in self.sent,
-            )
-            try:
-                self.whatsapp.SendMessage(message)
-            except RuntimeError as err:
-                raise XMPPError(text=str(err))
+        message = whatsapp.Message(
+            Kind=whatsapp.MessageReaction,
+            ID=legacy_msg_id,
+            JID=c.legacy_id,
+            Body=emojis[0] if emojis else "",
+            IsCarbon=legacy_msg_id in self.sent,
+        )
+        try:
+            self.whatsapp.SendMessage(message)
+        except RuntimeError as err:
+            raise XMPPError(text=str(err))
 
     async def retract(self, legacy_msg_id: str, c: Contact):
         """
