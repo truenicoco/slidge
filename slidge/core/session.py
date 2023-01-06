@@ -409,12 +409,35 @@ class BaseSession(
         e = await self.__get_entity(m)
         react_to: str = m["reactions"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(react_to)
-        if legacy_id:
-            await self.react(legacy_id, [r["value"] for r in m["reactions"]], e)
-            if e.is_group:
-                await e.echo(m, None)
-        else:
+
+        if not legacy_id:
             log.debug("Ignored reaction from user")
+            raise XMPPError("internal-server-error")
+
+        emojis = [r["value"] for r in m["reactions"]]
+        error_msg = None
+
+        if e.REACTIONS_SINGLE_EMOJI and len(emojis) > 1:
+            error_msg = "Maximum 1 emoji/message"
+
+        if not error_msg and (subset := await e.available_emojis(legacy_id)):
+            log.debug("%s %s %s", set(emojis), subset, set(emojis).issubset(subset))
+            if not set(emojis).issubset(subset):
+                error_msg = (
+                    f"You can only react with the following emojis: {''.join(subset)}"
+                )
+
+        if error_msg:
+            self.send_gateway_message(error_msg)
+            if not isinstance(e, LegacyMUC):
+                # no need to carbon for groups, we just don't echo the stanza
+                e.react(legacy_id, carbon=True)  # type: ignore
+            await self.react(legacy_id, [], e)
+            raise XMPPError("not-acceptable", text="You can only react with")
+
+        await self.react(legacy_id, emojis, e)
+        if isinstance(e, LegacyMUC):
+            await e.echo(m, None)
 
     @ignore_message_to_component
     @ignore_sent_carbons

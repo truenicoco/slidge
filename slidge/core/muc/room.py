@@ -15,6 +15,7 @@ from ...util.types import (
     LegacyParticipantType,
     SessionType,
 )
+from ..mixins.base import ReactionRecipientMixin
 from ..mixins.disco import BaseDiscoMixin
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 class LegacyMUC(
     Generic[SessionType, LegacyGroupIdType, LegacyParticipantType, LegacyMessageType],
     BaseDiscoMixin,
+    ReactionRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
 ):
     user_nick = "SlidgeUser"

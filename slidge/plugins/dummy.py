@@ -28,6 +28,8 @@ class Bookmarks(LegacyBookmarks):
 
 
 class MUC(LegacyMUC["Session", str, "Participant", str]):
+    REACTIONS_SINGLE_EMOJI = True
+
     session: "Session"
     msg_ids = defaultdict(int)  # type: ignore
 
@@ -74,6 +76,13 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
 
 class Participant(LegacyParticipant[MUC]):
     pass
+
+
+class Contact(LegacyContact):
+    REACTIONS_SINGLE_EMOJI = True
+
+    async def available_emojis(self, legacy_msg_id):
+        return {"🦅", "🧺"}
 
 
 class Gateway(BaseGateway):

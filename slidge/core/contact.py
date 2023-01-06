@@ -16,10 +16,14 @@ from ..util.types import (
 from ..util.xep_0292.stanza import VCard4
 from . import config
 from .mixins import FullCarbonMixin
+from .mixins.base import ReactionRecipientMixin
 
 
 class LegacyContact(
-    Generic[SessionType, LegacyUserIdType], FullCarbonMixin, metaclass=SubclassableOnce
+    Generic[SessionType, LegacyUserIdType],
+    FullCarbonMixin,
+    ReactionRecipientMixin,
+    metaclass=SubclassableOnce,
 ):
     """
     This class centralizes actions in relation to a specific legacy contact.
