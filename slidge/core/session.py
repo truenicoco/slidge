@@ -365,12 +365,20 @@ class BaseSession(
         """
         e = await self.__get_entity(m)
         displayed_msg_id = m["displayed"]["id"]
-        if legacy := self.__xmpp_msg_id_to_legacy(displayed_msg_id):
-            await self.displayed(legacy, e)
-            if e.is_group:
-                await e.echo(m, None)
+        if not e.is_group and self.xmpp.MARK_ALL_MESSAGES:
+            to_mark = e.get_msg_xmpp_id_up_to(displayed_msg_id)
+            if to_mark is None:
+                log.debug("Can't mark all messages up to %s", displayed_msg_id)
+                to_mark = [displayed_msg_id]
         else:
-            log.debug("Ignored displayed marker for msg: %r", displayed_msg_id)
+            to_mark = [displayed_msg_id]
+        for xmpp_id in to_mark:
+            if legacy := self.__xmpp_msg_id_to_legacy(xmpp_id):
+                await self.displayed(legacy, e)
+                if e.is_group:
+                    await e.echo(m, None)
+            else:
+                log.debug("Ignored displayed marker for msg: %r", xmpp_id)
 
     @ignore_message_to_component
     @ignore_sent_carbons

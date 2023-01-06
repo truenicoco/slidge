@@ -86,6 +86,7 @@ class Gateway(BaseGateway):
         "You can use any password you want."
     )
     REGISTRATION_TYPE = RegistrationType.QRCODE
+    MARK_ALL_MESSAGES = True
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]

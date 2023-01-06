@@ -155,6 +155,12 @@ class BaseGateway(
     yet still open a functional chat window on incoming messages from components.
     """
 
+    MARK_ALL_MESSAGES = False
+    """
+    Set this to True for legacy networks that expects read marks for *all* messages and not just
+    the latest one that was read (as most XMPP clients will only send a reak mark for the latest msg).
+    """
+
     REGISTRATION_2FA_TITLE = "Enter your 2FA code"
     REGISTRATION_2FA_INSTRUCTIONS = (
         "You should have received something via email or SMS, or something"

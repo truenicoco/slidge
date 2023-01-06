@@ -89,6 +89,9 @@ class LegacyContact(
         self._subscribe_from = True
         self._subscribe_to = True
 
+        if self.xmpp.MARK_ALL_MESSAGES:
+            self._sent_order = list[str]()
+
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
@@ -111,8 +114,34 @@ class LegacyContact(
             stanza["from"] = self.user.jid
             self._privileged_send(stanza)
         else:
+            if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
+                self._sent_order.append(stanza["id"])
             stanza["to"] = self.user.jid
             stanza.send()
+
+    def get_msg_xmpp_id_up_to(self, horizon_xmpp_id: str):
+        """
+        Return XMPP msg ids sent by this contact up to a given XMPP msg id.
+
+        Plugins have no reason to use this, but it is used by slidge core
+        for legacy networks that need to mark all messages as read (most XMPP
+        clients only send a read marker for the latest message.
+
+        This has side effects, if the horizon XMPP id is found, messages up to
+        this horizon are not cleared, to avoid sending the same read mark twice.
+
+        :param horizon_xmpp_id: The latest message
+        :return: A list of XMPP ids or None if horizon_xmpp_id was not found
+        """
+        for i, xmpp_id in enumerate(self._sent_order):
+            if xmpp_id == horizon_xmpp_id:
+                break
+        else:
+            return
+        i += 1
+        res = self._sent_order[:i]
+        self._sent_order = self._sent_order[i:]
+        return res
 
     def send_text(
         self,
@@ -393,6 +422,12 @@ class LegacyRoster(
         :return: An identifier for the user on the legacy network.
         """
         return _unescape_node(jid_username)
+
+
+def is_markable(stanza: Union[Message, Presence]):
+    if isinstance(stanza, Presence):
+        return False
+    return bool(stanza["body"])
 
 
 ESCAPE_TABLE = "".maketrans(
