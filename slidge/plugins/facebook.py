@@ -125,12 +125,7 @@ class Contact(LegacyContact["Session", str]):
         self.name = participant.messaging_actor.name
         self._fb_id = int(participant.id)
         if self.avatar is None or update_avatar:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    participant.messaging_actor.profile_pic_large.uri
-                ) as response:
-                    response.raise_for_status()
-                    self.avatar = await response.read()
+            self.avatar = participant.messaging_actor.profile_pic_large.uri
 
 
 class Roster(LegacyRoster["Session", Contact, str]):
