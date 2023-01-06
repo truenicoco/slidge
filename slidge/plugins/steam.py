@@ -125,6 +125,9 @@ class Contact(LegacyContact["Session", int]):
     def update_reactions(self, timestamp: int):
         self.react(timestamp, self.contact_reactions[timestamp])
 
+    async def available_emojis(self, legacy_msg_id):
+        return set(emoji_translate.values())
+
 
 class Roster(LegacyRoster["Session", Contact, int]):
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
@@ -344,6 +347,7 @@ class Session(
         new = set[str]()
         for emoji in emojis:
             if emoji_translate.inverse.get(emoji) is None:
+                # should not happen anymore, slidge core should  take care of that never happening
                 self.send_gateway_message(
                     f"On steam, you can only react with {' '.join(emoji_translate.values())}"
                 )
