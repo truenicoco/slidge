@@ -403,6 +403,7 @@ class TestAimShakespeareBase(SlidgeTest):
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
                 <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
+                <item jid="aim.shakespeare.lit" node="sync-contacts" name="Sync XMPP roster"/>
               </query>
             </iq>
             """

@@ -113,6 +113,12 @@ class AdhocProvider:
             handler=self._handle_unregister,
             only_users=True,
         )
+        self.add_command(
+            node="sync-contacts",
+            name="Sync XMPP roster",
+            handler=self._handle_contact_sync,
+            only_users=True,
+        )
 
     async def get_items(self, jid: JID, node: str, iq: Iq):
         all_items = self.xmpp.plugin["xep_0030"].static.get_items(jid, node, None, None)
@@ -413,6 +419,58 @@ class AdhocProvider:
         await self.xmpp.plugin["xep_0077"].api["user_remove"](None, None, iq["from"])
         await self.xmpp.session_cls.kill_by_jid(iq.get_from())
         adhoc_session["notes"] = [("info", "Bye bye!")]
+        adhoc_session["has_next"] = False
+        adhoc_session["completed"] = True
+
+        return adhoc_session
+
+    async def _handle_contact_sync(self, iq: Iq, adhoc_session: dict[str, Any]):
+        session: "BaseSession" = self.xmpp.get_session_from_stanza(iq)  # type:ignore
+
+        roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.bare_jid)
+
+        contacts = session.contacts.known_contacts()
+
+        added = 0
+        removed = 0
+        updated = 0
+        for item in roster_iq["roster"]:
+            groups = set(item["groups"])
+            if self.xmpp.ROSTER_GROUP in groups:
+                contact = contacts.pop(item["jid"], None)
+                if contact is None:
+                    if len(groups) == 1:
+                        await self.xmpp["xep_0356"].set_roster(
+                            session.user.jid, {item["jid"]: {"subscription": "remove"}}
+                        )
+                        removed += 1
+                    else:
+                        groups.remove(self.xmpp.ROSTER_GROUP)
+                        await self.xmpp["xep_0356"].set_roster(
+                            session.user.jid,
+                            {
+                                item["jid"]: {
+                                    "subscription": item["subscription"],
+                                    "name": item["name"],
+                                    "groups": groups,
+                                }
+                            },
+                        )
+                        updated += 1
+                else:
+                    if contact.name != item["name"]:
+                        log.debug("%s vs %s", contact.name, item["name"])
+                        await contact.add_to_roster()
+                        updated += 1
+
+        # we popped before so this only acts on slidge contacts not in the xmpp roster
+        for contact in contacts.values():
+            added += 1
+            await contact.add_to_roster()
+
+        adhoc_session["notes"] = [
+            ("info", f"{added} added, {removed} removed, {updated} updated")
+        ]
         adhoc_session["has_next"] = False
         adhoc_session["completed"] = True
 

@@ -303,6 +303,9 @@ class LegacyRoster(
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())
 
+    def known_contacts(self):
+        return self._contacts_by_bare_jid.copy()
+
     async def by_jid(self, contact_jid: JID) -> LegacyContactType:
         """
         Retrieve a contact by their JID
