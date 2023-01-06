@@ -2,20 +2,24 @@ image: debian/unstable
 arch: arm64
 
 packages:
+  - binutils
   - devscripts
   - debhelper-compat
   - dwz
   - python3-dev
   - libffi-dev
-  - cython3
   - dh-virtualenv
+  - python3-poetry
   - python3-setuptools
   - python3-pip
+  - golang-src
+  - golang-go
 
 environment:
   DEBFULLNAME: IGImonster
   EMAIL: igimonster@mailbox.org
-  PLUGINS: facebook signal skype hackernews mattermost steam discord
+  GOBIN: /tmp/gobin
+  PLUGINS: facebook signal skype hackernews mattermost steam discord whatsapp
   POETRY_EXTRAS: facebook signal skype mattermost steam discord
 
 artifacts:
@@ -32,12 +36,15 @@ tasks:
         fi
       done
   - export-requirements: |
-      # https://github.com/python-poetry/poetry/issues/5241
-      sudo apt-get remove python3-virtualenv -y
-      curl -sSL https://install.python-poetry.org | python3 -
       cd slidge
-      ~/.local/bin/poetry export $(for p in $POETRY_EXTRAS; do echo -n "-E $p "; done) -o requirements.txt
-      sudo apt-get install python3-virtualenv dh-virtualenv -y
+      sudo poetry self add poetry-plugin-export
+      poetry export $(for p in $POETRY_EXTRAS; do echo -n "-E $p "; done) -o requirements.txt
+  - generate-gopy: |
+      go install github.com/go-python/gopy@latest
+      go install golang.org/x/tools/cmd/goimports@latest
+      sudo mv $GOBIN/gopy $GOBIN/goimports /usr/local/bin
+      sudo python3 -m pip install pybindgen
+      find slidge -name go.mod -execdir gopy build -vm=python3 -output=generated -no-make=true . ';'
   - generate-plugin-files: |
       cd slidge/debian
       mkdir -p etc
@@ -57,12 +64,12 @@ tasks:
       ls -la /usr/lib/slidge*
       sudo ls -la /etc/slidge*
       sudo mv /etc/slidge/conf.d/common.conf.example /etc/slidge/conf.d/common.conf
-      sudo mv /etc/slidge/mattermost.conf.example /etc/slidge/mattermost.conf
-      sudo systemctl cat slidge@mattermost.service
+      sudo mv /etc/slidge/whatsapp.conf.example /etc/slidge/whatsapp.conf
+      sudo systemctl cat slidge@whatsapp.service
       slidge --help
-      sudo systemctl enable --now slidge@mattermost
+      sudo systemctl enable --now slidge@whatsapp
       sleep 15
-      sudo journalctl -u slidge@mattermost --since yesterday
+      sudo journalctl -u slidge@whatsapp --since yesterday
   - tar: |
       tar cf slidge-debian-arm64.tar slidge-* slidge_*
       mv slidge_${VER}_arm64.deb slidge-latest-arm64.deb
