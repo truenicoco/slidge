@@ -26,6 +26,8 @@ class Participant(AttachmentSenderMixin, LegacyParticipant):
 
 
 class MUC(LegacyMUC["Session", str, Participant, int]):
+    REACTIONS_SINGLE_EMOJI = True
+
     session: "Session"
 
     type = MucType.GROUP

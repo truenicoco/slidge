@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
     CORRECTION = False
+    REACTIONS_SINGLE_EMOJI = True
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)

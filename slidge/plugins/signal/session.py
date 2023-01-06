@@ -61,7 +61,6 @@ class Session(
             raise RuntimeError
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
-        self.reaction_ack_futures: dict[tuple[int, str], asyncio.Future[None]] = {}
         self.user_uuid: asyncio.Future[str] = self.xmpp.loop.create_future()
         self.user_nick: asyncio.Future[str] = self.xmpp.loop.create_future()
         self.connected = self.xmpp.loop.create_future()
@@ -208,18 +207,11 @@ class Session(
                     carbon=True,
                 )
             if (reaction := sent_msg.reaction) is not None:
-                try:
-                    fut = self.reaction_ack_futures.pop(
-                        (reaction.targetSentTimestamp, reaction.emoji)
-                    )
-                except KeyError:
-                    contact.react(
-                        reaction.targetSentTimestamp,
-                        () if reaction.remove else reaction.emoji,
-                        carbon=True,
-                    )
-                else:
-                    fut.set_result(None)
+                contact.react(
+                    reaction.targetSentTimestamp,
+                    () if reaction.remove else reaction.emoji,
+                    carbon=True,
+                )
             if (delete := sent_msg.remoteDelete) is not None:
                 contact.retract(delete.target_sent_timestamp, carbon=True)
 
@@ -469,13 +461,12 @@ class Session(
                     f"Slidge failed to remove your reactions on message '{legacy_msg_id}'"
                 )
                 self.log.warning("Could not find the emoji to remove reaction")
-                return
+                raise XMPPError(
+                    "undefined-condition",
+                    "Could not remove your reactions to this message",
+                )
         else:
             emoji = emojis[-1]
-            if len(emojis) > 1:
-                self.send_gateway_message("Only one reaction per message on signal")
-                c.react(legacy_msg_id, emoji, carbon=True)
-            c.user_reactions[legacy_msg_id] = emoji
 
         response = await (await self.signal).react(
             username=self.phone,
@@ -497,10 +488,7 @@ class Session(
             or result.proof_required_failure
         ):
             raise XMPPError(str(result))
-        f = self.reaction_ack_futures[
-            (legacy_msg_id, emoji)
-        ] = self.xmpp.loop.create_future()
-        await f
+        c.user_reactions[legacy_msg_id] = emoji
 
     @handle_unregistered_recipient
     async def retract(self, legacy_msg_id: int, c: "Contact"):
