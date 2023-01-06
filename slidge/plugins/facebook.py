@@ -26,6 +26,15 @@ from slidge import *
 from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired
 
 
+class Config:
+    CHATS_TO_FETCH = 20
+    CHATS_TO_FETCH__DOC = (
+        "The number of most recent chats to fetch on startup. "
+        "Getting all chats might hit rate limiting and possibly account lock. "
+        "Please report if you try with high values and don't hit any problem!"
+    )
+
+
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter facebook credentials"
     REGISTRATION_FIELDS = [
@@ -223,8 +232,10 @@ class Session(
         self.xmpp.loop.create_task(self.mqtt.listen(self.mqtt.seq_id))
         return f"Connected as '{self.me.name} <{self.me.email}>'"
 
-    async def add_friends(self, n=2):
-        thread_list = await self.api.fetch_thread_list(msg_count=0, thread_count=n)
+    async def add_friends(self):
+        thread_list = await self.api.fetch_thread_list(
+            msg_count=0, thread_count=Config.CHATS_TO_FETCH
+        )
         self.mqtt.seq_id = int(thread_list.sync_sequence_id)
         self.log.debug("SEQ ID: %s", self.mqtt.seq_id)
         self.log.debug("Thread list: %s", thread_list)
