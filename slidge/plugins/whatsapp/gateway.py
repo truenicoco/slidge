@@ -26,6 +26,7 @@ class Gateway(BaseGateway):
     WELCOME_MESSAGE = WELCOME_MESSAGE
     REGISTRATION_FIELDS = []
     ROSTER_GROUP = "WhatsApp"
+    MARK_ALL_MESSAGES = True
 
     def __init__(self):
         super().__init__()
