@@ -14,3 +14,22 @@ requirements*
 slidge/plugins/whatsapp/generated
 confs/slidge-tg.ini
 
+/debian/.debhelper/generated
+/debian/.debhelper/slidge
+/debian/.debhelper/slidge/dbgsym-build-ids
+/debian/etc/discord.conf.example
+/debian/etc/facebook.conf.example
+/debian/etc/hackernews.conf.example
+/debian/etc/mattermost.conf.example
+/debian/etc/signal.conf.example
+/debian/etc/skype.conf.example
+/debian/etc/steam.conf.example
+/debian/etc/telegram.conf.example
+/debian/etc/whatsapp.conf.example
+/debian/slidge
+/debian/changelog
+/debian/debhelper-build-stamp
+/debian/files
+/debian/slidge.postinst.debhelper
+/debian/slidge.prerm.debhelper
+/debian/slidge.substvars
