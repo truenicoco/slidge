@@ -414,7 +414,9 @@ class BaseSession(
             log.debug("Ignored reaction from user")
             raise XMPPError("internal-server-error")
 
-        emojis = [r["value"] for r in m["reactions"]]
+        emojis = [
+            remove_emoji_variation_selector_16(r["value"]) for r in m["reactions"]
+        ]
         error_msg = None
 
         if e.REACTIONS_SINGLE_EMOJI and len(emojis) > 1:
@@ -687,6 +689,11 @@ class BaseSession(
         :param c: The contact this retraction refers to
         """
         raise NotImplementedError
+
+
+def remove_emoji_variation_selector_16(emoji: str):
+    # this is required for compatibility with dino, and maybe other future clients?
+    return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
 
 
 _sessions: dict[GatewayUser, BaseSession] = {}
