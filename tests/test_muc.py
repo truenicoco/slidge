@@ -594,7 +594,7 @@ class TestMuc(SlidgeTest):
                      type='groupchat'>
                 <body>{fallback}{stripped_body}</body>
                 <reply to='room-private@aim.shakespeare.lit/Anna' id='message-id1' xmlns='urn:xmpp:reply:0' />
-                <fallback xmlns='urn:xmpp:feature-fallback:0' for='urn:xmpp:reply:0'>
+                <fallback xmlns='urn:xmpp:fallback:0' for='urn:xmpp:reply:0'>
                   <body start="0" end="{len(fallback)}" />
                 </fallback>
             </message>
@@ -722,7 +722,7 @@ class TestMuc(SlidgeTest):
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
-                    <fallback xmlns="urn:xmpp:feature-fallback:0" for="urn:xmpp:reply:0">
+                    <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
                   		<body start="0" end="8"/>
                    	</fallback>
                 </message>

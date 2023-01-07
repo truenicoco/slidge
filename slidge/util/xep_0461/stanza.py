@@ -13,7 +13,7 @@ class Reply(ElementBase):
 
 class FeatureFallBack(ElementBase):
     # should also be a multi attrib
-    namespace = "urn:xmpp:feature-fallback:0"
+    namespace = "urn:xmpp:fallback:0"
     name = "fallback"
     plugin_attrib = "feature_fallback"
     interfaces = {"for"}

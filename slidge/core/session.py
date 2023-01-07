@@ -235,7 +235,7 @@ class BaseSession(
             url = None
 
         text = m["body"]
-        if m.xml.find("{urn:xmpp:feature-fallback:0}fallback") is not None and (
+        if m.xml.find("{urn:xmpp:fallback:0}fallback") is not None and (
             isinstance(e, LegacyMUC) or e.REPLIES  # type: ignore
         ):
             text = m["feature_fallback"].get_stripped_body()
