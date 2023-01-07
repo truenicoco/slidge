@@ -433,7 +433,7 @@ class BaseSession(
                 # no need to carbon for groups, we just don't echo the stanza
                 e.react(legacy_id, carbon=True)  # type: ignore
             await self.react(legacy_id, [], e)
-            raise XMPPError("not-acceptable", text="You can only react with")
+            raise XMPPError("not-acceptable", text=error_msg)
 
         await self.react(legacy_id, emojis, e)
         if isinstance(e, LegacyMUC):
