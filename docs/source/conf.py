@@ -78,6 +78,5 @@ intersphinx_mapping = {
 }
 
 extlinks = {
-    "xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-"),
-    "issue": ("https://github.com/sphinx-doc/sphinx/issues/%s", "issue "),
+    "xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")
 }
