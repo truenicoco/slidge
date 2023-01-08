@@ -723,7 +723,7 @@ class TestMuc(SlidgeTest):
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
                     <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
-                  		<body start="0" end="8"/>
+                  		<body start="0" end="9"/>
                    	</fallback>
                 </message>
                 """,

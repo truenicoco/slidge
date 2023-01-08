@@ -44,7 +44,7 @@ class FeatureFallBack(ElementBase):
         msg["body"] = quoted + msg["body"]
         msg["feature_fallback"]["for"] = NS
         msg["feature_fallback"]["fallback_body"]["start"] = 0
-        msg["feature_fallback"]["fallback_body"]["end"] = len(quoted) - 1
+        msg["feature_fallback"]["fallback_body"]["end"] = len(quoted)
 
 
 class FallBackBody(ElementBase):
