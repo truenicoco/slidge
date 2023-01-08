@@ -287,7 +287,7 @@ class TestMuc(SlidgeTest):
                         <value>1</value>
                     </field>
                     <field var="muc#roomconfig_allowpm" type="boolean">
-                        <value>1</value>
+                        <value>0</value>
                     </field>
                 </x>
               </query>

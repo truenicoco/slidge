@@ -156,7 +156,7 @@ class LegacyMUC(
         form.add_field("muc#roomconfig_membersonly", "boolean", value=is_group)
         form.add_field("muc#roomconfig_whois", "boolean", value=is_group)
         form.add_field("muc#roomconfig_publicroom", "boolean", value=not is_group)
-        form.add_field("muc#roomconfig_allowpm", "boolean", value=not is_group)
+        form.add_field("muc#roomconfig_allowpm", "boolean", value=False)
 
         return form
 
