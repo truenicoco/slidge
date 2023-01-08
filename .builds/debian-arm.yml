@@ -19,7 +19,7 @@ environment:
   DEBFULLNAME: IGImonster
   EMAIL: igimonster@mailbox.org
   GOBIN: /tmp/gobin
-  PLUGINS: facebook signal skype hackernews mattermost steam discord whatsapp
+  PLUGINS: facebook signal skype hackernews mattermost steam discord
   POETRY_EXTRAS: facebook signal skype mattermost steam discord
 
 artifacts:
@@ -39,12 +39,12 @@ tasks:
       cd slidge
       sudo poetry self add poetry-plugin-export
       poetry export $(for p in $POETRY_EXTRAS; do echo -n "-E $p "; done) -o requirements.txt
-  - generate-gopy: |
-      go install github.com/go-python/gopy@latest
-      go install golang.org/x/tools/cmd/goimports@latest
-      sudo mv $GOBIN/gopy $GOBIN/goimports /usr/local/bin
-      sudo python3 -m pip install pybindgen
-      find slidge -name go.mod -execdir gopy build -vm=python3 -output=generated -no-make=true . ';'
+#  - generate-gopy: |
+#      go install github.com/go-python/gopy@latest
+#      go install golang.org/x/tools/cmd/goimports@latest
+#      sudo mv $GOBIN/gopy $GOBIN/goimports /usr/local/bin
+#      sudo python3 -m pip install pybindgen
+#      find slidge -name go.mod -execdir gopy build -vm=python3 -output=generated -no-make=true . ';'
   - generate-plugin-files: |
       cd slidge/debian
       mkdir -p etc
