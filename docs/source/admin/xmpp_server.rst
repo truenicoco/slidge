@@ -4,11 +4,11 @@ Configure the XMPP server
 Slidge requires a running and properly configured XMPP server running and accepting
 component connections and uses different containers/processes for each gateway.
 
-Slidge uses :XEP:`0363` (HTTP File Upload) to receive files from your contacts.
+Slidge uses :xep:`0363` (HTTP File Upload) to receive files from your contacts.
 For some networks, this is also required to receive QR codes to scan in official apps.
 Chances are you already have this component enabled in your XMPP server config.
 
-Slidge also uses :XEP:`0356` (Privileged Entity) to:
+Slidge also uses :xep:`0356` (Privileged Entity) to:
 
 - manage the user's roster, i.e., automatically fill it up with legacy contacts
 - impersonate the user to keep sent history and read markers in sync if they use
@@ -116,8 +116,8 @@ Example:
 
 .. code-block:: yaml
 
-hosts:
-  - example.com
+        hosts:
+          - example.com
 
 These same principles also apply to ACL.
 
