@@ -129,11 +129,11 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         seconds: Optional[int] = None,
         since: Optional[datetime] = None,
     ):
-        for m in await self.fetch_history(50):
+        for m in await self.fetch_history(50, since):
             part = await self.participant_by_sender_id(m.sender_id)
             await part.send_tg_message(m, full_jid=full_jid)
 
-    async def fetch_history(self, n: int):
+    async def fetch_history(self, n: int, since: Optional[datetime] = None):
         tg = self.session.tg
         chat = await self.get_tg_chat()
         m = chat.last_message
@@ -158,6 +158,9 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
             messages.extend(fetched)
             i += len(fetched)
             if i > n:
+                break
+
+            if since is not None and fetched[-1].date < since.timestamp():
                 break
 
             last_message_id = fetched[-1].id
