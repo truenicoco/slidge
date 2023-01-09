@@ -7,6 +7,7 @@ from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
+from . import config
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 
 if TYPE_CHECKING:
@@ -129,7 +130,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         seconds: Optional[int] = None,
         since: Optional[datetime] = None,
     ):
-        for m in await self.fetch_history(50, since):
+        for m in await self.fetch_history(config.GROUP_HISTORY_MAXIMUM_MESSAGES, since):
             part = await self.participant_by_sender_id(m.sender_id)
             await part.send_tg_message(m, full_jid=full_jid)
 
