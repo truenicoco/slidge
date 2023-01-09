@@ -43,7 +43,7 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
         maxchars: Optional[int] = None,
         maxstanzas: Optional[int] = None,
         seconds: Optional[int] = None,
-        since: Optional[int] = None,
+        since: Optional[datetime] = None,
     ):
         if maxchars is not None and maxchars == 0:
             return

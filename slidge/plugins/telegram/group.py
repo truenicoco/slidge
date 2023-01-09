@@ -127,7 +127,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         maxchars: Optional[int] = None,
         maxstanzas: Optional[int] = None,
         seconds: Optional[int] = None,
-        since: Optional[int] = None,
+        since: Optional[datetime] = None,
     ):
         for m in await self.fetch_history(50):
             part = await self.participant_by_tg_user(

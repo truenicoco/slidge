@@ -1,6 +1,6 @@
 import logging
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, AsyncIterable, Generic, Optional
 
@@ -283,7 +283,12 @@ class LegacyMUC(
         maxchars = int_or_none(history_params["maxchars"])
         maxstanzas = int_or_none(history_params["maxstanzas"])
         seconds = int_or_none(history_params["seconds"])
-        since = int_or_none(history_params["since"])
+        try:
+            since = self.xmpp.plugin["xep_0082"].parse(history_params["since"])
+        except ValueError:
+            since = None
+        if seconds:
+            since = datetime.now() - timedelta(seconds=seconds)
         if equals_zero(maxchars) or equals_zero(maxstanzas):
             log.debug("Joining client does not want any MUC history")
         else:
@@ -292,7 +297,6 @@ class LegacyMUC(
                 user_full_jid,
                 maxchars=maxchars,
                 maxstanzas=maxstanzas,
-                seconds=seconds,
                 since=since,
             )
         self._make_subject_message(user_full_jid).send()
@@ -320,7 +324,7 @@ class LegacyMUC(
         maxchars: Optional[int] = None,
         maxstanzas: Optional[int] = None,
         seconds: Optional[int] = None,
-        since: Optional[int] = None,
+        since=None,
     ):
         raise NotImplementedError
 
