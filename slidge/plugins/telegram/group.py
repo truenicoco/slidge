@@ -130,9 +130,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         since: Optional[datetime] = None,
     ):
         for m in await self.fetch_history(50):
-            part = await self.participant_by_tg_user(
-                await self.session.tg.get_user(m.sender_id.user_id)
-            )
+            part = await self.participant_by_sender_id(m.sender_id)
             await part.send_tg_message(m, full_jid=full_jid)
 
     async def fetch_history(self, n: int):
@@ -165,6 +163,14 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
             last_message_id = fetched[-1].id
 
         return reversed(messages)
+
+    async def participant_by_sender_id(self, sender_id: tgapi.MessageSender):
+        if isinstance(sender_id, tgapi.MessageSenderUser):
+            return await self.participant_by_tg_user(
+                await self.session.tg.api.get_user(sender_id.user_id)
+            )
+        else:
+            return await self.participant_system()
 
 
 class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):

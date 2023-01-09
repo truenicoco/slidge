@@ -127,13 +127,7 @@ class TelegramClient(aiotdlib.Client):
                 return
 
         muc = await self.bookmarks.by_legacy_id(msg.chat_id)
-        sender = msg.sender_id
-        if isinstance(sender, tgapi.MessageSenderUser):
-            participant = await muc.participant_by_tg_user(
-                await self.api.get_user(sender.user_id)
-            )
-        else:
-            participant = await muc.participant_system()
+        participant = await muc.participant_by_sender_id(msg.sender_id)
         await participant.send_tg_message(msg)
 
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):
