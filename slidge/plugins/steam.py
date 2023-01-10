@@ -235,6 +235,7 @@ class Session(
                     Contact.send_text,
                     body=msg.body.message,
                     legacy_msg_id=msg.body.rtime32_server_timestamp,
+                    carbon=msg.body.local_echo
                 ),
             )
 
