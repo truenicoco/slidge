@@ -91,12 +91,7 @@ class SlidgeTest(SlixTest):
 
     @classmethod
     def tearDownClass(cls):
-        BaseSession.reset_subclass()
-        BaseGateway.reset_subclass()
-        LegacyRoster.reset_subclass()
-        LegacyContact.reset_subclass()
-        LegacyMUC.reset_subclass()
-        LegacyBookmarks.reset_subclass()
+        reset_subclasses()
         user_store._users = None
 
     def next_sent(self):
@@ -243,3 +238,19 @@ def find_subclass(o, parent, base_ok=False):
             return parent
         else:
             raise RuntimeError
+
+
+def reset_subclasses():
+    """
+    Reset registered subclasses between test classes.
+
+    Needed because these classes are meant to only be subclassed once and raise
+    exceptions otherwise.
+    """
+    BaseSession.reset_subclass()
+    BaseGateway.reset_subclass()
+    LegacyRoster.reset_subclass()
+    LegacyContact.reset_subclass()
+    LegacyMUC.reset_subclass()
+    LegacyBookmarks.reset_subclass()
+    LegacyParticipant.reset_subclass()
