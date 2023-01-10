@@ -41,4 +41,12 @@ def discord():
 
 
 def whatsapp():
+    # create empty python modules in case the whatsapp gopy files have not
+    # been generated, (eg, on readthedocs)
+    generated_dir = Path("..") / "slidge" / "plugins" / "whatsapp" / "generated"
+    if not generated_dir.exists():
+        generated_dir.mkdir()
+        for f in "whatsapp", "go":
+            path = (generated_dir / f).with_suffix(".py")
+            path.write_text("def __getattr__(name): return")
     return _parser("whatsapp")
