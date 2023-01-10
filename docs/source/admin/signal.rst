@@ -8,5 +8,8 @@ running slidge must have the permission to access its socket.
   If you installed slidge and signald with apt/dpkg, add the slidge user to the signald group
   to ensure proper permissions.
 
-Launch slidge with ``--signald-socket /path/to/signald.sock`` (defaults to ``/signald/signald.sock``, which
-makes sense in a container context).
+
+.. argparse::
+   :filename: source/argparsers.py
+   :func: signal
+   :prog: slidge --legacy-module slidge.plugins.signal

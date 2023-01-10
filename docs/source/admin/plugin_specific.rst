@@ -7,3 +7,6 @@ Most plugins work without further configurations, but some require a little more
 .. toctree::
    signal
    telegram
+   discord
+   facebook
+   whatsapp
