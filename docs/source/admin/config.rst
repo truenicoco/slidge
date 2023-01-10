@@ -5,7 +5,7 @@ Configuration
 
 .. note::
   For the debian package, edit the ``/etc/slidge/conf.d/common.conf`` and
-  ``/etc/slidge/superduper.conf`` files
+  ``/etc/slidge/*.conf`` files
 
 .. argparse::
    :module: slidge.__main__
