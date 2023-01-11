@@ -11,11 +11,12 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    name: mirror
     steps:
       - name: mirror
-        id: mirror
-        uses: bridgelightcloud/github-mirror-action@v2
-        with:
-          origin: ''
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --bare "https://truenicoco:${GITHUB_TOKEN}@github.com/truenicoco/slidge" . || exit 1
+          git remote add --mirror=fetch mirror https://git.sr.ht/~nicoco/slidge || exit 1
+          git fetch mirror +refs/heads/*:refs/remotes/origin/* || exit 1
+          git push --force --mirror --prune origin || exit 1
