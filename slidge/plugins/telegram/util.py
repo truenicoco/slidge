@@ -76,24 +76,30 @@ class TelegramToXMPPMixin:
                 if self.is_group and not reply_self:
                     muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
                     if sender_user_id is None:
+                        reply_to_fallback = ""
                         reply_to_author = await muc.participant_system()
+                    elif sender_user_id == await self.session.tg.get_my_id():
+                        reply_to_author = self.session.user.jid
+                        reply_to_fallback = f"{muc.user_nick}:\n"
                     else:
                         reply_to_author = await muc.participant_by_tg_user_id(
                             sender_user_id
                         )
+                        reply_to_fallback = f"{reply_to_author.contact.name}:\n"
                 else:
+                    reply_to_fallback = ""
                     reply_to_author = None
 
                 if isinstance(reply_to_content, tgapi.MessageText):
-                    reply_to_fallback = reply_to_content.text.text
+                    reply_to_fallback += reply_to_content.text.text
                 elif isinstance(reply_to_content, tgapi.MessageAnimatedEmoji):
-                    reply_to_fallback = reply_to_content.animated_emoji.sticker.emoji
+                    reply_to_fallback += reply_to_content.animated_emoji.sticker.emoji
                 elif isinstance(reply_to_content, tgapi.MessageSticker):
-                    reply_to_fallback = reply_to_content.sticker.emoji
+                    reply_to_fallback += reply_to_content.sticker.emoji
                 elif best_file := get_best_file(reply_to_content):
-                    reply_to_fallback = f"Attachment {best_file.id}"
+                    reply_to_fallback += f"Attachment {best_file.id}"
                 else:
-                    reply_to_fallback = "[unsupported by slidge]"
+                    reply_to_fallback += "[unsupported by slidge]"
         else:
             # if reply_to = 0, telegram really means "None"
             reply_to = None
