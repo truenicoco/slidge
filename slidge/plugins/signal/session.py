@@ -207,11 +207,16 @@ class Session(
                     carbon=True,
                 )
             if (reaction := sent_msg.reaction) is not None:
-                contact.react(
-                    reaction.targetSentTimestamp,
-                    () if reaction.remove else reaction.emoji,
-                    carbon=True,
-                )
+                try:
+                    contact.react(
+                        reaction.targetSentTimestamp,
+                        () if reaction.remove else reaction.emoji,
+                        carbon=True,
+                    )
+                except ValueError as e:
+                    contact.send_text(
+                        f"/me tried to react with an invalid emoji: {e}", carbon=True
+                    )
             if (delete := sent_msg.remoteDelete) is not None:
                 contact.retract(delete.target_sent_timestamp, carbon=True)
 
