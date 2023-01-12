@@ -72,10 +72,7 @@ class TelegramClient(aiotdlib.Client):
             await handler(update)
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
-        if (msg := update.message).is_channel_post:
-            self.log.debug("Ignoring channel post")
-            return
-
+        msg = update.message
         if not await self.is_private_chat(msg.chat_id):
             return await self.handle_group_message(msg)
 
