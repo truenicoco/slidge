@@ -6,9 +6,9 @@ config system, for plugins, so they can be used to generate the docs.
 import importlib
 from pathlib import Path
 
-from slidge.util.conf import ConfigModule
-from slidge.util.test import reset_subclasses
 from slidge.core import config
+from slidge.util.conf import ConfigModule
+from slidge.util.test import reset_subclasses  # type:ignore
 
 # required for plugins that use it in their config obj
 config.HOME_DIR = Path("/var/lib/slidge/${SLIDGE_JID}/")

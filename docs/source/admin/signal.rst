@@ -10,6 +10,6 @@ running slidge must have the permission to access its socket.
 
 
 .. argparse::
-   :filename: source/argparsers.py
+   :module: slidge.util.argparsers
    :func: signal
    :prog: slidge --legacy-module slidge.plugins.signal

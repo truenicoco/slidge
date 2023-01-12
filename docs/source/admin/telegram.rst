@@ -7,6 +7,6 @@ Slidge uses the official telegram library: `tdlib <https://tdlib.github.io/td/>`
 
 
 .. argparse::
-   :filename: source/argparsers.py
+   :module: slidge.util.argparsers
    :func: telegram
    :prog: slidge --legacy-module slidge.plugins.telegram

@@ -2,6 +2,6 @@ Facebook
 --------
 
 .. argparse::
-   :filename: source/argparsers.py
+   :module: slidge.util.argparsers
    :func: facebook
    :prog: slidge --legacy-module slidge.plugins.facebook

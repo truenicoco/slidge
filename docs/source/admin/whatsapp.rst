@@ -2,6 +2,6 @@ Whatsapp
 --------
 
 .. argparse::
-   :filename: source/argparsers.py
+   :module: slidge.util.argparsers
    :func: whatsapp
    :prog: slidge --legacy-module slidge.plugins.whatsapp

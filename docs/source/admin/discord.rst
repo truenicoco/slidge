@@ -2,6 +2,6 @@ Discord
 -------
 
 .. argparse::
-   :filename: source/argparsers.py
+   :module: slidge.util.argparsers
    :func: discord
    :prog: slidge --legacy-module slidge.plugins.discord
