@@ -11,6 +11,7 @@ INI file, eg ``debug=true``.
 """
 import importlib
 import logging
+import os
 import signal
 from pathlib import Path
 
@@ -40,7 +41,10 @@ class SigTermInterrupt(Exception):
 
 def get_configurator():
     p = configargparse.ArgumentParser(
-        default_config_files=["/etc/slidge/conf.d/*.conf"], description=__doc__
+        default_config_files=os.getenv(
+            "SLIDGE_CONF_DIR", "/etc/slidge/conf.d/*.conf"
+        ).split(":"),
+        description=__doc__,
     )
     p.add_argument(
         "-c",
