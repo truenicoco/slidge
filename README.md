@@ -2,6 +2,7 @@ Slidge 🛷
 ========
 
 [Home](https://sr.ht/~nicoco/slidge) |
+[Docs](https://slidge.im) |
 [Source](https://sr.ht/~nicoco/slidge/sources) |
 [Issues](https://sr.ht/~nicoco/slidge/trackers) |
 [Patches](https://lists.sr.ht/~nicoco/public-inbox) |
@@ -9,7 +10,6 @@ Slidge 🛷
 
 Turn any XMPP client into that fancy multiprotocol chat app that every cool kid want.
 
-[![Documentation status](https://readthedocs.org/projects/slidge/badge/?version=latest)](https://slidge.readthedocs.io/)
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
 [![Debian package](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
