@@ -143,6 +143,8 @@ class TelegramToXMPPMixin:
                 return
             muc = await self.session.bookmarks.by_legacy_id(msg.chat_id)
             await muc.update_subject_from_msg()
+        elif isinstance(content, tgapi.MessageCustomServiceAction):
+            self.send_text(body=content.text, **kwargs)
         else:
             self.send_text(
                 "/me tried to send an unsupported content. "
