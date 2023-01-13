@@ -16,7 +16,7 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 from slidge.core.adhoc import RegistrationType
 
-ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
+ASSETS_DIR = Path(__file__).parent.parent.parent / "dev" / "assets"
 
 
 class Bookmarks(LegacyBookmarks):

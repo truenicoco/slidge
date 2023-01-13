@@ -10,8 +10,8 @@ services:
       - 127.0.0.1:8888:80
       - 127.0.0.1:8065:8065
     volumes:
-      - ./confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
-      - ./confs/mod_privilege.lua:/var/lib/prosody/custom_plugins/share/lua/5.2/mod_privilege.lua
+      - ./dev/confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
+      - ./dev/confs/mod_privilege.lua:/var/lib/prosody/custom_plugins/share/lua/5.2/mod_privilege.lua
 
   slidge-dummy:
     build:
@@ -25,7 +25,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
 
@@ -40,7 +40,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-tg.ini:/slidge-tg.ini
+      - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -58,7 +58,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/signald:/signald
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
       - signald
@@ -74,7 +74,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -91,7 +91,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
 
@@ -106,7 +106,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -123,7 +123,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
 
@@ -138,7 +138,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -156,7 +156,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
 
@@ -174,7 +174,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
-      - ./confs/slidge-example.ini:/slidge-example.ini
+      - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
 
@@ -217,7 +217,7 @@ services:
     network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:rw
-      - ./confs/movim.env:/var/www/html/.env:ro
+      - ./dev/confs/movim.env:/var/www/html/.env:ro
     depends_on:
       postgresql:
         condition: service_healthy
@@ -234,7 +234,7 @@ services:
     network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:ro
-      - ./confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dev/confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - movim
 
@@ -242,4 +242,4 @@ services:
     image: docker.io/mattermost/mattermost-preview
     network_mode: service:prosody
     volumes:
-      - ./confs/mattermost-mysql-darwin.cnf:/etc/mysql/mysql.conf.d/slidge.cnf
+      - ./dev/confs/mattermost-mysql-darwin.cnf:/etc/mysql/mysql.conf.d/slidge.cnf

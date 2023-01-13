@@ -100,7 +100,7 @@ class TestPubSubAvatar(SlixTest):
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
 
     def advertise_avatar(self):
-        img = Path(__file__).parent.parent / "assets" / "5x5.png"
+        img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
         self.xmpp.loop.run_until_complete(
             self.pubsub.set_avatar(
                 "stan@pubsub.south.park",

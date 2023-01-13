@@ -12,7 +12,7 @@ persistent/
 .old
 requirements*
 slidge/plugins/whatsapp/generated
-confs/slidge-tg.ini
+dev/confs/slidge-tg.ini
 
 /debian/.debhelper/generated
 /debian/.debhelper/slidge

@@ -93,7 +93,7 @@ def test_slidge_conf():
     args, rest = main.get_parser().parse_known_args(
         [
             "-c",
-            str(Path(__file__).parent.parent / "confs" / "slidge-example.ini"),
+            str(Path(__file__).parent.parent / "dev" / "confs" / "slidge-example.ini"),
             "--legacy-module=slidge.plugins.dummy",
             "--jid=test.localhost",
             "--some-other",
@@ -111,7 +111,7 @@ def test_set_conf(monkeypatch):
     monkeypatch.setenv("SLIDGE_USER_JID_VALIDATOR", "cloup")
     argv = [
         "-c",
-        str(Path(__file__).parent.parent / "confs" / "slidge-example.ini"),
+        str(Path(__file__).parent.parent / "dev" / "confs" / "slidge-example.ini"),
         "--legacy-module=slidge.plugins.dummy",
         "--jid=test.localhost",
         "--ignore-delay-threshold=200",

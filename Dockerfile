@@ -142,7 +142,7 @@ USER root
 COPY --from=prosody-dev /etc/prosody/certs/localhost.crt /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 
-COPY ./assets /venv/lib/python3.9/site-packages/assets
+COPY ./dev/assets /venv/lib/python3.9/site-packages/assets
 COPY watcher.py /watcher.py
 RUN pip install watchdog[watchmedo]
 

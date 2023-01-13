@@ -26,7 +26,7 @@ tasks:
       poetry build
   - muc-bot: |
       cd slidge
-      poetry run python .builds/muc_bot.py || true  # let's not block if this fails
+      poetry run python dev/muc_bot.py || true  # let's not block if this fails
   - mypy: |
       cd slidge
       poetry run mypy slidge
