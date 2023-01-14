@@ -37,9 +37,6 @@ tasks:
       cd slidge
       poetry run black --check slidge
   - docs: |
-      set +x
-      curl -X POST -d "branches=master" -d "token=$(cat .rtd-slidge)" $RTD_URL
-      set -x
       cd slidge/docs/
       make html
       cd build/html
