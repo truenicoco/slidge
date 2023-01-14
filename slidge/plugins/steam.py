@@ -177,11 +177,20 @@ class Session(
         self.steam.on("FriendMessagesClient.IncomingMessage#1", self.on_friend_message)
         self.steam.on("FriendMessagesClient.MessageReaction#1", self.on_friend_reaction)
         self.steam.on(EMsg.ServiceMethodResponse, self.on_service_method_response)
-        self.steam.on("disconnected", self.re_login)
+        self.steam.on("disconnected", self.on_steam_disconnected)
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
         return int(xmpp_msg_id)
+
+    def on_steam_disconnected(self, msg):
+        self.logged = False
+        self.send_gateway_status(f"Disconnected from steam: '{msg}'", show="busy")
+        self.send_gateway_message(
+            f"You have been disconnected from steam: '{msg}'. "
+            f"You can try to re-login via the dedicated adhoc command, but you "
+            f"might need to unregister and re-register to the gateway component."
+        )
 
     async def login(self):
         if not self.steam.logged_on:
