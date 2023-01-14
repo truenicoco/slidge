@@ -173,16 +173,16 @@ class Session(
             self.log.debug("Using found client: %s - %s", client, client.logged_on)
             self.steam = client
 
-    @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
-        return int(xmpp_msg_id)
-
-    async def login(self):
         self.steam.on(EMsg.ClientPersonaState, self.on_persona_state)
         self.steam.on("FriendMessagesClient.IncomingMessage#1", self.on_friend_message)
         self.steam.on("FriendMessagesClient.MessageReaction#1", self.on_friend_reaction)
         self.steam.on(EMsg.ServiceMethodResponse, self.on_service_method_response)
 
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
+        return int(xmpp_msg_id)
+
+    async def login(self):
         if not self.steam.logged_on:
             # if just after registration, we're already logged on
             self.log.debug("Client is not logged on")
