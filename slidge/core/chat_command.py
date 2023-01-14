@@ -1,9 +1,9 @@
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Optional
-from urllib.parse import quote as percent_encode
+from urllib.parse import quote as url_quote
 
-from slixmpp import Message
+from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
 from ..util.db import GatewayUser
@@ -54,7 +54,7 @@ class ChatCommandProvider:
             text = ""
             for f in result_fields:
                 if f.type == "jid-single":
-                    text += f"xmpp:{percent_encode(result[f.var])}\n"
+                    text += f"xmpp:{percent_encode(JID(result[f.var]))}\n"
                 else:
                     text += f"{f.label}: {result[f.var]}\n"
             session.send_gateway_message(text)
@@ -83,9 +83,7 @@ class ChatCommandProvider:
             contacts = sorted(
                 session.contacts, key=lambda c: c.name.casefold() if c.name else ""
             )
-            t = "\n".join(
-                f"{c.name}: xmpp:{percent_encode(c.jid.bare)}" for c in contacts
-            )
+            t = "\n".join(f"{c.name}: xmpp:{percent_encode(c.jid)}" for c in contacts)
             msg.reply(t).send()
 
     async def _chat_command_register(
@@ -197,6 +195,10 @@ class ChatCommandProvider:
                 msg.reply(t).send()
             else:
                 msg.reply("No groups!").send()
+
+
+def percent_encode(jid: JID):
+    return f"{url_quote(jid.user)}@{jid.server}"  # type:ignore
 
 
 log = logging.getLogger(__name__)
