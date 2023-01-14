@@ -119,6 +119,12 @@ class AdhocProvider:
             handler=self._handle_contact_sync,
             only_users=True,
         )
+        self.add_command(
+            node="re-login",
+            name="Re-login to the legacy network",
+            handler=self._handle_re_login,
+            only_users=True,
+        )
 
     async def get_items(self, jid: JID, node: str, iq: Iq):
         all_items = self.xmpp.plugin["xep_0030"].static.get_items(jid, node, None, None)
@@ -471,6 +477,26 @@ class AdhocProvider:
         adhoc_session["notes"] = [
             ("info", f"{added} added, {removed} removed, {updated} updated")
         ]
+        adhoc_session["has_next"] = False
+        adhoc_session["completed"] = True
+
+        return adhoc_session
+
+    async def _handle_re_login(self, iq: Iq, adhoc_session: dict[str, Any]):
+        session: "BaseSession" = self.xmpp.get_session_from_stanza(iq)  # type:ignore
+
+        if session is None:
+            raise XMPPError(
+                "subscription-required", text="Register to the gateway first"
+            )
+
+        if session.logged:
+            raise XMPPError("bad-request", text="You are already logged in.")
+
+        msg = await session.login()
+        session.logged = True
+
+        adhoc_session["notes"] = [("info", f"Login response: {msg}")]
         adhoc_session["has_next"] = False
         adhoc_session["completed"] = True
 

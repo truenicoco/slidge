@@ -98,7 +98,7 @@ class BaseSession(
         self.ignore_messages = set[str]()
 
         self.contacts: LegacyRosterType = self._roster_cls(self)
-        self.never_logged = True
+        self.logged = False
 
         self.bookmarks: BookmarksType = LegacyBookmarks.get_self_or_unique_subclass()(
             self

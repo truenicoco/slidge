@@ -475,7 +475,7 @@ class BaseGateway(
             )
         else:
             log.info(f"Login success for %s", session.user)
-            session.never_logged = False
+            session.logged = True
             if status is None:
                 session.send_gateway_status("Logged in", show="chat")
             else:

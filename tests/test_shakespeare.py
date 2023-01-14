@@ -404,6 +404,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
                 <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
                 <item jid="aim.shakespeare.lit" node="sync-contacts" name="Sync XMPP roster"/>
+                <item jid="aim.shakespeare.lit" node="re-login" name="Re-login to the legacy network"/>
               </query>
             </iq>
             """
