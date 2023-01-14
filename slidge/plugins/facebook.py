@@ -362,11 +362,19 @@ class Session(
                             or a.image_info.uri_map.get(0)
                         )
                     except AttributeError:
-                        log.warning("Unhandled attachment: %s", a)
-                        contact.send_text(
-                            "/me sent an attachment that slidge does not support"
-                        )
-                        continue
+                        media_id = getattr(a, "media_id", None)
+                        if media_id:
+                            url = await self.api.get_file_url(
+                                thread_key.thread_fbid or thread_key.other_user_id,
+                                msg_id,
+                                media_id,
+                            )
+                        else:
+                            log.warning("Unhandled attachment: %s", a)
+                            contact.send_text(
+                                "/me sent an attachment that slidge does not support"
+                            )
+                            continue
                     if url is None:
                         if last:
                             contact.send_text(
