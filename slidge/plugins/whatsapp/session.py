@@ -30,7 +30,10 @@ MESSAGE_PAIR_SUCCESS = (
     "re-registered from your main device."
 )
 
-MESSAGE_LOGGED_OUT = "You have been logged out, please re-scan the QR code on your main device to log in."
+MESSAGE_LOGGED_OUT = (
+    "You have been logged out, please use the re-login adhoc command "
+    "and re-scan the QR code on your main device."
+)
 
 
 class Session(
@@ -123,10 +126,10 @@ class Session(
                     "We thought we were connected but apparently we weren't?"
                 )
         elif event == whatsapp.EventLoggedOut:
+            self.logged = False
             self._connected = self.xmpp.loop.create_future()
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
-            await self.login()
         elif event == whatsapp.EventContactSync:
             contact = await self.contacts.by_legacy_id(data.Contact.JID)
             contact.name = data.Contact.Name
