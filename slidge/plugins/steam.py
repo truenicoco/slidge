@@ -177,6 +177,7 @@ class Session(
         self.steam.on("FriendMessagesClient.IncomingMessage#1", self.on_friend_message)
         self.steam.on("FriendMessagesClient.MessageReaction#1", self.on_friend_reaction)
         self.steam.on(EMsg.ServiceMethodResponse, self.on_service_method_response)
+        self.steam.on("disconnected", self.re_login)
 
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
