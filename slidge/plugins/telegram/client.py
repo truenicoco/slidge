@@ -227,7 +227,7 @@ class TelegramClient(aiotdlib.Client):
         self, update: tgapi.UpdateMessageInteractionInfo
     ):
         if not await self.is_private_chat(update.chat_id):
-            return
+            return await self.react_group(update)
 
         contact = await self.session.contacts.by_legacy_id(update.chat_id)
         me = await self.get_my_id()
@@ -267,6 +267,26 @@ class TelegramClient(aiotdlib.Client):
 
             contact.react(update.message_id, contact_reactions)
             contact.react(update.message_id, user_reactions, carbon=True)
+
+    async def react_group(self, update: tgapi.UpdateMessageInteractionInfo):
+        muc = await self.bookmarks.by_legacy_id(update.chat_id)
+        if update.interaction_info is None:
+            while True:
+                try:
+                    reacter = muc.reactions[update.message_id].pop()
+                except KeyError:
+                    return
+                reacter.react(update.message_id)
+
+        for reaction in update.interaction_info.reactions:
+            emoji = reaction.reaction
+            for sender_id in reaction.recent_sender_ids:
+                if isinstance(sender_id, tgapi.MessageSenderUser):
+                    reacter = await muc.participant_by_tg_user_id(sender_id.user_id)
+                else:
+                    reacter = await muc.participant_system()
+                muc.reactions[update.message_id].add(reacter)
+                reacter.react(update.message_id, emoji)
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently

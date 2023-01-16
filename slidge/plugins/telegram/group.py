@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
@@ -28,6 +29,10 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     name = "unnamed"
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.reactions = defaultdict[int, set[Participant]](set)
 
     async def join(self, join_presence):
         self.user_nick = await self.session.my_name
@@ -185,3 +190,6 @@ class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):
         p = Participant(muc, nick)
         p.contact = await muc.session.contacts.by_legacy_id(user.id)
         return p
+
+    def __hash__(self):
+        return self.contact.legacy_id
