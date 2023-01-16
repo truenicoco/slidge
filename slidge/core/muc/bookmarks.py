@@ -1,4 +1,4 @@
-from typing import Generic, Type
+from typing import Generic, Optional, Type
 
 from slixmpp import JID
 from slixmpp.jid import _unescape_node
@@ -24,8 +24,10 @@ class LegacyBookmarks(
 
         self._muc_class: Type[LegacyMUC] = LegacyMUC.get_self_or_unique_subclass()
 
+        self._user_nick: Optional[str] = None
+
     def set_username(self, nick: str):
-        self._muc_class.user_nick = nick
+        self._user_nick = nick
 
     def __iter__(self):
         return iter(self._mucs_by_legacy_id.values())
@@ -47,6 +49,8 @@ class LegacyBookmarks(
             legacy_id = await self.jid_local_part_to_legacy_id(local_part)
             self.session.log.debug("%r is group %r", local_part, legacy_id)
             muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
+            if self._user_nick:
+                muc.user_nick = self._user_nick
             await muc.backfill()
             self.session.log.debug("MUC created: %r", muc)
             self._mucs_by_legacy_id[legacy_id] = muc
@@ -68,6 +72,8 @@ class LegacyBookmarks(
                 legacy_id=legacy_id,
                 jid=jid,
             )
+            if self._user_nick:
+                muc.user_nick = self._user_nick
             await muc.backfill()
             self.log.debug("MUC CLASS: %s", self._muc_class)
 
