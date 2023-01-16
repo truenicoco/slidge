@@ -456,17 +456,37 @@ class Session(
 
     @handle_unregistered_recipient
     async def react(
-        self, legacy_msg_id: int, emojis: list[str], c: Union["Contact", "MUC"]
+        self, legacy_msg_id: int, emojis: list[str], chat: Union["Contact", "MUC"]
     ):
-        address, group = self._get_args_from_entity(c)
-        if group:
-            return
-        c = cast("Contact", c)
+        address, group = self._get_args_from_entity(chat)
+        if legacy_msg_id in self.sent:
+            target_author = sigapi.JsonAddressv1(number=self.phone)
+        else:
+            if chat.is_group:
+                chat = cast("MUC", chat)
+                if legacy_msg_id in self.sent_in_muc:
+                    target_author = sigapi.JsonAddressv1(number=self.phone)
+                else:
+                    target_author = chat.sent.get(legacy_msg_id)
+                if target_author is None:
+                    self.log.warning(
+                        "Could not the message author to react to %s", legacy_msg_id
+                    )
+                    return
+            else:
+                chat = cast("Contact", chat)
+                target_author = chat.signal_address
+
+        if chat.is_group:
+            recipient_address = None
+        else:
+            chat = cast("Contact", chat)
+            recipient_address = chat.signal_address
 
         remove = len(emojis) == 0
         if remove:
             try:
-                emoji = c.user_reactions.pop(legacy_msg_id)
+                emoji = chat.user_reactions.pop(legacy_msg_id)
             except KeyError:
                 self.send_gateway_message(
                     f"Slidge failed to remove your reactions on message '{legacy_msg_id}'"
@@ -481,14 +501,12 @@ class Session(
 
         response = await (await self.signal).react(
             username=self.phone,
-            recipientAddress=c.signal_address,
+            recipientAddress=recipient_address,
             recipientGroupId=group,
             reaction=sigapi.JsonReactionv1(
                 emoji=emoji,
                 remove=remove,
-                targetAuthor=sigapi.JsonAddressv1(number=self.phone)
-                if legacy_msg_id in self.sent
-                else c.signal_address,
+                targetAuthor=target_author,
                 targetSentTimestamp=legacy_msg_id,
             ),
         )
@@ -499,7 +517,7 @@ class Session(
             or result.proof_required_failure
         ):
             raise XMPPError(str(result))
-        c.user_reactions[legacy_msg_id] = emoji
+        chat.user_reactions[legacy_msg_id] = emoji
 
     @handle_unregistered_recipient
     async def retract(self, legacy_msg_id: int, c: "Contact"):

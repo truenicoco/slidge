@@ -35,6 +35,8 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.sent = dict[int, sigapi.JsonAddressv1]()
+        # keys = msg timestamp; vals = single character emoji
+        self.user_reactions = dict[int, str]()
 
     async def get_participants(self):
         group = await (await self.session.signal).get_group(
@@ -52,9 +54,6 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
         p.contact = contact
         p.signal_address = contact.signal_address
         return p
-
-    async def fill_history(self, *_, **__):
-        pass
 
 
 class Bookmarks(LegacyBookmarks["Session", MUC, str]):
