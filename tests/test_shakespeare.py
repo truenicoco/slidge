@@ -612,6 +612,7 @@ class TestPrivilegeOld(SlidgeTest):
                   <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@shakespeare.lit">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
+                    <active xmlns="http://jabber.org/protocol/chatstates"/>
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
                   </message>
                 </forwarded>
@@ -689,6 +690,7 @@ class TestPrivilege(SlidgeTest):
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
+                    <active xmlns="http://jabber.org/protocol/chatstates"/>
                   </message>
                 </forwarded>
               </privilege>

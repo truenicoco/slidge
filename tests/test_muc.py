@@ -673,6 +673,7 @@ class TestMuc(SlidgeTest):
                      to='romeo@montague.lit/gajim'
                      type='groupchat'>
                 <body>the body</body>
+                <active xmlns="http://jabber.org/protocol/chatstates"/>
                 <markable xmlns="urn:xmpp:chat-markers:0"/>
                 <stanza-id xmlns="urn:xmpp:sid:0"
                      id="XXX"
@@ -702,6 +703,7 @@ class TestMuc(SlidgeTest):
                          to='romeo@montague.lit/gajim'
                          type='groupchat'>
                     <body>the body</body>
+                    <active xmlns="http://jabber.org/protocol/chatstates"/>
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
                     <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/firstwitch"/>
                     <stanza-id xmlns="urn:xmpp:sid:0"
@@ -735,6 +737,7 @@ class TestMuc(SlidgeTest):
                          to='romeo@montague.lit/gajim'
                          type='groupchat'>
                     <body>the body</body>
+                    <active xmlns="http://jabber.org/protocol/chatstates"/>
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
                     <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/secondwitch"/>
                     <stanza-id xmlns="urn:xmpp:sid:0"
@@ -777,6 +780,7 @@ class TestMuc(SlidgeTest):
                     <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
                   		<body start="0" end="9"/>
                    	</fallback>
+                   	<active xmlns="http://jabber.org/protocol/chatstates"/>
                 </message>
                 """,
             use_values=False,

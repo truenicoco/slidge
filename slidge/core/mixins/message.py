@@ -21,7 +21,6 @@ class MessageMaker(BaseSender):
     mtype: MessageTypes = NotImplemented
     STRIP_SHORT_DELAY = False
     USE_STANZA_ID = False
-    _is_composing = False
 
     def _make_message(
         self,
@@ -46,12 +45,9 @@ class MessageMaker(BaseSender):
             msg_cls = self.xmpp.Message  # type:ignore
         msg = msg_cls(sfrom=mfrom, stype=self.mtype, sto=mto, **kwargs)
         if body:
-            if self._is_composing:
-                state = "active"
-                self._is_composing = False
             msg["body"] = body
+            state = "active"
         if state:
-            self._is_composing = state == "composing"
             msg["chat_state"] = state
         for hint in hints:
             msg.enable(hint)
