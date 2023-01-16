@@ -190,35 +190,41 @@ class Session(
                 log.debug("No sent message in this sync message")
                 return
             sent_msg = sent.message
-            if sent_msg.group or sent_msg.groupV2:
+            if sent_msg.group:
+                # group V1 not supported
                 return
+            elif g := sent_msg.groupV2:
+                muc = await self.bookmarks.by_legacy_id(g.id)
+                sender = await muc.get_user_participant()
+                cb_kwargs = {}
+            else:
+                sender = await self.contacts.by_json_address(sent.destination)
+                cb_kwargs = {"carbon": True}
 
-            contact = await self.contacts.by_json_address(sent.destination)
-
-            await contact.send_attachments(
-                sent_msg.attachments, sent_msg.timestamp, carbon=True
+            await sender.send_attachments(
+                sent_msg.attachments, sent_msg.timestamp, **cb_kwargs
             )
 
             if (body := sent_msg.body) is not None:
-                contact.send_text(
+                sender.send_text(
                     body=body,
                     when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
                     legacy_id=sent_msg.timestamp,
-                    carbon=True,
+                    **cb_kwargs,
                 )
             if (reaction := sent_msg.reaction) is not None:
                 try:
-                    contact.react(
+                    sender.react(
                         reaction.targetSentTimestamp,
                         () if reaction.remove else reaction.emoji,
                         carbon=True,
                     )
                 except ValueError as e:
-                    contact.send_text(
-                        f"/me tried to react with an invalid emoji: {e}", carbon=True
+                    sender.send_text(
+                        f"/me tried to react with an invalid emoji: {e}", **cb_kwargs
                     )
             if (delete := sent_msg.remoteDelete) is not None:
-                contact.retract(delete.target_sent_timestamp, carbon=True)
+                sender.retract(delete.target_sent_timestamp, **cb_kwargs)
 
         contact = await self.contacts.by_json_address(msg.source)
 
