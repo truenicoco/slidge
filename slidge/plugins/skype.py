@@ -299,6 +299,7 @@ def handle_thread_exception(args: threading.ExceptHookArgs):
     ):
         session = thread.session
         log.info("Connection error, attempting re-login for %s", session.user)
+        session.logged = False
         thread.stop()
         session.re_login()
     else:
