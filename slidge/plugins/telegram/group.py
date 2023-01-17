@@ -113,14 +113,16 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         return msg_id
 
     async def participant_by_tg_user(self, user: tgapi.User) -> "Participant":
-        return await Participant.by_tg_user(self, user)
+        return await self.get_participant_by_contact(
+            await self.session.contacts.by_legacy_id(user.id)
+        )
 
     async def participant_system(self) -> "Participant":
         return await self.get_participant("")
 
     async def participant_by_tg_user_id(self, user_id: int) -> "Participant":
-        return await Participant.by_tg_user(
-            self, await self.session.tg.api.get_user(user_id)
+        return await self.participant_by_tg_user(
+            await self.session.tg.api.get_user(user_id)
         )
 
     async def get_tg_chat(self):
@@ -182,14 +184,6 @@ class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.chat_id = self.muc.legacy_id
-        self.session.log.debug("PARTICIPANT-N: %s", self.muc.n_participants)
-
-    @staticmethod
-    async def by_tg_user(muc: MUC, user: tgapi.User):
-        nick = " ".join((user.first_name, user.last_name)).strip()
-        p = Participant(muc, nick)
-        p.contact = await muc.session.contacts.by_legacy_id(user.id)
-        return p
 
     def __hash__(self):
         return self.contact.legacy_id
