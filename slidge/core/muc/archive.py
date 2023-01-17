@@ -106,6 +106,8 @@ class HistoryMessage:
         del stanza["markable"]
         del stanza["hint"]
         del stanza["chat_state"]
+        if not stanza["body"]:
+            del stanza["body"]
 
         self.stanza_component_ns = stanza
         stanza = copy(stanza)
