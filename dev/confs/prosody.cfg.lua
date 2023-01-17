@@ -146,3 +146,4 @@ Component "upload.localhost" "http_file_share"
 
 plugin_server = "https://modules.prosody.im/rocks/"
 installer_plugin_path = "/usr/local/lib/prosody/"
+http_file_share_daily_quota = 1024*1024*1024
