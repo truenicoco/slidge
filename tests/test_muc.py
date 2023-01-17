@@ -380,87 +380,11 @@ class TestMuc(SlidgeTest):
         )
 
     def test_join_group(self):
-        muc = self.get_private_muc("coven")
+        muc = self.get_private_muc("room-private")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         participant = self.xmpp.loop.run_until_complete(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
-        self.recv(
-            """
-            <presence
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit/thirdwitch'>
-              <x xmlns='http://jabber.org/protocol/muc'/>
-            </presence>
-            """
-        )
-        self.send(
-            """
-            <iq id="1"
-                from="aim.shakespeare.lit"
-                to="romeo@montague.lit/gajim"
-                type="get">
-                <query xmlns="http://jabber.org/protocol/disco#info"/>
-            </iq>
-            """
-        )
-        self.send(
-            """
-            <presence
-                from='coven@aim.shakespeare.lit/firstwitch'
-                to='romeo@montague.lit/gajim'>
-              <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='owner' role='moderator'/>
-              </x>
-            </presence>
-            """,
-        )
-        self.send(
-            """
-            <presence
-                from='coven@aim.shakespeare.lit/secondwitch'
-                to='romeo@montague.lit/gajim'>
-              <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='admin' role='moderator'/>
-              </x>
-            </presence>
-            """,
-        )
-        self.send(
-            """
-            <presence
-                id='n13mt3l'
-                from='coven@aim.shakespeare.lit/thirdwitch'
-                to='romeo@montague.lit/gajim'>
-              <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='member' role='participant'/>
-                <status code='110'/>
-              </x>
-            </presence>
-            """,
-        )
-        now_fmt = now.isoformat().replace("+00:00", "Z")
-        self.send(
-            f"""
-            <message type="groupchat" from="coven@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
-                <body>Hey</body>
-                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
-                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="coven@aim.shakespeare.lit"/>
-            </message>
-            """,
-            use_values=False,
-        )
-        self.send(
-            f"""
-            <message type="groupchat" to="romeo@montague.lit/gajim" from="coven@aim.shakespeare.lit/unknown">
-                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
-                <subject>coven</subject>
-            </message>
-            """
-        )
-
-    def test_join_channel(self):
         self.recv(
             """
             <presence
@@ -480,14 +404,14 @@ class TestMuc(SlidgeTest):
                 <query xmlns="http://jabber.org/protocol/disco#info"/>
             </iq>
             """
-        )
+        )  # slixmpp wants to update disco info
         self.send(
             """
             <presence
                 from='room-private@aim.shakespeare.lit/firstwitch'
                 to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='owner' role='moderator' jid='firstwitch@aim.shakespeare.lit/slidge'/>
+                <item affiliation='owner' role='moderator' jid="firstwitch@aim.shakespeare.lit/slidge"/>
               </x>
             </presence>
             """,
@@ -498,7 +422,7 @@ class TestMuc(SlidgeTest):
                 from='room-private@aim.shakespeare.lit/secondwitch'
                 to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='admin' role='moderator' jid='secondwitch@aim.shakespeare.lit/slidge'/>
+                <item affiliation='admin' role='moderator' jid="secondwitch@aim.shakespeare.lit/slidge"/>
               </x>
             </presence>
             """,
@@ -508,6 +432,83 @@ class TestMuc(SlidgeTest):
             <presence
                 id='n13mt3l'
                 from='room-private@aim.shakespeare.lit/thirdwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member' role='participant' jid='romeo@montague.lit/gajim'/>
+                <status code='100'/>
+                <status code='110'/>
+              </x>
+            </presence>
+            """,
+        )
+        now_fmt = now.isoformat().replace("+00:00", "Z")
+        self.send(
+            f"""
+            <message type="groupchat" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
+                <body>Hey</body>
+                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
+                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
+            </message>
+            """,
+            use_values=False,
+        )
+        self.send(
+            f"""
+            <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
+                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
+                <subject>room-private</subject>
+            </message>
+            """
+        )
+
+    def test_join_channel(self):
+        self.recv(
+            """
+            <presence
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='room-public@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc'/>
+            </presence>
+            """
+        )
+        self.send(
+            """
+            <iq id="1"
+                from="aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                type="get">
+                <query xmlns="http://jabber.org/protocol/disco#info"/>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <presence
+                from='room-public@aim.shakespeare.lit/firstwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='owner' role='moderator'/>
+              </x>
+            </presence>
+            """,
+        )
+        self.send(
+            """
+            <presence
+                from='room-public@aim.shakespeare.lit/secondwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='admin' role='moderator'/>
+              </x>
+            </presence>
+            """,
+        )
+        self.send(
+            """
+            <presence
+                id='n13mt3l'
+                from='room-public@aim.shakespeare.lit/thirdwitch'
                 to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='member' role='participant'/>

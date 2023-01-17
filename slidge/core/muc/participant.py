@@ -11,6 +11,8 @@ from slidge.core.mixins import MessageMixin, PresenceMixin
 from slidge.util import SubclassableOnce
 from slidge.util.types import LegacyMessageType, LegacyMUCType
 
+from .room import MucType
+
 
 class LegacyParticipant(
     Generic[LegacyMUCType], PresenceMixin, MessageMixin, metaclass=SubclassableOnce
@@ -53,17 +55,28 @@ class LegacyParticipant(
         *,
         last_seen: Optional[datetime] = None,
         status_codes: Optional[set[int]] = None,
+        user_full_jid: Optional[JID] = None,
         **presence_kwargs,
     ):
         p = super()._make_presence(last_seen=last_seen, **presence_kwargs)
         p["muc"]["affiliation"] = self.affiliation
         p["muc"]["role"] = self.role
         self.log.debug("Presence - contact: %r", self.contact)
-        if self.contact:
-            p["muc"]["jid"] = self.contact.jid
         codes = status_codes or set()
         if self.is_user:
             codes.add(110)
+        if self.muc.type == MucType.GROUP:
+            if self.is_user and user_full_jid:
+                p["muc"]["jid"] = user_full_jid
+                codes.add(100)
+            elif self.contact:
+                p["muc"]["jid"] = self.contact.jid
+            else:
+                self.log.warning(
+                    "Public group but no Contact or user_full_jid associated to %s",
+                    self.jid,
+                )
+
         p["muc"]["status_codes"] = codes
         return p
 
@@ -107,10 +120,14 @@ class LegacyParticipant(
         :param presence_id: set the presence ID. used internally by slidge
         """
         #  MUC status codes: https://xmpp.org/extensions/xep-0045.html#registrar-statuscodes
+        codes = set()
+        if nick_change:
+            codes.add(210)
         p = self._make_presence(
             pstatus=status,
             last_seen=last_seen,
-            status_codes={210} if nick_change else set(),
+            status_codes=codes,
+            user_full_jid=full_jid,
         )
         if presence_id:
             p["id"] = presence_id
