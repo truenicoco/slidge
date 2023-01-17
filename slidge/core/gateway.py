@@ -488,8 +488,25 @@ class BaseGateway(
         )
 
     async def _handle_admin(self, iq: Iq):
-        log.debug("MUC ADMIN request %s", iq)
-        raise XMPPError("not-authorized")
+        if iq["type"] != "get":
+            raise XMPPError("not-authorized")
+        affiliation = iq["mucadmin_query"]["item"]["affiliation"]
+
+        if not affiliation:
+            raise XMPPError("bad-request")
+
+        reply = iq.reply()
+        reply.enable("mucadmin_query")
+        muc = await self.get_muc_from_iq(iq)
+        reply = iq.reply()
+        async for participant in muc.get_participants():
+            if not participant.affiliation == affiliation:
+                continue
+            reply["mucadmin_query"].append(participant.mucadmin_item())
+        if affiliation == "member":
+            participant = await muc.get_user_participant()
+            reply["mucadmin_query"].append(participant.mucadmin_item())
+        reply.send()
 
     async def _handle_gateway_iq(self, iq: Iq):
         user = user_store.get_by_jid(iq.get_from())

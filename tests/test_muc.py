@@ -1309,3 +1309,61 @@ class TestMuc(SlidgeTest):
                 </iq>
                 """
             )
+
+    def test_get_members(self):
+        muc = self.get_private_muc()
+        muc.user_resources.add("gajim")
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
+                <query xmlns='http://jabber.org/protocol/muc#admin'>
+                    <item affiliation='admin' />
+                </query>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item nick="secondwitch" affiliation="admin" role="moderator" jid="secondwitch@aim.shakespeare.lit"/>
+              </query>
+            </iq>
+            """
+        )
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
+                <query xmlns='http://jabber.org/protocol/muc#admin'>
+                    <item affiliation='owner' />
+                </query>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+                <query xmlns="http://jabber.org/protocol/muc#admin">
+                    <item nick="firstwitch" affiliation="owner" role="moderator" jid="firstwitch@aim.shakespeare.lit"/>
+                </query>
+            </iq>
+            """
+        )
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
+                <query xmlns='http://jabber.org/protocol/muc#admin'>
+                    <item affiliation='member' />
+                </query>
+            </iq>
+            """
+        )
+        self.send(
+            """
+            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+                <query xmlns='http://jabber.org/protocol/muc#admin'>
+           	    	<item nick="thirdwitch" affiliation="member" role="participant" jid="romeo@montague.lit"/>
+                </query>
+            </iq>
+            """
+        )

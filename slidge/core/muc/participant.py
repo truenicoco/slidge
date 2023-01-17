@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Generic, Optional, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
+from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
 from slidge.core.contact import LegacyContact
@@ -99,6 +100,23 @@ class LegacyParticipant(
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
                 stanza.send()
+
+    def mucadmin_item(self):
+        item = MUCAdminItem()
+        item["nick"] = self.nickname
+        item["affiliation"] = self.affiliation
+        item["role"] = self.role
+        if self.muc.type == MucType.GROUP:
+            if self.is_user:
+                item["jid"] = self.user.bare_jid
+            elif self.contact:
+                item["jid"] = self.contact.jid.bare
+            else:
+                self.log.warning(
+                    "Public group but no Contact or user_full_jid associated to %s",
+                    self.jid,
+                )
+        return item
 
     def send_initial_presence(
         self,
