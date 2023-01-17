@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, AsyncIterable, Generic, Optional
 from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.stanza import Error as BaseError
 from slixmpp.xmlstream import ET

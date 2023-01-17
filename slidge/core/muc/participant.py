@@ -7,11 +7,10 @@ from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
-from slidge.core.contact import LegacyContact
-from slidge.core.mixins import MessageMixin, PresenceMixin
-from slidge.util import SubclassableOnce
-from slidge.util.types import LegacyMessageType, LegacyMUCType
-
+from ...util import SubclassableOnce
+from ...util.types import LegacyMessageType, LegacyMUCType
+from ..contact import LegacyContact
+from ..mixins import MessageMixin, PresenceMixin
 from .room import MucType
 
 
