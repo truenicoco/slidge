@@ -70,6 +70,8 @@ class AdhocProvider:
         self._only_admin = set[RestrictedItem]()
         self._only_users = set[RestrictedItem]()
         self._only_nonusers = set[RestrictedItem]()
+        self._only_logged = set[RestrictedItem]()
+        self._only_non_logged = set[RestrictedItem]()
 
         xmpp.plugin["xep_0030"].set_node_handler(
             "get_items",
@@ -100,6 +102,7 @@ class AdhocProvider:
             name="Search for contacts",
             handler=self._handle_search,
             only_users=True,
+            only_logged=True,
         )
         self.add_command(
             node="jabber:iq:register",
@@ -118,12 +121,14 @@ class AdhocProvider:
             name="Sync XMPP roster",
             handler=self._handle_contact_sync,
             only_users=True,
+            only_logged=True,
         )
         self.add_command(
             node="re-login",
             name="Re-login to the legacy network",
             handler=self._handle_re_login,
             only_users=True,
+            only_non_logged=True,
         )
 
     async def get_items(self, jid: JID, node: str, iq: Iq):
@@ -149,6 +154,15 @@ class AdhocProvider:
             elif restricted_item in self._only_nonusers and user:
                 continue
 
+            if restricted_item in self._only_logged:
+                session = self.xmpp.get_session_from_stanza(iq)  # type: ignore
+                if not session.logged:
+                    continue
+            elif restricted_item in self._only_non_logged:
+                session = self.xmpp.get_session_from_stanza(iq)  # type: ignore
+                if session.logged:
+                    continue
+
             filtered_items.append(item)
 
         return filtered_items
@@ -162,6 +176,8 @@ class AdhocProvider:
         only_admin=False,
         only_users=False,
         only_nonusers=False,
+        only_non_logged=False,
+        only_logged=False,
     ):
         if jid is None:
             jid = self.xmpp.boundjid
@@ -174,6 +190,10 @@ class AdhocProvider:
             self._only_users.add(item)
         if only_nonusers:
             self._only_nonusers.add(item)
+        if only_logged:
+            self._only_logged.add(item)
+        if only_non_logged:
+            self._only_non_logged.add(item)
 
         if only_users:
             handler = restrict(handler, is_user)

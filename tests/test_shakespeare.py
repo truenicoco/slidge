@@ -390,7 +390,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
 
-    def test_disco_adhoc_commands_as_user(self):
+    def test_disco_adhoc_commands_as_logged_user(self):
         self.recv(
             f"""
             <iq type='get'
@@ -411,11 +411,37 @@ class TestAimShakespeareBase(SlidgeTest):
                 <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
                 <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
                 <item jid="aim.shakespeare.lit" node="sync-contacts" name="Sync XMPP roster"/>
+              </query>
+            </iq>
+            """
+        )
+
+    def test_disco_adhoc_commands_as_non_logged_user(self):
+        self.get_romeo_session().logged = False
+        self.recv(
+            f"""
+            <iq type='get'
+                from='romeo@montague.lit/gajim'
+                to='{self.xmpp.boundjid.bare}'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq type='result'
+                to='romeo@montague.lit/gajim'
+                from='{self.xmpp.boundjid.bare}' id='1'>
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
                 <item jid="aim.shakespeare.lit" node="re-login" name="Re-login to the legacy network"/>
               </query>
             </iq>
             """
         )
+        self.get_romeo_session().logged = True
 
     def test_disco_adhoc_commands_as_admin(self):
         # monkeypatch.setattr(config, "ADMINS", ("romeo@montague.lit",))
