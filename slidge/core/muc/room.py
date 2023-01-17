@@ -352,6 +352,10 @@ class LegacyMUC(
         return p
 
     async def get_participants(self) -> AsyncIterable[LegacyParticipantType]:
+        """
+        This async generator should yield instances of Participants,
+        but *not* the user participant.
+        """
         yield NotImplemented
 
     async def _fill_history(
