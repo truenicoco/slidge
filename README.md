@@ -8,7 +8,7 @@ Slidge 🛷
 [Patches](https://lists.sr.ht/~nicoco/public-inbox) |
 [Chat](xmpp:slidge@conference.nicoco.fr?join)
 
-Turn any XMPP client into that fancy multiprotocol chat app that every cool kid want.
+Turn any XMPP client into that fancy multi-protocol chat app that every cool kid want.
 
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
 [![Debian package](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
@@ -16,10 +16,10 @@ Turn any XMPP client into that fancy multiprotocol chat app that every cool kid 
 
 Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
 It's a work in progress, but it should make
-[writing gateways to other chat networks](https://slidge.readthedocs.io/en/latest/dev/tutorial.html)
+[writing gateways to other chat networks](https://slidge.im/dev/tutorial.html)
 (*plugins*) as frictionless as possible.
 
-It comes with a few plugins included, implementing at least basic direct messaging and often more "advanced"
+It comes with a few plugins included, implementing basic direct messaging and more "advanced"
 instant messaging features:
 
 |            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | Groups[⁹] |
@@ -126,7 +126,6 @@ Related projects
 ----------------
 
 -   [Spectrum](https://www.spectrum.im/)
--   [Bitfrost](https://github.com/matrix-org/matrix-bifrost)
+-   [Bifröst](https://github.com/matrix-org/matrix-bifrost)
 -   [Mautrix](https://github.com/mautrix)
 -   [matterbridge](https://github.com/42wim/matterbridge)
--   [XMPP-discord-bridge](https://git.polynom.me/PapaTutuWawa/xmpp-discord-bridge)
