@@ -135,6 +135,13 @@ class TestAimShakespeareBase(SlidgeTest):
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
+        self.get_romeo_session().logged = True
+
+    @staticmethod
+    def get_romeo_session() -> Session:
+        return BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
 
     def test_jabber_iq_gateway(self):
         self.recv(

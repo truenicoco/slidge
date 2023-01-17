@@ -170,6 +170,7 @@ class TestMuc(SlidgeTest):
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         slidge.core.muc.room.uuid4 = slidge.core.mixins.message.uuid4 = lambda: "uuid"
+        self.get_romeo_session().logged = True
 
     def tearDown(self):
         slidge.core.muc.room.uuid4 = slidge.core.mixins.message.uuid4 = uuid.uuid4

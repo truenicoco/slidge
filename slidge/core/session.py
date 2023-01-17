@@ -143,6 +143,14 @@ class BaseSession(
         """
         return cast(LegacyMessageType, i)
 
+    def raise_if_not_logged(self):
+        if not self.logged:
+            raise XMPPError(
+                "internal-server-error",
+                etype="wait",
+                text="You are not logged to the legacy network",
+            )
+
     @classmethod
     def _from_user_or_none(cls, user):
         if user is None:
@@ -292,6 +300,7 @@ class BaseSession(
                 self.sent[legacy_msg_id] = m.get_id()
 
     async def __get_entity(self, m: Message) -> Union[LegacyContactType, LegacyMUCType]:
+        self.raise_if_not_logged()
         if m.get_type() == "groupchat":
             muc = await self.bookmarks.by_jid(m.get_to())
             if m.get_from().resource not in muc.user_resources:
@@ -459,6 +468,7 @@ class BaseSession(
             raise XMPPError(
                 "not-implemented", "This gateway does not implement multi-user chats."
             )
+        self.raise_if_not_logged()
         muc = await self.bookmarks.by_jid(p.get_to())
         log.debug("BOOKMARKS: %r", self.bookmarks.__class__)
         log.debug("JOIN MUC: %r -- %r -- %r", muc, muc.join, muc.__class__)

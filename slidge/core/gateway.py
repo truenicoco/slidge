@@ -283,6 +283,7 @@ class BaseGateway(
             raise XMPPError("registration-required")
 
         session = self.get_session_from_user(user)
+        session.raise_if_not_logged()
 
         try:
             muc = await session.bookmarks.by_jid(ito)
@@ -313,6 +314,7 @@ class BaseGateway(
             raise XMPPError("registration-required")
 
         session = self.get_session_from_user(user)
+        session.raise_if_not_logged()
 
         return await session.bookmarks.by_jid(ito)
 
