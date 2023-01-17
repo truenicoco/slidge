@@ -20,3 +20,15 @@ jobs:
           git remote add --mirror=fetch mirror https://git.sr.ht/~nicoco/slidge || exit 1
           git fetch mirror +refs/heads/*:refs/remotes/origin/* || exit 1
           git push --force --mirror --prune origin || exit 1
+      - name: codeberg
+        env:
+          CODEBERG: ${{ secrets.CODEBERG }}
+        run: |
+          mkdir ~/.ssh
+          echo "${CODEBERG}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo Adding remote
+          git remote add codeberg git@codeberg.org:nicoco/slidge.git
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          echo Pushing...
+          git -c core.sshCommand="/usr/bin/ssh -i ~/.ssh/id_rsa" push --force --mirror --prune codeberg || exit 1
