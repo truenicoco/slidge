@@ -38,12 +38,16 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
 
+    async def join(self, *a, **k):
+        await self.session.user_nick
+        await super().join(*a, **k)
+
     async def get_participants(self):
         group = await (await self.session.signal).get_group(
             account=self.session.phone, groupID=self.legacy_id
         )
         for m in group.members:
-            if m.uuid == self.session.user_uuid:
+            if m.uuid == await self.session.user_uuid:
                 continue
             contact = await self.session.contacts.by_uuid(m.uuid)
             participant = await self.get_participant_by_contact(contact)
