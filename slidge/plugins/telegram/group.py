@@ -33,11 +33,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.reactions = defaultdict[int, set[Participant]](set)
-
-    async def join(self, join_presence):
-        self.user_nick = await self.session.my_name
-        await self.update_subject_from_msg()
-        await super().join(join_presence)
+        self.session.xmpp.loop.create_task(self.update_subject_from_msg())
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
