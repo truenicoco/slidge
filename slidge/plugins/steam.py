@@ -183,11 +183,11 @@ class Session(
     def xmpp_msg_id_to_legacy_msg_id(xmpp_msg_id: str):
         return int(xmpp_msg_id)
 
-    def on_steam_disconnected(self, msg):
+    def on_steam_disconnected(self):
         self.logged = False
-        self.send_gateway_status(f"Disconnected from steam: '{msg}'", show="busy")
+        self.send_gateway_status(f"Disconnected from steam", show="busy")
         self.send_gateway_message(
-            f"You have been disconnected from steam: '{msg}'. "
+            f"You have been disconnected from steam. "
             f"You can try to re-login via the dedicated adhoc command, but you "
             f"might need to unregister and re-register to the gateway component."
         )
