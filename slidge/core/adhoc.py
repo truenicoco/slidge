@@ -513,7 +513,12 @@ class AdhocProvider:
         if session.logged:
             raise XMPPError("bad-request", text="You are already logged in.")
 
-        msg = await session.login()
+        try:
+            msg = await session.login()
+        except Exception as e:
+            raise XMPPError(
+                "internal-server-error", etype="wait", text=f"Could not login: {e}"
+            )
         session.logged = True
 
         adhoc_session["notes"] = [("info", f"Login response: {msg}")]
