@@ -45,8 +45,6 @@ class Session(
         self.user_correction_futures = dict[int, asyncio.Future]()
         self.delete_futures = dict[int, asyncio.Future]()
 
-        self.my_name: asyncio.Future[str] = self.xmpp.loop.create_future()
-
         self.tg = TelegramClient(self)
 
     @staticmethod
@@ -55,11 +53,11 @@ class Session(
 
     async def login(self):
         await self.tg.start()
-        await self.add_contacts_to_roster()
-        await self.add_groups()
         me = await self.tg.get_user(await self.tg.get_my_id())
         my_name = (me.first_name + " " + me.last_name).strip()
-        self.my_name.set_result(my_name)
+        self.bookmarks.set_username(my_name)
+        await self.add_contacts_to_roster()
+        await self.add_groups()
         return f"Connected as {my_name}"
 
     async def logout(self):
