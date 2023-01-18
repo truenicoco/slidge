@@ -32,3 +32,9 @@ jobs:
           ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
           echo Pushing...
           git -c core.sshCommand="/usr/bin/ssh -i ~/.ssh/id_rsa" push --force --mirror --prune codeberg || exit 1
+      - name: gitlab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          git remote add gitlab https://${GITLAB_TOKEN}@gitlab.com/nicocool84/slidge-mirror
+          git push --force --mirror --prune gitlab || exit 1
