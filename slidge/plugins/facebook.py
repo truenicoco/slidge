@@ -271,16 +271,15 @@ class Session(
         self.sent_messages[fb_id].add(fb_msg)
         return fb_msg.mid
 
-    async def send_file(self, url: str, chat: Contact, reply_to_msg_id=None, **kwargs):
-        async with aiohttp.ClientSession() as s:
-            async with s.get(url) as r:
-                data = await r.read()
+    async def send_file(
+        self, url: str, chat: Contact, http_response, reply_to_msg_id=None, **_
+    ):
         oti = self.mqtt.generate_offline_threading_id()
         fut = self.ack_futures[oti] = self.xmpp.loop.create_future()
         resp = await self.api.send_media(
-            data=data,
+            data=await http_response.read(),
             file_name=url.split("/")[-1],
-            mimetype=guess_type(url)[0] or "application/octet-stream",
+            mimetype=http_response.content_type,
             offline_threading_id=oti,
             chat_id=await chat.fb_id(),
             is_group=False,
