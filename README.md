@@ -126,6 +126,8 @@ Related projects
 ----------------
 
 -   [Spectrum](https://www.spectrum.im/)
+-   [telegabber](https://dev.narayana.im/narayana/telegabber)
+-   [biboumi](https://biboumi.louiz.org/)
 -   [Bifröst](https://github.com/matrix-org/matrix-bifrost)
 -   [Mautrix](https://github.com/mautrix)
 -   [matterbridge](https://github.com/42wim/matterbridge)
