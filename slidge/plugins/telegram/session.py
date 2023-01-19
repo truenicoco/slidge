@@ -157,9 +157,7 @@ class Session(
     async def add_contacts_to_roster(self):
         users = await self.tg.api.get_contacts()
         for id_ in users.user_ids:
-            contact = await self.contacts.by_legacy_id(id_)
-            await contact.add_to_roster()
-            await contact.update_info_from_user()
+            await self.contacts.by_legacy_id(id_)
 
     async def add_groups(self):
         for chat in await self.tg.get_main_list_chats_all():
@@ -213,7 +211,7 @@ class Session(
 
         await self.add_contacts_to_roster()
         contact = await self.contacts.by_legacy_id(user_id)
-        await contact.update_info_from_user()
+        await contact.update_info()
         await contact.add_to_roster()
 
         return SearchResult(

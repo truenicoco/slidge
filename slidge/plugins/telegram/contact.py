@@ -27,6 +27,7 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
         super().__init__(*a, **k)
         self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
+        self.xmpp.loop.create_task(self.update_info())
 
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()
@@ -72,7 +73,7 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
                 last_seen=datetime.now(),
             )
 
-    async def update_info_from_user(self, user: Optional[tgapi.User] = None):
+    async def update_info(self, user: Optional[tgapi.User] = None):
         if user is None:
             user = await self.session.tg.api.get_user(self.legacy_id)
         if username := user.username:
@@ -120,22 +121,10 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
             given=user.first_name, surname=user.last_name, phone=phone, full_name=name
         )
 
-    async def update_info_from_chat(self, chat: tgapi.Chat):
-        self.name = chat.title
-        if isinstance(chat.photo, tgapi.ChatPhotoInfo):
-            if (local := chat.photo.small.local) and (path := local.path):
-                with open(path, "rb") as f:
-                    self.avatar = f.read()
-            else:
-                response = await self.session.tg.api.download_file(
-                    file_id=chat.photo.small.id,
-                    synchronous=True,
-                    priority=1,
-                    offset=0,
-                    limit=0,
-                )
-                with open(response.local.path, "rb") as f:
-                    self.avatar = f.read()
+        if user.is_contact:
+            await self.add_to_roster()
+
+        self.update_status(user.status)
 
 
 class Roster(LegacyRoster["Session", "Contact", int]):

@@ -219,9 +219,7 @@ class TelegramClient(aiotdlib.Client):
         if u.id == await self.get_my_id():
             return
         contact = await self.session.contacts.by_legacy_id(u.id)
-        await contact.update_info_from_user(u)
-        if u.is_contact:
-            await contact.add_to_roster()
+        await contact.update_info(u)
 
     async def handle_MessageInteractionInfo(
         self, update: tgapi.UpdateMessageInteractionInfo
