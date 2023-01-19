@@ -100,5 +100,12 @@ class Roster(LegacyRoster["Session", Contact, str]):
         if jid_username in self.session.bookmarks.known_groups:
             raise XMPPError("bad-request", "This is a group ID, not a contact ID")
 
+    async def fill(self):
+        session = self.session
+        profiles = await (await session.signal).list_contacts(account=session.phone)
+        for profile in profiles.profiles:
+            # contacts are added automatically if their profile could be resolved
+            await self.by_json_address(profile.address)
+
 
 log = logging.getLogger(__name__)

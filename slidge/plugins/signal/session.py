@@ -136,8 +136,6 @@ class Session(
         self.user_nick.set_result(nick)
         self.user_uuid.set_result(profile.address.uuid)
         self.bookmarks.set_username(nick)
-        await self.add_contacts_to_roster()
-        await self.add_groups()
         return f"Connected as {self.phone}"
 
     async def on_websocket_connection_state(
@@ -153,26 +151,6 @@ class Session(
     async def logout(self):
         await (await self.signal).unsubscribe(account=self.phone)
 
-    async def add_contacts_to_roster(self):
-        """
-        Populate a user's roster
-        """
-        profiles = await (await self.signal).list_contacts(account=self.phone)
-        for profile in profiles.profiles:
-            # contacts are added automatically if their profile could be resolved
-            await self.contacts.by_json_address(profile.address)
-
-    async def add_groups(self):
-        groups = await (await self.signal).list_groups(account=self.phone)
-        self.log.debug("GROUPS: %r", groups)
-        for group in groups.groups:
-            muc = await self.bookmarks.by_legacy_id(group.id)
-            muc.type = MucType.GROUP
-            muc.DISCO_NAME = group.title
-            muc.subject = group.description
-            muc.description = group.description
-            muc.n_participants = len(group.members)
-
     async def on_signal_message(self, msg: sigapi.IncomingMessagev1):
         """
         User has received 'something' from signal
@@ -182,7 +160,7 @@ class Session(
         if (sync_msg := msg.sync_message) is not None:
             if sync_msg.contacts is not None and msg.sync_message.contactsComplete:
                 log.debug("Received a sync contact updates")
-                await self.add_contacts_to_roster()
+                await self.contacts.fill()
 
             if (sent := sync_msg.sent) is None:
                 # Probably a 'message read' marker

@@ -77,3 +77,15 @@ class Bookmarks(LegacyBookmarks["Session", MUC, str]):
         local_part = legacy_id.lower().translate(ESCAPE_TABLE)
         self.known_groups[local_part] = legacy_id
         return local_part
+
+    async def fill(self):
+        session = self.session
+        groups = await (await session.signal).list_groups(account=session.phone)
+        self.log.debug("GROUPS: %r", groups)
+        for group in groups.groups:
+            muc = await self.by_legacy_id(group.id)
+            muc.type = MucType.GROUP
+            muc.DISCO_NAME = group.title
+            muc.subject = group.description
+            muc.description = group.description
+            muc.n_participants = len(group.members)
