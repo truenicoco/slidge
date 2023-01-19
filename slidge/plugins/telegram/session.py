@@ -12,6 +12,7 @@ from slixmpp.exceptions import XMPPError
 from slidge import *
 
 from ...util.types import Chat
+from . import config
 from .client import TelegramClient
 from .contact import Contact, Roster
 from .gateway import Gateway
@@ -88,10 +89,13 @@ class Session(
     ) -> int:
         type_, _subtype = http_response.content_type.split("/")
         kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
+        stickers_pattern = config.OUTGOING_STICKERS_REGEXP
         with tempfile.NamedTemporaryFile() as file:
             bytes_ = await http_response.read()
             file.write(bytes_)
-            if type_ == "image":
+            if stickers_pattern and re.match(stickers_pattern, url.split("/")[-1]):
+                result = await self.tg.send_sticker(sticker=file.name, **kwargs)
+            elif type_ == "image":
                 result = await self.tg.send_photo(photo=file.name, **kwargs)
             elif type_ == "video":
                 result = await self.tg.send_video(video=file.name, **kwargs)

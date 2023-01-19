@@ -29,3 +29,11 @@ GROUP_HISTORY_MAXIMUM_MESSAGES__DOC = (
     "The number of messages to fetch from a group history. "
     "These messages and their attachments will be fetched on slidge startup."
 )
+
+OUTGOING_STICKERS_REGEXP: Optional[str] = None
+OUTGOING_STICKERS_REGEXP__DOC = (
+    "(workaround until the proper XEP is implemented) "
+    "Set this to a regexp to treat certain attachments sent from the XMPP client "
+    "as telegram custom stickers. Example: 'outgoing-stickers-regexp=.*\.webp' for "
+    "webp images."
+)
