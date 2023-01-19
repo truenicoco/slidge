@@ -427,6 +427,19 @@ class LegacyRoster(
         """
         return _unescape_node(jid_username)
 
+    async def fill(self):
+        """
+        Populate slidge's "virtual roster".
+
+        Override this and in it, ``await self.by_legacy_id(contact_id)``
+        for the every legacy contacts of the user for which you'd like to
+        set an avatar, nickname, vcard…
+
+        Await ``Contact.add_to_roster()`` in here to add the contact to the
+        user's XMPP roster.
+        """
+        pass
+
 
 def is_markable(stanza: Union[Message, Presence]):
     if isinstance(stanza, Presence):

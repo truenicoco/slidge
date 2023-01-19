@@ -80,3 +80,23 @@ class LegacyBookmarks(
             self._mucs_by_legacy_id[legacy_id] = muc
             self._mucs_by_bare_jid[jid.bare] = muc
         return muc
+
+    async def fill(self):
+        """
+        Establish a user's known groups.
+
+        This has to be overridden in plugins with group support and at the
+        minimum, this should ``await self.by_legacy_id(group_id)`` for all
+        the groups a user is part of.
+
+        Ideally, set the group subject, friendly, number, etc. in this method
+
+        Slidge internals will call this on successful ``BaseSession.login()``
+
+        """
+        if self.xmpp.GROUPS:
+            raise NotImplementedError(
+                "The plugin advertised support for groups but"
+                " LegacyBookmarks.fill() was not overridden."
+            )
+        pass

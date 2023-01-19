@@ -580,19 +580,23 @@ class BaseGateway(
                 f"You are not connected to this gateway! "
                 f"Maybe this message will tell you why: {e}"
             )
+            return
+
+        log.info(f"Login success for %s", session.user)
+        session.logged = True
+        session.send_gateway_status("Syncing contacts…", show="dnd")
+        await session.contacts.fill()
+        if self.GROUPS:
+            session.send_gateway_status("Syncing groups…", show="dnd")
+            await session.bookmarks.fill()
+        for c in session.contacts:
+            # we need to receive presences directed at the contacts, in
+            # order to send pubsub events for their +notify features
+            self.send_presence(pfrom=c.jid, pto=session.user.bare_jid, ptype="probe")
+        if status is None:
+            session.send_gateway_status("Logged in", show="chat")
         else:
-            log.info(f"Login success for %s", session.user)
-            session.logged = True
-            if status is None:
-                session.send_gateway_status("Logged in", show="chat")
-            else:
-                session.send_gateway_status(status, show="chat")
-            for c in session.contacts:
-                # we need to receive presences directed at the contacts, in
-                # order to send pubsub events for their +notify features
-                self.send_presence(
-                    pfrom=c.jid, pto=session.user.bare_jid, ptype="probe"
-                )
+            session.send_gateway_status(status, show="chat")
 
     def re_login(self, session: "SessionType"):
         async def w():
