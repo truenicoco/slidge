@@ -3,7 +3,6 @@ from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime
 from functools import wraps
 from io import BytesIO
-from mimetypes import guess_type
 from os import remove
 from os.path import basename
 from shelve import open
@@ -241,6 +240,7 @@ class Session(
         self,
         url: str,
         chat: Union[Contact, LegacyMUC],
+        http_response,
         reply_to_msg_id: Optional[str] = None,
         **_,
     ):
@@ -249,7 +249,7 @@ class Session(
         """
         message_id = whatsapp.GenerateMessageID()
         message_attachment = whatsapp.Attachment(
-            MIME=guess_type(url)[0], Filename=basename(url), URL=url
+            MIME=http_response.content_type, Filename=basename(url), URL=url
         )
         message = whatsapp.Message(
             Kind=whatsapp.MessageAttachment,
