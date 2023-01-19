@@ -128,8 +128,15 @@ class TelegramToXMPPMixin:
             emoji = content.animated_emoji.sticker.emoji
             self.send_text(body=emoji, **kwargs)
         elif isinstance(content, tgapi.MessageSticker):
-            emoji = content.sticker.emoji
-            self.send_text(body="[Sticker] " + emoji, **kwargs)
+            sticker = content.sticker
+            sticker_type = sticker.type_
+            if isinstance(sticker_type, tgapi.StickerTypeAnimated):
+                if t := sticker.thumbnail:
+                    await self.send_tg_file(t.file, **kwargs)
+                else:
+                    self.send_text(body="Sticker: " + sticker.emoji, **kwargs)
+            else:
+                await self.send_tg_file(sticker.sticker, **kwargs)
         elif best_file := get_best_file(content):
             await self.send_tg_file(best_file, content.caption.text, **kwargs)
         elif isinstance(content, tgapi.MessageBasicGroupChatCreate):
