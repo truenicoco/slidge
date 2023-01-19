@@ -2,6 +2,7 @@ import functools
 import logging
 from typing import Generic, Optional, Type, Union, cast
 
+import aiohttp
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 
@@ -83,6 +84,8 @@ class BaseSession(
     session-specific.
     """
 
+    http: aiohttp.ClientSession
+
     def __init__(self, user: GatewayUser):
         self._roster_cls: Type[
             LegacyRosterType
@@ -103,6 +106,8 @@ class BaseSession(
         self.bookmarks: BookmarksType = LegacyBookmarks.get_self_or_unique_subclass()(
             self
         )
+
+        self.http = self.xmpp.http  # type: ignore
 
     def shutdown(self):
         for c in self.contacts:
@@ -284,7 +289,17 @@ class BaseSession(
         )
 
         if url:
-            legacy_msg_id = await self.send_file(url, e, **kwargs)
+            async with self.http.get(url) as response:
+                if response.status >= 400:
+                    self.log.warning(
+                        "OOB url cannot be downloaded: %s, sending the URL as text instead.",
+                        response,
+                    )
+                    legacy_msg_id = await self.send_text(url, e, **kwargs)
+                else:
+                    legacy_msg_id = await self.send_file(
+                        url, e, http_response=response, **kwargs
+                    )
         elif text:
             legacy_msg_id = await self.send_text(text, e, **kwargs)
         else:
@@ -590,6 +605,7 @@ class BaseSession(
         url: str,
         chat: Chat,
         *,
+        http_response: aiohttp.ClientResponse,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to: Optional[Union[LegacyContactType, "LegacyParticipantType"]] = None,
@@ -599,6 +615,7 @@ class BaseSession(
 
         :param url: URL of the file
         :param chat: See :meth:`.BaseSession.send_text`
+        :param http_response: The HTTP GET response object on the URL
         :param reply_to_msg_id: See :meth:`.BaseSession.send_text`
         :param reply_to_fallback_text: See :meth:`.BaseSession.send_text`
         :param reply_to: See :meth:`.BaseSession.send_text`

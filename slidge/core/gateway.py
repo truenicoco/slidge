@@ -8,6 +8,7 @@ import tempfile
 from asyncio import Future
 from typing import Callable, Generic, Iterable, Optional, Sequence, Type
 
+import aiohttp
 import qrcode
 from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Message, StanzaPath
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
@@ -198,6 +199,7 @@ class BaseGateway(
             },
         )
         self.loop.set_exception_handler(self.__exception_handler)
+        self.http = aiohttp.ClientSession()
         self.has_crashed = False
 
         self.jid_validator = re.compile(config.USER_JID_VALIDATOR)

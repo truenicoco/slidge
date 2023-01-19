@@ -154,6 +154,7 @@ def main():
             logging.debug("Gateway is not connected, no need to clean up")
         user_store.close()
         avatar_cache.close()
+        gateway.loop.run_until_complete(gateway.http.close())
         logging.info("Successful clean shut down")
     logging.debug("Exiting with code %s", return_code)
     exit(return_code)
