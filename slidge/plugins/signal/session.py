@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
-import aiohttp
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 from slixmpp.exceptions import XMPPError
@@ -382,30 +381,29 @@ class Session(
         url: str,
         chat: "Contact",
         *,
+        http_response,
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
         reply_to: Optional[Union["Contact", "Participant"]] = None,
     ):
         s = await self.signal
         address, group = self._get_args_from_entity(chat)
-        async with aiohttp.ClientSession() as client:
-            async with client.get(url=url) as r:
-                with tempfile.TemporaryDirectory(
-                    dir=config.SIGNALD_SOCKET.parent,
-                ) as d:
-                    os.chmod(d, 0o777)
-                    with open(Path(d) / r.url.name, "wb") as f:
-                        f.write(await r.content.read())
-                        os.chmod(
-                            f.name, 0o666
-                        )  # temp file is 0600 https://stackoverflow.com/a/10541972/5902284
-                        signal_r = await s.send(
-                            account=self.phone,
-                            recipientAddress=address,
-                            recipientGroupId=group,
-                            attachments=[sigapi.JsonAttachmentv1(filename=f.name)],
-                        )
-                        return signal_r.timestamp
+        with tempfile.TemporaryDirectory(
+            dir=config.SIGNALD_SOCKET.parent,
+        ) as d:
+            os.chmod(d, 0o777)
+            with open(Path(d) / http_response.url.name, "wb") as f:
+                f.write(await http_response.content.read())
+                os.chmod(
+                    f.name, 0o666
+                )  # temp file is 0600 https://stackoverflow.com/a/10541972/5902284
+                signal_r = await s.send(
+                    account=self.phone,
+                    recipientAddress=address,
+                    recipientGroupId=group,
+                    attachments=[sigapi.JsonAttachmentv1(filename=f.name)],
+                )
+                return signal_r.timestamp
 
     async def active(self, c: "Contact"):
         pass
