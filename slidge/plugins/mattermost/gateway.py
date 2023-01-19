@@ -146,6 +146,28 @@ class Roster(LegacyRoster["Session", Contact, str]):
         else:
             return await self.by_legacy_id(username)
 
+    async def fill(self):
+        mm = self.session.mm_client
+        user_ids = await mm.get_contacts()
+        contact_mm_users = await mm.get_users_by_ids(user_ids)
+        contact_mm_statuses = await mm.get_users_statuses_by_ids(user_ids)
+
+        statuses = {s.user_id: s for s in contact_mm_statuses}
+
+        for user in contact_mm_users:
+            status: Status = statuses[user.id]
+            contact = await self.by_legacy_id(user.username)
+            self.user_id_to_username[user.id] = user.username
+            if user.nickname:
+                contact.name = user.nickname
+            else:
+                contact.name = " ".join([user.first_name, user.last_name]).strip()
+
+            contact.avatar = await mm.get_profile_image(user.id)
+
+            await contact.add_to_roster()
+            contact.update_status(str(status.status))
+
 
 class Session(
     BaseSession[
@@ -168,34 +190,8 @@ class Session(
 
     async def login(self):
         await self.mm_client.login()
-        await self.add_contacts()
         self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
         return f"Connected as '{(await self.mm_client.me).username}'"
-
-    async def add_contacts(self):
-        user_ids = await self.mm_client.get_contacts()
-        contact_mm_users = await self.mm_client.get_users_by_ids(user_ids)
-        contact_mm_statuses = await self.mm_client.get_users_statuses_by_ids(user_ids)
-
-        statuses = {s.user_id: s for s in contact_mm_statuses}
-
-        for user in contact_mm_users:
-            status: Status = statuses[user.id]
-            contact = await self.contacts.by_legacy_id(user.username)
-            self.contacts.user_id_to_username[user.id] = user.username
-            if user.nickname:
-                contact.name = user.nickname
-            elif user.first_name and user.last_name:
-                contact.name = user.first_name + " " + user.last_name
-            elif user.first_name:
-                contact.name = user.first_name
-            elif user.last_name:
-                contact.name = user.last_name
-
-            contact.avatar = await self.mm_client.get_profile_image(user.id)
-
-            await contact.add_to_roster()
-            contact.update_status(str(status.status))
 
     async def on_mm_event(self, event: MattermostEvent):
         self.log.debug("Event: %s", event)
