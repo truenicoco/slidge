@@ -43,21 +43,6 @@ class Session(
         self.xmpp.loop.create_task(self.discord.connect())
 
         await self.ready_future
-        for u in self.discord.users:
-            if not isinstance(u, di.User):
-                self.log.debug(f"Skipping %s", u)
-                continue
-            if not u.is_friend():
-                self.log.debug(f"%s is not a friend", u)
-                continue
-            c = await self.contacts.by_legacy_id(u.id)
-            await c.update_info()
-            await c.add_to_roster()
-            # TODO: contribute to discord.py-self so that the presence information
-            #       of relationships is parsed. logs show:
-            #       'PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.'
-            #       https://github.com/dolfies/discord.py-self/blob/master/discord/state.py#L1044
-            c.online()
         return f"Logged on as {self.discord.user}"
 
     async def send_text(

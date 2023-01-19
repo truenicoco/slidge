@@ -117,5 +117,22 @@ class Roster(LegacyRoster["Session", Contact, int]):
     async def legacy_id_to_jid_username(self, discord_user_id: int) -> str:
         return str(discord_user_id)
 
+    async def fill(self):
+        for u in self.session.discord.users:
+            if not isinstance(u, di.User):
+                log.debug(f"Skipping %s", u)
+                continue
+            if not u.is_friend():
+                log.debug(f"%s is not a friend", u)
+                continue
+            c = await self.by_legacy_id(u.id)
+            await c.update_info()
+            await c.add_to_roster()
+            # TODO: contribute to discord.py-self so that the presence information
+            #       of relationships is parsed. logs show:
+            #       'PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.'
+            #       https://github.com/dolfies/discord.py-self/blob/master/discord/state.py#L1044
+            c.online()
+
 
 log = logging.getLogger(__name__)
