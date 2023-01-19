@@ -150,6 +150,15 @@ class Roster(LegacyRoster["Session", Contact, int]):
         task = self.by_steam_id(steam_id)
         task.add_done_callback(lambda f: method(f.result()))
 
+    async def fill(self):
+        for f in self.session.steam.friends:
+            self.session.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
+            c = await self.by_legacy_id(f.steam_id.id)
+            c.name = f.name
+            c.avatar = f.get_avatar_url()
+            await c.add_to_roster()
+            c.update_status(f.state)
+
 
 class Session(
     BaseSession[
@@ -206,14 +215,6 @@ class Session(
                 self.log.debug("Login success")
             else:
                 raise RuntimeError("Could not connect to steam")
-
-        for f in self.steam.friends:
-            self.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
-            c = await self.contacts.by_legacy_id(f.steam_id.id)
-            c.name = f.name
-            c.avatar = f.get_avatar_url()
-            await c.add_to_roster()
-            c.update_status(f.state)
 
         asyncio.create_task(self.idle())
         return "Connected as " + self.user.registration_form["username"]  # type: ignore
