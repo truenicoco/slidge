@@ -228,10 +228,10 @@ class MattermostClient:
             raise RuntimeError(r)
         return r
 
-    async def upload_file(self, channel_id: str, url: str):
-        async with aiohttp.ClientSession() as s:
-            async with s.get(url) as get_response:
-                data = await get_response.read()
+    async def upload_file(
+        self, channel_id: str, url: str, http_response: aiohttp.ClientResponse
+    ):
+        data = await http_response.read()
         req = UploadFileMultipartData(
             files=File(file_name=url.split("/")[-1], payload=io.BytesIO(data)),
             channel_id=channel_id,

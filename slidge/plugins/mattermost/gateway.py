@@ -353,9 +353,9 @@ class Session(
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, url: str, chat: Contact, **k):
+    async def send_file(self, url: str, chat: Contact, http_response, **k):
         channel_id = await chat.direct_channel_id()
-        file_id = await self.mm_client.upload_file(channel_id, url)
+        file_id = await self.mm_client.upload_file(channel_id, url, http_response)
         return await self.mm_client.send_message_with_file(channel_id, file_id)
 
     async def active(self, c: Contact):
