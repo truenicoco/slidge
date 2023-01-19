@@ -123,7 +123,7 @@ def main():
         if unknown_argv:
             raise RuntimeError("Some arguments have not been recognized", unknown_argv)
 
-    gateway = BaseGateway.get_unique_subclass()()
+    gateway: BaseGateway = BaseGateway.get_unique_subclass()()
     gateway.connect()
 
     return_code = 0
