@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
 
@@ -162,7 +162,9 @@ class TelegramToXMPPMixin:
             )
             self.session.log.warning("Ignoring content: %s", type(content))
 
-    async def send_tg_file(self, best_file: tgapi.File, caption: str, **kwargs):
+    async def send_tg_file(
+        self, best_file: tgapi.File, caption: Optional[str] = None, **kwargs
+    ):
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
