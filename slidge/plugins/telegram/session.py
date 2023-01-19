@@ -3,10 +3,8 @@ import functools
 import logging
 import re
 import tempfile
-from mimetypes import guess_type
 from typing import Union
 
-import aiohttp
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
 from slixmpp.exceptions import XMPPError
@@ -88,35 +86,21 @@ class Session(
 
     @catch_chat_not_found
     async def send_file(
-        self,
-        url: str,
-        chat: Chat,
-        reply_to_msg_id=None,
-        **kwargs,
+        self, url: str, chat: Chat, http_response, reply_to_msg_id=None, **_
     ) -> int:
-        type_, _ = guess_type(url)
-        if type_ is not None:
-            type_, subtype = type_.split("/")
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                kwargs = dict(
-                    chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id
-                )
-                with tempfile.NamedTemporaryFile() as file:
-                    bytes_ = await response.read()
-                    file.write(bytes_)
-                    if type_ == "image":
-                        result = await self.tg.send_photo(photo=file.name, **kwargs)
-                    elif type_ == "video":
-                        result = await self.tg.send_video(video=file.name, **kwargs)
-                    elif type_ == "audio":
-                        result = await self.tg.send_audio(audio=file.name, **kwargs)
-                    else:
-                        result = await self.tg.send_document(
-                            document=file.name, **kwargs
-                        )
+        type_, _subtype = http_response.content_type.split("/")
+        kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
+        with tempfile.NamedTemporaryFile() as file:
+            bytes_ = await http_response.read()
+            file.write(bytes_)
+            if type_ == "image":
+                result = await self.tg.send_photo(photo=file.name, **kwargs)
+            elif type_ == "video":
+                result = await self.tg.send_video(video=file.name, **kwargs)
+            elif type_ == "audio":
+                result = await self.tg.send_audio(audio=file.name, **kwargs)
+            else:
+                result = await self.tg.send_document(document=file.name, **kwargs)
 
         return result.id
 
