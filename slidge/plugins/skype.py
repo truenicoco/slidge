@@ -85,11 +85,28 @@ class ListenThread(Thread):
         self.stop_event.set()
 
 
+class Roster(LegacyRoster):
+    async def fill(self):
+        for contact in self.session.sk.contacts:
+            c = await self.by_legacy_id(contact.id)
+            first = contact.name.first
+            last = contact.name.last
+            if first is not None and last is not None:
+                c.name = f"{first} {last}"
+            elif first is not None:
+                c.name = first
+            elif last is not None:
+                c.name = last
+            if contact.avatar is not None:
+                c.avatar = contact.avatar
+            await c.add_to_roster()
+
+
 class Session(
     BaseSession[
         Gateway,
         int,
-        LegacyRoster,
+        Roster,
         Contact,
         LegacyBookmarks,
         LegacyMUC,
@@ -123,19 +140,6 @@ class Session(
         )
 
         self.sk.subscribePresence()
-        for contact in self.sk.contacts:
-            c = await self.contacts.by_legacy_id(contact.id)
-            first = contact.name.first
-            last = contact.name.last
-            if first is not None and last is not None:
-                c.name = f"{first} {last}"
-            elif first is not None:
-                c.name = first
-            elif last is not None:
-                c.name = last
-            if contact.avatar is not None:
-                c.avatar = contact.avatar
-            await c.add_to_roster()
         # TODO: Creating 1 thread per user is probably very not optimal.
         #       We should contribute to skpy to make it aiohttp compatible…
         self.thread = thread = ListenThread(self)
