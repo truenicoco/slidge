@@ -6,13 +6,20 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Callable, Generic, Iterable, Optional, Sequence, Type
+from typing import Callable, Generic, Iterable, Optional, Sequence, Type, Union
 
 import aiohttp
 import qrcode
-from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Message, StanzaPath
+from slixmpp import (
+    JID,
+    ComponentXMPP,
+    CoroutineCallback,
+    Iq,
+    Message,
+    Presence,
+    StanzaPath,
+)
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
-from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
 
 from ..util import ABCSubclassableOnceAtMost, FormField
@@ -23,12 +30,16 @@ from . import config
 from .adhoc import AdhocProvider, RegistrationType
 from .chat_command import ChatCommandProvider
 from .disco import Disco
+from .mixins import MessageMixin
 from .pubsub import PubSubComponent
 from .session import BaseSession, SessionType
 
 
-class BaseGateway(
-    Generic[SessionType], ComponentXMPP, metaclass=ABCSubclassableOnceAtMost
+class BaseGateway(  # type:ignore
+    Generic[SessionType],
+    ComponentXMPP,
+    MessageMixin,
+    metaclass=ABCSubclassableOnceAtMost,
 ):
     """
     Must be subclassed by a plugin to set up various aspects of the XMPP
@@ -301,6 +312,13 @@ class BaseGateway(
             pass
         else:
             iq.reply().send()
+
+    mtype = "chat"  # type: ignore
+    is_group = False
+
+    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
+        stanza.set_from(self.boundjid.bare)
+        stanza.send()
 
     async def get_muc_from_iq(self, iq: Iq):
         ito = iq.get_to()
@@ -878,36 +896,6 @@ class BaseGateway(
         self._input_futures[jid.bare] = f
         await f
         return f.result()
-
-    async def send_file(self, filename: str, **msg_kwargs):
-        """
-        Upload a file using :xep:`0363` and send the link as out of band (:xep:`0066`)
-        content in a message.
-
-        :param filename:
-        :param msg_kwargs:
-        :return:
-        """
-        msg = self.make_message(**msg_kwargs)
-        msg.set_from(self.boundjid.bare)
-        try:
-            url = await self["xep_0363"].upload_file(
-                filename=filename, ifrom=config.UPLOAD_REQUESTER
-            )
-        except FileUploadError as e:
-            log.warning(
-                "Something is wrong with the upload service, see the traceback below"
-            )
-            log.exception(e)
-            msg["body"] = (
-                "I tried to send a file, but something went wrong. "
-                "Tell your XMPP admin to check slidge logs."
-            )
-            msg.send()
-            return
-        msg["oob"]["url"] = url
-        msg["body"] = url
-        msg.send()
 
     async def send_qr(self, text: str, **msg_kwargs):
         """

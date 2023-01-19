@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -298,18 +300,56 @@ class ContentMessageMixin(MessageMaker):
             reply_to_jid=reply_to_jid,
             carbon=carbon,
         )
-        uploaded_url = await self._upload(filename, content_type, input_file, url)
-        if uploaded_url is None:
-            if url is not None:
-                uploaded_url = url
+        if url and config.USE_ATTACHMENT_ORIGINAL_URLS:
+            uploaded_url = url
+        elif destination_root := config.NO_UPLOAD_PATH:
+            uu = str(uuid4())
+            destination_dir = Path(destination_root) / uu
+            destination_dir.mkdir()
+            if filename:
+                name = Path(filename).parts[-1]
+                destination = destination_dir / name
+                method = config.NO_UPLOAD_METHOD
+                if method == "copy":
+                    shutil.copy(filename, destination)
+                elif method == "hardlink":
+                    os.link(filename, destination)
+                elif method == "symlink":
+                    os.symlink(filename, destination, target_is_directory=True)
+                elif method == "move":
+                    shutil.move(filename, destination)
+            elif url:
+                name = url.split("/")[-1]
+                destination = destination_dir / name
+                async with self.session.http.get(url) as response:
+                    with destination.open("wb") as fd:
+                        async for chunk in response.content.iter_chunked(
+                            config.DOWNLOAD_CHUNK_SIZE
+                        ):
+                            fd.write(chunk)
+            elif input_file:
+                name = str(filename)
+                destination = destination_dir / name
+                with destination.open("wb") as fd:
+                    fd.write(input_file.read())
             else:
-                msg["body"] = (
-                    "I tried to send a file, but something went wrong. "
-                    "Tell your XMPP admin to check slidge logs."
+                raise RuntimeError(
+                    "Must be called with either filename, URL or input_file"
                 )
-                self._set_msg_id(msg, legacy_msg_id)
-                self._send(msg, **kwargs)
-                return
+
+            uploaded_url = "/".join(
+                [config.NO_UPLOAD_URL_PREFIX, uu, name]  # type:ignore
+            )
+        else:
+            uploaded_url = await self._upload(filename, content_type, input_file, url)
+        if uploaded_url is None:
+            msg["body"] = (
+                "I tried to send a file, but something went wrong. "
+                "Tell your slidge admin to check the logs."
+            )
+            self._set_msg_id(msg, legacy_msg_id)
+            self._send(msg, **kwargs)
+            return
 
         msg["oob"]["url"] = uploaded_url
         msg["body"] = uploaded_url

@@ -9,6 +9,7 @@ services:
       - 127.0.0.1:5281:5281
       - 127.0.0.1:8888:80
       - 127.0.0.1:8065:8065
+      - 127.0.0.1:4444:4444
     volumes:
       - ./dev/confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
       - ./dev/confs/mod_privilege.lua:/var/lib/prosody/custom_plugins/share/lua/5.2/mod_privilege.lua
@@ -25,6 +26,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
+      - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
@@ -40,6 +42,7 @@ services:
     volumes:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
+      - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
     depends_on:
       - prosody
@@ -58,6 +61,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/signald:/signald
+      - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
       - prosody
@@ -75,6 +79,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -92,6 +97,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
 
@@ -107,6 +113,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -124,6 +131,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
 
@@ -139,6 +147,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
     network_mode: service:prosody
@@ -157,6 +166,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
 
@@ -175,6 +185,7 @@ services:
       - ./slidge:/venv/lib/python3.9/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
+      - ./persistent/web:/slidge-web
     depends_on:
       - prosody
 
@@ -235,6 +246,7 @@ services:
     volumes:
       - ./persistent/movim/html:/var/www/html:ro
       - ./dev/confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./persistent/web:/slidge-web
     depends_on:
       - movim
 

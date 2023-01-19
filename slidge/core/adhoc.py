@@ -8,6 +8,7 @@ from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
+from uuid import uuid4
 
 import qrcode
 from slixmpp import JID, Iq
@@ -358,11 +359,21 @@ class AdhocProvider:
             ] = self.xmpp.loop.create_future()
             qr_text = await self.xmpp.get_qr_text(user)
             qr = qrcode.make(qr_text)
-            with tempfile.NamedTemporaryFile(suffix=".png") as f:
-                qr.save(f.name)
-                img_url = await self.xmpp.plugin["xep_0363"].upload_file(
-                    filename=Path(f.name), ifrom=config.UPLOAD_REQUESTER
+            if config.NO_UPLOAD_PATH:
+                uu = str(uuid4())
+                destination_dir = Path(config.NO_UPLOAD_PATH) / uu
+                destination_dir.mkdir()
+                name = "qr.png"
+                qr.save(destination_dir / name)
+                img_url = "/".join(
+                    [config.NO_UPLOAD_URL_PREFIX, uu, name]  # type:ignore
                 )
+            else:
+                with tempfile.NamedTemporaryFile(suffix=".png") as f:
+                    qr.save(f.name)
+                    img_url = await self.xmpp.plugin["xep_0363"].upload_file(
+                        filename=Path(f.name), ifrom=config.UPLOAD_REQUESTER
+                    )
 
             msg = self.xmpp.make_message(mto=user.bare_jid)
             msg.set_from(self.xmpp.boundjid.bare)

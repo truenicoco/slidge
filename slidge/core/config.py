@@ -83,9 +83,34 @@ AVATAR_SIZE__DOC = (
     "Maximum image size (width and height), image ratio will be preserved"
 )
 
+USE_ATTACHMENT_ORIGINAL_URLS = False
+USE_ATTACHMENT_ORIGINAL_URLS__DOC = (
+    "For legacy plugins in which attachments are publicly downloadable URLs, "
+    "let XMPP clients directly download them from this URL. Note that this will "
+    "probably leak your client IP to the legacy network."
+)
+
 UPLOAD_REQUESTER: Optional[str] = None
 UPLOAD_REQUESTER__DOC = (
     "Set which JID should request the upload slots. Defaults to the component JID."
+)
+
+NO_UPLOAD_PATH: Optional[str] = None
+NO_UPLOAD_PATH__DOC = (
+    "Instead of using the XMPP server's HTTP upload component, copy files to this dir. "
+    "You need to set NO_UPLOAD_URL_PREFIX too if you use this option, and configure "
+    "an web server to serve files in this dir."
+)
+
+NO_UPLOAD_URL_PREFIX: Optional[str] = None
+NO_UPLOAD_URL_PREFIX__DOC = (
+    "Base URL that servers files in the dir set in the no-upload-path option, "
+    "eg https://example.com:666/slidge-attachments/"
+)
+
+NO_UPLOAD_METHOD: str = "copy"
+NO_UPLOAD_METHOD__DOC = (
+    "Whether to 'copy', 'move', 'hardlink' or 'symlink' the files in no-upload-path."
 )
 
 IGNORE_DELAY_THRESHOLD = _TimedeltaSeconds("300")
@@ -109,3 +134,6 @@ LAST_SEEN_FALLBACK__DOC = (
 
 QR_TIMEOUT = 60
 QR_TIMEOUT__DOC = "Timeout for QR code flashing confirmation."
+
+DOWNLOAD_CHUNK_SIZE = 1024
+DOWNLOAD_CHUNK_SIZE__DOC = "Chunk size when slidge needs to download files using HTTP."
