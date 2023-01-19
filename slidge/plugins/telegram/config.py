@@ -26,7 +26,6 @@ REGISTRATION_AUTH_CODE_TIMEOUT__DOC = (
 
 GROUP_HISTORY_MAXIMUM_MESSAGES = 50
 GROUP_HISTORY_MAXIMUM_MESSAGES__DOC = (
-    "The number of messages to fetch from a group history. Warning! Until slidge "
-    "gets proper MAM support (XEP-0363), this will fetch history and send messages "
-    "on each MUC join."
+    "The number of messages to fetch from a group history. "
+    "These messages and their attachments will be fetched on slidge startup."
 )
