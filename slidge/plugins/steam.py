@@ -216,6 +216,7 @@ class Session(
             c.update_status(f.state)
 
         asyncio.create_task(self.idle())
+        return "Connected as " + self.user.registration_form["username"]  # type: ignore
 
     async def idle(self):
         while True:
