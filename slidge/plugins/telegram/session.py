@@ -53,8 +53,6 @@ class Session(
         me = await self.tg.get_user(await self.tg.get_my_id())
         my_name = (me.first_name + " " + me.last_name).strip()
         self.bookmarks.set_username(my_name)
-        await self.add_contacts_to_roster()
-        await self.add_groups()
         return f"Connected as {my_name}"
 
     async def logout(self):
@@ -123,6 +121,7 @@ class Session(
         )
         self.log.debug("Send composing res: %s", res)
 
+    @catch_chat_not_found
     async def paused(self, c: "Contact"):
         pass
 
@@ -135,28 +134,6 @@ class Session(
             force_read=True,
         )
         self.log.debug("Send chat action res: %s", res)
-
-    @catch_chat_not_found
-    async def add_contacts_to_roster(self):
-        users = await self.tg.api.get_contacts()
-        for id_ in users.user_ids:
-            await self.contacts.by_legacy_id(id_)
-
-    async def add_groups(self):
-        for chat in await self.tg.get_main_list_chats_all():
-            if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
-                muc = await self.bookmarks.by_legacy_id(chat.id)
-                group = await self.tg.get_basic_group(chat.type_.basic_group_id)
-                muc.type = MucType.GROUP
-            elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
-                muc = await self.bookmarks.by_legacy_id(chat.id)
-                group = await self.tg.get_supergroup(chat.type_.supergroup_id)
-                muc.type = MucType.CHANNEL
-            else:
-                continue
-
-            muc.n_participants = group.member_count
-            muc.DISCO_NAME = chat.title
 
     @catch_chat_not_found
     async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
@@ -192,7 +169,6 @@ class Session(
         if user_id == 0:
             return
 
-        await self.add_contacts_to_roster()
         contact = await self.contacts.by_legacy_id(user_id)
         await contact.update_info()
         await contact.add_to_roster()

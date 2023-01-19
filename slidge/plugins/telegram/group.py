@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class Bookmarks(LegacyBookmarks):
+    session: "Session"
+
     @staticmethod
     async def legacy_id_to_jid_local_part(legacy_id: int):
         return "group" + str(legacy_id)
@@ -23,6 +25,23 @@ class Bookmarks(LegacyBookmarks):
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part: str):
         return int(local_part.replace("group", ""))
+
+    async def fill(self):
+        tg = self.session.tg
+        for chat in await tg.get_main_list_chats_all():
+            if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
+                muc = await self.by_legacy_id(chat.id)
+                group = await tg.get_basic_group(chat.type_.basic_group_id)
+                muc.type = MucType.GROUP
+            elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
+                muc = await self.by_legacy_id(chat.id)
+                group = await tg.get_supergroup(chat.type_.supergroup_id)
+                muc.type = MucType.CHANNEL
+            else:
+                continue
+
+            muc.n_participants = group.member_count
+            muc.DISCO_NAME = chat.title
 
 
 class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):

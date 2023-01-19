@@ -139,5 +139,10 @@ class Roster(LegacyRoster["Session", "Contact", int]):
             else:
                 raise XMPPError("bad-request", "This looks like a telegram group ID")
 
+    async def fill(self):
+        users = await self.session.tg.api.get_contacts()
+        for id_ in users.user_ids:
+            await self.by_legacy_id(id_)
+
 
 log = logging.getLogger(__name__)
