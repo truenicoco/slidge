@@ -26,6 +26,10 @@ class Bookmarks(LegacyBookmarks):
             raise XMPPError("not-found")
         return local_part
 
+    async def fill(self):
+        for i in range(1, 3):
+            await self.by_legacy_id(f"prout-{i}")
+
 
 class MUC(LegacyMUC["Session", str, "Participant", str]):
     REACTIONS_SINGLE_EMOJI = True
