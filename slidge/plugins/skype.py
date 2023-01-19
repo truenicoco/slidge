@@ -227,17 +227,13 @@ class Session(
             self.thread.stop()
             self.thread.join()
 
-    async def send_file(self, url: str, chat: LegacyContact, **kwargs):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                file_bytes = await response.read()
+    async def send_file(self, url: str, chat: LegacyContact, http_response, **kwargs):
         fname = url.split("/")[-1]
-        fname_lower = fname.lower()
         await asyncio.to_thread(
             self.sk.contacts[chat.legacy_id].chat.sendFile,
-            io.BytesIO(file_bytes),
+            io.BytesIO(await http_response.read()),
             fname,
-            any(fname_lower.endswith(x) for x in (".png", ".jpg", ".gif", ".jpeg")),
+            http_response.content_type.startswith("image"),
         )
 
     async def active(self, c: LegacyContact):
