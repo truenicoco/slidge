@@ -28,7 +28,8 @@ class Bookmarks(LegacyBookmarks):
 
     async def fill(self):
         for i in range(1, 3):
-            await self.by_legacy_id(f"prout-{i}")
+            muc = await self.by_legacy_id(f"prout-{i}")
+            muc.DISCO_NAME = f"A friendly name {i}"
 
 
 class MUC(LegacyMUC["Session", str, "Participant", str]):
