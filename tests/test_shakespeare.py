@@ -111,7 +111,7 @@ class Roster(LegacyRoster):
             raise XMPPError(text="Only juliet", condition="item-not-found")
 
     @staticmethod
-    def legacy_id_to_jid_username(legacy_id: int) -> str:
+    async def legacy_id_to_jid_username(legacy_id: int) -> str:
         if legacy_id == 123:
             return "juliet"
         else:
@@ -740,6 +740,42 @@ class TestPrivilege(SlidgeTest):
                 </item>
               </query>
             </iq>
+            """
+        )
+
+
+class TestContact(SlidgeTest):
+    plugin = globals()
+
+    def setUp(self):
+        super().setUp()
+        user_store.add(
+            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+        self.get_romeo_session().logged = True
+
+    @staticmethod
+    def get_romeo_session() -> Session:
+        return BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+
+    def get_juliet(self) -> LegacyContact:
+        session = self.get_romeo_session()
+        return self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(123))
+
+    def test_caps(self):
+        juliet = self.get_juliet()
+        juliet.online()
+        self.send(
+            """
+            <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
+                <c xmlns="http://jabber.org/protocol/caps"
+                   node="http://slixmpp.com/ver/1.8.3"
+                   hash="sha-1"
+                   ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
+                <priority>0</priority>
+            </presence>
             """
         )
 

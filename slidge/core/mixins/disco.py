@@ -75,5 +75,11 @@ class ChatterDiscoMixin(BaseDiscoMixin):
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
         for f in self.features():
             await add_feature(f)
-
+        await xmpp.plugin["xep_0030"].add_identity(
+            jid=self.jid,
+            category=self.DISCO_CATEGORY,
+            itype=self.DISCO_TYPE,
+            name=self.DISCO_NAME,
+            lang=self.DISCO_LANG,
+        )
         await xmpp["xep_0115"].update_caps(jid=jid)
