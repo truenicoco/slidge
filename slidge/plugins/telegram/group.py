@@ -32,14 +32,11 @@ class Bookmarks(LegacyBookmarks):
             if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
                 muc = await self.by_legacy_id(chat.id)
                 group = await tg.get_basic_group(chat.type_.basic_group_id)
-                muc.type = MucType.GROUP
             elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
                 muc = await self.by_legacy_id(chat.id)
                 group = await tg.get_supergroup(chat.type_.supergroup_id)
-                muc.type = MucType.CHANNEL
             else:
                 continue
-
             muc.n_participants = group.member_count
             muc.DISCO_NAME = chat.title
 
@@ -48,6 +45,8 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     name = "unnamed"
+    # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
+    type = MucType.GROUP
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
