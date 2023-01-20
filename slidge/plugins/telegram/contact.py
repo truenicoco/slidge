@@ -111,8 +111,6 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
             else:
                 self._subscribe_to = self._subscribe_from = False
 
-        self.update_status(user.status)
-
         if p := user.phone_number:
             phone = "+" + p
         else:
@@ -123,8 +121,7 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
 
         if user.is_contact:
             await self.add_to_roster()
-
-        self.update_status(user.status)
+            self.update_status(user.status)
 
 
 class Roster(LegacyRoster["Session", "Contact", int]):
