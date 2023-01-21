@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import stat
+import tempfile
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -224,7 +225,7 @@ class AttachmentMixin(MessageMaker):
                 async with session.get(url) as r:
                     input_file = BytesIO(await r.read())
         try:
-            return await self.xmpp["xep_0363"].upload_file(
+            return input_file, await self.xmpp["xep_0363"].upload_file(
                 filename=filename,
                 content_type=content_type,
                 input_file=input_file,
@@ -425,7 +426,9 @@ class AttachmentMixin(MessageMaker):
                 filename, legacy_file_id, input_file, url
             )
         else:
-            uploaded_url = await self._upload(filename, content_type, input_file, url)
+            input_file, uploaded_url = await self._upload(
+                filename, content_type, input_file, url
+            )
         if uploaded_url is None:
             msg["body"] = (
                 "I tried to send a file, but something went wrong. "
@@ -439,6 +442,14 @@ class AttachmentMixin(MessageMaker):
         if isinstance(filename, Path):
             self.__set_sims(msg, uploaded_url, filename, content_type, caption)
             self.__set_sfs(msg, uploaded_url, filename, content_type, caption)
+        elif isinstance(filename, str) and input_file:
+            with tempfile.TemporaryDirectory() as d:
+                filename = Path(d) / filename
+                with filename.open("wb+") as f:
+                    with open(input_file.name, "rb") as ugly:
+                        f.write(ugly.read())
+                self.__set_sims(msg, uploaded_url, filename, content_type, caption)
+                self.__set_sfs(msg, uploaded_url, filename, content_type, caption)
         self.__send_url(
             msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
         )
