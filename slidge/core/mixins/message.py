@@ -200,8 +200,11 @@ class MarkerMixin(MessageMaker):
         )
 
 
-class ContentMessageMixin(MessageMaker):
+class AttachmentMixin(MessageMaker):
     __legacy_file_ids_to_urls = BiDict[Union[str, int], str]()
+
+    def send_text(self, *_, **k):
+        raise NotImplementedError
 
     async def _upload(
         self,
@@ -228,40 +231,6 @@ class ContentMessageMixin(MessageMaker):
                 "Something is wrong with the upload service, see the traceback below"
             )
             log.exception(e)
-
-    def send_text(
-        self,
-        body: str,
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        *,
-        when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to_jid: Optional[JID] = None,
-        **kwargs,
-    ):
-        """
-        Transmit a message from the entity to the user
-
-        :param body: Context of the message
-        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
-            user to the legacy network, specify this
-        :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_to_jid: JID of the quoted message author
-        """
-        msg = self._make_message(
-            mbody=body,
-            legacy_msg_id=legacy_msg_id,
-            when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=reply_to_jid,
-            hints=kwargs.get("hints") or {"markable", "store"},
-            carbon=kwargs.get("carbon"),
-        )
-        self._send(msg, **kwargs)
 
     async def __no_upload(
         self,
@@ -428,6 +397,42 @@ class ContentMessageMixin(MessageMaker):
         self.__send_url(
             msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
         )
+
+
+class ContentMessageMixin(AttachmentMixin):
+    def send_text(
+        self,
+        body: str,
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+        *,
+        when: Optional[datetime] = None,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to_jid: Optional[JID] = None,
+        **kwargs,
+    ):
+        """
+        Transmit a message from the entity to the user
+
+        :param body: Context of the message
+        :param legacy_msg_id: If you want to be able to transport read markers from the gateway
+            user to the legacy network, specify this
+        :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
+        :param reply_to_msg_id: Quote another message (:xep:`0461`)
+        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
+        :param reply_to_jid: JID of the quoted message author
+        """
+        msg = self._make_message(
+            mbody=body,
+            legacy_msg_id=legacy_msg_id,
+            when=when,
+            reply_to_msg_id=reply_to_msg_id,
+            reply_to_fallback_text=reply_to_fallback_text,
+            reply_to_jid=reply_to_jid,
+            hints=kwargs.get("hints") or {"markable", "store"},
+            carbon=kwargs.get("carbon"),
+        )
+        self._send(msg, **kwargs)
 
     def correct(self, legacy_msg_id: LegacyMessageType, new_text: str, **kwargs):
         """
