@@ -17,6 +17,7 @@ class AttachmentSenderMixin:
                     content_type=attachment.contentType,
                     legacy_msg_id=legacy_msg_id if i == last_attachment_i else None,
                     caption=attachment.caption,
+                    legacy_file_id=attachment.key,
                     **kwargs,
                 )
 
