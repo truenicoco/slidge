@@ -169,4 +169,9 @@ class TelegramToXMPPMixin:
             file_id=best_file.id, synchronous=True, priority=1
         )
         best_file_downloaded: tgapi.File = await self.session.tg.request(query)
-        await self.send_file(best_file_downloaded.local.path, caption=caption, **kwargs)
+        await self.send_file(
+            best_file_downloaded.local.path,
+            caption=caption,
+            legacy_file_id=str(best_file.remote.unique_id),
+            **kwargs,
+        )
