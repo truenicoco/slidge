@@ -18,6 +18,8 @@ from .util import (
     xep_0356,
     xep_0356_old,
     xep_0372,
+    xep_0446,
+    xep_0447,
     xep_0461,
 )
 from .util.db import GatewayUser, user_store
@@ -30,6 +32,8 @@ slixmpp.plugins.__all__.extend(
         "xep_0372",
         "xep_0385",
         "xep_0461",
+        "xep_0446",
+        "xep_0447",
     ]
 )
 

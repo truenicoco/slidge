@@ -997,6 +997,7 @@ SLIXMPP_PLUGINS = [
     "xep_0385",  # Stateless in-line media sharing
     "xep_0424",  # Message retraction
     "xep_0444",  # Message reactions
+    "xep_0447",  # Stateless File Sharing
     "xep_0461",  # Message replies
 ]
 log = logging.getLogger(__name__)
