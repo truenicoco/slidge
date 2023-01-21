@@ -12,15 +12,26 @@ from .util import (
     xep_0050,
     xep_0077,
     xep_0100,
+    xep_0234,
     xep_0292,
     xep_0313,
     xep_0356,
     xep_0356_old,
+    xep_0372,
     xep_0461,
 )
 from .util.db import GatewayUser, user_store
 
-slixmpp.plugins.__all__.extend(["xep_0292_provider", "xep_0356_old", "xep_0461"])
+slixmpp.plugins.__all__.extend(
+    [
+        "xep_0234",
+        "xep_0292_provider",
+        "xep_0356_old",
+        "xep_0372",
+        "xep_0385",
+        "xep_0461",
+    ]
+)
 
 __all__ = [
     "BaseGateway",

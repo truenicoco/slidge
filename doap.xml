@@ -369,6 +369,13 @@
     </implements>
     <implements>
         <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0385.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:note>Legacy service to XMPP attachments have SIMS metadata when possible. Not supported from XMPP to legacy service</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0410.html"/>
             <xmpp:status>complete</xmpp:status>
             <xmpp:since>0.1.0</xmpp:since>

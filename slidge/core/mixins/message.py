@@ -18,6 +18,7 @@ from slidge.util.types import LegacyMessageType
 
 from ...util import BiDict
 from ...util.types import ChatState, Marker, ProcessingHint
+from ...util.xep_0385.stanza import Sims
 from .base import BaseSender
 
 
@@ -202,6 +203,7 @@ class MarkerMixin(MessageMaker):
 
 class AttachmentMixin(MessageMaker):
     __legacy_file_ids_to_urls = BiDict[Union[str, int], str]()
+    __uploaded_urls_to_sims = dict[Union[str, int], Sims]()
 
     def send_text(self, *_, **k):
         raise NotImplementedError
@@ -253,7 +255,7 @@ class AttachmentMixin(MessageMaker):
                 )
                 name = files[0].name
                 uu = files[0].parent.name  # anti-obvious url trick, see below
-                return "/".join(
+                return files[0], "/".join(
                     [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
                 )
             else:
@@ -305,7 +307,27 @@ class AttachmentMixin(MessageMaker):
             [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
         )
 
-        return uploaded_url
+        return destination, uploaded_url
+
+    def __set_sims(
+        self,
+        msg: Message,
+        uploaded_url: str,
+        path: Path,
+        content_type: Optional[str] = None,
+        caption: Optional[str] = None,
+    ):
+        cache = self.__uploaded_urls_to_sims.get(uploaded_url)
+        if cache:
+            msg.append(cache)
+            return
+
+        sims = self.xmpp["xep_0385"].get_sims(
+            path, [uploaded_url], content_type, caption
+        )
+        self.__uploaded_urls_to_sims[uploaded_url] = sims
+
+        msg.append(sims)
 
     def __send_url(
         self,
@@ -379,7 +401,7 @@ class AttachmentMixin(MessageMaker):
         elif url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             uploaded_url = url
         elif config.NO_UPLOAD_PATH:
-            uploaded_url = await self.__no_upload(
+            filename, uploaded_url = await self.__no_upload(
                 filename, legacy_file_id, input_file, url
             )
         else:
@@ -394,6 +416,8 @@ class AttachmentMixin(MessageMaker):
             return
         if legacy_file_id:
             self.__legacy_file_ids_to_urls[legacy_file_id] = uploaded_url
+        if isinstance(filename, Path):
+            self.__set_sims(msg, uploaded_url, filename, content_type, caption)
         self.__send_url(
             msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
         )

@@ -994,6 +994,7 @@ SLIXMPP_PLUGINS = [
     "xep_0356",  # Privileged Entity
     "xep_0356_old",  # Privileged Entity (old namespace)
     "xep_0363",  # HTTP file upload
+    "xep_0385",  # Stateless in-line media sharing
     "xep_0424",  # Message retraction
     "xep_0444",  # Message reactions
     "xep_0461",  # Message replies
