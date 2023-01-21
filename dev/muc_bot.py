@@ -88,7 +88,7 @@ ROOM = "slidge@conference.nicoco.fr"
 REPO = "slidge"
 BOT_PASS_FILE = "~/.c3p0"
 BOT_JID = "c3p0@slidge.im"
-HASH_LEN = 5
+HASH_LEN = 7
 URL = f"https://git.sr.ht/~nicoco/{REPO}/commit/"
 
 main()
