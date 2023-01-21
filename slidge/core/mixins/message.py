@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import stat
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -15,6 +16,7 @@ from slixmpp.types import MessageTypes
 from slidge.core import config
 from slidge.util.types import LegacyMessageType
 
+from ...util import BiDict
 from ...util.types import ChatState, Marker, ProcessingHint
 from .base import BaseSender
 
@@ -199,6 +201,8 @@ class MarkerMixin(MessageMaker):
 
 
 class ContentMessageMixin(MessageMaker):
+    __legacy_file_ids_to_urls = BiDict[Union[str, int], str]()
+
     async def _upload(
         self,
         filename: Union[Path, str],
@@ -259,6 +263,102 @@ class ContentMessageMixin(MessageMaker):
         )
         self._send(msg, **kwargs)
 
+    async def __no_upload(
+        self,
+        filename: Union[Path, str],
+        legacy_file_id: Optional[Union[str, int]] = None,
+        input_file: Optional[IO[bytes]] = None,
+        url: Optional[str] = None,
+    ):
+        file_id = str(uuid4()) if legacy_file_id is None else str(legacy_file_id)
+        destination_dir = Path(config.NO_UPLOAD_PATH) / file_id  # type:ignore
+
+        if destination_dir.exists():
+            log.debug("Dest dir exists: %s", destination_dir)
+            files = list(f for f in destination_dir.glob("**/*") if f.is_file())
+            if len(files) == 1:
+                log.debug(
+                    "Found the legacy attachment '%s' at '%s'",
+                    legacy_file_id,
+                    files[0],
+                )
+                name = files[0].name
+                uu = files[0].parent.name  # anti-obvious url trick, see below
+                return "/".join(
+                    [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
+                )
+            else:
+                log.warning(
+                    "There are several or zero files in %s, "
+                    "slidge doesn't know which one to pick among %s",
+                    destination_dir,
+                    files,
+                )
+
+        log.debug("Did not find a file in: %s", destination_dir)
+        # let's use a UUID to avoid URLs being too obvious
+        uu = str(uuid4())
+        destination_dir = destination_dir / uu
+        destination_dir.mkdir(parents=True)
+        if filename:
+            name = Path(filename).parts[-1]
+            destination = destination_dir / name
+            method = config.NO_UPLOAD_METHOD
+            if method == "copy":
+                shutil.copy(filename, destination)
+            elif method == "hardlink":
+                os.link(filename, destination)
+            elif method == "symlink":
+                os.symlink(filename, destination, target_is_directory=True)
+            elif method == "move":
+                shutil.move(filename, destination)
+            if config.NO_UPLOAD_FILE_READ_OTHERS:
+                log.debug("Changing perms of %s", destination)
+                destination.chmod(destination.stat().st_mode | stat.S_IROTH)
+        elif url:
+            name = url.split("/")[-1]
+            destination = destination_dir / name
+            async with self.session.http.get(url) as response:
+                with destination.open("wb") as fd:
+                    async for chunk in response.content.iter_chunked(
+                        config.DOWNLOAD_CHUNK_SIZE
+                    ):
+                        fd.write(chunk)
+        elif input_file:
+            name = str(filename)
+            destination = destination_dir / name
+            with destination.open("wb") as fd:
+                fd.write(input_file.read())
+        else:
+            raise RuntimeError("Must be called with either filename, URL or input_file")
+
+        uploaded_url = "/".join(
+            [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
+        )
+
+        return uploaded_url
+
+    def __send_url(
+        self,
+        msg: Message,
+        legacy_msg_id: LegacyMessageType,
+        uploaded_url: str,
+        caption: Optional[str] = None,
+        carbon=False,
+        when: Optional[datetime] = None,
+        **kwargs,
+    ):
+        msg["oob"]["url"] = uploaded_url
+        msg["body"] = uploaded_url
+        if caption:
+            self._send(msg, carbon=carbon, **kwargs)
+            self.send_text(
+                caption, legacy_msg_id=legacy_msg_id, when=when, carbon=carbon, **kwargs
+            )
+        else:
+            self._set_msg_id(msg, legacy_msg_id)
+            self._send(msg, **kwargs)
+
     async def send_file(
         self,
         filename: Union[Path, str],
@@ -272,6 +372,7 @@ class ContentMessageMixin(MessageMaker):
         reply_to_jid: Optional[JID] = None,
         when: Optional[datetime] = None,
         caption: Optional[str] = None,
+        legacy_file_id: Optional[Union[str, int]] = None,
         **kwargs,
     ):
         """
@@ -291,6 +392,8 @@ class ContentMessageMixin(MessageMaker):
         :param reply_to_jid: JID of the quoted message author
         :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
         :param caption: an optional text that is linked to the file
+        :param legacy_file_id: A unique identifier for the file on the legacy network.
+             Plugins should try their best to provide it, to avoid duplicates.
         """
         carbon = kwargs.pop("carbon", False)
         msg = self._make_message(
@@ -300,45 +403,15 @@ class ContentMessageMixin(MessageMaker):
             reply_to_jid=reply_to_jid,
             carbon=carbon,
         )
-        if url and config.USE_ATTACHMENT_ORIGINAL_URLS:
+        if legacy_file_id and (
+            cache := self.__legacy_file_ids_to_urls.get(legacy_file_id)
+        ):
+            uploaded_url = cache
+        elif url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             uploaded_url = url
-        elif destination_root := config.NO_UPLOAD_PATH:
-            uu = str(uuid4())
-            destination_dir = Path(destination_root) / uu
-            destination_dir.mkdir()
-            if filename:
-                name = Path(filename).parts[-1]
-                destination = destination_dir / name
-                method = config.NO_UPLOAD_METHOD
-                if method == "copy":
-                    shutil.copy(filename, destination)
-                elif method == "hardlink":
-                    os.link(filename, destination)
-                elif method == "symlink":
-                    os.symlink(filename, destination, target_is_directory=True)
-                elif method == "move":
-                    shutil.move(filename, destination)
-            elif url:
-                name = url.split("/")[-1]
-                destination = destination_dir / name
-                async with self.session.http.get(url) as response:
-                    with destination.open("wb") as fd:
-                        async for chunk in response.content.iter_chunked(
-                            config.DOWNLOAD_CHUNK_SIZE
-                        ):
-                            fd.write(chunk)
-            elif input_file:
-                name = str(filename)
-                destination = destination_dir / name
-                with destination.open("wb") as fd:
-                    fd.write(input_file.read())
-            else:
-                raise RuntimeError(
-                    "Must be called with either filename, URL or input_file"
-                )
-
-            uploaded_url = "/".join(
-                [config.NO_UPLOAD_URL_PREFIX, uu, name]  # type:ignore
+        elif config.NO_UPLOAD_PATH:
+            uploaded_url = await self.__no_upload(
+                filename, legacy_file_id, input_file, url
             )
         else:
             uploaded_url = await self._upload(filename, content_type, input_file, url)
@@ -350,17 +423,11 @@ class ContentMessageMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             self._send(msg, **kwargs)
             return
-
-        msg["oob"]["url"] = uploaded_url
-        msg["body"] = uploaded_url
-        if caption:
-            self._send(msg, carbon=carbon, **kwargs)
-            self.send_text(
-                caption, legacy_msg_id=legacy_msg_id, when=when, carbon=carbon, **kwargs
-            )
-        else:
-            self._set_msg_id(msg, legacy_msg_id)
-            self._send(msg, **kwargs)
+        if legacy_file_id:
+            self.__legacy_file_ids_to_urls[legacy_file_id] = uploaded_url
+        self.__send_url(
+            msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
+        )
 
     def correct(self, legacy_msg_id: LegacyMessageType, new_text: str, **kwargs):
         """

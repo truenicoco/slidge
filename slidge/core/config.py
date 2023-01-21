@@ -113,6 +113,9 @@ NO_UPLOAD_METHOD__DOC = (
     "Whether to 'copy', 'move', 'hardlink' or 'symlink' the files in no-upload-path."
 )
 
+NO_UPLOAD_FILE_READ_OTHERS = False
+NO_UPLOAD_FILE_READ_OTHERS__DOC = "After writing a file in NO_UPLOAD_PATH, change its permission so that 'others' can read it."
+
 IGNORE_DELAY_THRESHOLD = _TimedeltaSeconds("300")
 IGNORE_DELAY_THRESHOLD__DOC = (
     "Threshold, in seconds, below which the <delay> information is stripped "
