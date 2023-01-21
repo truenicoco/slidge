@@ -41,6 +41,7 @@ class TestSIMS(SlixTest):
             self.check(
                 sims,
                 f"""
+                <reference xmlns='urn:xmpp:reference:0' type='data'>
                 <media-sharing xmlns='urn:xmpp:sims:1'>
                   <file xmlns='urn:xmpp:jingle:apps:file-transfer:5'>
                     <media-type>MEDIA</media-type>
@@ -54,6 +55,7 @@ class TestSIMS(SlixTest):
                     <reference xmlns='urn:xmpp:reference:0' type='data' uri='https://xxx.com' />
                   </sources>
                 </media-sharing>
+                </reference>
                 """,
                 use_values=False,
             )

@@ -60,8 +60,7 @@ class XEP_0385(BasePlugin):
         h["value"] = h["value"].decode()
         sims["file"].append(h)
 
-        return sims
-        # do we need to put it as a child of "reference"?
-        # ref = self.xmpp["xep_0372"].stanza.Reference()
-        # ref.append(sims)
-        # return ref
+        ref = self.xmpp["xep_0372"].stanza.Reference()
+        ref.append(sims)
+        ref["type"] = "data"
+        return ref
