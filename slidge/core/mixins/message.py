@@ -274,7 +274,12 @@ class AttachmentMixin(MessageMaker):
         uu = str(uuid4())
         destination_dir = destination_dir / uu
         destination_dir.mkdir(parents=True)
-        if filename:
+        if input_file:
+            name = str(filename)
+            destination = destination_dir / name
+            with destination.open("wb") as fd:
+                fd.write(input_file.read())
+        elif filename:
             name = Path(filename).parts[-1]
             destination = destination_dir / name
             method = config.NO_UPLOAD_METHOD
@@ -298,11 +303,6 @@ class AttachmentMixin(MessageMaker):
                         config.DOWNLOAD_CHUNK_SIZE
                     ):
                         fd.write(chunk)
-        elif input_file:
-            name = str(filename)
-            destination = destination_dir / name
-            with destination.open("wb") as fd:
-                fd.write(input_file.read())
         else:
             raise RuntimeError("Must be called with either filename, URL or input_file")
 
