@@ -371,6 +371,8 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             self._send(msg, **kwargs)
 
+    # TODO: rewrite this so it's less ambiguous whether filename is a Path or a filename
+    #       associated with input_file
     async def send_file(
         self,
         filename: Union[Path, str],
@@ -422,13 +424,25 @@ class AttachmentMixin(MessageMaker):
         elif url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             uploaded_url = url
         elif config.NO_UPLOAD_PATH:
+            if isinstance(input_file, BytesIO):
+                # we have to copy the bytes here or we can't reread it again for hashing
+                input_copy = BytesIO(input_file.getvalue())
+            else:
+                input_copy = input_file  # type: ignore
             filename, uploaded_url = await self.__no_upload(
-                filename, legacy_file_id, input_file, url
+                filename, legacy_file_id, input_copy, url
             )
         else:
-            input_file, uploaded_url = await self._upload(
-                filename, content_type, input_file, url
-            )
+            if isinstance(input_file, BytesIO):
+                # we have to copy the bytes here or we can't reread it again for hashing
+                input_copy = BytesIO(input_file.getvalue())
+                _, uploaded_url = await self._upload(
+                    filename, content_type, input_copy, url
+                )
+            else:
+                input_file, uploaded_url = await self._upload(
+                    filename, content_type, input_file, url
+                )
         if uploaded_url is None:
             msg["body"] = (
                 "I tried to send a file, but something went wrong. "
@@ -444,12 +458,16 @@ class AttachmentMixin(MessageMaker):
             self.__set_sfs(msg, uploaded_url, filename, content_type, caption)
         elif isinstance(filename, str) and input_file:
             with tempfile.TemporaryDirectory() as d:
-                filename = Path(d) / filename
-                with filename.open("wb+") as f:
-                    with open(input_file.name, "rb") as ugly:
-                        f.write(ugly.read())
-                self.__set_sims(msg, uploaded_url, filename, content_type, caption)
-                self.__set_sfs(msg, uploaded_url, filename, content_type, caption)
+                new_filename = Path(d) / filename
+                with new_filename.open("wb+") as f:
+                    if input_file.closed:
+                        with open(input_file.name, "rb") as ugly:
+                            f.write(ugly.read())
+                    else:
+                        # this happens when this method is called with io.BytesIO
+                        f.write(input_file.read())
+                self.__set_sims(msg, uploaded_url, new_filename, content_type, caption)
+                self.__set_sfs(msg, uploaded_url, new_filename, content_type, caption)
         self.__send_url(
             msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
         )
