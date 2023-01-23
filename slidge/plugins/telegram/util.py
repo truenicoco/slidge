@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-def get_best_file(content: tgapi.MessageContent):
+def get_best_file(content: tgapi.MessageContent) -> Optional[tgapi.File]:
     if isinstance(content, tgapi.MessagePhoto):
         photo = content.photo
         return max(photo.sizes, key=lambda x: x.width).photo
@@ -20,6 +20,19 @@ def get_best_file(content: tgapi.MessageContent):
         return content.audio.audio
     elif isinstance(content, tgapi.MessageDocument):
         return content.document.document
+    return None
+
+
+def get_file_name(content: tgapi.MessageContent) -> Optional[str]:
+    if isinstance(content, tgapi.MessageVideo):
+        return content.video.file_name
+    elif isinstance(content, tgapi.MessageAnimation):
+        return content.animation.file_name
+    elif isinstance(content, tgapi.MessageAudio):
+        return content.audio.file_name
+    elif isinstance(content, tgapi.MessageDocument):
+        return content.document.file_name
+    return None
 
 
 class AvailableEmojisMixin:
@@ -138,7 +151,9 @@ class TelegramToXMPPMixin:
             else:
                 await self.send_tg_file(sticker.sticker, **kwargs)
         elif best_file := get_best_file(content):
-            await self.send_tg_file(best_file, content.caption.text, **kwargs)
+            await self.send_tg_file(
+                best_file, content.caption.text, get_file_name(content), **kwargs
+            )
         elif isinstance(content, tgapi.MessageBasicGroupChatCreate):
             # TODO: work out how to map this to group invitation
             pass
@@ -163,7 +178,11 @@ class TelegramToXMPPMixin:
             self.session.log.warning("Ignoring content: %s", type(content))
 
     async def send_tg_file(
-        self, best_file: tgapi.File, caption: Optional[str] = None, **kwargs
+        self,
+        best_file: tgapi.File,
+        caption: Optional[str] = None,
+        file_name: Optional[str] = None,
+        **kwargs,
     ):
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
@@ -172,6 +191,7 @@ class TelegramToXMPPMixin:
         await self.send_file(
             best_file_downloaded.local.path,
             caption=caption,
+            file_name=file_name,
             legacy_file_id=str(best_file.remote.unique_id),
             **kwargs,
         )
