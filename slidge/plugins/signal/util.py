@@ -10,16 +10,15 @@ class AttachmentSenderMixin:
         last_attachment_i = len(attachments) - 1
         for i, attachment in enumerate(attachments):
             filename = get_filename(attachment)
-            with open(attachment.storedFilename, "rb") as f:
-                await self.send_file(  # type:ignore
-                    filename=filename,
-                    input_file=f,
-                    content_type=attachment.contentType,
-                    legacy_msg_id=legacy_msg_id if i == last_attachment_i else None,
-                    caption=attachment.caption,
-                    legacy_file_id=attachment.key,
-                    **kwargs,
-                )
+            await self.send_file(  # type:ignore
+                file_name=filename,
+                file_path=attachment.storedFilename,
+                content_type=attachment.contentType,
+                legacy_msg_id=legacy_msg_id if i == last_attachment_i else None,
+                caption=attachment.caption,
+                legacy_file_id=attachment.key,
+                **kwargs,
+            )
 
 
 def get_filename(attachment: sigapi.JsonAttachmentv1):

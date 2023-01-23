@@ -1,5 +1,4 @@
 import asyncio
-import io
 import json
 import logging
 import random
@@ -7,10 +6,8 @@ import shelve
 import zlib
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from mimetypes import guess_type
 from typing import Optional, Union
 
-import aiohttp
 import maufbapi.types.graphql
 from maufbapi import AndroidAPI, AndroidMQTT, AndroidState
 from maufbapi.mqtt.subscription import RealtimeTopic
@@ -351,44 +348,43 @@ class Session(
                 return
 
             last_attachment_i = len(attachments) - 1
-            async with aiohttp.ClientSession() as c:
-                for i, a in enumerate(attachments):
-                    last = i == last_attachment_i
-                    try:
-                        url = (
-                            ((v := a.video_info) and v.download_url)
-                            or ((au := a.audio_info) and au.url)
-                            or a.image_info.uri_map.get(0)
+            for i, a in enumerate(attachments):
+                last = i == last_attachment_i
+                try:
+                    url = (
+                        ((v := a.video_info) and v.download_url)
+                        or ((au := a.audio_info) and au.url)
+                        or a.image_info.uri_map.get(0)
+                    )
+                except AttributeError:
+                    media_id = getattr(a, "media_id", None)
+                    if media_id:
+                        url = await self.api.get_file_url(
+                            thread_key.thread_fbid or thread_key.other_user_id,
+                            msg_id,
+                            media_id,
                         )
-                    except AttributeError:
-                        media_id = getattr(a, "media_id", None)
-                        if media_id:
-                            url = await self.api.get_file_url(
-                                thread_key.thread_fbid or thread_key.other_user_id,
-                                msg_id,
-                                media_id,
-                            )
-                        else:
-                            log.warning("Unhandled attachment: %s", a)
-                            contact.send_text(
-                                "/me sent an attachment that slidge does not support"
-                            )
-                            continue
-                    if url is None:
-                        if last:
-                            contact.send_text(
-                                text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
-                            )
+                    else:
+                        log.warning("Unhandled attachment: %s", a)
+                        contact.send_text(
+                            "/me sent an attachment that slidge does not support"
+                        )
                         continue
-                    async with c.get(url) as r:
-                        await contact.send_file(
-                            filename=a.file_name,
-                            content_type=a.mime_type,
-                            input_file=io.BytesIO(await r.read()),
-                            caption=text if last else None,
-                            legacy_msg_id=msg_id if last else None,
-                            reply_to_msg_id=reply_to if last else None,
+                if url is None:
+                    if last:
+                        contact.send_text(
+                            text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
                         )
+                    continue
+                await contact.send_file(
+                    file_name=a.file_name,
+                    content_type=a.mime_type,
+                    file_url=url,
+                    caption=text if last else None,
+                    legacy_msg_id=msg_id if last else None,
+                    reply_to_msg_id=reply_to if last else None,
+                    legacy_file_id=a.media_id,
+                )
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
         log.debug("Facebook read: %s", receipt)

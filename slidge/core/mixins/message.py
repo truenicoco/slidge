@@ -4,12 +4,10 @@ import shutil
 import stat
 import tempfile
 from datetime import datetime, timezone
-from io import BytesIO
 from pathlib import Path
 from typing import IO, Iterable, Optional, Union
 from uuid import uuid4
 
-import aiohttp
 from slixmpp import JID, Message
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
@@ -211,24 +209,23 @@ class AttachmentMixin(MessageMaker):
     def send_text(self, *_, **k):
         raise NotImplementedError
 
-    async def _upload(
+    async def __upload(
         self,
-        filename: Union[Path, str],
+        file_path: Path,
+        file_name: Optional[str] = None,
         content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
     ):
-        if url is not None:
-            if input_file is not None:
-                raise TypeError("Either a URL or a file-like object")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as r:
-                    input_file = BytesIO(await r.read())
+        if file_name and file_path.name != file_name:
+            d = Path(tempfile.mkdtemp())
+            temp = d / file_name
+            temp.symlink_to(file_path)
+            file_path = temp
+        else:
+            d = None
         try:
-            return input_file, await self.xmpp["xep_0363"].upload_file(
-                filename=filename,
+            new_url = await self.xmpp["xep_0363"].upload_file(
+                filename=file_path,
                 content_type=content_type,
-                input_file=input_file,
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
             )
         except FileUploadError as e:
@@ -236,13 +233,19 @@ class AttachmentMixin(MessageMaker):
                 "Something is wrong with the upload service, see the traceback below"
             )
             log.exception(e)
+            return None, None
+        finally:
+            if d is not None:
+                file_path.unlink()
+                d.rmdir()
 
+        return new_url
+
+    @staticmethod
     async def __no_upload(
-        self,
-        filename: Union[Path, str],
+        file_path: Path,
+        file_name: Optional[str] = None,
         legacy_file_id: Optional[Union[str, int]] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
     ):
         file_id = str(uuid4()) if legacy_file_id is None else str(legacy_file_id)
         destination_dir = Path(config.NO_UPLOAD_PATH) / file_id  # type:ignore
@@ -268,49 +271,90 @@ class AttachmentMixin(MessageMaker):
                     destination_dir,
                     files,
                 )
+                return None, None
 
         log.debug("Did not find a file in: %s", destination_dir)
         # let's use a UUID to avoid URLs being too obvious
         uu = str(uuid4())
         destination_dir = destination_dir / uu
         destination_dir.mkdir(parents=True)
-        if input_file:
-            name = str(filename)
-            destination = destination_dir / name
-            with destination.open("wb") as fd:
-                fd.write(input_file.read())
-        elif filename:
-            name = Path(filename).parts[-1]
-            destination = destination_dir / name
-            method = config.NO_UPLOAD_METHOD
-            if method == "copy":
-                shutil.copy(filename, destination)
-            elif method == "hardlink":
-                os.link(filename, destination)
-            elif method == "symlink":
-                os.symlink(filename, destination, target_is_directory=True)
-            elif method == "move":
-                shutil.move(filename, destination)
-            if config.NO_UPLOAD_FILE_READ_OTHERS:
-                log.debug("Changing perms of %s", destination)
-                destination.chmod(destination.stat().st_mode | stat.S_IROTH)
-        elif url:
-            name = url.split("/")[-1]
-            destination = destination_dir / name
-            async with self.session.http.get(url) as response:
-                with destination.open("wb") as fd:
-                    async for chunk in response.content.iter_chunked(
-                        config.DOWNLOAD_CHUNK_SIZE
-                    ):
-                        fd.write(chunk)
+
+        name = file_name or file_path.name
+        destination = destination_dir / name
+        method = config.NO_UPLOAD_METHOD
+        if method == "copy":
+            shutil.copy(file_path, destination)
+        elif method == "hardlink":
+            os.link(file_path, destination)
+        elif method == "symlink":
+            os.symlink(file_path, destination, target_is_directory=True)
+        elif method == "move":
+            shutil.move(file_path, destination)
         else:
-            raise RuntimeError("Must be called with either filename, URL or input_file")
+            raise RuntimeError("No upload method not recognized", method)
+
+        if config.NO_UPLOAD_FILE_READ_OTHERS:
+            log.debug("Changing perms of %s", destination)
+            destination.chmod(destination.stat().st_mode | stat.S_IROTH)
 
         uploaded_url = "/".join(
             [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
         )
 
         return destination, uploaded_url
+
+    async def __get_url(
+        self,
+        file_path: Optional[Path] = None,
+        data_stream: Optional[IO[bytes]] = None,
+        data: Optional[bytes] = None,
+        file_url: Optional[str] = None,
+        file_name: Optional[str] = None,
+        content_type: Optional[str] = None,
+        legacy_file_id: Optional[Union[str, int]] = None,
+    ):
+        if legacy_file_id:
+            cache = self.__legacy_file_ids_to_urls.get(legacy_file_id)
+            if cache is not None:
+                return False, None, cache
+
+        if file_url and config.USE_ATTACHMENT_ORIGINAL_URLS:
+            return False, None, file_url
+
+        if file_path is None:
+            file_name = str(uuid4()) if file_name is None else file_name
+            temp_dir = Path(tempfile.mkdtemp())
+            file_path = temp_dir / file_name
+            if file_url:
+                async with self.session.http.get(file_url) as r:
+                    with file_path.open("wb") as f:
+                        f.write(await r.read())
+
+            else:
+                if data_stream is not None:
+                    data = data_stream.read()
+                if data is None:
+                    raise RuntimeError
+
+                with file_path.open("wb") as f:
+                    f.write(data)
+
+            is_temp = not bool(config.NO_UPLOAD_PATH)
+        else:
+            is_temp = False
+
+        if config.NO_UPLOAD_PATH:
+            local_path, new_url = await self.__no_upload(
+                file_path, file_name, legacy_file_id
+            )
+        else:
+            local_path = file_path
+            new_url = await self.__upload(file_path, file_name, content_type)
+
+        if legacy_file_id:
+            self.__legacy_file_ids_to_urls[legacy_file_id] = new_url
+
+        return is_temp, local_path, new_url
 
     def __set_sims(
         self,
@@ -371,16 +415,16 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             self._send(msg, **kwargs)
 
-    # TODO: rewrite this so it's less ambiguous whether filename is a Path or a filename
-    #       associated with input_file
     async def send_file(
         self,
-        filename: Union[Path, str],
+        file_path: Optional[Union[Path, str]] = None,
         legacy_msg_id: Optional[LegacyMessageType] = None,
         *,
+        data_stream: Optional[IO[bytes]] = None,
+        data: Optional[bytes] = None,
+        file_url: Optional[str] = None,
+        file_name: Optional[str] = None,
         content_type: Optional[str] = None,
-        input_file: Optional[IO[bytes]] = None,
-        url: Optional[str] = None,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to_jid: Optional[JID] = None,
@@ -390,17 +434,16 @@ class AttachmentMixin(MessageMaker):
         **kwargs,
     ):
         """
-        Send a file using HTTP upload (:xep:`0363`)
+        Send a message with an attachment
 
-        :param filename: Filename to use or location on disk to the file to upload
+        :param file_path: Path to the attachment
+        :param data_stream: Alternatively, a stream of bytes (such as a File object)
+        :param data: Alternatively, a bytes object
+        :param file_url: Alternatively, a URL
+        :param file_name: How the file should be named.
         :param content_type: MIME type, inferred from filename if not given
-        :param input_file: Optionally, a file like object instead of a file on disk.
-            filename will still be used to give the uploaded file a name
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
-        :param url: Optionally, a URL of a file that slidge will download and upload to the
-            default file upload service on the xmpp server it's running on. url and input_file
-            are mutually exclusive.
         :param reply_to_msg_id: Quote another message (:xep:`0461`)
         :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
         :param reply_to_jid: JID of the quoted message author
@@ -417,33 +460,17 @@ class AttachmentMixin(MessageMaker):
             reply_to_jid=reply_to_jid,
             carbon=carbon,
         )
-        if legacy_file_id and (
-            cache := self.__legacy_file_ids_to_urls.get(legacy_file_id)
-        ):
-            uploaded_url = cache
-        elif url and config.USE_ATTACHMENT_ORIGINAL_URLS:
-            uploaded_url = url
-        elif config.NO_UPLOAD_PATH:
-            if isinstance(input_file, BytesIO):
-                # we have to copy the bytes here or we can't reread it again for hashing
-                input_copy = BytesIO(input_file.getvalue())
-            else:
-                input_copy = input_file  # type: ignore
-            filename, uploaded_url = await self.__no_upload(
-                filename, legacy_file_id, input_copy, url
-            )
-        else:
-            if isinstance(input_file, BytesIO):
-                # we have to copy the bytes here or we can't reread it again for hashing
-                input_copy = BytesIO(input_file.getvalue())
-                _, uploaded_url = await self._upload(
-                    filename, content_type, input_copy, url
-                )
-            else:
-                input_file, uploaded_url = await self._upload(
-                    filename, content_type, input_file, url
-                )
-        if uploaded_url is None:
+        is_temp, local_path, new_url = await self.__get_url(
+            Path(file_path) if file_path else None,
+            data_stream,
+            data,
+            file_url,
+            file_name,
+            content_type,
+            legacy_file_id,
+        )
+
+        if new_url is None:
             msg["body"] = (
                 "I tried to send a file, but something went wrong. "
                 "Tell your slidge admin to check the logs."
@@ -451,26 +478,15 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             self._send(msg, **kwargs)
             return
-        if legacy_file_id:
-            self.__legacy_file_ids_to_urls[legacy_file_id] = uploaded_url
-        if isinstance(filename, Path):
-            self.__set_sims(msg, uploaded_url, filename, content_type, caption)
-            self.__set_sfs(msg, uploaded_url, filename, content_type, caption)
-        elif isinstance(filename, str) and input_file:
-            with tempfile.TemporaryDirectory() as d:
-                new_filename = Path(d) / filename
-                with new_filename.open("wb+") as f:
-                    if input_file.closed:
-                        with open(input_file.name, "rb") as ugly:
-                            f.write(ugly.read())
-                    else:
-                        # this happens when this method is called with io.BytesIO
-                        f.write(input_file.read())
-                self.__set_sims(msg, uploaded_url, new_filename, content_type, caption)
-                self.__set_sfs(msg, uploaded_url, new_filename, content_type, caption)
-        self.__send_url(
-            msg, legacy_msg_id, uploaded_url, caption, carbon, when, **kwargs
-        )
+
+        if local_path:
+            self.__set_sims(msg, new_url, local_path, content_type, caption)
+            self.__set_sfs(msg, new_url, local_path, content_type, caption)
+            if is_temp and isinstance(local_path, Path):
+                local_path.unlink()
+                local_path.parent.rmdir()
+
+        self.__send_url(msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs)
 
 
 class ContentMessageMixin(AttachmentMixin):

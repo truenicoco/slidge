@@ -52,8 +52,8 @@ class Discord(di.Client):
             for i, attachment in enumerate(attachments):
                 last = i == last_attachment_i
                 await contact.send_file(
-                    url=attachment.url,
-                    filename=attachment.filename,
+                    file_url=attachment.url,
+                    file_name=attachment.filename,
                     content_type=attachment.content_type,
                     reply_to_msg_id=reply_to if last else None,
                     legacy_msg_id=msg_id if last else None,

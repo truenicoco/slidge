@@ -1,5 +1,4 @@
 import asyncio
-import io
 import pprint
 import re
 from datetime import datetime
@@ -245,9 +244,7 @@ class Session(
                         last = i == last_file_i
                         await contact.send_file(
                             filename=file_meta["name"],
-                            input_file=io.BytesIO(
-                                await self.mm_client.get_file(file_meta["id"])
-                            ),
+                            input_bytes=await self.mm_client.get_file(file_meta["id"]),
                             legacy_msg_id=post_id if last else None,
                             caption=text if last else None,
                         )

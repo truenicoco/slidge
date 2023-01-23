@@ -7,7 +7,6 @@ from pathlib import Path
 from threading import Lock, Thread
 from typing import Any, Optional
 
-import aiohttp
 import skpy
 from requests.exceptions import ConnectionError
 from slixmpp import JID
@@ -173,10 +172,9 @@ class Session(
                         contact.send_text(msg.plain, legacy_msg_id=msg.clientId)
                         self.unread_by_user[msg.clientId] = msg
                     elif isinstance(msg, skpy.SkypeFileMsg):
-                        file = io.BytesIO(
-                            await asyncio.to_thread(lambda: msg.fileContent)
-                        )  # non-blocking download / lambda because fileContent = property
-                        await contact.send_file(filename=msg.file.name, input_file=file)
+                        # non-blocking download / lambda because fileContent = property
+                        data = await asyncio.to_thread(lambda: msg.fileContent)
+                        await contact.send_file(file_name=msg.file.name, data=data)
         elif isinstance(event, skpy.SkypeTypingEvent):
             contact = await self.contacts.by_legacy_id(event.userId)
             if event.active:

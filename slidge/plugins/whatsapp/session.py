@@ -2,7 +2,6 @@ import asyncio
 from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime
 from functools import wraps
-from io import BytesIO
 from os import remove
 from os.path import basename
 from shelve import open
@@ -196,9 +195,9 @@ class Session(
                     attachment.Caption if attachment.Caption != "" else None
                 )
                 await contact.send_file(
-                    filename=attachment.Filename,
+                    file_name=attachment.Filename,
                     content_type=attachment.MIME,
-                    input_file=BytesIO(initial_bytes=bytes(attachment.Data)),
+                    input_file=bytes(attachment.Data),
                     legacy_msg_id=message.ID,
                     reply_to_msg_id=message_reply_id,
                     when=message_timestamp,
