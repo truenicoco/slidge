@@ -413,7 +413,7 @@ class AttachmentMixin(MessageMaker):
             )
         else:
             self._set_msg_id(msg, legacy_msg_id)
-            self._send(msg, **kwargs)
+            self._send(msg, carbon=carbon, **kwargs)
 
     async def send_file(
         self,
