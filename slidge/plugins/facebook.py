@@ -587,8 +587,15 @@ async def request(
         return await fut
 
 
+async def _dispatch(self, evt) -> None:
+    for handler in self._event_handlers[type(evt)]:
+        self.log.trace("Dispatching event %s", evt)
+        await handler(evt)
+
+
 AndroidMQTT.publish = publish
 AndroidMQTT.request = request
+AndroidMQTT._dispatch = _dispatch
 
 
 log = logging.getLogger(__name__)
