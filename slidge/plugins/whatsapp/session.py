@@ -197,7 +197,7 @@ class Session(
                 await contact.send_file(
                     file_name=attachment.Filename,
                     content_type=attachment.MIME,
-                    input_file=bytes(attachment.Data),
+                    data=bytes(attachment.Data),
                     legacy_msg_id=message.ID,
                     reply_to_msg_id=message_reply_id,
                     when=message_timestamp,
