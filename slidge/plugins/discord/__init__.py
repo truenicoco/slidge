@@ -126,7 +126,6 @@ class Roster(LegacyRoster["Session", Contact, int]):
                 log.debug(f"%s is not a friend", u)
                 continue
             c = await self.by_legacy_id(u.id)
-            await c.update_info()
             await c.add_to_roster()
             # TODO: contribute to discord.py-self so that the presence information
             #       of relationships is parsed. logs show:
