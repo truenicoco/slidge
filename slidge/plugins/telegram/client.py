@@ -7,7 +7,7 @@ import aiotdlib
 from aiotdlib import api as tgapi
 
 from . import config
-from .util import get_best_file
+from .util import get_best_file, get_file_name
 
 if TYPE_CHECKING:
     from .contact import Contact
@@ -101,7 +101,8 @@ class TelegramClient(aiotdlib.Client):
                 )
                 has_caption = (caption := content.caption) and (text := caption.text)
                 await contact.send_file(
-                    filename=file.local.path,
+                    file_path=file.local.path,
+                    file_name=get_file_name(content),
                     legacy_msg_id=None if has_caption else msg.id,
                     carbon=True,
                 )
