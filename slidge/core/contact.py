@@ -303,6 +303,16 @@ class LegacyContact(
         for ptype in "unsubscribe", "unsubscribed", "unavailable":
             self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)  # type: ignore
 
+    async def update_info(self):
+        """
+        Fetch information about this contact from the legacy network
+
+        This is awaited on Contact instantiation, and should be overridden to
+        update the nickname, avatar, vcard [..] of this contact, by making
+        "legacy API calls".
+        """
+        pass
+
 
 class LegacyRoster(
     Generic[SessionType, LegacyContactType, LegacyUserIdType],
@@ -363,6 +373,7 @@ class LegacyRoster(
                 jid_username,
             )
             await c.update_caps()
+            await c.update_info()
             self._contacts_by_legacy_id[c.legacy_id] = self._contacts_by_bare_jid[
                 bare
             ] = c
@@ -386,6 +397,7 @@ class LegacyRoster(
                 self.session, legacy_id, await self.legacy_id_to_jid_username(legacy_id)
             )
             await c.update_caps()
+            await c.update_info()
             self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[
                 legacy_id
             ] = c
