@@ -1,12 +1,16 @@
 import datetime
 import logging
+import tempfile
 from copy import copy
+from pathlib import Path
 from typing import Hashable, Optional, Dict, Any
 
 from slixmpp import JID, Presence, Message
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0082 import format_datetime
 
 from slidge import *
+from slidge.core.mixins.message import AttachmentMixin
 
 from slidge.util.test import SlidgeTest
 from slidge.core.contact import LegacyContactType
@@ -778,6 +782,115 @@ class TestContact(SlidgeTest):
             </presence>
             """
         )
+
+
+class TestCarbon(SlidgeTest):
+    plugin = globals()
+
+    def setUp(self):
+        super().setUp()
+        user_store.add(
+            JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+        self.get_romeo_session().logged = True
+
+    @staticmethod
+    def get_romeo_session() -> Session:
+        return BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@shakespeare.lit")
+        )
+
+    def get_juliet(self) -> LegacyContact:
+        session = self.get_romeo_session()
+        return self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(123))
+
+    def test_carbon_send(self):
+        orig = AttachmentMixin._AttachmentMixin__get_url
+
+        async def get_url(self, file_path, *a, **k):
+            return False, file_path, "URL"
+
+        AttachmentMixin._AttachmentMixin__get_url = get_url
+
+        self.recv(
+            """
+            <message to="aim.shakespeare.lit" from="shakespeare.lit">
+              <privilege xmlns="urn:xmpp:privilege:2">
+                <perm access="roster" type="both" />
+                <perm access="message" type="outgoing" />
+              </privilege>
+            </message>
+            """
+        )
+
+        juliet = self.get_juliet()
+        juliet.send_text("TEXT", carbon=True)
+        self.send(
+            """
+   <message xmlns="jabber:component:accept" to="shakespeare.lit" from="aim.shakespeare.lit" type="normal">
+   	<privilege xmlns="urn:xmpp:privilege:2">
+   		<forwarded xmlns="urn:xmpp:forward:0">
+   			<message xmlns="jabber:client" type="chat" from="romeo@shakespeare.lit" to="juliet@aim.shakespeare.lit">
+   				<body>TEXT</body>
+   				<active xmlns="http://jabber.org/protocol/chatstates"/>
+   				<store xmlns="urn:xmpp:hints"/>
+   				<markable xmlns="urn:xmpp:chat-markers:0"/>
+   			</message>
+   		</forwarded>
+   	</privilege>
+   </message>
+            """
+        )
+        with tempfile.NamedTemporaryFile("w+") as f:
+            f.write("test")
+            f.seek(0)
+            self.xmpp.loop.run_until_complete(
+                juliet.send_file(file_path=f.name, carbon=True)
+            )
+            stamp = format_datetime(
+                datetime.datetime.fromtimestamp(Path(f.name).stat().st_mtime)
+            )
+            self.send(
+                f"""
+       <message xmlns="jabber:component:accept" to="shakespeare.lit" from="aim.shakespeare.lit" type="normal">
+        <privilege xmlns="urn:xmpp:privilege:2">
+            <forwarded xmlns="urn:xmpp:forward:0">
+                <message xmlns="jabber:client" type="chat" from="romeo@shakespeare.lit" to="juliet@aim.shakespeare.lit">
+                    <reference xmlns="urn:xmpp:reference:0" type="data">
+                        <media-sharing xmlns="urn:xmpp:sims:1">
+                            <sources>
+                                <reference xmlns="urn:xmpp:reference:0" uri="URL" type="data"/>
+                            </sources>
+                            <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
+                                <name>{Path(f.name).name}</name>
+                                <size>4</size>
+                                <date>{stamp}</date>
+                                <hash xmlns="urn:xmpp:hashes:2" algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
+                            </file>
+                        </media-sharing>
+                    </reference>
+                    <file-sharing xmlns="urn:xmpp:sfs:0" disposition="inline">
+                        <sources>
+                            <url-data xmlns="http://jabber.org/protocol/url-data" target="URL"/>
+                        </sources>
+                        <file xmlns="urn:xmpp:file:metadata:0">
+                            <name>{Path(f.name).name}</name>
+                            <size>4</size>
+                            <date>{stamp}</date>
+                            <hash xmlns="urn:xmpp:hashes:2" algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
+                        </file>
+                    </file-sharing>
+                    <x xmlns="jabber:x:oob">
+                        <url>URL</url>
+                    </x>
+                    <body>URL</body>
+                </message>
+            </forwarded>
+        </privilege>
+       </message>
+                """
+            )
+        AttachmentMixin._AttachmentMixin__get_url = orig
 
 
 log = logging.getLogger(__name__)
