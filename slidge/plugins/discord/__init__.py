@@ -95,7 +95,7 @@ class Roster(LegacyRoster["Session", Contact, int]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
 
-    async def by_discord_user(self, u: di.User):
+    async def by_discord_user(self, u: di.User) -> Contact:
         return await self.by_legacy_id(u.id)
 
     async def jid_username_to_legacy_id(self, username: str):
