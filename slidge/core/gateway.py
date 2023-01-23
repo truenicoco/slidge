@@ -429,6 +429,8 @@ class BaseGateway(  # type:ignore
             # don't need to make a mess in the logs).
             pass
         else:
+            if exception:
+                log.exception(exception)
             self.loop.stop()
             exit(1)
 
