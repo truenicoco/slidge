@@ -150,63 +150,62 @@ def save_state(user_bare_jid: str, state: AndroidState):
         shelf["state"] = state
 
 
-class Contact(LegacyContact["Session", str]):
-    # legacy_id = facebook username, as in facebook.com/name.surname123
+class Contact(LegacyContact["Session", int]):
     REACTIONS_SINGLE_EMOJI = True
 
-    def __init__(self, *a, **k):
-        super(Contact, self).__init__(*a, **k)
-        self._fb_id: Optional[int] = None
+    # def __init__(self, *a, **k):
+    #     super(Contact, self).__init__(*a, **k)
+    #     self._fb_id: Optional[int] = None
 
-    async def fb_id(self):
-        if self._fb_id is None:
-            results = await self.session.api.search(
-                self.legacy_id, entity_types=["user"]
-            )
-            for search_result in results.search_results.edges:
-                result = search_result.node
-                if (
-                    isinstance(result, Participant)
-                    and result.username == self.legacy_id
-                ):
-                    self._fb_id = int(result.id)
-                    break
-            else:
-                raise XMPPError(
-                    "not-found", text=f"Cannot find the facebook ID of {self.legacy_id}"
-                )
-            self.session.contacts.by_fb_id_dict[self._fb_id] = self
-        return self._fb_id
+    # async def fb_id(self):
+    #     if self._fb_id is None:
+    #         results = await self.session.api.search(
+    #             self.legacy_id, entity_types=["user"]
+    #         )
+    #         for search_result in results.search_results.edges:
+    #             result = search_result.node
+    #             if (
+    #                 isinstance(result, Participant)
+    #                 and result.username.translate(ESCAPE_TABLE) == self.legacy_id
+    #             ):
+    #                 self._fb_id = int(result.id)
+    #                 break
+    #         else:
+    #             raise XMPPError(
+    #                 "not-found", text=f"Cannot find the facebook ID of {self.legacy_id}"
+    #             )
+    #         self.session.contacts.by_fb_id_dict[self._fb_id] = self
+    #     return self._fb_id
 
     async def populate_from_participant(
         self, participant: ParticipantNode, update_avatar=True
     ):
-        if self.legacy_id != participant.messaging_actor.username:
+        if self.legacy_id != int(participant.messaging_actor.id):
             raise RuntimeError(
                 "Attempted to populate a contact with a non-corresponding participant"
             )
         self.name = participant.messaging_actor.name
-        self._fb_id = int(participant.id)
+        # self._fb_id = int(participant.id)
         if self.avatar is None or update_avatar:
             self.avatar = participant.messaging_actor.profile_pic_large.uri
 
 
 class Roster(LegacyRoster["Session", Contact, str]):
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.by_fb_id_dict: dict[int, Contact] = {}
+    # def __init__(self, *a, **k):
+    #     super().__init__(*a, **k)
+    #     self.by_fb_id_dict: dict[int, Contact] = {}
 
-    async def by_fb_id(self, fb_id: int) -> "Contact":
-        contact = self.by_fb_id_dict.get(fb_id)
-        if contact is None:
-            thread = (await self.session.api.fetch_thread_info(fb_id))[0]
-            return await self.by_thread(thread)
-        return contact
+    # async def by_fb_id(self, fb_id: int) -> "Contact":
+    #     contact = self.by_fb_id_dict.get(fb_id)
+    #     if contact is None:
+    #         thread = (await self.session.api.fetch_thread_info(fb_id))[0]
+    #         return await self.by_thread(thread)
+    #     return contact
 
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
             raise ValueError("Thread seems to be a group thread")
-        return await self.by_fb_id(t.other_user_id)
+        return await self.by_legacy_id(t.other_user_id)
 
     async def by_thread(self, t: Thread):
         if t.is_group_thread:
@@ -218,16 +217,16 @@ class Roster(LegacyRoster["Session", Contact, str]):
             )
 
         for participant in t.all_participants.nodes:
-            if participant.id != self.session.me.id:
+            if int(participant.id) != int(self.session.my_id):
                 break
         else:
             raise RuntimeError(
                 "Couldn't find friend in thread participants", t.all_participants
             )
 
-        contact = await self.by_legacy_id(participant.messaging_actor.username)
+        contact = await self.by_legacy_id(int(participant.messaging_actor.id))
         await contact.populate_from_participant(participant)
-        self.by_fb_id_dict[int(participant.id)] = contact
+        # self.by_fb_id_dict[int(participant.id)] = contact
         return contact
 
 
@@ -239,6 +238,7 @@ class Session(
     mqtt: AndroidMQTT
     api: AndroidAPI
     me: maufbapi.types.graphql.OwnInfo
+    my_id: int
 
     def __init__(self, user):
         super().__init__(user)
@@ -262,7 +262,7 @@ class Session(
         self.api = AndroidAPI(state=s, proxy_handler=x)
         self.mqtt = AndroidMQTT(self.api.state, proxy_handler=self.api.proxy_handler)
         self.me = await self.api.get_self()
-        self.me.id = int(self.me.id)  # bug in maufbapi?
+        self.my_id = int(self.me.id)  # bug in maufbapi? tulir said: "ask meta"
         await self.add_friends()
         self.mqtt.seq_id_update_callback = lambda i: setattr(self.mqtt, "seq_id", i)
         self.mqtt.add_event_handler(mqtt_t.Message, self.on_fb_message)
@@ -309,7 +309,7 @@ class Session(
         self, text: str, chat: Contact, *, reply_to_msg_id=None, **kwargs
     ) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
-            target=(fb_id := await chat.fb_id()),
+            target=chat.legacy_id,
             message=text,
             is_group=False,
             reply_to=reply_to_msg_id,
@@ -321,7 +321,7 @@ class Session(
         if not resp.success:
             raise XMPPError(resp.error_message)
         fb_msg = await fut
-        self.sent_messages[fb_id].add(fb_msg)
+        self.sent_messages[chat.legacy_id].add(fb_msg)
         return fb_msg.mid
 
     async def send_file(
@@ -334,7 +334,7 @@ class Session(
             file_name=url.split("/")[-1],
             mimetype=http_response.content_type,
             offline_threading_id=oti,
-            chat_id=await chat.fb_id(),
+            chat_id=chat.legacy_id,
             is_group=False,
             reply_to=reply_to_msg_id,
         )
@@ -349,19 +349,19 @@ class Session(
         pass
 
     async def composing(self, c: Contact):
-        await self.mqtt.set_typing(target=await c.fb_id())
+        await self.mqtt.set_typing(target=c.legacy_id)
 
     async def paused(self, c: Contact):
-        await self.mqtt.set_typing(target=await c.fb_id(), typing=False)
+        await self.mqtt.set_typing(target=c.legacy_id, typing=False)
 
     async def displayed(self, legacy_msg_id: str, c: Contact):
-        fb_id = await c.fb_id()
+        # fb_id = await c.fb_id()
         try:
-            t = self.received_messages[fb_id].by_mid[legacy_msg_id].timestamp_ms
+            t = self.received_messages[c.legacy_id].by_mid[legacy_msg_id].timestamp_ms
         except KeyError:
             log.debug("Cannot find the timestamp of %s", legacy_msg_id)
         else:
-            await self.mqtt.mark_read(target=fb_id, read_to=t, is_group=False)
+            await self.mqtt.mark_read(target=c.legacy_id, read_to=t, is_group=False)
 
     async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
         if isinstance(evt, mqtt_t.ExtendedMessage):
@@ -380,7 +380,7 @@ class Session(
 
         log.debug("Facebook message: %s", evt)
         fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
-        if meta.sender == self.me.id:
+        if meta.sender == self.my_id:
             try:
                 fut = self.ack_futures.pop(meta.offline_threading_id)
             except KeyError:
@@ -454,7 +454,7 @@ class Session(
 
     async def on_fb_typing(self, notification: mqtt_t.TypingNotification):
         log.debug("Facebook typing: %s", notification)
-        c = await self.contacts.by_fb_id(notification.user_id)
+        c = await self.contacts.by_legacy_id(notification.user_id)
         if notification.typing_status:
             c.composing()
         else:
@@ -464,9 +464,9 @@ class Session(
         log.debug("Facebook own read: %s", receipt)
         when = receipt.read_to
         for thread in receipt.threads:
-            c = await self.contacts.by_fb_id(thread.other_user_id)
+            c = await self.contacts.by_legacy_id(thread.other_user_id)
             try:
-                mid = self.received_messages[await c.fb_id()].pop_up_to(when).mid
+                mid = self.received_messages[c.legacy_id].pop_up_to(when).mid
             except KeyError:
                 log.debug("Cannot find mid of %s", when)
                 continue
@@ -478,7 +478,7 @@ class Session(
             return
         contact = await self.contacts.by_thread_key(tk)
         mid = reaction.message_id
-        if reaction.reaction_sender_id == self.me.id:
+        if reaction.reaction_sender_id == self.my_id:
             try:
                 f = self.reaction_futures.pop(mid)
             except KeyError:
@@ -494,7 +494,7 @@ class Session(
             return
         contact = await self.contacts.by_thread_key(tk)
         mid = unsend.message_id
-        if unsend.user_id == self.me.id:
+        if unsend.user_id == self.my_id:
             try:
                 f = self.unsend_futures.pop(mid)
             except KeyError:
@@ -538,7 +538,7 @@ class Session(
                         "name": result.name + " (friend)"
                         if is_friend
                         else " (not friend)",
-                        "jid": f"{result.username}@{self.xmpp.boundjid.bare}",
+                        "jid": f"{result.id}@{self.xmpp.boundjid.bare}",
                     }
                 )
 
