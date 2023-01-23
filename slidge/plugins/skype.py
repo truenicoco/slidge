@@ -60,6 +60,29 @@ class Contact(LegacyContact["Session", str]):
         else:
             log.warning("Unknown contact status: %s", status)
 
+    async def update_info(self, user: Optional[skpy.SkypeUser] = None):
+        if user is None:
+            user = self.session.sk.contacts.user(self.legacy_id)
+            if user is None:
+                raise XMPPError("item-not-found")
+
+        # TODO: do something with phone, mood, and locality attributes of SkypeUser
+
+        first = user.name.first
+        last = user.name.last
+
+        if first is not None and last is not None:
+            self.name = f"{first} {last}"
+        elif first is not None:
+            self.name = first
+        elif last is not None:
+            self.name = last
+
+        if user.avatar is not None:
+            self.avatar = user.avatar
+
+        self.set_vcard(given=first, surname=last, full_name=self.name)
+
 
 class ListenThread(Thread):
     def __init__(self, session: "Session", *a, **kw):
@@ -88,16 +111,6 @@ class Roster(LegacyRoster):
     async def fill(self):
         for contact in self.session.sk.contacts:
             c = await self.by_legacy_id(contact.id)
-            first = contact.name.first
-            last = contact.name.last
-            if first is not None and last is not None:
-                c.name = f"{first} {last}"
-            elif first is not None:
-                c.name = first
-            elif last is not None:
-                c.name = last
-            if contact.avatar is not None:
-                c.avatar = contact.avatar
             await c.add_to_roster()
 
 
