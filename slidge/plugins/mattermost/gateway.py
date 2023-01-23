@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import emoji
-from mattermost_api_reference_client.models import Status
+from mattermost_api_reference_client.models import Status, User
 from mattermost_api_reference_client.types import Unset
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -117,6 +117,24 @@ class Contact(LegacyContact["Session", str]):
             ],
         )
 
+    async def update_info(self, user: Optional[User] = None):
+        if user is None:
+            user = await self.session.mm_client.get_user(self.legacy_id)
+
+        full_name = " ".join(
+            filter(None, [user.first_name, user.last_name])  # type:ignore
+        ).strip()
+
+        self.name = user.nickname or full_name
+
+        self.set_vcard(
+            full_name=full_name,
+            given=user.first_name,  # type:ignore
+            surname=user.last_name,  # type:ignore
+            email=user.email,  # type:ignore
+        )
+        self.avatar = await self.session.mm_client.get_profile_image(user.id)
+
 
 class Roster(LegacyRoster["Session", Contact, str]):
     user_id_to_username: dict[str, str]
@@ -156,14 +174,6 @@ class Roster(LegacyRoster["Session", Contact, str]):
         for user in contact_mm_users:
             status: Status = statuses[user.id]
             contact = await self.by_legacy_id(user.username)
-            self.user_id_to_username[user.id] = user.username
-            if user.nickname:
-                contact.name = user.nickname
-            else:
-                contact.name = " ".join([user.first_name, user.last_name]).strip()
-
-            contact.avatar = await mm.get_profile_image(user.id)
-
             await contact.add_to_roster()
             contact.update_status(str(status.status))
 
