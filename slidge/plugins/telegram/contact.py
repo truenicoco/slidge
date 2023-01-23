@@ -27,7 +27,6 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
         super().__init__(*a, **k)
         self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
-        self.xmpp.loop.create_task(self.update_info())
 
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()

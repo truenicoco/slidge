@@ -174,7 +174,6 @@ class Session(
             return
 
         contact = await self.contacts.by_legacy_id(user_id)
-        await contact.update_info()
         await contact.add_to_roster()
 
         return SearchResult(
