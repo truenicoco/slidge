@@ -227,7 +227,7 @@ def escape(t: str):
     return re.sub(ESCAPE_PATTERN, r"\\\1", t)
 
 
-RESERVED_CHARS = "_*[]()~`>#+-=|{}.!"
+RESERVED_CHARS = r"_*[]()~`>#+-=|{}.!\\"
 ESCAPE_PATTERN = re.compile(f"([{re.escape(RESERVED_CHARS)}])")
 
 log = logging.getLogger(__name__)
