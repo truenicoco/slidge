@@ -544,7 +544,7 @@ class ContentMessageMixin(AttachmentMixin):
         Call this when a legacy contact reacts to a message
 
         :param legacy_msg_id: The message which the reaction refers to.
-        :param emojis: A iterable of emojis used as reactions
+        :param emojis: An iterable of emojis used as reactions
         :return:
         """
         msg = self._make_message(hints={"store"}, carbon=kwargs.get("carbon"))
