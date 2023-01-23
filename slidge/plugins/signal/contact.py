@@ -25,7 +25,6 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
         super().__init__(*a, **k)
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
-        self.xmpp.loop.create_task(self._update_info())
 
     @functools.cached_property
     def signal_address(self):
@@ -62,7 +61,7 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
             attempts += 1
             await asyncio.sleep(sleep * attempts**exp)
 
-    async def _update_info(self, profile: Optional[sigapi.Profilev1] = None):
+    async def update_info(self, profile: Optional[sigapi.Profilev1] = None):
         if profile is None:
             profile = await self.get_profile()
             if profile is None:
