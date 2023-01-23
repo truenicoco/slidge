@@ -128,6 +128,18 @@ class Contact(LegacyContact["Session", int]):
     async def available_emojis(self, legacy_msg_id):
         return set(emoji_translate.values())
 
+    async def update_info(self, user: Optional[SteamUser] = None):
+        if user is None:
+            user = self.session.steam.get_user(self.legacy_id)
+            if user is None:
+                raise XMPPError("item-not-found")
+        self.name = user.name
+        try:
+            self.avatar = user.get_avatar_url()
+        except TypeError:
+            self.session.log.debug("Could not update the avatar of %s", user)
+        self.update_status(user.state)
+
 
 class Roster(LegacyRoster["Session", Contact, int]):
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
@@ -157,7 +169,6 @@ class Roster(LegacyRoster["Session", Contact, int]):
             c.name = f.name
             c.avatar = f.get_avatar_url()
             await c.add_to_roster()
-            c.update_status(f.state)
 
 
 class Session(
