@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 class Bookmarks(LegacyBookmarks):
     session: "Session"
 
+    # COMPAT: We prefix with 'group' because movim does not like MUC local parts
+    #         starting with a hyphen
+
     @staticmethod
     async def legacy_id_to_jid_local_part(legacy_id: int):
         return "group" + str(legacy_id)
@@ -29,16 +32,10 @@ class Bookmarks(LegacyBookmarks):
     async def fill(self):
         tg = self.session.tg
         for chat in await tg.get_main_list_chats_all():
-            if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
-                muc = await self.by_legacy_id(chat.id)
-                group = await tg.get_basic_group(chat.type_.basic_group_id)
-            elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
-                muc = await self.by_legacy_id(chat.id)
-                group = await tg.get_supergroup(chat.type_.supergroup_id)
-            else:
-                continue
-            muc.n_participants = group.member_count
-            muc.DISCO_NAME = chat.title
+            if isinstance(
+                chat.type_, (tgapi.ChatTypeBasicGroup, tgapi.ChatTypeSupergroup)
+            ):
+                await self.by_legacy_id(chat.id)
 
 
 class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
@@ -52,6 +49,18 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         super().__init__(*a, **k)
         self.reactions = defaultdict[int, set[Participant]](set)
         self.session.xmpp.loop.create_task(self.update_subject_from_msg())
+
+    async def update_info(self):
+        tg = self.session.tg
+        chat = await tg.get_chat(self.legacy_id)
+        if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
+            group = await tg.get_basic_group(chat.type_.basic_group_id)
+        elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
+            group = await tg.get_supergroup(chat.type_.supergroup_id)
+        else:
+            raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
+        self.n_participants = group.member_count
+        self.DISCO_NAME = self.description = chat.title
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
