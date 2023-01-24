@@ -29,7 +29,7 @@ class Discord(di.Client):
             if fut is None:
                 (
                     await self.session.contacts.by_discord_user(channel.recipient)
-                ).send_text(message.content, carbon=True)
+                ).send_text(message.content, legacy_msg_id=message.id, carbon=True)
             else:
                 fut.set_result(True)
         else:
@@ -74,7 +74,7 @@ class Discord(di.Client):
             if fut is None:
                 (
                     await self.session.contacts.by_discord_user(after.channel.recipient)
-                ).correct(after.id, after.content, carbon=True)
+                ).correct(before.id, after.content, carbon=True)
             else:
                 fut.set_result(True)
         else:
