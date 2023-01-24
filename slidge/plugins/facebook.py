@@ -161,9 +161,19 @@ class Contact(LegacyContact["Session", int]):
                 "Attempted to populate a contact with a non-corresponding participant"
             )
         self.name = participant.messaging_actor.name
-        # self._fb_id = int(participant.id)
         if self.avatar is None or update_avatar:
             self.avatar = participant.messaging_actor.profile_pic_large.uri
+
+    async def get_thread(self):
+        return (await self.session.api.fetch_thread_info(self.legacy_id))[0]
+
+    async def update_info(self):
+        t = await self.get_thread()
+
+        participant = self.session.contacts.get_friend_participant(
+            t.all_participants.nodes
+        )
+        await self.populate_from_participant(participant)
 
 
 class Roster(LegacyRoster["Session", Contact, int]):
@@ -176,22 +186,25 @@ class Roster(LegacyRoster["Session", Contact, int]):
         if t.is_group_thread:
             raise RuntimeError("Tried to populate a user from a group chat")
 
-        if len(t.all_participants.nodes) != 2:
-            raise RuntimeError(
-                "Tried is not a group chat but doesn't have 2 participants ‽"
-            )
-
-        for participant in t.all_participants.nodes:
-            if int(participant.id) != self.session.my_id:
-                break
-        else:
-            raise RuntimeError(
-                "Couldn't find friend in thread participants", t.all_participants
-            )
-
+        participant = self.get_friend_participant(t.all_participants.nodes)
         contact = await self.by_legacy_id(int(participant.messaging_actor.id))
         await contact.populate_from_participant(participant)
         return contact
+
+    def get_friend_participant(self, nodes: list[ParticipantNode]) -> ParticipantNode:
+        if len(nodes) != 2:
+            raise XMPPError(
+                "internal-server-error",
+                "This facebook thread has more than two participants. This is a slidge bug.",
+            )
+
+        for participant in nodes:
+            if int(participant.id) != self.session.my_id:
+                return participant
+        else:
+            raise XMPPError(
+                "internal-server-error", "Couldn't find friend in thread participants"
+            )
 
 
 class Session(
@@ -262,7 +275,11 @@ class Session(
             if t.is_group_thread:
                 log.debug("Skipping group: %s", t)
                 continue
-            c = await self.contacts.by_thread(t)
+            try:
+                c = await self.contacts.by_thread(t)
+            except XMPPError:
+                self.log.warning("Something went wrong with this thread: %s", t)
+                continue
             await c.add_to_roster()
             c.online()
 
