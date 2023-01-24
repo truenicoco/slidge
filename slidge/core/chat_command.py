@@ -184,6 +184,8 @@ class ChatCommandProvider:
         if session is None:
             msg.reply("Register to the gateway first!").send()
         else:
+            msg.reply("Updating groups…").send()
+            await session.bookmarks.fill()
             groups = sorted(
                 session.bookmarks,
                 key=lambda m: m.DISCO_NAME.casefold() if m.DISCO_NAME else "",
