@@ -1,6 +1,6 @@
 import logging
 from datetime import date, datetime
-from typing import Any, Generic, Optional, Type, Union
+from typing import Any, Generic, Iterable, Optional, Type, Union
 
 from slixmpp import JID, Message, Presence
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
@@ -221,6 +221,7 @@ class LegacyContact(
         surname: Optional[str] = None,
         birthday: Optional[date] = None,
         phone: Optional[str] = None,
+        phones: Iterable[str] = (),
         note: Optional[str] = None,
         url: Optional[str] = None,
         email: Optional[str] = None,
@@ -252,6 +253,8 @@ class LegacyContact(
             vcard.add_email(email)
         if phone:
             vcard.add_tel(phone)
+        for p in phones:
+            vcard.add_tel(p)
         if country and locality:
             vcard.add_address(country, locality)
         elif country:
