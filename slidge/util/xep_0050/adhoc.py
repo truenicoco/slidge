@@ -4,6 +4,7 @@
 # This file is part of Slixmpp.
 # See the file LICENSE for copying permission.
 import asyncio
+import functools
 import logging
 import time
 
@@ -620,10 +621,16 @@ class XEP_0050(BasePlugin):
             self.terminate_command(session)
 
 
+def _iscoroutine_or_partial_coroutine(handler):
+    return asyncio.iscoroutinefunction(handler) \
+        or isinstance(handler, functools.partial) \
+        and asyncio.iscoroutinefunction(handler.func)
+
+
 async def _await_if_needed(handler, *args):
     if handler is None:
         raise XMPPError("bad-request", text="The command is completed")
-    if asyncio.iscoroutinefunction(handler):
+    if _iscoroutine_or_partial_coroutine(handler):
         log.debug(f"%s is async", handler)
         return await handler(*args)
     else:

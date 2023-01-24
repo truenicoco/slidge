@@ -1,13 +1,12 @@
 import slixmpp.plugins
 
 from .core import config as global_config
+from .core.command import FormField, SearchResult
 from .core.contact import LegacyContact, LegacyRoster
 from .core.gateway import BaseGateway
 from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from .core.session import BaseSession
 from .util import (
-    FormField,
-    SearchResult,
     xep_0030,
     xep_0050,
     xep_0077,

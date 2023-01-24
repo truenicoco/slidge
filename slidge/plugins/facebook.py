@@ -21,7 +21,7 @@ from maufbapi.types.graphql.responses import FriendshipStatus
 from slixmpp import JID
 
 from slidge import *
-from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired
+from slidge.core.command.register import RegistrationType, TwoFactorNotRequired
 
 
 class AndroidMQTT(AndroidMQTTOriginal):

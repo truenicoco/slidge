@@ -482,6 +482,7 @@ class AttachmentMixin(MessageMaker):
                 local_path.parent.rmdir()
 
         self.__send_url(msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs)
+        return new_url
 
 
 class ContentMessageMixin(AttachmentMixin):

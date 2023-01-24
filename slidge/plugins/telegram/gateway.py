@@ -4,10 +4,11 @@ import typing
 from datetime import datetime
 
 import aiotdlib.api as tgapi
-from slixmpp import JID, Iq
+from slixmpp import JID
 
 from slidge import *
-from slidge.core.adhoc import RegistrationType
+from slidge.core.command import Command, CommandAccess, Confirmation, Form, TableResult
+from slidge.core.command.register import RegistrationType
 
 from ...util import is_valid_phone_number
 from . import config
@@ -22,6 +23,102 @@ REGISTRATION_INSTRUCTIONS = (
     "in the official telegram client. "
     "You can uninstall the telegram client after this if you want."
 )
+
+
+class SessionCommandMixin:
+    INSTRUCTIONS: str = NotImplemented
+
+    async def run(self, session, ifrom: JID, *args):
+        assert session is not None
+        tg_sessions = (await session.tg.api.get_active_sessions()).sessions
+        if args:
+            return await self.step2(
+                {"tg-session": args[0]}, session, ifrom, tg_sessions
+            )
+        return Form(
+            title="Telegram sessions",
+            instructions=self.INSTRUCTIONS,
+            fields=[
+                FormField(
+                    "tg-session",
+                    type="list-single",
+                    label="Session",
+                    options=[
+                        {"label": f"{i}: {s.country} ({s.region})", "value": str(i)}
+                        for i, s in enumerate(tg_sessions)
+                    ],
+                )
+            ],
+            handler=self.step2,
+            handler_args=[tg_sessions],
+        )
+
+    async def step2(
+        self, form_values, _session, _ifrom, tg_sessions: list[tgapi.Session]
+    ):
+        raise NotImplementedError
+
+
+class ListSessions(SessionCommandMixin, Command):
+    NAME = "List telegram sessions"
+    NODE = CHAT_COMMAND = "tg-sessions"
+    ACCESS = CommandAccess.USER_LOGGED
+    INSTRUCTIONS = "Pick a session for more details"
+
+    async def step2(
+        self, form_values, _session, _ifrom, tg_sessions: list[tgapi.Session]
+    ):
+        i = int(form_values["tg-session"])
+        tg_session = tg_sessions[i]
+        items = [
+            {"name": n.removesuffix("_"), "value": str(getattr(tg_session, n))}
+            for n in [
+                "is_current",
+                "type_",
+                "application_name",
+                "ip",
+                "country",
+                "region",
+            ]
+        ]
+        items.extend(
+            {
+                "name": n,
+                "value": fmt_timestamp(getattr(tg_session, n, 0)),
+            }
+            for n in ["log_in_date", "last_active_date"]
+        )
+        return TableResult(
+            description=f"Details of telegram session #{i}",
+            fields=[FormField("name"), FormField("value")],
+            items=items,
+        )
+
+
+class TerminateSession(SessionCommandMixin, Command):
+    NAME = "Terminate a telegram session"
+    NODE = CHAT_COMMAND = "terminate-tg-session"
+    ACCESS = CommandAccess.USER_LOGGED
+    INSTRUCTIONS = "Pick a session to terminate it"
+
+    async def step2(
+        self, form_values, session, _ifrom, tg_sessions: list[tgapi.Session]
+    ):
+        assert session is not None
+        i = int(form_values["tg-session"])
+        tg_session = tg_sessions[i]
+        return Confirmation(
+            prompt=f"Are you sure you want to terminate session #{i} "
+            f"(last active on {fmt_timestamp(tg_session.last_active_date)})",
+            success="The session has been terminated",
+            handler=self.finish,
+            handler_args=[i],
+        )
+
+    @staticmethod
+    async def finish(session: "Session", _ifrom, session_i: int):
+        await session.tg.api.terminate_session(session_i)
+        return "Session has been terminated"
 
 
 class Gateway(BaseGateway["Session"]):
@@ -91,91 +188,9 @@ class Gateway(BaseGateway["Session"]):
         await session.tg.start()
         await session.tg.api.log_out()
 
-    def add_adhoc_commands(self):
-        self.adhoc.add_command(
-            node="get_sessions",
-            name="List active sessions",
-            handler=self.adhoc_active_sessions1,
-            only_users=True,
-        )
 
-    async def adhoc_active_sessions1(
-        self, iq: Iq, adhoc_session: dict[str, typing.Any]
-    ):
-        user = user_store.get_by_stanza(iq)
-        if user is None:
-            raise XMPPError("subscription-required")
-        session = self.session_cls.from_stanza(iq)
-
-        form = self["xep_0004"].make_form("form", "Active telegram sessions")
-        tg_sessions = (await session.tg.api.get_active_sessions()).sessions
-        form.add_field(
-            "tg_session_id",
-            ftype="list-single",
-            label="Sessions",
-            options=[{"label": f"{s.country}", "value": s.id} for s in tg_sessions],
-        )
-
-        adhoc_session["payload"] = form
-        adhoc_session["next"] = self.adhoc_active_sessions2
-        adhoc_session["has_next"] = True
-        adhoc_session["tg_sessions"] = {s.id: s for s in tg_sessions}
-        adhoc_session["slidge_session"] = session
-
-        return adhoc_session
-
-    async def adhoc_active_sessions2(self, form, adhoc_session: dict[str, typing.Any]):
-        tg_session_id = int(form.get_values()["tg_session_id"])
-
-        form = self["xep_0004"].make_form("form", "Telegram session info")
-        tg_session: tgapi.Session = adhoc_session["tg_sessions"][str(tg_session_id)]
-        for x in fmt_tg_session(tg_session):
-            form.add_field(
-                ftype="fixed",
-                value=x,
-            )
-        if tg_session.is_current:
-            adhoc_session["has_next"] = False
-        else:
-            form.add_field(
-                "terminate", ftype="boolean", label="Terminate session", value="0"
-            )
-            form.add_field("tg_session_id", ftype="hidden", value=tg_session.id)
-            adhoc_session["has_next"] = True
-            adhoc_session["next"] = self.adhoc_active_sessions3
-
-        adhoc_session["payload"] = form
-
-        return adhoc_session
-
-    async def adhoc_active_sessions3(self, form, adhoc_session: dict[str, typing.Any]):
-        form_values = form.get_values()
-        terminate = bool(int(form_values["terminate"]))
-
-        if terminate:
-            session: Session = adhoc_session["slidge_session"]
-            await session.tg.api.terminate_session(int(form_values["tg_session_id"]))
-            info = "Session terminated."
-        else:
-            info = "Session not terminated."
-
-        adhoc_session["notes"] = [("info", info)]
-        adhoc_session["has_next"] = False
-
-        return adhoc_session
-
-
-def fmt_tg_session(s: tgapi.Session):
-    return [
-        f"Country: {s.country}",
-        f"Region: {s.region}",
-        f"Ip: {s.ip}",
-        f"App: {s.application_name}",
-        f"Device: {s.device_model}",
-        f"Platform: {s.platform}",
-        f"Since: {datetime.fromtimestamp(s.log_in_date).isoformat()}",
-        f"Last seen: {datetime.fromtimestamp(s.last_active_date).isoformat()}",
-    ]
+def fmt_timestamp(t: int):
+    return datetime.fromtimestamp(t).isoformat(timespec="minutes")
 
 
 log = logging.getLogger(__name__)

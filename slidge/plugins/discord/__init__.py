@@ -7,7 +7,7 @@ from slixmpp import JID
 
 from slidge import *
 
-from ...util import BiDict
+from ... import FormField
 from .session import Session
 
 

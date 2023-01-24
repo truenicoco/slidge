@@ -477,6 +477,8 @@ class TestAimShakespeareBase(SlidgeTest):
                 <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
                 <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
                 <item jid="aim.shakespeare.lit" node="sync-contacts" name="Sync XMPP roster"/>
+                <item jid="aim.shakespeare.lit" node="contacts" name="List your legacy contacts"/>
+                <item jid="aim.shakespeare.lit" node="groups" name="List your legacy groups"/>
               </query>
             </iq>
             """

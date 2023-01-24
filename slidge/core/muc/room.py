@@ -94,6 +94,14 @@ class LegacyMUC(
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
 
+    @property
+    def name(self):
+        return self.DISCO_NAME
+
+    @name.setter
+    def name(self, n: str):
+        self.DISCO_NAME = n
+
     def _on_presence_unavailable(self, p: Presence):
         pto = p.get_to()
         if pto.bare != self.jid.bare:

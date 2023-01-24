@@ -13,7 +13,7 @@ from typing import Any, Optional, Union
 from slixmpp import JID
 
 from slidge import *
-from slidge.core.adhoc import RegistrationType
+from slidge.core.command.register import RegistrationType
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "dev" / "assets"
 
@@ -92,7 +92,7 @@ class Gateway(BaseGateway):
         "Only username 'n' is accepted and only 'baba' and 'bibi' contacts exist.\n"
         "You can use any password you want."
     )
-    REGISTRATION_TYPE = RegistrationType.QRCODE
+    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
     MARK_ALL_MESSAGES = True
 
     async def validate(

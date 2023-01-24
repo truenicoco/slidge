@@ -21,89 +21,10 @@ from slixmpp.xmlstream.matcher import MatchIDSender
 from slidge import *
 
 from ..core import config
+from ..core.command import Command
 
 
-class SlidgeTest(SlixTest):
-    plugin: Union[types.ModuleType, dict]
-
-    class Config:
-        jid = "aim.shakespeare.lit"
-        secret = "test"
-        server = "shakespeare.lit"
-        port = 5222
-        upload_service = "upload.test"
-        home_dir = Path(tempfile.mkdtemp())
-        user_jid_validator = ".*@shakespeare.lit"
-        admins: list[str] = []
-        no_roster_push = False
-        upload_requester = None
-        ignore_delay_threshold = 300
-
-    @classmethod
-    def setUpClass(cls):
-        user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
-        for k, v in vars(cls.Config).items():
-            setattr(config, k.upper(), v)
-
-    def setUp(self):
-        BaseGateway._subclass = find_subclass(self.plugin, BaseGateway)
-        BaseSession._subclass = find_subclass(self.plugin, BaseSession)
-        LegacyRoster._subclass = find_subclass(self.plugin, LegacyRoster, base_ok=True)
-        LegacyContact._subclass = find_subclass(
-            self.plugin, LegacyContact, base_ok=True
-        )
-        LegacyMUC._subclass = find_subclass(self.plugin, LegacyMUC, base_ok=True)
-        LegacyBookmarks._subclass = find_subclass(
-            self.plugin, LegacyBookmarks, base_ok=True
-        )
-
-        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
-
-        self.xmpp._always_send_everything = True
-
-        self.xmpp.connection_made(TestTransport(self.xmpp))
-        self.xmpp.session_bind_event.set()
-        # Remove unique ID prefix to make it easier to test
-        self.xmpp._id_prefix = ""
-        self.xmpp.default_lang = None
-        self.xmpp.peer_default_lang = None
-
-        def new_id():
-            self.xmpp._id += 1
-            return str(self.xmpp._id)
-
-        self.xmpp._id = 0
-        self.xmpp.new_id = new_id
-
-        # Must have the stream header ready for xmpp.process() to work.
-        header = self.xmpp.stream_header
-
-        self.xmpp.data_received(header)
-        self.wait_for_send_queue()
-
-        self.xmpp.socket.next_sent()
-        self.xmpp.socket.next_sent()
-
-        # Some plugins require messages to have ID values. Set
-        # this to True in tests related to those plugins.
-        self.xmpp.use_message_ids = False
-        self.xmpp.use_presence_ids = False
-
-    @classmethod
-    def tearDownClass(cls):
-        reset_subclasses()
-        user_store._users = None
-
-    def next_sent(self):
-        self.wait_for_send_queue()
-        sent = self.xmpp.socket.next_sent(timeout=1)
-        if sent is None:
-            return None
-        xml = self.parse_xml(sent)
-        self.fix_namespaces(xml, "jabber:component:accept")
-        sent = self.xmpp._build_stanza(xml, "jabber:component:accept")
-        return sent
-
+class SlixTestPlus(SlixTest):
     def check(self, stanza, criteria, method="exact", defaults=None, use_values=True):
         """
         Create and compare several stanza objects to a correct XML string.
@@ -215,6 +136,88 @@ class SlidgeTest(SlixTest):
 
             self.assertTrue(result, debug)
 
+    def next_sent(self):
+        self.wait_for_send_queue()
+        sent = self.xmpp.socket.next_sent(timeout=1)
+        if sent is None:
+            return None
+        xml = self.parse_xml(sent)
+        self.fix_namespaces(xml, "jabber:component:accept")
+        sent = self.xmpp._build_stanza(xml, "jabber:component:accept")
+        return sent
+
+
+class SlidgeTest(SlixTestPlus):
+    plugin: Union[types.ModuleType, dict]
+
+    class Config:
+        jid = "aim.shakespeare.lit"
+        secret = "test"
+        server = "shakespeare.lit"
+        port = 5222
+        upload_service = "upload.test"
+        home_dir = Path(tempfile.mkdtemp())
+        user_jid_validator = ".*@shakespeare.lit"
+        admins: list[str] = []
+        no_roster_push = False
+        upload_requester = None
+        ignore_delay_threshold = 300
+
+    @classmethod
+    def setUpClass(cls):
+        user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
+        for k, v in vars(cls.Config).items():
+            setattr(config, k.upper(), v)
+
+    def setUp(self):
+        BaseGateway._subclass = find_subclass(self.plugin, BaseGateway)
+        BaseSession._subclass = find_subclass(self.plugin, BaseSession)
+        LegacyRoster._subclass = find_subclass(self.plugin, LegacyRoster, base_ok=True)
+        LegacyContact._subclass = find_subclass(
+            self.plugin, LegacyContact, base_ok=True
+        )
+        LegacyMUC._subclass = find_subclass(self.plugin, LegacyMUC, base_ok=True)
+        LegacyBookmarks._subclass = find_subclass(
+            self.plugin, LegacyBookmarks, base_ok=True
+        )
+
+        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+
+        self.xmpp._always_send_everything = True
+
+        self.xmpp.connection_made(TestTransport(self.xmpp))
+        self.xmpp.session_bind_event.set()
+        # Remove unique ID prefix to make it easier to test
+        self.xmpp._id_prefix = ""
+        self.xmpp.default_lang = None
+        self.xmpp.peer_default_lang = None
+
+        def new_id():
+            self.xmpp._id += 1
+            return str(self.xmpp._id)
+
+        self.xmpp._id = 0
+        self.xmpp.new_id = new_id
+
+        # Must have the stream header ready for xmpp.process() to work.
+        header = self.xmpp.stream_header
+
+        self.xmpp.data_received(header)
+        self.wait_for_send_queue()
+
+        self.xmpp.socket.next_sent()
+        self.xmpp.socket.next_sent()
+
+        # Some plugins require messages to have ID values. Set
+        # this to True in tests related to those plugins.
+        self.xmpp.use_message_ids = False
+        self.xmpp.use_presence_ids = False
+
+    @classmethod
+    def tearDownClass(cls):
+        reset_subclasses()
+        user_store._users = None
+
 
 def format_stanza(stanza):
     return highlight(
@@ -254,3 +257,10 @@ def reset_subclasses():
     LegacyMUC.reset_subclass()
     LegacyBookmarks.reset_subclass()
     LegacyParticipant.reset_subclass()
+    reset_commands()
+
+
+def reset_commands():
+    Command.subclasses = [
+        c for c in Command.subclasses if str(c).startswith("<class 'slidge.core")
+    ]

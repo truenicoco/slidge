@@ -28,7 +28,7 @@ from steam.protobufs.steammessages_friendmessages_pb2 import (
 from steam.steamid import SteamID
 
 from slidge import *
-from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired
+from slidge.core.command.register import RegistrationType, TwoFactorNotRequired
 from slidge.util import BiDict
 
 

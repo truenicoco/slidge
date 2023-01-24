@@ -1,202 +1,242 @@
+"""
+Handle slidge commands by exchanging chat messages with the gateway components.
+
+Ad-hoc methods should provide a better UX, but some clients do not support them,
+so this is mostly a fallback. 
+"""
+
 import asyncio
+import functools
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Union
 from urllib.parse import quote as url_quote
 
-from slixmpp import JID, Message
+from slixmpp import JID, CoroutineCallback, Message, StanzaPath
+from slixmpp.types import MessageTypes
 
-from ..util.db import GatewayUser
 from ..util.error import XMPPError
-from ..util.types import SessionType
-from . import config
-from .adhoc import RegistrationType, TwoFactorNotRequired
+from .command import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:
     from .gateway import BaseGateway
 
 
 class ChatCommandProvider:
+    UNKNOWN = "Wut? I don't know that command: {}"
+
     def __init__(self, xmpp: "BaseGateway"):
         self.xmpp = xmpp
-
-    async def _chat_command_search(
-        self, *args, msg: Message, session: Optional["SessionType"] = None
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!")
-            return
-
-        search_form = {}
-        diff = len(args) - len(self.xmpp.SEARCH_FIELDS)
-
-        if diff > 0:
-            session.send_gateway_message("Too many parameters!")
-            return
-
-        for field, arg in zip(self.xmpp.SEARCH_FIELDS, args):
-            search_form[field.var] = arg
-
-        if diff < 0:
-            for field in self.xmpp.SEARCH_FIELDS[diff:]:
-                if not field.required:
-                    continue
-                search_form[field.var] = await session.input(
-                    (field.label or field.var) + "?"
-                )
-
-        results = await session.search(search_form)
-        if results is None:
-            session.send_gateway_message("No results!")
-            return
-
-        result_fields = results.fields
-        for result in results.items:
-            text = ""
-            for f in result_fields:
-                if f.type == "jid-single":
-                    text += f"xmpp:{percent_encode(JID(result[f.var]))}\n"
-                else:
-                    text += f"{f.label}: {result[f.var]}\n"
-            session.send_gateway_message(text)
-
-    async def _chat_command_help(
-        self, *_args, msg: Message, session: Optional["SessionType"]
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!").send()
-        else:
-            t = "|".join(
-                x
-                for x in self.xmpp._chat_commands.keys()
-                if x not in ("register", "help")
+        self._keywords = list[str]()
+        self._commands: dict[str, Command] = {}
+        self._input_futures = dict[str, asyncio.Future[str]]()
+        self.xmpp.register_handler(
+            CoroutineCallback(
+                "MUCPresenceError",
+                StanzaPath(f"message@to={self.xmpp.boundjid.bare}"),
+                self._handle_message,  # type: ignore
             )
-            log.debug("In help: %s", t)
-            msg.reply(f"Available commands: {t}").send()
+        )
 
-    @staticmethod
-    async def _chat_command_list_contacts(
-        *_args, msg: Message, session: Optional["SessionType"]
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!").send()
-        else:
-            contacts = sorted(
-                session.contacts, key=lambda c: c.name.casefold() if c.name else ""
+    def register(self, command: Command):
+        """
+        Register a command to be used via chat messages with the gateway
+
+        Plugins should not call this, any class subclassing Command should be
+        automatically added by slidge core.
+
+        :param command: the new command
+        """
+        t = command.CHAT_COMMAND
+        if t in self._commands:
+            raise RuntimeError("There is already a command triggered by '%s'", t)
+        self._commands[t] = command
+
+    async def input(
+        self,
+        jid: JID,
+        text=None,
+        mtype: MessageTypes = "chat",
+        timeout=60,
+        **msg_kwargs,
+    ) -> str:
+        """
+        Request arbitrary user input using a simple chat message, and await the result.
+
+        You shouldn't need to call directly bust instead use :meth:`.BaseSession.input`
+        to directly target a user.
+
+        NB: When using this, the next message that the user sent to the component will
+        not be transmitted to :meth:`.BaseGateway.on_gateway_message`, but rather intercepted.
+        Await the coroutine to get its content.
+
+        :param jid: The JID we want input from
+        :param text: A prompt to display for the user
+        :param mtype: Message type
+        :param timeout:
+        :return: The user's reply
+        """
+        if text is not None:
+            self.xmpp.send_message(
+                mto=jid,
+                mbody=text,
+                mtype=mtype,
+                mfrom=self.xmpp.boundjid.bare,
+                **msg_kwargs,
             )
-            t = "\n".join(f"{c.name}: xmpp:{percent_encode(c.jid)}" for c in contacts)
-            msg.reply(t).send()
+        f = asyncio.get_event_loop().create_future()
+        self._input_futures[jid.bare] = f
+        try:
+            await asyncio.wait_for(f, timeout)
+        except asyncio.TimeoutError:
+            self.xmpp.send_message(
+                mto=jid,
+                mbody="You took too much time to reply",
+                mtype=mtype,
+                mfrom=self.xmpp.boundjid.bare,
+            )
+            del self._input_futures[jid.bare]
+            raise XMPPError("remote-server-timeout", "You took too much time to reply")
 
-    async def _chat_command_register(
-        self, *args, msg: Message, session: Optional["SessionType"]
-    ):
-        if session is not None:
-            msg.reply("You are already registered to this gateway").send()
+        return f.result()
+
+    async def _handle_message(self, msg: Message):
+        if not msg["body"]:
             return
 
-        jid = msg.get_from()
+        if not msg.get_from().node:
+            return  # ignore component and server messages
 
-        if not self.xmpp.jid_validator.match(jid.bare):  # type:ignore
-            msg.reply("You are not allowed to register to this gateway").send()
+        f = self._input_futures.pop(msg.get_from().bare, None)
+        if f is not None:
+            f.set_result(msg["body"])
             return
 
-        msg.reply(self.xmpp.REGISTRATION_INSTRUCTIONS).send()
-        form: dict[str, Optional[str]] = {}
-        for field in self.xmpp.REGISTRATION_FIELDS:
-            text = field.label or field.var
-            if field.value != "":
-                text += f" (default: '{field.value}')"
-            if not field.required:
-                text += " (optional, reply with '.' to skip)"
-            if (options := field.options) is not None:
-                for option in options:
-                    label = option["label"]
-                    value = option["value"]
-                    text += f"\n{label}: reply with '{value}'"
+        c = msg["body"].lower()
+        first_word, *rest = c.split(" ")
 
-            while True:
-                ans = await self.xmpp.input(jid, text + "?")
-                if ans == "." and not field.required:
-                    form[field.var] = None
-                    break
-                else:
-                    if (options := field.options) is not None:
-                        valid_choices = [x["value"] for x in options]
-                        if ans not in valid_choices:
-                            continue
-                    form[field.var] = ans
-                    break
+        if first_word == "help":
+            return self._handle_help(msg, *rest)
 
-        user = GatewayUser(bare_jid=jid.bare, registration_form=form)
+        mfrom = msg.get_from()
+
+        command = self._commands.get(first_word)
+        if command is None:
+            return self._not_found(msg, first_word)
 
         try:
-            two_fa_needed = True
-            try:
-                await self.xmpp.user_prevalidate(jid, form)
-            except TwoFactorNotRequired:
-                if self.xmpp.REGISTRATION_TYPE == RegistrationType.TWO_FACTOR_CODE:
-                    two_fa_needed = False
+            session = command.raise_if_not_authorized(mfrom)
+        except XMPPError as e:
+            reply = msg.reply()
+            reply["body"] = e.text
+            reply.send()
+            raise
+
+        result = await self.__wrap_handler(msg, command.run, session, mfrom, *rest)
+        return await self._handle_result(result, msg, session)
+
+    async def _handle_result(self, result: CommandResponseType, msg: Message, session):
+        if isinstance(result, str) or result is None:
+            reply = msg.reply()
+            reply["body"] = result or "End of command."
+            reply.send()
+            return
+
+        if isinstance(result, Form):
+            form_values = {}
+            for f in result.fields:
+                if f.type == "fixed":
+                    msg.reply(f"{f.label or f.var}: {f.value}").send()
                 else:
-                    raise
-
-            if self.xmpp.REGISTRATION_TYPE == RegistrationType.TWO_FACTOR_CODE:
-                if two_fa_needed:
-                    code = await self.xmpp.input(
-                        jid,
-                        self.xmpp.REGISTRATION_2FA_TITLE
-                        + "\n"
-                        + self.xmpp.REGISTRATION_2FA_INSTRUCTIONS,
+                    if f.type == "list-single":
+                        assert f.options is not None
+                        for o in f.options:
+                            msg.reply(f"{o['value']} -- {o['label']}").send()
+                    form_values[f.var] = f.validate(
+                        await self.xmpp.input(msg.get_from(), (f.label or f.var) + "?")
                     )
-                    await self.xmpp.validate_two_factor_code(user, code)
+            result = await self.__wrap_handler(
+                msg,
+                result.handler,
+                form_values,
+                session,
+                msg.get_from(),
+                *result.handler_args,
+                **result.handler_kwargs,
+            )
+            return await self._handle_result(result, msg, session)
 
-            elif self.xmpp.REGISTRATION_TYPE == RegistrationType.QRCODE:
-                fut = self.xmpp.loop.create_future()
-                self.xmpp.qr_pending_registrations[user.bare_jid] = fut  # type:ignore
-                qr_url = await self.xmpp.get_qr_text(user)
-                self.xmpp.send_message(
-                    mto=jid, mbody=qr_url, mfrom=self.xmpp.boundjid.bare
-                )
-                await self.xmpp.send_qr(qr_url, mto=jid)
-                try:
-                    await asyncio.wait_for(fut, config.QR_TIMEOUT)
-                except asyncio.TimeoutError:
-                    msg.reply(f"You did not flash the QR code in time!").send()
-                    return
+        if isinstance(result, Confirmation):
+            yes_or_no = await self.xmpp.input(msg.get_from(), result.prompt)
+            if not yes_or_no.lower().startswith("y"):
+                reply = msg.reply()
+                reply["body"] = "Canceled"
+                reply.send()
+                return
+            result = await self.__wrap_handler(
+                msg,
+                result.handler,
+                session,
+                msg.get_from(),
+                *result.handler_args,
+                **result.handler_kwargs,
+            )
+            return await self._handle_result(result, msg, session)
 
-        except (ValueError, XMPPError) as e:
-            msg.reply(f"Something went wrong: {e}").send()
+        if isinstance(result, TableResult):
+            if len(result.items) == 0:
+                msg.reply("Empty results").send()
+                return
 
-        else:
-            user.commit()
-            self.xmpp.event("user_register", msg)
-            msg.reply(f"Success!").send()
-
-    async def _chat_command_unregister(
-        self, *args, msg: Message, session: Optional["SessionType"]
-    ):
-        ifrom = msg.get_from()
-        await self.xmpp.plugin["xep_0077"].api["user_remove"](None, None, ifrom)
-        await self.xmpp.session_cls.kill_by_jid(ifrom)
+            for item in result.items:
+                body = ""
+                for f in result.fields:
+                    if f.type == "jid-single":
+                        value = f"xmpp:{percent_encode(JID(item[f.var]))}"
+                    else:
+                        value = item[f.var]
+                    body += f"\n{f.label or f.var}: {value}"
+                msg.reply(body).send()
 
     @staticmethod
-    async def _chat_command_list_groups(
-        *_args, msg: Message, session: Optional["SessionType"]
-    ):
-        if session is None:
-            msg.reply("Register to the gateway first!").send()
-        else:
-            msg.reply("Updating groups…").send()
-            await session.bookmarks.fill()
-            groups = sorted(
-                session.bookmarks,
-                key=lambda m: m.DISCO_NAME.casefold() if m.DISCO_NAME else "",
-            )
-            if groups:
-                t = "\n".join(
-                    f"{m.DISCO_NAME}: xmpp:{percent_encode(m.jid)}?join" for m in groups
-                )
-                msg.reply(t).send()
+    async def __wrap_handler(msg, f: Union[Callable, functools.partial], *a, **k):
+        try:
+            if asyncio.iscoroutinefunction(f):
+                return await f(*a, **k)
+            elif hasattr(f, "func") and asyncio.iscoroutinefunction(f.func):
+                return await f(*a, **k)
             else:
-                msg.reply("No groups!").send()
+                return f(*a, **k)
+        except Exception as e:
+            reply = msg.reply()
+            reply["body"] = f"Error: {e}"
+            reply.send()
+
+    def _handle_help(self, msg: Message, *rest):
+        if len(rest) == 0:
+            reply = msg.reply()
+            reply["body"] = self._help(msg.get_from())
+            reply.send()
+        elif len(rest) == 1 and (command := self._commands.get(rest[0])):
+            reply = msg.reply()
+            reply["body"] = f"{command.CHAT_COMMAND}: {command.NAME}\n{command.HELP}"
+            reply.send()
+        else:
+            self._not_found(msg, str(rest))
+
+    def _help(self, mfrom: JID):
+        msg = "Available commands:"
+        for c in self._commands.values():
+            try:
+                c.raise_if_not_authorized(mfrom)
+            except XMPPError:
+                continue
+            msg += f"\n{c.CHAT_COMMAND} -- {c.NAME}"
+        return msg
+
+    def _not_found(self, msg: Message, word: str):
+        e = self.UNKNOWN.format(word)
+        msg.reply(e).send()
+        raise XMPPError("item-not-found", e)
 
 
 def percent_encode(jid: JID):

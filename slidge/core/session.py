@@ -20,8 +20,8 @@ from ..util.types import (
     PresenceShow,
     SessionType,
 )
-from ..util.util import SearchResult
 from . import config
+from .command.base import SearchResult
 from .contact import LegacyRoster
 from .muc.bookmarks import LegacyBookmarks
 from .muc.room import LegacyMUC
@@ -725,7 +725,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def search(self, form_values: dict[str, str]) -> Optional["SearchResult"]:
+    async def search(self, form_values: dict[str, str]) -> Optional[SearchResult]:
         """
         Triggered when the user uses Jabber Search (:xep:`0055`) on the component
 

@@ -1,10 +1,9 @@
-import dataclasses
 import logging
 import mimetypes
 import re
 from abc import ABCMeta
 from pathlib import Path
-from typing import Collection, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 try:
     import magic
@@ -49,40 +48,6 @@ def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
     return name.with_suffix(valid_suffix)
 
 
-@dataclasses.dataclass
-class FormField:
-    """
-    Represents a field of the form that a user will see when registering to the gateway
-    via their XMPP client.
-    """
-
-    var: str = ""
-    """
-    Internal name of the field, will be used to retrieve via :py:attr:`slidge.GatewayUser.registration_form`
-    """
-    label: Optional[str] = None
-    """Description of the field that the aspiring user will see"""
-    required: bool = False
-    """Whether this field is mandatory or not"""
-    private: bool = False
-    """
-    For sensitive info that should not be displayed on screen while the user types.
-    Forces field_type to "text-private"
-    """
-    type: FieldType = "text-single"
-    """Type of the field, see `XEP-0004 <https://xmpp.org/extensions/xep-0004.html#protocol-fieldtypes>`_"""
-    value: str = ""
-    """Pre-filled value. Will be automatically pre-filled if a registered user modifies their subscription"""
-    options: Optional[list[dict[str, str]]] = None
-
-    def dict(self):
-        return dataclasses.asdict(self)
-
-    def __post_init__(self):
-        if self.private:
-            self.type = "text-private"
-
-
 KeyType = TypeVar("KeyType")
 ValueType = TypeVar("ValueType")
 
@@ -99,12 +64,6 @@ class BiDict(Generic[KeyType, ValueType], dict[KeyType, ValueType]):
             del self.inverse[self[key]]
         super().__setitem__(key, value)
         self.inverse[value] = key
-
-
-@dataclasses.dataclass
-class SearchResult:
-    fields: Collection[FormField]
-    items: Collection[dict[str, str]]
 
 
 class SubclassableOnce(type):

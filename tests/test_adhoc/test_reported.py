@@ -1,0 +1,106 @@
+import pytest
+
+# import slixmpp.test
+from slixmpp.test import SlixTest
+# from slixmpp import JID
+
+import slidge.core.adhoc
+from slidge.util.xep_0050.adhoc import XEP_0050
+from slidge.core.adhoc import AdhocProvider
+from slidge.core.command import Command, TableResult
+from slidge.core.command.base import FormField
+
+class MockSession:
+    def __init__(self, jid):
+        # self.jid = jid
+        self.logged = True
+
+@pytest.fixture(autouse=True)
+def mock(monkeypatch):
+    monkeypatch.setattr(
+        slidge.core.command.base, "is_admin", lambda j: j.username.startswith("admin")
+    )
+    monkeypatch.setattr(Command, "_get_session", lambda s, j: MockSession(j))
+    # monkeypatch.setattr(slidge.core.adhoc, "commands", [Command1])
+    # monkeypatch.setattr(
+    #     slixmpp.test.ComponentXMPP,
+    #     "get_session_from_stanza",
+    #     lambda self, stanza: None,
+    #     raising=False,
+    # )
+    monkeypatch.setattr(XEP_0050, "new_session", lambda _: "session-id")
+
+
+class Command1(Command):
+    NAME = "Command number one"
+    NODE = "command1"
+
+    async def run(self, _session, _ifrom):
+        return TableResult(
+            description="A description",
+            fields=[
+                FormField("name", label="JID"),
+                FormField("jid", type="jid-single", label="JID"),
+            ],
+            items=[
+                {"jid": "test@test", "name": "Some dude"},
+                {"jid": "test2@test", "name": "Some dude2"},
+            ],
+        )
+
+
+class TestCommandsResults(SlixTest):
+    def setUp(self):
+        self.stream_start(
+            mode="component",
+            plugins=["xep_0050"],
+            jid="slidge.whatever.ass",
+            server="whatever.ass",
+        )
+        self.adhoc = AdhocProvider(self.xmpp)
+        self.adhoc.register(Command1(self.xmpp))
+
+    def test_table_result(self):
+        self.recv(
+            f"""
+            <iq type='set'
+                from='admin@whatever.ass/cheogram'
+                to='{self.xmpp.boundjid.bare}'
+                id="1">
+              <command xmlns='http://jabber.org/protocol/commands'
+                       node='command1'
+                       action='execute'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="1">
+                <command xmlns="http://jabber.org/protocol/commands"
+                         node="command1"
+                         sessionid="session-id"
+                         status="completed">
+                    <x xmlns="jabber:x:data" type="result">
+                        <title>A description</title>
+                        <reported>
+                            <field var="name" type="text-single" label="JID" />
+                            <field var="jid" type="jid-single" label="JID" />
+                        </reported>
+                        <item>
+                            <field var="name"><value>Some dude2</value></field>
+                            <field var="jid"><value>test2@test</value></field>
+                        </item>
+                        <item>
+                            <field var="name"><value>Some dude</value></field>
+                            <field var="jid"><value>test@test</value></field>
+                        </item>
+                    </x>
+                </command>
+            </iq>
+            """,
+            use_values=False,
+        )

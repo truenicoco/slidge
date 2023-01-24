@@ -6,7 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Callable, Generic, Iterable, Optional, Sequence, Type, Union
+from typing import Collection, Generic, Optional, Sequence, Type, Union
 
 import aiohttp
 import qrcode
@@ -22,14 +22,16 @@ from slixmpp import (
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
 
-from ..util import ABCSubclassableOnceAtMost, FormField
+from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.error import XMPPError
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
 from . import config
-from .adhoc import AdhocProvider, RegistrationType
+from .adhoc import AdhocProvider
 from .chat_command import ChatCommandProvider
+from .command.base import Command, FormField
+from .command.register import RegistrationType
 from .disco import Disco
 from .mixins import MessageMixin
 from .pubsub import PubSubComponent
@@ -65,7 +67,7 @@ class BaseGateway(  # type:ignore
 
     """
 
-    REGISTRATION_FIELDS: Iterable[FormField] = [
+    REGISTRATION_FIELDS: Collection[FormField] = [
         FormField(var="username", label="User name", required=True),
         FormField(var="password", label="Password", required=True, private=True),
     ]
@@ -105,7 +107,7 @@ class BaseGateway(  # type:ignore
     SEARCH_FIELDS: Sequence[FormField] = [
         FormField(var="first", label="First name", required=True),
         FormField(var="last", label="Last name", required=True),
-        FormField(var="phone", label="Last name", required=False),
+        FormField(var="phone", label="Phone number", required=False),
     ]
     """
     Fields used for searching items via the component, through :xep:`0055` (jabber search).
@@ -126,36 +128,6 @@ class BaseGateway(  # type:ignore
     SEARCH_INSTRUCTIONS: str = ""
     """
     Instructions of the search form.
-    """
-
-    _BASE_CHAT_COMMANDS = {
-        "find": "_chat_command_search",
-        "help": "_chat_command_help",
-        "register": "_chat_command_register",
-        "unregister": "_chat_command_unregister",
-        "contacts": "_chat_command_list_contacts",
-        "groups": "_chat_command_list_groups",
-    }
-    CHAT_COMMANDS: dict[str, str] = {}
-    """
-    Keys of this dict can be used to trigger a command by a simple chat message to the gateway
-    component. Extra words after the key are passed as *args to the handler. Values of the dict
-    are strings, and handlers are resolved using ``getattr()`` on the :class:`.BaseGateway`
-    instance.
-    
-    Handlers are coroutines with following signature:
-    
-    .. code-block:: python
-    
-        async def _chat_command_xxx(*args, msg: Message, session: Optional[Session] = None)
-            ...
-    
-    The original :class:`slixmpp.stanza.Message` is also passed to the handler as the
-    msg kwarg. If the command comes from a registered gateway user, its session attribute is also
-    passed to the handler.
-    
-    Refer to the :class:`slixmpp.plugins.xep_0050.XEP_0050` for more details on how to use ad-hoc
-    commands.
     """
 
     WELCOME_MESSAGE = (
@@ -242,15 +214,10 @@ class BaseGateway(  # type:ignore
             )
 
         self.adhoc = AdhocProvider(self)
-        self.add_adhoc_commands()
+        self.chat_commands = ChatCommandProvider(self)
+        self._register_commands()
 
         self.disco = Disco(self)
-
-        self.chat_commands = chat = ChatCommandProvider(self)
-        self._chat_commands: dict[str, Callable] = {
-            k: getattr(self, v, None) or getattr(chat, v)
-            for k, v in (self._BASE_CHAT_COMMANDS | self.CHAT_COMMANDS).items()
-        }
 
         self.use_origin_id = False
 
@@ -317,6 +284,15 @@ class BaseGateway(  # type:ignore
 
     mtype = "chat"  # type: ignore
     is_group = False
+
+    def _register_commands(self):
+        for cls in Command.subclasses:
+            if any(x is NotImplemented for x in [cls.CHAT_COMMAND, cls.NODE, cls.NAME]):
+                log.debug("Skipping %s because it looks abstract", cls)
+                continue
+            c = cls(self)
+            self.adhoc.register(c)
+            self.chat_commands.register(c)
 
     def _send(self, stanza: Union[Message, Presence], **send_kwargs):
         stanza.set_from(self.boundjid.bare)
@@ -461,7 +437,6 @@ class BaseGateway(  # type:ignore
     def __register_handlers(self):
         self.add_event_handler("session_start", self.__on_session_start)
         self.add_event_handler("disconnected", self.connect)
-        self.add_event_handler("gateway_message", self._on_gateway_message_private)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
 
@@ -741,7 +716,7 @@ class BaseGateway(  # type:ignore
         form["title"] = self.SEARCH_TITLE
         form["instructions"] = self.SEARCH_INSTRUCTIONS
         for field in self.SEARCH_FIELDS:
-            form.add_field(**field.dict())
+            form.append(field.get_xml())
         return reply
 
     async def _search_query(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
@@ -767,42 +742,6 @@ class BaseGateway(  # type:ignore
             form.add_item(item)
         return reply
 
-    def add_adhoc_commands(self):
-        """
-        Override this if you want to provide custom adhoc commands (:xep:`0050`)
-        for your plugin, using :class:`slixmpp.plugins.xep_0050.XEP_0050`
-
-        Basic example:
-
-        .. code-block:: python
-
-            def add_adhoc_commands(self):
-                self["xep_0050"].add_command(
-                    node="account_info",
-                    name="Account Information",
-                    handler=self.handle_account_info
-                )
-
-            async def handle_account_info(self, iq: Iq, adhoc_session: dict[str, Any]):
-                # beware, 'adhoc_session' is not a slidge session!
-                user = user_store.get_by_stanza(iq)
-
-                if user is None:
-                    raise XMPPError("subscription-required")
-
-                form = self["xep_0004"].make_form("result", "Account info")
-                form.add_field(
-                    label="Credits",
-                    value=await FakeLegacyClient.get_credits(user.registration_form['username']),
-                )
-
-                adhoc_session["payload"] = form
-                adhoc_session["has_next"] = False
-
-                return session
-        """
-        pass
-
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
@@ -819,6 +758,10 @@ class BaseGateway(  # type:ignore
         """
         pass
 
+    async def unregister_user(self, user: GatewayUser):
+        await self.xmpp.plugin["xep_0077"].api["user_remove"](None, None, user.jid)
+        await self.xmpp.session_cls.kill_by_jid(user.jid)
+
     async def unregister(self, user: GatewayUser):
         """
         Optionally override this if you need to clean additional
@@ -827,56 +770,6 @@ class BaseGateway(  # type:ignore
         :param user:
         """
         pass
-
-    async def _on_gateway_message_private(self, msg: Message):
-        """
-        Called when an XMPP user (not necessarily registered as a gateway user) sends a direct message to
-        the gateway.
-
-        If you override this and still want :meth:`.BaseGateway.input` to work, make sure to include the try/except part.
-
-        :param msg: Message sent by the XMPP user
-        """
-        try:
-            f = self._input_futures.pop(msg.get_from().bare)
-        except KeyError:
-            text = msg["body"]
-            command, *rest = text.split(" ")
-
-            user = user_store.get_by_stanza(msg)
-            if user is None:
-                session = None
-            else:
-                session = self.get_session_from_user(user)
-
-            handler = self._chat_commands.get(command)
-            if handler is None:
-                await self.on_gateway_message(msg, session=session)
-            else:
-                log.debug("Chat command handler: %s", handler)
-                await handler(*rest, msg=msg, session=session)
-        else:
-            f.set_result(msg["body"])
-
-    @staticmethod
-    async def on_gateway_message(msg: Message, session: Optional[SessionType] = None):
-        """
-        Called when the gateway component receives a direct gateway message.
-
-        Can be used to implement bot like commands, especially in conjunction with
-        :meth:`.BaseGateway.input`
-
-        :param msg:
-        :param session: If the message comes from a registered gateway user, their :.BaseSession:
-        """
-        if session is None:
-            r = msg.reply(
-                body="I got that, but I'm not doing anything with it. I don't even know you!"
-            )
-        else:
-            r = msg.reply(body="What? Type 'help' for the list of available commands.")
-        r["type"] = "chat"
-        r.send()
 
     async def input(
         self, jid: JID, text=None, mtype: MessageTypes = "chat", **msg_kwargs
@@ -896,14 +789,7 @@ class BaseGateway(  # type:ignore
         :param mtype: Message type
         :return: The user's reply
         """
-        if text is not None:
-            self.send_message(
-                mto=jid, mbody=text, mtype=mtype, mfrom=self.boundjid.bare, **msg_kwargs
-            )
-        f = self.loop.create_future()
-        self._input_futures[jid.bare] = f
-        await f
-        return f.result()
+        return await self.chat_commands.input(jid, text, mtype, **msg_kwargs)
 
     async def send_qr(self, text: str, **msg_kwargs):
         """
