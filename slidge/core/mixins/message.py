@@ -100,7 +100,6 @@ class MessageMaker(BaseSender):
         if reply_to_msg_id is not None:
             xmpp_id = self._legacy_to_xmpp(reply_to_msg_id)
             msg["reply"]["id"] = xmpp_id
-            # FIXME: https://xmpp.org/extensions/xep-0461.html#usecases mentions that a full JID must be used here
             if reply_to_author:
                 msg["reply"]["to"] = reply_to_author
             if reply_to_fallback_text:
