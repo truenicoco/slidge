@@ -153,30 +153,6 @@ def save_state(user_bare_jid: str, state: AndroidState):
 class Contact(LegacyContact["Session", int]):
     REACTIONS_SINGLE_EMOJI = True
 
-    # def __init__(self, *a, **k):
-    #     super(Contact, self).__init__(*a, **k)
-    #     self._fb_id: Optional[int] = None
-
-    # async def fb_id(self):
-    #     if self._fb_id is None:
-    #         results = await self.session.api.search(
-    #             self.legacy_id, entity_types=["user"]
-    #         )
-    #         for search_result in results.search_results.edges:
-    #             result = search_result.node
-    #             if (
-    #                 isinstance(result, Participant)
-    #                 and result.username.translate(ESCAPE_TABLE) == self.legacy_id
-    #             ):
-    #                 self._fb_id = int(result.id)
-    #                 break
-    #         else:
-    #             raise XMPPError(
-    #                 "not-found", text=f"Cannot find the facebook ID of {self.legacy_id}"
-    #             )
-    #         self.session.contacts.by_fb_id_dict[self._fb_id] = self
-    #     return self._fb_id
-
     async def populate_from_participant(
         self, participant: ParticipantNode, update_avatar=True
     ):
@@ -190,11 +166,11 @@ class Contact(LegacyContact["Session", int]):
             self.avatar = participant.messaging_actor.profile_pic_large.uri
 
 
-class Roster(LegacyRoster["Session", Contact, str]):
+class Roster(LegacyRoster["Session", Contact, int]):
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
             raise ValueError("Thread seems to be a group thread")
-        return await self.by_legacy_id(str(t.other_user_id))
+        return await self.by_legacy_id(t.other_user_id)
 
     async def by_thread(self, t: Thread):
         if t.is_group_thread:
@@ -206,14 +182,14 @@ class Roster(LegacyRoster["Session", Contact, str]):
             )
 
         for participant in t.all_participants.nodes:
-            if int(participant.id) != int(self.session.my_id):
+            if int(participant.id) != self.session.my_id:
                 break
         else:
             raise RuntimeError(
                 "Couldn't find friend in thread participants", t.all_participants
             )
 
-        contact = await self.by_legacy_id(participant.messaging_actor.id)
+        contact = await self.by_legacy_id(int(participant.messaging_actor.id))
         await contact.populate_from_participant(participant)
         return contact
 
