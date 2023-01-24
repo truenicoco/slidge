@@ -143,7 +143,7 @@ COPY --from=prosody-dev /etc/prosody/certs/localhost.crt /usr/local/share/ca-cer
 RUN update-ca-certificates
 
 COPY ./dev/assets /venv/lib/python3.9/site-packages/dev/assets
-COPY watcher.py /watcher.py
+COPY ./dev/watcher.py /watcher.py
 RUN pip install watchdog[watchmedo]
 
 ENTRYPOINT ["/venv/bin/python", "/watcher.py", "/venv/lib/python3.9/site-packages/slidge/"]
