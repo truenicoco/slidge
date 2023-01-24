@@ -60,6 +60,15 @@ class Contact(LegacyContact["Session", str]):
         else:
             log.warning("Unknown contact status: %s", status)
 
+    def update_mood(self, mood: skpy.SkypeContact.Mood):
+        mood_str = str(mood)
+        if mood_str:
+            if self._last_presence:
+                self._last_presence.presence_kwargs["pstatus"] = mood_str
+                self._send_last_presence()
+            else:
+                self.online(status=mood_str)
+
     async def update_info(self, contact: Optional[skpy.SkypeContact] = None):
         if contact is None:
             contact = self.session.sk.contacts.contact(self.legacy_id)
@@ -82,6 +91,8 @@ class Contact(LegacyContact["Session", str]):
             self.avatar = contact.avatar
 
         self.set_vcard(given=first, surname=last, full_name=self.name)
+
+        self.update_mood(contact.mood)
 
 
 class ListenThread(Thread):
