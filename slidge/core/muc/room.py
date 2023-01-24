@@ -126,6 +126,16 @@ class LegacyMUC(
         """
         return
 
+    async def update_info(self):
+        """
+        Fetch information about this group from the legacy network
+
+        This is awaited on MUC instantiation, and should be overridden to
+        update the attributes of the group chat, like title, subject, number
+        of participants etc.
+        """
+        pass
+
     @property
     def subject(self):
         return self._subject

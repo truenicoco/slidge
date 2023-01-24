@@ -51,6 +51,7 @@ class LegacyBookmarks(
             muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
             if self._user_nick:
                 muc.user_nick = self._user_nick
+            await muc.update_info()
             await muc.backfill()
             self.session.log.debug("MUC created: %r", muc)
             self._mucs_by_legacy_id[legacy_id] = muc
@@ -74,6 +75,7 @@ class LegacyBookmarks(
             )
             if self._user_nick:
                 muc.user_nick = self._user_nick
+            await muc.update_info()
             await muc.backfill()
             self.log.debug("MUC CLASS: %s", self._muc_class)
 
