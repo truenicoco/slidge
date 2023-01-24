@@ -42,10 +42,13 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
         await self.session.user_nick
         await super().join(*a, **k)
 
-    async def get_participants(self):
-        group = await (await self.session.signal).get_group(
+    async def get_signal_group(self) -> sigapi.JsonGroupV2Infov1:
+        return await (await self.session.signal).get_group(
             account=self.session.phone, groupID=self.legacy_id
         )
+
+    async def get_participants(self):
+        group = await self.get_signal_group()
         for m in group.members:
             if m.uuid == await self.session.user_uuid:
                 continue
@@ -54,10 +57,16 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
             yield participant
 
     async def get_participant_by_contact(self, contact):
-        p = await self.get_participant(contact.name)
-        p.contact = contact
+        p = await super().get_participant_by_contact(contact)
         p.signal_address = contact.signal_address
         return p
+
+    async def update_info(self):
+        group = await self.get_signal_group()
+        self.DISCO_NAME = group.title
+        self.subject = group.description
+        self.description = group.description
+        self.n_participants = len(group.members)
 
 
 class Bookmarks(LegacyBookmarks["Session", MUC, str]):
@@ -83,9 +92,4 @@ class Bookmarks(LegacyBookmarks["Session", MUC, str]):
         groups = await (await session.signal).list_groups(account=session.phone)
         self.log.debug("GROUPS: %r", groups)
         for group in groups.groups:
-            muc = await self.by_legacy_id(group.id)
-            muc.type = MucType.GROUP
-            muc.DISCO_NAME = group.title
-            muc.subject = group.description
-            muc.description = group.description
-            muc.n_participants = len(group.members)
+            await self.by_legacy_id(group.id)
