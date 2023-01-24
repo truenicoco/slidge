@@ -13,8 +13,7 @@ from slidge import *
 from slidge.core.mixins.message import AttachmentMixin
 
 from slidge.util.test import SlidgeTest
-from slidge.core.contact import LegacyContactType
-from slidge.util.types import LegacyMessageType
+from slidge.util.types import LegacyMessageType, LegacyContactType
 from slidge.util.xep_0356.permissions import (
     Permissions,
     MessagePermission,

@@ -2,8 +2,6 @@ import datetime
 import uuid
 from typing import Hashable, Optional, Dict, Any
 
-import pytest
-
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
@@ -13,8 +11,7 @@ from slidge import *
 from slidge.core.muc import MucType
 
 from slidge.util.test import SlidgeTest
-from slidge.core.contact import LegacyContactType
-from slidge.util.types import LegacyMessageType
+from slidge.util.types import LegacyContactType, LegacyMessageType
 
 
 class Gateway(BaseGateway):

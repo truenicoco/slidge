@@ -1,11 +1,11 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import aiosignald.generated as sigapi
 from slixmpp.exceptions import XMPPError
 from slixmpp.jid import _unescape_node
 
 from slidge import *
-from slidge.core.contact import ESCAPE_TABLE
+from slidge.core.contact.roster import ESCAPE_TABLE
 
 from .util import AttachmentSenderMixin
 

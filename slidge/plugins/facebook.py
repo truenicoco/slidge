@@ -191,21 +191,10 @@ class Contact(LegacyContact["Session", int]):
 
 
 class Roster(LegacyRoster["Session", Contact, str]):
-    # def __init__(self, *a, **k):
-    #     super().__init__(*a, **k)
-    #     self.by_fb_id_dict: dict[int, Contact] = {}
-
-    # async def by_fb_id(self, fb_id: int) -> "Contact":
-    #     contact = self.by_fb_id_dict.get(fb_id)
-    #     if contact is None:
-    #         thread = (await self.session.api.fetch_thread_info(fb_id))[0]
-    #         return await self.by_thread(thread)
-    #     return contact
-
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
             raise ValueError("Thread seems to be a group thread")
-        return await self.by_legacy_id(t.other_user_id)
+        return await self.by_legacy_id(str(t.other_user_id))
 
     async def by_thread(self, t: Thread):
         if t.is_group_thread:
@@ -224,9 +213,8 @@ class Roster(LegacyRoster["Session", Contact, str]):
                 "Couldn't find friend in thread participants", t.all_participants
             )
 
-        contact = await self.by_legacy_id(int(participant.messaging_actor.id))
+        contact = await self.by_legacy_id(participant.messaging_actor.id)
         await contact.populate_from_participant(participant)
-        # self.by_fb_id_dict[int(participant.id)] = contact
         return contact
 
 

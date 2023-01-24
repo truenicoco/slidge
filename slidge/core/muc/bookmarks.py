@@ -3,10 +3,9 @@ from typing import Generic, Optional, Type
 from slixmpp import JID
 from slixmpp.jid import _unescape_node
 
-from slidge.core.contact import ESCAPE_TABLE
-from slidge.util import SubclassableOnce
-from slidge.util.types import LegacyGroupIdType, LegacyMUCType, SessionType
-
+from ...util import SubclassableOnce
+from ...util.types import LegacyGroupIdType, LegacyMUCType, SessionType
+from ..contact.roster import ESCAPE_TABLE
 from .room import LegacyMUC
 
 
