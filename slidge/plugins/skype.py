@@ -75,8 +75,6 @@ class Contact(LegacyContact["Session", str]):
             if contact is None:
                 raise XMPPError("item-not-found")
 
-        # TODO: do something with phone, mood, and locality attributes of SkypeUser
-
         first = contact.name.first
         last = contact.name.last
 
@@ -90,7 +88,14 @@ class Contact(LegacyContact["Session", str]):
         if contact.avatar is not None:
             self.avatar = contact.avatar
 
-        self.set_vcard(given=first, surname=last, full_name=self.name)
+        self.set_vcard(
+            given=first,
+            surname=last,
+            full_name=self.name,
+            locality=str(contact.location),
+            phones=[p for p in contact.phones if p.number],
+            birthday=contact.birthday,
+        )
 
         self.update_mood(contact.mood)
 
