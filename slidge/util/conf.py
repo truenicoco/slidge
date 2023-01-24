@@ -163,7 +163,7 @@ class ConfigModule:
 
     def add_options_to_parser(self):
         p = self.parser
-        for o in self.options:
+        for o in sorted(self.options, key=lambda x: x.name):
             p.add_argument(*o.names, **o.kwargs)
 
     def update_dynamic_defaults(self, args):
