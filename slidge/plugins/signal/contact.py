@@ -98,6 +98,21 @@ class Roster(LegacyRoster["Session", Contact, str]):
     async def jid_username_to_legacy_id(self, jid_username: str):
         if jid_username in self.session.bookmarks.known_groups:
             raise XMPPError("bad-request", "This is a group ID, not a contact ID")
+        check = (await self.session.signal).is_identifier_registered(
+            account=self.session.phone, identifier=jid_username
+        )
+        try:
+            if (await check).value:
+                return jid_username
+            else:
+                raise XMPPError(
+                    "item-not-found", f"No account identified by {jid_username}"
+                )
+        except sigexc.IllegalArgumentException:
+            raise XMPPError(
+                "bad-request",
+                f"The identifier {jid_username} is not a valid signal account identifier",
+            )
 
     async def fill(self):
         session = self.session
