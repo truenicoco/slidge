@@ -151,12 +151,19 @@ class Session(
             str(self.skype_token_path),
         )
 
-        self.sk.subscribePresence()
+        try:
+            self.sk.subscribePresence()
+        except skpy.core.SkypeApiException:
+            self.log.warning("Could not subscribe to presences")
+            extra = " (presences not working) "
+        else:
+            extra = ""
+
         # TODO: Creating 1 thread per user is probably very not optimal.
         #       We should contribute to skpy to make it aiohttp compatible…
         self.thread = thread = ListenThread(self)
         thread.start()
-        return f"Connected as '{self.sk.userId}'"
+        return f"Connected{extra} as '{self.sk.userId}'"
 
     async def on_skype_event(self, event: skpy.SkypeEvent):
         log.debug("Skype event: %s", event)
