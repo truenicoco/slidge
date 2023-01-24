@@ -52,9 +52,9 @@ HOME_DIR__DYNAMIC_DEFAULT = True
 
 USER_JID_VALIDATOR: str
 USER_JID_VALIDATOR__DOC = (
-    "Regular expression to restrict user that can register to the gateway by JID. "
-    "Defaults to .*@${SLIDGE_SERVER}, forbids the gateway to JIDs "
-    "not using the same XMPP server as the gateway"
+    "Regular expression to restrict users that can register to the gateway, by JID. "
+    "Defaults to .*@${SLIDGE_SERVER}, but since SLIDGE_SERVER is usually localhost, "
+    "you probably want to change that to .*@example.com"
 )
 USER_JID_VALIDATOR__DYNAMIC_DEFAULT = True
 
