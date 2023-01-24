@@ -18,8 +18,14 @@ LEGACY_MODULE__DOC = (
     "a BaseGateway and a LegacySession subclass"
 )
 
-SERVER: str
-SERVER__DOC = "The XMPP server's host name."
+SERVER: str = "localhost"
+SERVER__DOC = (
+    "The XMPP server's host name. Defaults to localhost, which is the "
+    "standard way of running slidge, on the same host as the XMPP server. "
+    "The 'Jabber Component Protocol' (XEP-0114) does not mention encryption, "
+    "so you *should* provide encryption another way, eg via port forwarding, if "
+    "you change this."
+)
 SERVER__SHORT = "s"
 
 SECRET: str
