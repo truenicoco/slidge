@@ -166,8 +166,6 @@ class Roster(LegacyRoster["Session", Contact, int]):
         for f in self.session.steam.friends:
             self.session.log.debug("Friend: %s - %s - %s", f, f.name, f.steam_id.id)
             c = await self.by_legacy_id(f.steam_id.id)
-            c.name = f.name
-            c.avatar = f.get_avatar_url()
             await c.add_to_roster()
 
 
