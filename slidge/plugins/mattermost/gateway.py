@@ -119,7 +119,7 @@ class Contact(LegacyContact["Session", str]):
 
     async def update_info(self, user: Optional[User] = None):
         if user is None:
-            user = await self.session.mm_client.get_user(self.legacy_id)
+            user = await self.session.mm_client.get_user(await self.mm_id())
 
         full_name = " ".join(
             filter(None, [user.first_name, user.last_name])  # type:ignore
