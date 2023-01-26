@@ -79,7 +79,7 @@ class Session(
         )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
-        return await self.send_text("Correction: " + text, c)
+        pass
 
     async def search(self, form_values: dict[str, str]):
         phone = form_values.get("phone")
