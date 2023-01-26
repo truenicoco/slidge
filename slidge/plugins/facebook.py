@@ -164,11 +164,11 @@ class Contact(LegacyContact["Session", int]):
         if self.avatar is None or update_avatar:
             self.avatar = participant.messaging_actor.profile_pic_large.uri
 
-    async def get_thread(self):
-        return (await self.session.api.fetch_thread_info(self.legacy_id))[0]
+    async def get_thread(self, **kwargs):
+        return (await self.session.api.fetch_thread_info(self.legacy_id, **kwargs))[0]
 
     async def update_info(self):
-        t = await self.get_thread()
+        t = await self.get_thread(msg_count=0)
 
         participant = self.session.contacts.get_friend_participant(
             t.all_participants.nodes
