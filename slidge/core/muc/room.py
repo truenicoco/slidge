@@ -7,10 +7,10 @@ from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
-from slixmpp.stanza import Error
 from slixmpp.xmlstream import ET
 
 from ...util import ABCSubclassableOnceAtMost
+from ...util.error import XMPPError
 from ...util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
@@ -194,19 +194,6 @@ class LegacyMUC(
 
         return form
 
-    def _no_nickname_error(self, join_presence: Presence):
-        presence = self.xmpp.make_presence(
-            ptype="error", pto=join_presence.get_from(), pfrom=self.jid
-        )
-        # Error.namespace
-        presence["id"] = join_presence["id"]
-        error = Error()
-        error["by"] = self.jid
-        error["condition"] = "jid-malformed"
-        error["type"] = "modify"
-        presence.append(error)
-        presence.send()
-
     def _make_subject_message(self, user_full_jid: JID):
         subject_setter = copy(self.jid)
         log.debug("subject setter: %s", self.subject_setter)
@@ -236,14 +223,7 @@ class LegacyMUC(
         if iq.get_from().resource in self.user_resources:
             iq.reply().send()
         else:
-            reply = iq.reply()
-            reply["type"] = "error"
-            error = Error()
-            error["by"] = self.jid
-            error["condition"] = "not-acceptable"
-            error["type"] = "cancel"
-            reply.append(error)
-            reply.send()
+            raise XMPPError("not-acceptable", etype="cancel", by=self.jid)
 
     def user_full_jids(self):
         for r in self.user_resources:
@@ -293,15 +273,10 @@ class LegacyMUC(
     async def join(self, join_presence: Presence):
         user_full_jid = join_presence.get_from()
         requested_nickname = join_presence.get_to().resource
-
-        if not requested_nickname:
-            self._no_nickname_error(join_presence)
-            return
-
         client_resource = user_full_jid.resource
-        if not client_resource:
-            self._no_nickname_error(join_presence)
-            return
+
+        if not requested_nickname or not client_resource:
+            raise XMPPError("jid-malformed", by=self.jid)
 
         self.log.debug(
             "Resource %s of %s wants to join room %s with nickname %s",

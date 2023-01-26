@@ -19,11 +19,12 @@ from slixmpp import (
     Presence,
     StanzaPath,
 )
-from slixmpp.exceptions import IqError, IqTimeout, XMPPError
+from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
 
 from ..util import ABCSubclassableOnceAtMost, FormField
 from ..util.db import GatewayUser, RosterBackend, user_store
+from ..util.error import XMPPError
 from ..util.types import AvatarType
 from ..util.xep_0292.vcard4 import VCard4Provider
 from . import config
@@ -538,7 +539,9 @@ class BaseGateway(  # type:ignore
             raise XMPPError("not-authorized", "Register to the gateway first")
 
         if len(self.SEARCH_FIELDS) > 1:
-            raise XMPPError("not-implemented", "Use jabber search for this gateway")
+            raise XMPPError(
+                "feature-not-implemented", "Use jabber search for this gateway"
+            )
 
         field = self.SEARCH_FIELDS[0]
 
