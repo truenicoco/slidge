@@ -489,6 +489,11 @@ class BaseSession(
     @ignore_sent_carbons
     async def retract_from_msg(self, m: Message):
         e = await self.__get_entity(m)
+        if not e.RETRACTION:
+            raise XMPPError(
+                "bad-request",
+                "This legacy service does not support message retraction.",
+            )
         xmpp_id: str = m["apply_to"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id:
