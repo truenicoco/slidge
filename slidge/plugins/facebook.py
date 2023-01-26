@@ -167,6 +167,14 @@ class Contact(LegacyContact["Session", int]):
     async def get_thread(self, **kwargs):
         return (await self.session.api.fetch_thread_info(self.legacy_id, **kwargs))[0]
 
+    async def send_fb_sticker(self, sticker_id: int, legacy_msg_id: str):
+        resp = await self.session.api.fetch_stickers([sticker_id])
+        await self.send_file(
+            file_url=resp.nodes[0].preview_image.uri,
+            legacy_file_id=f"sticker-{sticker_id}",
+            legacy_msg_id=legacy_msg_id,
+        )
+
     async def update_info(self):
         t = await self.get_thread(msg_count=0)
 
@@ -374,9 +382,13 @@ class Session(
                 fut.set_result(fb_msg)
         else:
             self.received_messages[thread_key.other_user_id].add(fb_msg)
+            msg_id = meta.id
+
+            sticker = msg.sticker
+            if sticker is not None:
+                return await contact.send_fb_sticker(sticker, msg_id)
 
             text = msg.text
-            msg_id = meta.id
             if not (attachments := msg.attachments):
                 if text:
                     contact.send_text(
