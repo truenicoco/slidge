@@ -354,14 +354,25 @@ class Session(
 
     async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
         if isinstance(evt, mqtt_t.ExtendedMessage):
-            reply_to = evt.reply_to_message.metadata.id
             msg = evt.message
         else:
-            reply_to = None
             msg = evt
         meta = msg.metadata
         if is_group_thread(thread_key := meta.thread):
             return
+
+        kwargs = {}
+        if isinstance(evt, mqtt_t.ExtendedMessage):
+            log.debug("Extended message")
+            if reply_to_fb_msg := evt.reply_to_message:
+                log.debug("Reply-to")
+                kwargs["reply_to_msg_id"] = reply_to_fb_msg.metadata.id
+                kwargs["reply_to_fallback_text"] = reply_to_fb_msg.text
+                kwargs["reply_self"] = (
+                    reply_to_fb_msg.metadata.sender == msg.metadata.sender
+                )
+        log.debug("kwargs %s", kwargs)
+
         contact = await self.contacts.by_thread_key(thread_key)
 
         if not contact.added_to_roster:
@@ -383,17 +394,16 @@ class Session(
         else:
             self.received_messages[thread_key.other_user_id].add(fb_msg)
             msg_id = meta.id
+            kwargs["legacy_msg_id"] = msg_id
 
             sticker = msg.sticker
             if sticker is not None:
-                return await contact.send_fb_sticker(sticker, msg_id)
+                return await contact.send_fb_sticker(sticker, **kwargs)
 
             text = msg.text
             if not (attachments := msg.attachments):
                 if text:
-                    contact.send_text(
-                        text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
-                    )
+                    contact.send_text(text, **kwargs)
                 return
 
             last_attachment_i = len(attachments) - 1
@@ -421,18 +431,15 @@ class Session(
                         continue
                 if url is None:
                     if last:
-                        contact.send_text(
-                            text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
-                        )
+                        contact.send_text(text, **kwargs)
                     continue
                 await contact.send_file(
                     file_name=a.file_name,
                     content_type=a.mime_type,
                     file_url=url,
                     caption=text if last else None,
-                    legacy_msg_id=msg_id if last else None,
-                    reply_to_msg_id=reply_to if last else None,
                     legacy_file_id=a.media_id,
+                    **(kwargs if last else {}),
                 )
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
