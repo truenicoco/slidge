@@ -183,6 +183,7 @@ class BaseGateway(  # type:ignore
     GROUPS = False
 
     def __init__(self):
+        self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
         super().__init__(
             config.JID,
             config.SECRET,

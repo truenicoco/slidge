@@ -458,6 +458,7 @@ class AttachmentMixin(MessageMaker):
             reply_to_fallback_text=reply_to_fallback_text,
             reply_to_jid=reply_to_jid,
             carbon=carbon,
+            **kwargs,
         )
         is_temp, local_path, new_url = await self.__get_url(
             Path(file_path) if file_path else None,
