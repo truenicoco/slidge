@@ -146,3 +146,12 @@ QR_TIMEOUT__DOC = "Timeout for QR code flashing confirmation."
 
 DOWNLOAD_CHUNK_SIZE = 1024
 DOWNLOAD_CHUNK_SIZE__DOC = "Chunk size when slidge needs to download files using HTTP."
+
+LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND = False
+LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND__DOC = (
+    "If the legacy service does not support last message correction but supports message "
+    "retractions, slidge can 'retract' the edited message when you edit from an XMPP "
+    "client, as a workaround. This may only work for editing messages **once**. "
+    "If the legacy service does not support retractions and this is set to true, when "
+    "XMPP clients attempt to correct, this will send a new message."
+)

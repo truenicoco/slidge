@@ -77,6 +77,8 @@ class Participant(LegacyParticipant[MUC]):
 
 class Contact(LegacyContact):
     REACTIONS_SINGLE_EMOJI = True
+    RETRACTION = True
+    CORRECTION = False
 
     async def available_emojis(self, legacy_msg_id):
         return {"🦅", "🧺"}

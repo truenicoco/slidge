@@ -18,7 +18,7 @@ from ...util.types import (
     SessionType,
 )
 from ..mixins.base import ReactionRecipientMixin
-from ..mixins.disco import BaseDiscoMixin
+from ..mixins.disco import ChatterDiscoMixin
 from .archive import MessageArchive
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
 class LegacyMUC(
     Generic[SessionType, LegacyGroupIdType, LegacyParticipantType, LegacyMessageType],
-    BaseDiscoMixin,
+    ChatterDiscoMixin,
     ReactionRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
 ):

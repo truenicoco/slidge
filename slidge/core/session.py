@@ -21,6 +21,7 @@ from ..util.types import (
     SessionType,
 )
 from ..util.util import SearchResult
+from . import config
 from .contact import LegacyRoster
 from .muc.bookmarks import LegacyBookmarks
 from .muc.room import LegacyMUC
@@ -416,9 +417,28 @@ class BaseSession(
 
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            new_legacy_msg_id = await self.send_text(m["body"], e)
+            new_legacy_msg_id = await self.send_text("Correction:" + m["body"], e)
         else:
             new_legacy_msg_id = await self.correct(m["body"], legacy_id, e)
+
+        if not e.CORRECTION:
+            self.send_gateway_message(
+                "Last message correction is not supported by this legacy service. "
+                "Slidge will send your correction as new message."
+            )
+            if (
+                config.LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND
+                and e.RETRACTION
+                and legacy_id is not None
+            ):
+                if legacy_id is not None:
+                    self.send_gateway_message(
+                        "Slidge will attempt to retract the original message you wanted to edit."
+                    )
+                    await self.retract(legacy_id, e)
+
+            return await self.send_text("Correction: " + m["body"], e)
+
         if isinstance(e, LegacyMUC):
             if new_legacy_msg_id is not None:
                 self.muc_sent_msg_ids[new_legacy_msg_id] = m.get_id()
