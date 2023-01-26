@@ -105,7 +105,7 @@ class Gateway(BaseGateway):
 
     SEARCH_TITLE = "Search in your facebook friends"
     SEARCH_INSTRUCTIONS = "Enter something that can be used to search for one of your friends, eg, a first name"
-    SEARCH_FIELDS = [FormField(var="query", label="Term(s)")]
+    SEARCH_FIELDS = [FormField(var="query", label="Search term(s)", required=True)]
 
     def __init__(self):
         super().__init__()
