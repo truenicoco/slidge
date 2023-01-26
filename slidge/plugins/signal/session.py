@@ -130,7 +130,7 @@ class Session(
                     break
             else:
                 raise RuntimeError("Could not find the signal address of your account")
-        nick: str = profile.name or profile.profile_name or self.user.jid.username
+        nick: str = profile.name or profile.profile_name or self.user.jid.username  # type: ignore
         if nick is not None:
             nick = nick.replace("\u0000", " ")
         self.user_nick.set_result(nick)
