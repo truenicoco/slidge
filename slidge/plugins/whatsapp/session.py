@@ -341,9 +341,7 @@ class Session(
             raise XMPPError(text=str(err))
 
     async def correct(self, text: str, legacy_msg_id: str, c: Contact):
-        self.send_gateway_message(
-            "Warning: WhatsApp does not support message editing at this point in time."
-        )
+        pass
 
     async def search(self, form_values: dict[str, str]):
         self.send_gateway_message("Searching on WhatsApp has not been implemented yet.")
