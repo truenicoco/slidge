@@ -151,6 +151,7 @@ def save_state(user_bare_jid: str, state: AndroidState):
 
 
 class Contact(LegacyContact["Session", int]):
+    CORRECTION = False
     REACTIONS_SINGLE_EMOJI = True
 
     async def populate_from_participant(
@@ -505,8 +506,7 @@ class Session(
             contact.retract(unsend.message_id)
 
     async def correct(self, text: str, legacy_msg_id: str, c: Contact):
-        await self.api.unsend(legacy_msg_id)
-        return await self.send_text(text, c)
+        pass
 
     async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
         # only reaction per msg on facebook, but this is handled by slidge core
