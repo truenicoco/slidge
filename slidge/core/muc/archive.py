@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from typing import Collection, Optional
 
 from slixmpp import Iq, Message
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 from slixmpp.plugins.xep_0444.stanza import NS as ReactionsNameSpace
+
+from ...util.error import XMPPError
 
 
 class MessageArchive:

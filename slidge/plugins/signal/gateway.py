@@ -11,7 +11,6 @@ import aiosignald.generated as sigapi
 import qrcode
 from aiosignald import SignaldAPI
 from slixmpp import JID, Iq, Message
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0004 import FormField as AdhocFormField
 
@@ -308,7 +307,6 @@ class Gateway(BaseGateway):
             raise XMPPError(
                 "not-acceptable",
                 "Please fill the captcha to register your phone number.",
-                etype="modify",
             )
 
     async def validate_two_factor_code(self, user: GatewayUser, code: str):

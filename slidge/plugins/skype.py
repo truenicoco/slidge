@@ -10,7 +10,6 @@ from typing import Any, Optional
 import skpy
 from requests.exceptions import ConnectionError
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -42,7 +41,7 @@ class Gateway(BaseGateway["Session"]):
         except skpy.SkypeApiException:
             raise XMPPError("bad-request")
         except skpy.SkypeAuthException:
-            raise XMPPError("forbidden", etype="auth")
+            raise XMPPError("forbidden")
 
 
 class Contact(LegacyContact["Session", str]):

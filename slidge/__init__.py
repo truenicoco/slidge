@@ -23,6 +23,7 @@ from .util import (
     xep_0461,
 )
 from .util.db import GatewayUser, user_store
+from .util.error import XMPPError
 
 slixmpp.plugins.__all__.extend(
     [
@@ -49,6 +50,7 @@ __all__ = [
     "MucType",
     "FormField",
     "SearchResult",
+    "XMPPError",
     "user_store",
     "global_config",
 ]

@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 

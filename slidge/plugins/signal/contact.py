@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Optional
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -39,7 +38,7 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
                 address=self.signal_address,
             )
         except sigexc.UnregisteredUserError:
-            raise XMPPError("not-found")
+            raise XMPPError("item-not-found")
         identities = r.identities
         self.session.send_gateway_message(str(identities))
 

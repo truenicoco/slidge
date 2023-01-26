@@ -4,7 +4,6 @@ from typing import Optional
 
 import discord as di
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 
@@ -56,7 +55,7 @@ class Contact(LegacyContact[Session, "str"]):
         logging.debug("Searching for user: %s", self.legacy_id)
         if (u := self.session.discord.get_user(self.legacy_id)) is None:
             raise XMPPError(
-                "not-found", text=f"Cannot find the discord user {self.legacy_id}"
+                "item-not-found", text=f"Cannot find the discord user {self.legacy_id}"
             )
         return u
 

@@ -19,7 +19,6 @@ from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant, ParticipantNode, Thread
 from maufbapi.types.graphql.responses import FriendshipStatus
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 from slidge.core.adhoc import RegistrationType, TwoFactorNotRequired

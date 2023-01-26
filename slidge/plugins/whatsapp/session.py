@@ -7,14 +7,13 @@ from os.path import basename
 from shelve import open
 from typing import Optional, Union
 
-from slixmpp.exceptions import XMPPError
-
 from slidge import (
     BaseSession,
     GatewayUser,
     LegacyBookmarks,
     LegacyMUC,
     LegacyParticipant,
+    XMPPError,
     global_config,
 )
 from slidge.plugins.whatsapp.generated import go, whatsapp

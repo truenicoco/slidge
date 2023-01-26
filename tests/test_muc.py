@@ -199,10 +199,11 @@ class TestMuc(SlidgeTest):
                 type="error" from="non-room@aim.shakespeare.lit"
                 to="romeo@montague.lit/gajim"
                 id="123">
-              <error xmlns="jabber:client" type="cancel">
+              <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
             </error></iq>
             """,
+            use_values=False
         )
 
     def test_disco_group(self):
@@ -1056,14 +1057,14 @@ class TestMuc(SlidgeTest):
             """
         )
         self.send(
-            # FIXME: I don't think this is the right namespace for <error>, but maybe it only happens during tests?
             """
             <iq type='error' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <error xmlns="jabber:client" type='cancel'>
+              <error type='cancel'>
                 <item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
               </error>
             </iq>
-            """
+            """,
+            use_values=False
         )
 
     def test_last_page(self):

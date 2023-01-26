@@ -227,10 +227,11 @@ class TestPubSubAvatar(SlixTest):
                 from="stan@pubsub.south.park"
                 to="kyle@south.park"
                 id="retrieve2">
-              <error xmlns="jabber:client" type="cancel">
+              <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
             </error></iq>
             """,
+            use_values=False
         )
 
     def test_single_metadata_retrieval(self):

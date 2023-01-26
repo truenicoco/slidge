@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Optional
 from urllib.parse import quote as url_quote
 
 from slixmpp import JID, Message
-from slixmpp.exceptions import XMPPError
 
 from ..util.db import GatewayUser
+from ..util.error import XMPPError
 from ..util.types import SessionType
 from . import config
 from .adhoc import RegistrationType, TwoFactorNotRequired

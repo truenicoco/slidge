@@ -17,7 +17,6 @@ from typing import Any, Callable, Optional
 
 import steam.enums
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 from steam.client import SteamClient
 from steam.client.user import SteamUser
 from steam.core.msg import MsgProto
@@ -93,9 +92,7 @@ class Gateway(BaseGateway["Session"]):
             login_result = client.login(username, password, two_factor_code=code)
 
         if login_result != EResult.OK:
-            raise XMPPError(
-                "forbidden", etype="auth", text=f"Could not login: {login_result}"
-            )
+            raise XMPPError("forbidden", text=f"Could not login: {login_result}")
 
         # store the client, so it's picked up on Sessions.login(), without re-auth
         self.steam_clients[user.bare_jid] = client

@@ -4,10 +4,10 @@ from typing import Generic, Optional, Type, Union, cast
 
 import aiohttp
 from slixmpp import JID, Message, Presence
-from slixmpp.exceptions import XMPPError
 
 from ..util import ABCSubclassableOnceAtMost, BiDict
 from ..util.db import GatewayUser, user_store
+from ..util.error import XMPPError
 from ..util.types import (
     BookmarksType,
     Chat,
@@ -153,16 +153,13 @@ class BaseSession(
         if not self.logged:
             raise XMPPError(
                 "internal-server-error",
-                etype="wait",
                 text="You are not logged to the legacy network",
             )
 
     @classmethod
     def _from_user_or_none(cls, user):
         if user is None:
-            raise XMPPError(
-                text="User not found", condition="subscription-required", etype="auth"
-            )
+            raise XMPPError(text="User not found", condition="subscription-required")
 
         session = _sessions.get(user)
         if session is None:
@@ -506,7 +503,8 @@ class BaseSession(
     async def join_groupchat(self, p: Presence):
         if not self.xmpp.GROUPS:
             raise XMPPError(
-                "not-implemented", "This gateway does not implement multi-user chats."
+                "feature-not-implemented",
+                "This gateway does not implement multi-user chats.",
             )
         self.raise_if_not_logged()
         muc = await self.bookmarks.by_jid(p.get_to())

@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 from slidge.core.adhoc import RegistrationType
@@ -23,7 +22,7 @@ class Bookmarks(LegacyBookmarks):
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part):
         if local_part not in {"prout-1", "prout2"}:
-            raise XMPPError("not-found")
+            raise XMPPError("item-not-found")
         return local_part
 
     async def fill(self):
@@ -124,7 +123,7 @@ class Roster(LegacyRoster):
     @staticmethod
     async def jid_username_to_legacy_id(jid_username: str):
         if jid_username not in BUDDIES + ["bubu"]:
-            raise XMPPError("not-found")
+            raise XMPPError("item-not-found")
         return jid_username
 
 

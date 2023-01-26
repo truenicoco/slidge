@@ -7,7 +7,6 @@ from typing import Union
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 

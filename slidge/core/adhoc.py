@@ -12,11 +12,11 @@ from uuid import uuid4
 
 import qrcode
 from slixmpp import JID, Iq
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form, FormField
 from slixmpp.types import JidStr
 
 from ..util.db import GatewayUser, user_store
+from ..util.error import XMPPError
 from ..util.xep_0030.stanza.items import DiscoItems
 from . import config
 
@@ -527,9 +527,7 @@ class AdhocProvider:
         try:
             msg = await session.login()
         except Exception as e:
-            raise XMPPError(
-                "internal-server-error", etype="wait", text=f"Could not login: {e}"
-            )
+            raise XMPPError("internal-server-error", text=f"Could not login: {e}")
         session.logged = True
 
         adhoc_session["notes"] = [("info", f"Login response: {msg}")]

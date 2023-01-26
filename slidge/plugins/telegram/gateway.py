@@ -5,7 +5,6 @@ from datetime import datetime
 
 import aiotdlib.api as tgapi
 from slixmpp import JID, Iq
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 from slidge.core.adhoc import RegistrationType

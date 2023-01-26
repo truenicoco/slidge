@@ -8,7 +8,6 @@ import emoji
 from mattermost_api_reference_client.models import Status, User
 from mattermost_api_reference_client.types import Unset
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 

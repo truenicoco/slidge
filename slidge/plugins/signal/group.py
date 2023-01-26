@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 import aiosignald.generated as sigapi
-from slixmpp.exceptions import XMPPError
 from slixmpp.jid import _unescape_node
 
 from slidge import *

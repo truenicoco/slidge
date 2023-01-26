@@ -8,7 +8,6 @@ from typing import Optional, Union
 
 from PIL import Image, UnidentifiedImageError
 from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Presence, StanzaPath
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.base import BasePlugin, register_plugin
 from slixmpp.plugins.xep_0060.stanza import Event, EventItem, EventItems, Item
 from slixmpp.plugins.xep_0084 import Data as AvatarData
@@ -17,6 +16,7 @@ from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.types import JidStr, OptJidStr
 
 from ..util.db import user_store
+from ..util.error import XMPPError
 from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
 from . import config

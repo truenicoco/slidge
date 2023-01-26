@@ -15,7 +15,6 @@ from typing import Any, Optional
 
 import aiohttp
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 

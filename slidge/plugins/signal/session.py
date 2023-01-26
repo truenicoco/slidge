@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
-from slixmpp.exceptions import XMPPError
 
 from slidge import *
 from slidge.core.muc.room import MucType
@@ -324,7 +323,7 @@ class Session(
         result = response.results[0]
         log.debug("Result: %s", result)
         if result.networkFailure or result.proof_required_failure:
-            raise XMPPError(str(result))
+            raise XMPPError("internal-server-error", str(result))
         elif result.identityFailure:
             chat = cast("Contact", chat)
             s = await self.signal
@@ -347,7 +346,7 @@ class Session(
                     )
                 await self.send_text(text, chat, reply_to_msg_id=reply_to_msg_id)
             else:
-                raise XMPPError(str(result))
+                raise XMPPError("internal-server-error", str(result))
         legacy_msg_id = response.timestamp
         if group:
             self.sent_in_muc[legacy_msg_id] = cast("MUC", chat)
@@ -492,7 +491,7 @@ class Session(
             or result.identityFailure
             or result.proof_required_failure
         ):
-            raise XMPPError(str(result))
+            raise XMPPError("internal-server-error", str(result))
         chat.user_reactions[legacy_msg_id] = emoji
 
     @handle_unregistered_recipient

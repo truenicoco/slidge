@@ -193,13 +193,14 @@ class TestAimShakespeareBase(SlidgeTest):
         )
         self.send(
             """
-            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
-              <error xmlns="jabber:client" type="cancel">
+            <iq type='error' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+              <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No contact was found with the info you provided.</text>
               </error>
             </iq>
-            """
+            """,
+            use_values=False,
         )
 
     def test_from_romeo_to_eve(self):
@@ -212,8 +213,15 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        s = self.next_sent()
-        assert s["error"]["condition"] == "item-not-found"
+        self.send(
+            """
+            <message type="error" to="romeo@montague.lit" from="eve@aim.shakespeare.lit">
+                <error type="cancel"><item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet
+            </text></error></message>
+            """,
+            use_values=False
+        )
 
     def test_from_romeo_to_juliet(self):
         self.recv(
@@ -305,16 +313,26 @@ class TestAimShakespeareBase(SlidgeTest):
     def test_jid_validator(self):
         self.recv(
             """
-            <iq from='eve@nothingshakespearian' type='get' to='aim.shakespeare.lit'>
+            <iq from='eve@nothingshakespearian' type='get' to='aim.shakespeare.lit' id="0">
               <query xmlns='jabber:iq:register'>
               </query>
             </iq>
             """
         )
-        assert self.next_sent()["error"]["condition"] == "not-allowed"
+        self.send(
+            """
+           <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error" to="eve@nothingshakespearian" id="0">
+            <error type="cancel">
+                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Your account is not allowed to use this gateway.</text>
+            </error>
+           </iq>
+            """,
+            use_values=False
+        )
         self.recv(
             """
-            <iq from='eve@nothingshakespearian' type='set' to='aim.shakespeare.lit'>
+            <iq from='eve@nothingshakespearian' type='set' to='aim.shakespeare.lit' id='1'>
               <query xmlns='jabber:iq:register'>
                 <username>bill</username>
                 <password>Calliope</password>
@@ -322,7 +340,17 @@ class TestAimShakespeareBase(SlidgeTest):
             </iq>
             """
         )
-        assert self.next_sent()["error"]["condition"] == "not-allowed"
+        self.send(
+            """
+           <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error" to="eve@nothingshakespearian" id="1">
+            <error type="cancel">
+                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Your account is not allowed to use this gateway.</text>
+            </error>
+           </iq>
+            """,
+            use_values=False
+        )
 
     def test_reactions(self):
         self.recv(
@@ -486,7 +514,7 @@ class TestAimShakespeareBase(SlidgeTest):
         self.send(
             f"""
             <iq xmlns="jabber:component:accept" type="error" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
-              <error xmlns="jabber:client" type="cancel">
+              <error type="auth">
                 <not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
             </error>
             </iq>
@@ -537,11 +565,12 @@ class TestAimShakespeareBase(SlidgeTest):
         self.send(
             f"""
             <iq xmlns="jabber:component:accept" type="error" from="juliet@aim.shakespeare.lit" to="test@localhost/gajim" id="123">
-              <error xmlns="jabber:client" type="cancel">
+              <error type="auth">
                 <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
               </error>
             </iq>
-            """
+            """,
+            use_values=False,
         )
 
     def test_disco_registered_existing_contact(self):
@@ -583,7 +612,7 @@ class TestAimShakespeareBase(SlidgeTest):
         self.send(
             f"""
             <message xmlns="jabber:component:accept" type="error" from="nope@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
-              <error xmlns="jabber:client" type="cancel">
+              <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet</text>
               </error>

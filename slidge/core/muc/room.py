@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
-from slixmpp.stanza import Error as BaseError
+from slixmpp.stanza import Error
 from slixmpp.xmlstream import ET
 
 from ...util import ABCSubclassableOnceAtMost
@@ -24,10 +24,6 @@ from .archive import MessageArchive
 if TYPE_CHECKING:
     from ..contact import LegacyContact
     from ..gateway import BaseGateway
-
-
-class Error(BaseError):
-    namespace = "jabber:component:accept"
 
 
 class MucType(int, Enum):
