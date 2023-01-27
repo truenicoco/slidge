@@ -33,7 +33,7 @@ def exception(self, e):
         reply["error"]["type"] = "wait"
         log.warning("You should catch IqTimeout exceptions")
         reply.send()
-    elif isinstance(e, XMPPError):
+    elif isinstance(e, (XMPPError, Base)):
         # We raised this deliberately
         keep_id = self["id"]
         reply = self.reply(clear=e.clear)
@@ -41,8 +41,8 @@ def exception(self, e):
         reply["error"]["condition"] = e.condition
         reply["error"]["text"] = e.text
         reply["error"]["type"] = e.etype
-        if e.by:
-            reply["error"]["by"] = e.by
+        if by := getattr(e, "by", None):
+            reply["error"]["by"] = by
         if e.extension is not None:
             # Extended error tag
             extxml = ET.Element(
