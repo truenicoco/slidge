@@ -452,13 +452,14 @@ class AttachmentMixin(MessageMaker):
              Plugins should try their best to provide it, to avoid duplicates.
         """
         carbon = kwargs.pop("carbon", False)
+        mto = kwargs.pop("mto", None)
         msg = self._make_message(
             when=when,
             reply_to_msg_id=reply_to_msg_id,
             reply_to_fallback_text=reply_to_fallback_text,
             reply_to_jid=reply_to_jid,
             carbon=carbon,
-            **kwargs,
+            mto=mto,
         )
         is_temp, local_path, new_url = await self.__get_url(
             Path(file_path) if file_path else None,
