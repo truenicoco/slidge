@@ -309,8 +309,22 @@ class BaseSession(
             if legacy_msg_id is not None:
                 self.muc_sent_msg_ids[legacy_msg_id] = m.get_id()
         else:
+            self.__ack(m)
             if legacy_msg_id is not None:
                 self.sent[legacy_msg_id] = m.get_id()
+
+    def __ack(self, msg: Message):
+        if (
+            msg["request_receipt"]
+            and msg["type"] in self.xmpp.plugin["xep_0184"].ack_types
+            and not msg["receipt"]
+        ):
+            ack = self.xmpp.Message()
+            ack["type"] = msg["type"]
+            ack["to"] = msg["from"].bare
+            ack["from"] = msg["to"]
+            ack["receipt"] = msg["id"]
+            ack.send()
 
     async def __get_entity(self, m: Message) -> Union[LegacyContactType, LegacyMUCType]:
         self.raise_if_not_logged()
@@ -434,13 +448,14 @@ class BaseSession(
                     )
                     await self.retract(legacy_id, e)
 
-            return await self.send_text("Correction: " + m["body"], e)
+            await self.send_text("Correction: " + m["body"], e)
 
         if isinstance(e, LegacyMUC):
             if new_legacy_msg_id is not None:
                 self.muc_sent_msg_ids[new_legacy_msg_id] = m.get_id()
             await e.echo(m, new_legacy_msg_id)
         else:
+            self.__ack(m)
             if new_legacy_msg_id is not None:
                 self.sent[new_legacy_msg_id] = m.get_id()
 
@@ -481,6 +496,8 @@ class BaseSession(
         await self.react(legacy_id, emojis, e)
         if isinstance(e, LegacyMUC):
             await e.echo(m, None)
+        else:
+            self.__ack(m)
 
     @ignore_message_to_component
     @ignore_sent_carbons
@@ -499,6 +516,7 @@ class BaseSession(
                 await e.echo(m, None)
         else:
             log.debug("Ignored retraction from user")
+        self.__ack(m)
 
     async def join_groupchat(self, p: Presence):
         if not self.xmpp.GROUPS:

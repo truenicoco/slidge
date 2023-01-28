@@ -233,7 +233,6 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        assert len(text_received_by_juliet) == 1
         text, contact = text_received_by_juliet[-1]
         assert text == "Art thou not Romeo, and a Montague?"
         assert contact.legacy_id == 123
@@ -245,6 +244,42 @@ class TestAimShakespeareBase(SlidgeTest):
         )  # there must be a better way to check for the presence of the markable thing
         m2.enable("markable")
         assert m == m2
+
+    def test_delivery_receipt(self):
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit/slidge'
+                     from='romeo@montague.lit/prout'
+                     id="123">
+                <body>Art thou not Romeo, and a Montague?</body>
+                <request xmlns='urn:xmpp:receipts'/>
+            </message>
+            """
+        )
+        self.next_sent()  # auto reply in our test plugin
+        self.send(
+            """
+            <message xmlns="jabber:component:accept"
+                    type="chat"
+                    to="romeo@montague.lit"
+                    from="juliet@aim.shakespeare.lit/slidge">
+   	            <received xmlns="urn:xmpp:receipts" id="123"/>
+            </message>
+            """
+        )
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit/slidge'
+                     from='romeo@montague.lit/prout'
+                     id="123">
+                <body>Art thou not Romeo, and a Montague?</body>
+            </message>
+            """
+        )
+        self.next_sent()  # auto reply in our test plugin
+        assert self.next_sent() is None
 
     def test_romeo_composing(self):
         self.recv(

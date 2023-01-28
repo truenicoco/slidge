@@ -154,11 +154,6 @@ class MarkerMixin(MessageMaker):
         msg[marker]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         return msg
 
-    def _make_receipt(self, legacy_msg_id: LegacyMessageType, carbon=False):
-        msg = self._make_message(carbon=carbon)
-        msg["receipt"] = self._legacy_to_xmpp(legacy_msg_id)
-        return msg
-
     def ack(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
         Send an "acknowledged" message marker (:xep:`0333`) from this contact to the user.
@@ -174,16 +169,11 @@ class MarkerMixin(MessageMaker):
 
     def received(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
-        Send a "received" message marker (:xep:`0333`) and a "message delivery receipt"
-        (:xep:`0184`)
-        from this contact to the user
+        Send a "received" message marker (:xep:`0333`) from this contact to the user
 
         :param legacy_msg_id: The message this marker refers to
         """
         carbon = kwargs.get("carbon")
-        if not self.is_group:
-            # msg receipts are NOT RECOMMENDED for MUCs
-            self._send(self._make_receipt(legacy_msg_id, carbon=carbon), **kwargs)
         self._send(
             self._make_marker(legacy_msg_id, "received", carbon=carbon), **kwargs
         )

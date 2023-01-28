@@ -204,7 +204,7 @@ class BaseGateway(  # type:ignore
                 },
                 "xep_0184": {
                     "auto_ack": False,
-                    "auto_request": True,
+                    "auto_request": False,
                 },
                 "xep_0363": {
                     "upload_service": config.UPLOAD_SERVICE,
