@@ -429,10 +429,9 @@ class BaseSession(
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
             new_legacy_msg_id = await self.send_text("Correction:" + m["body"], e)
-        else:
+        elif e.CORRECTION:
             new_legacy_msg_id = await self.correct(m["body"], legacy_id, e)
-
-        if not e.CORRECTION:
+        else:
             self.send_gateway_message(
                 "Last message correction is not supported by this legacy service. "
                 "Slidge will send your correction as new message."
@@ -448,7 +447,7 @@ class BaseSession(
                     )
                     await self.retract(legacy_id, e)
 
-            await self.send_text("Correction: " + m["body"], e)
+            new_legacy_msg_id = await self.send_text("Correction: " + m["body"], e)
 
         if isinstance(e, LegacyMUC):
             if new_legacy_msg_id is not None:
