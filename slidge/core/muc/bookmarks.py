@@ -23,9 +23,14 @@ class LegacyBookmarks(
 
         self._muc_class: Type[LegacyMUC] = LegacyMUC.get_self_or_unique_subclass()
 
-        self._user_nick: Optional[str] = None
+        self._user_nick: str = self.session.user.jid.node
 
-    def set_username(self, nick: str):
+    @property
+    def user_nick(self):
+        return self._user_nick
+
+    @user_nick.setter
+    def user_nick(self, nick: str):
         self._user_nick = nick
 
     def __iter__(self):
@@ -48,7 +53,7 @@ class LegacyBookmarks(
             legacy_id = await self.jid_local_part_to_legacy_id(local_part)
             self.session.log.debug("%r is group %r", local_part, legacy_id)
             muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
-            if self._user_nick:
+            if not muc.user_nick:
                 muc.user_nick = self._user_nick
             await muc.update_info()
             await muc.backfill()
@@ -72,7 +77,7 @@ class LegacyBookmarks(
                 legacy_id=legacy_id,
                 jid=jid,
             )
-            if self._user_nick:
+            if not muc.user_nick:
                 muc.user_nick = self._user_nick
             await muc.update_info()
             await muc.backfill()
@@ -100,4 +105,3 @@ class LegacyBookmarks(
                 "The plugin advertised support for groups but"
                 " LegacyBookmarks.fill() was not overridden."
             )
-        pass

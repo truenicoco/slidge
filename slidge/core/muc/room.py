@@ -40,7 +40,6 @@ class LegacyMUC(
     ReactionRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
 ):
-    user_nick = "SlidgeUser"
     subject_date: Optional[datetime] = None
     n_participants: Optional[int] = None
     max_history_fetch = 100
@@ -90,6 +89,7 @@ class LegacyMUC(
         self.subject_setter = "unknown"
 
         self.archive: MessageArchive = MessageArchive()
+        self.user_nick = self.user.jid.node
 
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"

@@ -105,12 +105,11 @@ class Participant(LegacyParticipant):
 
 
 class MUC(LegacyMUC[Session, str, Participant, str]):
-    user_nick = "thirdwitch"
-
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.xmpp.loop.create_task(self.init_history())
         self.history = []
+        self.user_nick = "thirdwitch"
 
     async def init_history(self):
         for hour in range(10):

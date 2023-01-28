@@ -52,7 +52,7 @@ class Session(
         await self.tg.start()
         me = await self.tg.get_user(await self.tg.get_my_id())
         my_name = (me.first_name + " " + me.last_name).strip()
-        self.bookmarks.set_username(my_name)
+        self.bookmarks.user_nick = my_name
         return f"Connected as {my_name}"
 
     async def logout(self):

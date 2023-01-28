@@ -60,7 +60,6 @@ class Session(
         self.signal = self.xmpp.signal
         self.xmpp.sessions_by_phone[self.phone] = self
         self.user_uuid: asyncio.Future[str] = self.xmpp.loop.create_future()
-        self.user_nick: asyncio.Future[str] = self.xmpp.loop.create_future()
         self.connected = self.xmpp.loop.create_future()
         self.sent_in_muc = dict[int, "MUC"]()
 
@@ -129,12 +128,12 @@ class Session(
                     break
             else:
                 raise RuntimeError("Could not find the signal address of your account")
-        nick: str = profile.name or profile.profile_name or self.user.jid.username  # type: ignore
+        nick: str = profile.name or profile.profile_name  # type: ignore
         if nick is not None:
             nick = nick.replace("\u0000", " ")
-        self.user_nick.set_result(nick)
+            self.bookmarks.user_nick = nick
         self.user_uuid.set_result(profile.address.uuid)
-        self.bookmarks.set_username(nick)
+
         return f"Connected as {self.phone}"
 
     async def on_websocket_connection_state(

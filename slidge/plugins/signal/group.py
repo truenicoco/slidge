@@ -37,10 +37,6 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
 
-    async def join(self, *a, **k):
-        await self.session.user_nick
-        await super().join(*a, **k)
-
     async def get_signal_group(self) -> sigapi.JsonGroupV2Infov1:
         return await (await self.session.signal).get_group(
             account=self.session.phone, groupID=self.legacy_id
