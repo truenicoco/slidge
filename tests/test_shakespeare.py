@@ -262,7 +262,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
             <message xmlns="jabber:component:accept"
                     type="chat"
-                    to="romeo@montague.lit"
+                    to="romeo@montague.lit/prout"
                     from="juliet@aim.shakespeare.lit/slidge">
    	            <received xmlns="urn:xmpp:receipts" id="123"/>
             </message>

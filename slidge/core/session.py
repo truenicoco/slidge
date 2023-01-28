@@ -321,7 +321,7 @@ class BaseSession(
         ):
             ack = self.xmpp.Message()
             ack["type"] = msg["type"]
-            ack["to"] = msg["from"].bare
+            ack["to"] = msg["from"]
             ack["from"] = msg["to"]
             ack["receipt"] = msg["id"]
             ack.send()
