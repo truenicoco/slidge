@@ -308,7 +308,7 @@ class Session(
         ] = self.xmpp.loop.create_future()
         log.debug("Send message response: %s", resp)
         if not resp.success:
-            raise XMPPError(resp.error_message)
+            raise XMPPError("internal-server-error", resp.error_message)
         fb_msg = await fut
         self.sent_messages[chat.legacy_id].add(fb_msg)
         return fb_msg.mid
