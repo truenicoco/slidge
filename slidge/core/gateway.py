@@ -320,6 +320,8 @@ class BaseGateway(  # type:ignore
 
     def _send(self, stanza: Union[Message, Presence], **send_kwargs):
         stanza.set_from(self.boundjid.bare)
+        if mto := send_kwargs.get("mto"):
+            stanza.set_to(mto)
         stanza.send()
 
     async def get_muc_from_iq(self, iq: Iq):
