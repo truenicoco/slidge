@@ -193,18 +193,9 @@ class Session(
                 attachment_caption = (
                     attachment.Caption if attachment.Caption != "" else None
                 )
-                mime = attachment.MIME
-                file_name = attachment.Filename
-                if (
-                    mime
-                    and file_name
-                    and config.ADD_AUDIO_OGG_FILENAME_SUFFIX
-                    and mime.startswith("audio/ogg")
-                ):
-                    file_name += config.ADD_AUDIO_OGG_FILENAME_SUFFIX
 
                 await contact.send_file(
-                    file_name=file_name,
+                    file_name=attachment.Filename,
                     content_type=attachment.MIME,
                     data=bytes(attachment.Data),
                     legacy_msg_id=message.ID,

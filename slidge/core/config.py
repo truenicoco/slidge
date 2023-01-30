@@ -155,3 +155,11 @@ LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND__DOC = (
     "If the legacy service does not support retractions and this is set to true, when "
     "XMPP clients attempt to correct, this will send a new message."
 )
+
+FIX_FILENAME_SUFFIX_MIME_TYPE = False
+FIX_FILENAME_SUFFIX_MIME_TYPE__DOC = (
+    "Fix the Filename suffix based on the Mime Type of the file. "
+    "Some clients (eg Conversations) may not inline files that have a wrong suffix for the MIME Type. "
+    "Therefore the MIME Type of the file is checked, if the suffix is not valid for that MIME Type, "
+    "a valid one will be picked."
+)

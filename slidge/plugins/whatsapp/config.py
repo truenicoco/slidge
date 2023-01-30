@@ -2,7 +2,6 @@
 Config contains plugin-specific configuration for WhatsApp, and is loaded automatically by the
 core configuration framework.
 """
-from typing import Optional
 
 from slidge import global_config
 
@@ -16,11 +15,3 @@ ALWAYS_SYNC_ROSTER__DOC = (
 
 SKIP_VERIFY_TLS = False
 SKIP_VERIFY_TLS__DOC = "Whether or not HTTPS connections made by this plugin should verify TLS certificates."
-
-ADD_AUDIO_OGG_FILENAME_SUFFIX: Optional[str] = None
-ADD_AUDIO_OGG_FILENAME_SUFFIX__DOC = (
-    "Whatsapp audio attachments file names are suffixed with '.bin'. "
-    "Some clients (eg Conversations) may not inline audio files that have a .bin "
-    "suffix, so you can set this to '.oga' as a workaround to get audio attachments "
-    "inlined."
-)
