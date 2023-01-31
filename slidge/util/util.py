@@ -1,10 +1,50 @@
 import dataclasses
 import logging
+import mimetypes
 import re
 from abc import ABCMeta
+from pathlib import Path
 from typing import Collection, Generic, Optional, TypeVar
 
+try:
+    import magic
+except ImportError as e:
+    magic = None  # type:ignore
+
 from .types import FieldType
+
+
+def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
+    if magic is None:
+        log.warning("libmagic is not usable: %s", e)
+
+    guessed = magic.from_file(path, mime=True)
+    if guessed == mime_type:
+        log.debug("Magic and given MIME match")
+    else:
+        log.debug("Magic (%s) and given MIME (%s) differ", guessed, mime_type)
+        mime_type = guessed
+
+    valid_suffix_list = mimetypes.guess_all_extensions(mime_type, strict=False)
+
+    if file_name:
+        name = Path(file_name)
+    else:
+        name = Path(path.name)
+
+    suffix = name.suffix
+
+    if suffix in valid_suffix_list:
+        log.debug("Suffix %s is in %s", suffix, valid_suffix_list)
+        return name
+
+    valid_suffix = mimetypes.guess_extension(mime_type, strict=False)
+    if valid_suffix is None:
+        log.debug("No valid suffix found")
+        return name
+
+    log.debug("Changing suffix of %s to %s", file_name or path.name, valid_suffix)
+    return name.with_suffix(valid_suffix)
 
 
 @dataclasses.dataclass

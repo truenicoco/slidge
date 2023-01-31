@@ -217,6 +217,13 @@ class Session(
         reply_to_fallback_text=None,
         reply_to=None,
     ):
+        if isinstance(chat, LegacyContact):
+            await chat.send_file(
+                ASSETS_DIR / "buddy1.png",
+                file_name="buddy1.jpg",
+                caption="This is a caption",
+            )
+
         if isinstance(chat, MUC):
             await chat.send_text(text)
             return

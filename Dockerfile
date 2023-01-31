@@ -34,7 +34,7 @@ ENV PYTHONUNBUFFERED=1
 
 # required by compiled stringprep module
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    libidn11
+    libidn11 libmagic1
 
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge

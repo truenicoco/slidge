@@ -17,6 +17,7 @@ from slidge.util.types import LegacyMessageType
 
 from ...util import BiDict
 from ...util.types import ChatState, Marker, ProcessingHint
+from ...util.util import fix_suffix
 from ...util.xep_0385.stanza import Sims
 from ...util.xep_0447.stanza import StatelessFileSharing
 from .base import BaseSender
@@ -331,6 +332,9 @@ class AttachmentMixin(MessageMaker):
             is_temp = not bool(config.NO_UPLOAD_PATH)
         else:
             is_temp = False
+
+        if config.FIX_FILENAME_SUFFIX_MIME_TYPE:
+            file_name = str(fix_suffix(file_path, content_type, file_name))
 
         if config.NO_UPLOAD_PATH:
             local_path, new_url = await self.__no_upload(
