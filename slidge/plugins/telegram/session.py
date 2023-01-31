@@ -20,14 +20,32 @@ from .group import MUC
 
 def catch_chat_not_found(coroutine):
     @functools.wraps(coroutine)
-    async def wrapped(*a, **k):
+    async def wrapped(self: "Session", *a, **k):
         try:
-            return await coroutine(*a, **k)
+            return await coroutine(self, *a, **k)
         except tgapi.BadRequest as e:
             if e.code == 400:
-                raise XMPPError(condition="item-not-found", text="Recipient not found")
+                # FIXME: Chat should always be the first arg for a cleaner API...
+                if len(a) == 1:
+                    chat: Chat = a[0]
+                elif len(a) == 2:
+                    chat = a[1]
+                else:
+                    chat = k.get("chat", k.get("c"))
+                if chat is None:
+                    raise RuntimeError(a, k)
+                try:
+                    await self.tg.api.create_private_chat(chat.legacy_id)
+                except tgapi.BadRequest as e2:
+                    if e.code == 400:
+                        raise XMPPError(condition="item-not-found", text=e2.message)
+                    else:
+                        raise XMPPError(
+                            condition="internal-server-error", text=e2.message
+                        )
             else:
-                raise
+                raise XMPPError(condition="internal-server-error", text=e.message)
+            return await coroutine(self, *a, **k)
 
     return wrapped
 
