@@ -98,13 +98,14 @@ apt update && apt install slidge -y
 Refer to [the docs](https://slidge.readthedocs.io/en/latest/admin/launch.html#debian-packages)
 for information about how to use the provided systemd service files.
 
-### pip
+### pipx
 
-Tagged releases are uploaded to [pypi](https://pypi.org/project/slidge/).
+Tagged releases are uploaded to [pypi](https://pypi.org/project/slidge/) and should
+be installable on any distro with `pipx`.
 
 ```sh
-pip install slidge[signal]  # you can replace signal with any network listed in the table above
-python -m slidge --legacy-module=slidge.plugins.signal
+pipx install slidge[signal]  # you can replace signal with any network listed in the table above
+slidge --legacy-module=slidge.plugins.signal
 ```
 
 If you're looking for the bleeding edge, download an artifact
