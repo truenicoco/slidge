@@ -32,9 +32,11 @@ FROM docker.io/library/python:3.9-slim AS base
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-# required by compiled stringprep module
+# libidn11: required by compiled stringprep module
+# libmagic1: to guess mime type from files
+# media-types: to determine file name suffix based on file type
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    libidn11
+    libidn11 libmagic1 media-types
 
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge

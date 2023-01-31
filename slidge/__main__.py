@@ -29,7 +29,9 @@ from slidge.util.db import user_store
 
 class MainConfig(ConfigModule):
     def update_dynamic_defaults(self, args):
-        logging.basicConfig(level=args.loglevel, filename=args.log_file)
+        # force=True is needed in case we call a logger before this is reached,
+        # or basicConfig has no effect
+        logging.basicConfig(level=args.loglevel, filename=args.log_file, force=True)
 
         if args.home_dir is None:
             args.home_dir = Path("/var/lib/slidge") / str(args.jid)
