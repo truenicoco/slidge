@@ -130,6 +130,10 @@ class Roster(LegacyRoster["Session", "Contact", int]):
             raise XMPPError("bad-request", "This is not a telegram user ID")
         else:
             if tg_id > 0:
+                try:
+                    await self.session.tg.get_user(user_id=tg_id)
+                except tgapi.BadRequest as e:
+                    raise XMPPError("item-not-found", e.message)
                 return tg_id
             else:
                 raise XMPPError("bad-request", "This looks like a telegram group ID")
