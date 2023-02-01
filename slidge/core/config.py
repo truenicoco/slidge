@@ -155,3 +155,6 @@ LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND__DOC = (
     "If the legacy service does not support retractions and this is set to true, when "
     "XMPP clients attempt to correct, this will send a new message."
 )
+
+LOG_FILE: Optional[Path] = None
+LOG_FILE__DOC = "Log to a file instead of stdout/err"
