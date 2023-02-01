@@ -51,7 +51,7 @@ N/A means that the legacy network does not have an equivalent of this XMPP featu
 
 **WARNING**: you may break the terms of use of a legacy network and end up getting your account locked
 by using slidge. Refer to the
-[keeping a low profile](https://slidge.readthedocs.io/en/latest/user/low_profile.html)
+[keeping a low profile](https://slidge.im/user/low_profile.html)
 documentation page for more info.
 
 Status
