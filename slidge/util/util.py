@@ -6,18 +6,17 @@ from abc import ABCMeta
 from pathlib import Path
 from typing import Collection, Generic, Optional, TypeVar
 
-try:
+from ..core import config
+
+if config.FIX_FILENAME_SUFFIX_MIME_TYPE:
     import magic
-except ImportError as e:
+else:
     magic = None  # type:ignore
 
 from .types import FieldType
 
 
 def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
-    if magic is None:
-        log.warning("libmagic is not usable: %s", e)
-
     guessed = magic.from_file(path, mime=True)
     if guessed == mime_type:
         log.debug("Magic and given MIME match")
