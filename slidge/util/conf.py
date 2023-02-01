@@ -97,7 +97,6 @@ class ConfigModule:
     def __init__(
         self, config_obj, parser: Optional[configargparse.ArgumentParser] = None
     ):
-
         self.config_obj = config_obj
         if parser is None:
             parser = configargparse.ArgumentParser()

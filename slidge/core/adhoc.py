@@ -310,7 +310,6 @@ class AdhocProvider:
         return adhoc_session
 
     async def _handle_register2(self, form: Form, adhoc_session: dict[str, Any]):
-
         form_values = form.get_values()
         two_fa_needed = True
         try:

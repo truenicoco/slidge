@@ -284,7 +284,6 @@ class Session(
             if user_id == await self.mm_client.mm_id:
                 self.log.debug("Own status change")
             else:
-
                 contact = await self.contacts.by_mm_user_id(user_id)
                 contact.update_status(event.data["status"])
         elif event.type == EventType.Typing:
