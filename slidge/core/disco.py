@@ -7,6 +7,7 @@ from slixmpp.types import OptJid
 from ..util.db import user_store
 from ..util.error import XMPPError
 from ..util.xep_0030.stanza.info import DiscoInfo
+from ..util.xep_0030.stanza.items import DiscoItems
 
 if TYPE_CHECKING:
     from ..core.gateway import BaseGateway
@@ -21,6 +22,13 @@ class Disco:
             jid=None,
             node=None,
             handler=self.get_info,
+        )
+
+        xmpp.plugin["xep_0030"].set_node_handler(
+            "get_items",
+            jid=None,
+            node=None,
+            handler=self.get_items,
         )
 
     async def get_info(
@@ -54,6 +62,24 @@ class Disco:
 
         log.debug("entity: %s", entity)
         return entity.get_disco_info()
+
+    async def get_items(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ):
+        if ifrom is None:
+            raise XMPPError("bad-request")
+
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError("registration-required")
+
+        session = self.xmpp.get_session_from_user(user)  # type:ignore
+
+        d = DiscoItems()
+        for muc in session.bookmarks:
+            d.add_item(muc.jid, name=muc.name)
+
+        return d
 
 
 log = logging.getLogger(__name__)

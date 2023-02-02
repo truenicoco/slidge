@@ -156,6 +156,10 @@ class Bookmarks(LegacyBookmarks[Session, MUC, str]):
             raise XMPPError("item-not-found")
         return muc
 
+    async def fill(self):
+        await self.by_legacy_id("room-private")
+        await self.by_legacy_id("room-public")
+        await self.by_legacy_id("coven")
 
 class TestMuc(SlidgeTest):
     plugin = globals()
@@ -261,6 +265,28 @@ class TestMuc(SlidgeTest):
               </query>
             </iq>
             """,
+        )
+
+    def test_disco_items(self):
+        session = self.get_romeo_session()
+        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        self.recv(
+            f"""
+            <iq type="get" from="romeo@montague.lit/gajim" to="aim.shakespeare.lit" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#items'/>
+            </iq>
+            """
+        )
+        self.send(
+            """
+           <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="romeo@montague.lit/gajim" id="123">   	
+            <query xmlns="http://jabber.org/protocol/disco#items">
+                <item jid="room-private@aim.shakespeare.lit" name="room-private"/>
+                <item jid="room-public@aim.shakespeare.lit" name="room-public"/>
+                <item jid="coven@aim.shakespeare.lit" name="coven"/>
+            </query>
+           </iq>
+            """
         )
 
     def test_disco_channel(self):
