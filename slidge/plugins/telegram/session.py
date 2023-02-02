@@ -3,6 +3,7 @@ import functools
 import logging
 import re
 import tempfile
+from pathlib import Path
 from typing import Union
 
 import aiotdlib.api as tgapi
@@ -107,19 +108,21 @@ class Session(
         type_, _subtype = http_response.content_type.split("/")
         kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
         stickers_pattern = config.OUTGOING_STICKERS_REGEXP
-        with tempfile.NamedTemporaryFile() as file:
-            bytes_ = await http_response.read()
-            file.write(bytes_)
-            if stickers_pattern and re.match(stickers_pattern, url.split("/")[-1]):
-                result = await self.tg.send_sticker(sticker=file.name, **kwargs)
+        file_name = url.split("/")[-1]
+        with tempfile.TemporaryDirectory() as d:
+            tmp_file = Path(d) / file_name
+            tmp_file.write_bytes(await http_response.read())
+            tmp_file_str = str(tmp_file)
+            if stickers_pattern and re.match(stickers_pattern, file_name):
+                result = await self.tg.send_sticker(sticker=tmp_file_str, **kwargs)
             elif type_ == "image":
-                result = await self.tg.send_photo(photo=file.name, **kwargs)
+                result = await self.tg.send_photo(photo=tmp_file_str, **kwargs)
             elif type_ == "video":
-                result = await self.tg.send_video(video=file.name, **kwargs)
+                result = await self.tg.send_video(video=tmp_file_str, **kwargs)
             elif type_ == "audio":
-                result = await self.tg.send_audio(audio=file.name, **kwargs)
+                result = await self.tg.send_audio(audio=tmp_file_str, **kwargs)
             else:
-                result = await self.tg.send_document(document=file.name, **kwargs)
+                result = await self.tg.send_document(document=tmp_file_str, **kwargs)
 
             new_message_id = await self.wait_for_tdlib_success(result.id)
 
