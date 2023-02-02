@@ -121,7 +121,9 @@ class Session(
             else:
                 result = await self.tg.send_document(document=file.name, **kwargs)
 
-        return result.id
+            new_message_id = await self.wait_for_tdlib_success(result.id)
+
+        return new_message_id
 
     @catch_chat_not_found
     async def active(self, c: "Contact"):
