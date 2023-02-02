@@ -35,7 +35,7 @@ def catch_chat_not_found(coroutine):
                 if chat is None:
                     raise RuntimeError(a, k)
                 try:
-                    await self.tg.api.create_private_chat(chat.legacy_id)
+                    await self.tg.api.create_private_chat(chat.legacy_id, False)
                 except tgapi.BadRequest as e2:
                     if e.code == 400:
                         raise XMPPError(condition="item-not-found", text=e2.message)
