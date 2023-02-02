@@ -26,7 +26,15 @@ class Bookmarks(LegacyBookmarks):
 
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part: str):
-        return int(local_part.replace("group", ""))
+        try:
+            return int(local_part.replace("group", ""))
+        except ValueError:
+            raise XMPPError(
+                "bad-request",
+                "This does not look like a valid telegram ID, at least not for slidge. "
+                "Do not be like edhelas, do not attempt to join groups you had joined "
+                "through spectrum. ",
+            )
 
     async def fill(self):
         tg = self.session.tg
