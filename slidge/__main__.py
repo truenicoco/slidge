@@ -16,6 +16,7 @@ import importlib
 import logging
 import os
 import signal
+import subprocess
 from pathlib import Path
 
 import configargparse
@@ -76,6 +77,11 @@ def get_configurator():
         dest="loglevel",
         const=logging.DEBUG,
         env_var="SLIDGE_DEBUG",
+    )
+    p.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     configurator = MainConfig(config, p)
     return configurator
@@ -163,6 +169,22 @@ def main():
         logging.info("Successful clean shut down")
     logging.debug("Exiting with code %s", return_code)
     exit(return_code)
+
+
+def get_version():
+    try:
+        git = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode()
+    except FileNotFoundError:
+        pass
+    else:
+        return "git-" + git[:10]
+
+    return "NO_VERSION"
+
+
+# this should be modified before publish, but if someone cloned from the repo,
+# it can help
+__version__ = get_version()
 
 
 if __name__ == "__main__":
