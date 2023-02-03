@@ -22,6 +22,8 @@ tasks:
       curl -sSL https://install.python-poetry.org | python3 -
       sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
+      export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
+      sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
       poetry install --all-extras
       poetry build
   - muc-bot: |
@@ -63,6 +65,7 @@ tasks:
         exit 0
       fi
       cd slidge
+      GITVER=$VER
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           VER=$(echo $TAG | cut -c2-)
@@ -72,6 +75,8 @@ tasks:
           set -x
 
           sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
+          sed "s/$GITVER/$VER/" -i slidge/__main__.py
+
           poetry build
           poetry publish
 
