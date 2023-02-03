@@ -107,11 +107,10 @@ class Participant(LegacyParticipant):
 class MUC(LegacyMUC[Session, str, Participant, str]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self.xmpp.loop.create_task(self.init_history())
         self.history = []
         self.user_nick = "thirdwitch"
 
-    async def init_history(self):
+    async def backfill(self):
         for hour in range(10):
             sender = await self.get_participant(f"history-man-{hour}")
             sender.send_text(
@@ -137,6 +136,22 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
             second.contact = await self.session.contacts.by_legacy_id(222)
         yield second
 
+    async def update_info(self):
+        if self.jid.local == "room-private":
+            self.name = "Private Room"
+            self.subject = "Private Subject"
+            self.type = MucType.GROUP
+            return
+
+        if self.jid.local == "room-public":
+            self.name = "Public Room"
+            self.subject = "Public Subject"
+            self.type = MucType.CHANNEL
+            return
+
+        if self.jid.local == "coven":
+            self.name = "The coven"
+
 
 class Bookmarks(LegacyBookmarks[Session, MUC, str]):
     @staticmethod
@@ -148,11 +163,7 @@ class Bookmarks(LegacyBookmarks[Session, MUC, str]):
 
     async def by_jid(self, jid: JID):
         muc = await super().by_jid(jid)
-        if "private" in muc.legacy_id:
-            muc.type = MucType.GROUP
-        elif "public" in muc.legacy_id:
-            muc.type = MucType.CHANNEL
-        elif muc.legacy_id != "coven":
+        if not(x in jid.local for x in ["private", "public", "coven"]):
             raise XMPPError("item-not-found")
         return muc
 
@@ -222,7 +233,7 @@ class TestMuc(SlidgeTest):
             <iq xmlns="jabber:component:accept" type="result"
                 from="room-private@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="room-private" />
+                <identity category="conference" type="text" name="Private Room" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/muc#stable_id" />
                 <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
@@ -243,6 +254,9 @@ class TestMuc(SlidgeTest):
                     <field var="muc#roominfo_subjectmod" type="boolean">
                         <value>0</value>
                     </field>
+                    <field var="muc#roominfo_subject">
+   		    		 <value>Private Subject</value>
+           			</field>
                     <field var="muc#roomconfig_persistentroom" type="boolean">
                         <value>1</value>
                     </field>
@@ -281,9 +295,9 @@ class TestMuc(SlidgeTest):
             """
            <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="romeo@montague.lit/gajim" id="123">   	
             <query xmlns="http://jabber.org/protocol/disco#items">
-                <item jid="room-private@aim.shakespeare.lit" name="room-private"/>
-                <item jid="room-public@aim.shakespeare.lit" name="room-public"/>
-                <item jid="coven@aim.shakespeare.lit" name="coven"/>
+                <item jid="room-private@aim.shakespeare.lit" name="Private Room"/>
+                <item jid="room-public@aim.shakespeare.lit" name="Public Room"/>
+                <item jid="coven@aim.shakespeare.lit" name="The coven"/>
             </query>
            </iq>
             """
@@ -302,7 +316,7 @@ class TestMuc(SlidgeTest):
             <iq xmlns="jabber:component:accept" type="result"
                 from="room-public@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="room-public" />
+                <identity category="conference" type="text" name="Public Room" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/muc#stable_id" />
                 <feature var="urn:xmpp:sid:0" />
@@ -326,6 +340,9 @@ class TestMuc(SlidgeTest):
                     <field var="muc#roomconfig_persistentroom" type="boolean">
                         <value>1</value>
                     </field>
+                    <field var="muc#roominfo_subject">
+   		    		 <value>Public Subject</value>
+           			</field>
                     <field var="muc#roomconfig_changesubject" type="boolean">
                         <value>0</value>
                     </field>
@@ -480,7 +497,7 @@ class TestMuc(SlidgeTest):
             f"""
             <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
                 <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
-                <subject>room-private</subject>
+                <subject>Private Subject</subject>
             </message>
             """
         )

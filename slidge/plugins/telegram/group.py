@@ -67,7 +67,7 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
         else:
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
         self.n_participants = group.member_count
-        self.DISCO_NAME = self.description = chat.title
+        self.name = self.description = chat.title
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
