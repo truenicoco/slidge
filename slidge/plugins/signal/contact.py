@@ -9,6 +9,7 @@ import aiosignald.generated as sigapi
 
 from slidge import *
 
+from . import config
 from .util import AttachmentSenderMixin
 
 if TYPE_CHECKING:
@@ -70,7 +71,10 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
                 )
                 return
 
-        nick = profile.name or profile.profile_name
+        if config.PREFER_PROFILE_NAME:
+            nick = profile.profile_name or profile.contact_name
+        else:
+            nick = profile.contact_name or profile.profile_name
         if nick is not None:
             nick = nick.replace("\u0000", " ")
             self.name = nick
