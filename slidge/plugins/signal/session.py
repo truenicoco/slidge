@@ -71,9 +71,10 @@ class Session(
             raise NotImplementedError
 
     @handle_unregistered_recipient
-    async def paused(self, c: "Contact"):
+    async def paused(self, c):
+        address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
-            account=self.phone, typing=False, address=c.signal_address
+            account=self.phone, typing=False, address=address, group=group
         )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
