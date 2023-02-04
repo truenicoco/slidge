@@ -3,7 +3,7 @@ FROM docker.io/library/python:3.9-slim AS builder
 ENV PATH="/venv/bin:/root/.local/bin:$PATH"
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ca-certificates curl python3-slixmpp-lib
+    ca-certificates curl python3-slixmpp-lib git
 
 RUN python3 -m venv /venv && python3 -m pip install wheel
 RUN curl -fL https://install.python-poetry.org | python3 -
@@ -22,7 +22,8 @@ COPY poetry.lock pyproject.toml /build/
 ARG SLIDGE_PLUGIN="signal facebook telegram skype mattermost steam discord"
 
 # some plugins don't have specific deps, so --extras=PLUGIN fails: fallback to slidge core deps
-RUN poetry export --extras="$SLIDGE_PLUGIN" > requirements.txt || poetry export > requirements.txt
+RUN poetry export --extras="$SLIDGE_PLUGIN" --without-hashes > requirements.txt \
+    || poetry export --without-hashes > requirements.txt
 RUN python3 -m pip install --requirement requirements.txt
 
 ## Minimal runtime environment for slidge

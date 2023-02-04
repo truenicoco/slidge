@@ -1,6 +1,5 @@
-import functools
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import discord as di
 from slixmpp import JID
@@ -41,16 +40,18 @@ class Gateway(BaseGateway[Session]):
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
+        token = registration_form.get("token")
+        assert isinstance(token, str)
         try:
-            await di.Client().login(registration_form.get("token"))
+            await di.Client().login(token)
         except di.LoginFailure as e:
             raise ValueError(str(e))
 
 
-class Contact(LegacyContact[Session, "str"]):
+class Contact(LegacyContact[Session, int]):
     MARKS = False
 
-    @functools.cached_property
+    @property
     def discord_user(self) -> di.User:
         logging.debug("Searching for user: %s", self.legacy_id)
         if (u := self.session.discord.get_user(self.legacy_id)) is None:
@@ -59,14 +60,18 @@ class Contact(LegacyContact[Session, "str"]):
             )
         return u
 
-    @functools.cached_property
+    @property
     def direct_channel_id(self):
+        assert self.discord_user.dm_channel is not None
         return self.discord_user.dm_channel.id
 
     async def update_reactions(self, m: di.Message):
         legacy_reactions = []
         user = self.discord_user
         for r in m.reactions:
+            if r.is_custom_emoji():
+                continue
+            assert isinstance(r.emoji, str)
             async for u in r.users():
                 if u == user:
                     legacy_reactions.append(r.emoji)
@@ -75,7 +80,8 @@ class Contact(LegacyContact[Session, "str"]):
     async def update_info(self):
         u = self.discord_user
         self.name = name = u.display_name
-        self.avatar = str(u.avatar_url)
+        if u.avatar:
+            self.avatar = str(u.avatar)
 
         try:
             profile = await u.profile()
@@ -94,7 +100,7 @@ class Roster(LegacyRoster["Session", Contact, int]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
 
-    async def by_discord_user(self, u: di.User) -> Contact:
+    async def by_discord_user(self, u: Union[di.User, di.Member]) -> Contact:
         return await self.by_legacy_id(u.id)
 
     async def jid_username_to_legacy_id(self, username: str):
