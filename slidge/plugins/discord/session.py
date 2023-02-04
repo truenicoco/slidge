@@ -39,7 +39,9 @@ class Session(
         return int(i)
 
     async def login(self):
-        await self.discord.login(self.user.registration_form["token"])
+        token = self.user.registration_form["token"]
+        assert isinstance(token, str)
+        await self.discord.login(token)
         self.xmpp.loop.create_task(self.discord.connect())
 
         await self.ready_future
@@ -93,19 +95,21 @@ class Session(
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
         u = c.discord_user
-        channel: di.DMChannel = u.dm_channel
+        channel = u.dm_channel
         if channel is None:
             return
         m = await channel.fetch_message(legacy_msg_id)
         self.log.debug("Message %s should be marked as read", m)
-        # try:
-        #     await m.ack()  # triggers 404, maybe does not work for DM?
-        # except Exception as e:
-        #     self.log.exception("Message %s should have been marked as read but this raised %s", m, e)
+        try:
+            await m.ack()  # triggers 404, maybe does not work for DM?
+        except Exception as e:
+            self.log.exception(
+                "Message %s should have been marked as read but this raised %s", m, e
+            )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
         u = c.discord_user
-        channel: di.DMChannel = u.dm_channel
+        channel = u.dm_channel
         if channel is None:
             return
         m = await channel.fetch_message(legacy_msg_id)
@@ -115,7 +119,7 @@ class Session(
 
     async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
         u = c.discord_user
-        channel: di.DMChannel = u.dm_channel
+        channel = u.dm_channel
         if channel is None:
             return
         m = await channel.fetch_message(legacy_msg_id)
@@ -127,11 +131,11 @@ class Session(
         for e in xmpp_reactions - legacy_reactions:
             await m.add_reaction(e)
         for e in legacy_reactions - xmpp_reactions:
-            await m.remove_reaction(e, self.discord.user)
+            await m.remove_reaction(e, self.discord.user)  # type:ignore
 
     async def retract(self, legacy_msg_id: Any, c: "Contact"):
         u = c.discord_user
-        channel: di.DMChannel = u.dm_channel
+        channel = u.dm_channel
         if channel is None:
             return
         m = await channel.fetch_message(legacy_msg_id)
@@ -140,6 +144,7 @@ class Session(
         await self.delete_futures[legacy_msg_id]
 
     async def update_reactions(self, message: di.Message):
+        assert isinstance(message.channel, di.DMChannel)
         (await self.contacts.by_discord_user(message.channel.recipient)).react(
             message.id, self.get_my_legacy_reactions(message), carbon=True
         )
@@ -148,7 +153,8 @@ class Session(
     def get_my_legacy_reactions(message: di.Message) -> list[str]:
         reactions = []
         for r in message.reactions:
-            if r.me and not r.custom_emoji:
+            if r.me and not r.is_custom_emoji():
+                assert isinstance(r.emoji, str)
                 reactions.append(r.emoji)
 
         return reactions
