@@ -4,6 +4,7 @@ import discord as di
 from discord.threads import Thread
 
 if TYPE_CHECKING:
+    from . import Contact
     from .session import Session
 
 
@@ -22,7 +23,10 @@ class Discord(di.Client):
     async def on_message(self, message: di.Message):
         channel = message.channel
         if isinstance(channel, di.DMChannel):
-            return await self.on_message_dm_channel(message)
+            if (author := message.author) == self.user:
+                return await self.on_carbon_dm_channel(message)
+            contact = await self.get_contact(author)
+            return await contact.send_message(message)
 
         if isinstance(channel, di.VoiceChannel):
             return
@@ -32,35 +36,6 @@ class Discord(di.Client):
 
         if isinstance(channel, Thread):
             return
-
-    async def on_message_dm_channel(self, message: di.Message):
-        assert isinstance(message.channel, di.DMChannel)
-        if (author := message.author) == self.user:
-            return await self.on_carbon_dm_channel(message)
-
-        contact = await self.session.contacts.by_discord_user(author)
-        reply_to = message.reference.message_id if message.reference else None
-
-        text = message.content
-        attachments = message.attachments
-        msg_id = message.id
-
-        if not attachments:
-            return contact.send_text(
-                text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to
-            )
-
-        last_attachment_i = len(attachments := message.attachments) - 1
-        for i, attachment in enumerate(attachments):
-            last = i == last_attachment_i
-            await contact.send_file(
-                file_url=attachment.url,
-                file_name=attachment.filename,
-                content_type=attachment.content_type,
-                reply_to_msg_id=reply_to if last else None,
-                legacy_msg_id=msg_id if last else None,
-                caption=text if last else None,
-            )
 
     async def on_carbon_dm_channel(self, message: di.Message):
         assert isinstance(message.channel, di.DMChannel)
@@ -81,34 +56,32 @@ class Discord(di.Client):
     async def on_message_edit(self, before: di.Message, after: di.Message):
         if not isinstance(after.channel, di.DMChannel):
             return
-        if before.content == after.content:
-            return
-        if (author := after.author) == self.user:
-            fut = self.session.edit_futures.get(after.id)
-            if fut is None:
-                (
-                    await self.session.contacts.by_discord_user(after.channel.recipient)
-                ).correct(before.id, after.content, carbon=True)
-            else:
-                fut.set_result(True)
-        else:
-            (await self.session.contacts.by_discord_user(author)).correct(
-                after.id, after.content
-            )
+
+        contact = await self.get_contact(after.channel.recipient)
+        if after.author == self.user:
+            return await self.on_carbon_edit(before, after, contact)
+
+        contact.correct(after.id, after.content)
+
+    async def on_carbon_edit(
+        self, before: di.Message, after: di.Message, contact: "Contact"
+    ):
+        fut = self.session.edit_futures.get(after.id)
+        if fut is None:
+            return contact.correct(before.id, after.content, carbon=True)
+        fut.set_result(True)
 
     async def on_message_delete(self, m: di.Message):
         if not isinstance(m.channel, di.DMChannel):
             return
-        if (author := m.author) == self.user:
+
+        contact = await self.get_contact(m.channel.recipient)
+        if m.author == self.user:
             fut = self.session.delete_futures.get(m.id)
             if fut is None:
-                (
-                    await self.session.contacts.by_discord_user(m.channel.recipient)
-                ).retract(m.id, carbon=True)
-            else:
-                fut.set_result(True)
-        else:
-            (await self.session.contacts.by_discord_user(author)).retract(m.id)
+                return contact.retract(m.id, carbon=True)
+            return fut.set_result(True)
+        await contact.retract(m.id)
 
     async def on_reaction_add(
         self, reaction: di.Reaction, user: Union[di.User, di.ClientUser]
@@ -133,3 +106,6 @@ class Discord(di.Client):
             await (await self.session.contacts.by_discord_user(user)).update_reactions(
                 message
             )
+
+    async def get_contact(self, user: Union[di.User, di.Member]):
+        return await self.session.contacts.by_discord_user(user)

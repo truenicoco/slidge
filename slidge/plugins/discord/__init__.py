@@ -95,6 +95,28 @@ class Contact(LegacyContact[Session, int]):
         # TODO: use the relationship here
         # relationship = u.relationship
 
+    async def send_message(self, message: di.Message):
+        reply_to = message.reference.message_id if message.reference else None
+
+        text = message.content
+        attachments = message.attachments
+        msg_id = message.id
+
+        if not attachments:
+            return self.send_text(text, legacy_msg_id=msg_id, reply_to_msg_id=reply_to)
+
+        last_attachment_i = len(attachments := message.attachments) - 1
+        for i, attachment in enumerate(attachments):
+            last = i == last_attachment_i
+            await self.send_file(
+                file_url=attachment.url,
+                file_name=attachment.filename,
+                content_type=attachment.content_type,
+                reply_to_msg_id=reply_to if last else None,
+                legacy_msg_id=msg_id if last else None,
+                caption=text if last else None,
+            )
+
 
 class Roster(LegacyRoster["Session", Contact, int]):
     def __init__(self, *a, **k):
