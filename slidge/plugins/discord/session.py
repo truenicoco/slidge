@@ -8,8 +8,10 @@ from slidge import *
 from ...util.types import Chat
 
 if TYPE_CHECKING:
-    from . import Contact, Gateway, Roster
+    from . import Contact, Gateway
     from .client import Discord
+    from .contact import Roster
+    from .group import MUC
 
 
 class Session(
@@ -55,19 +57,18 @@ class Session(
         reply_to_fallback_text: Optional[str] = None,
         **kwargs,
     ):
+        recipient = await get_recipient(chat)
+        if reply_to_msg_id is None:
+            reference = None
+        else:
+            reference = di.MessageReference(
+                message_id=reply_to_msg_id, channel_id=recipient.id
+            )
+
         async with self.send_lock:
-            mid = (
-                await chat.discord_user.send(
-                    text,
-                    reference=None
-                    if reply_to_msg_id is None
-                    else di.MessageReference(
-                        message_id=reply_to_msg_id,
-                        channel_id=chat.direct_channel_id,
-                    ),
-                )
-            ).id
-        f = self.send_futures[mid] = self.xmpp.loop.create_future()
+            msg = await recipient.send(text, reference=reference)  # type:ignore
+            mid = msg.id
+            f = self.send_futures[mid] = self.xmpp.loop.create_future()
         await f
         return mid
 
@@ -76,7 +77,8 @@ class Session(
 
     async def send_file(self, url: str, chat: Chat, **kwargs):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
-        await chat.discord_user.send(url)
+        recipient = await get_recipient(chat)
+        await recipient.send(url)
 
     async def active(self, c: "Contact"):
         pass
@@ -85,7 +87,8 @@ class Session(
         pass
 
     async def composing(self, c: "Contact"):
-        await c.discord_user.trigger_typing()
+        recipient = await get_recipient(c)
+        await recipient.trigger_typing()
 
     async def paused(self, c: "Contact"):
         pass
@@ -94,11 +97,9 @@ class Session(
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
-        u = c.discord_user
-        channel = u.dm_channel
-        if channel is None:
-            return
-        m = await channel.fetch_message(legacy_msg_id)
+
+        recipient = await get_recipient(c)
+        m = await recipient.fetch_message(legacy_msg_id)
         self.log.debug("Message %s should be marked as read", m)
         try:
             await m.ack()  # triggers 404, maybe does not work for DM?
@@ -108,20 +109,16 @@ class Session(
             )
 
     async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
-        u = c.discord_user
-        channel = u.dm_channel
-        if channel is None:
-            return
+        channel = await get_recipient(c)
+
         m = await channel.fetch_message(legacy_msg_id)
         self.edit_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await m.edit(content=text)
         await self.edit_futures[legacy_msg_id]
 
     async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
-        u = c.discord_user
-        channel = u.dm_channel
-        if channel is None:
-            return
+        channel = await get_recipient(c)
+
         m = await channel.fetch_message(legacy_msg_id)
 
         legacy_reactions = set(self.get_my_legacy_reactions(m))
@@ -134,20 +131,23 @@ class Session(
             await m.remove_reaction(e, self.discord.user)  # type:ignore
 
     async def retract(self, legacy_msg_id: Any, c: "Contact"):
-        u = c.discord_user
-        channel = u.dm_channel
-        if channel is None:
-            return
+        channel = await get_recipient(c)
+
         m = await channel.fetch_message(legacy_msg_id)
         self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await m.delete()
         await self.delete_futures[legacy_msg_id]
 
     async def update_reactions(self, message: di.Message):
-        assert isinstance(message.channel, di.DMChannel)
-        (await self.contacts.by_discord_user(message.channel.recipient)).react(
-            message.id, self.get_my_legacy_reactions(message), carbon=True
-        )
+        if isinstance(message.channel, di.DMChannel):
+            me = await self.contacts.by_discord_user(message.channel.recipient)
+        elif isinstance(message.channel, di.TextChannel):
+            muc = await self.bookmarks.by_legacy_id(message.channel.id)
+            me = await muc.get_user_participant()
+        else:
+            self.log.warning("Cannot update reactions for %s", message)
+            return
+        me.react(message.id, self.get_my_legacy_reactions(message), carbon=True)
 
     @staticmethod
     def get_my_legacy_reactions(message: di.Message) -> list[str]:
@@ -161,3 +161,12 @@ class Session(
 
     async def search(self, form_values: dict[str, str]):
         pass
+
+
+async def get_recipient(
+    chat: Union["Contact", "MUC"]
+) -> Union[di.User, di.TextChannel]:
+    if chat.is_group:
+        return await chat.get_discord_channel()  # type:ignore
+    else:
+        return chat.discord_user  # type:ignore
