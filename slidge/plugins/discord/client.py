@@ -28,6 +28,18 @@ class Discord(di.Client):
             contact = await self.get_contact(author)
             return await contact.send_message(message)
 
+        if isinstance(channel, di.TextChannel):
+            muc = await self.session.bookmarks.by_legacy_id(channel.id)
+
+            if (author := message.author) == self.user:
+                participant = await muc.get_user_participant()
+            else:
+                participant = await muc.get_participant_by_contact(
+                    await self.get_contact(author)
+                )
+
+            return await participant.send_message(message)
+
         if isinstance(channel, di.VoiceChannel):
             return
 
@@ -39,29 +51,51 @@ class Discord(di.Client):
 
     async def on_carbon_dm_channel(self, message: di.Message):
         assert isinstance(message.channel, di.DMChannel)
+
         async with self.session.send_lock:
             fut = self.session.send_futures.get(message.id)
+
         if fut is None:
-            (
-                await self.session.contacts.by_discord_user(message.channel.recipient)
-            ).send_text(message.content, legacy_msg_id=message.id, carbon=True)
+            contact = await self.get_contact(message.channel.recipient)
+            contact.send_text(message.content, legacy_msg_id=message.id, carbon=True)
         else:
             fut.set_result(True)
-        return
 
     async def on_typing(self, channel, user, _when):
-        if user != self.user and isinstance(channel, di.DMChannel):
-            (await self.session.contacts.by_discord_user(user)).composing()
-
-    async def on_message_edit(self, before: di.Message, after: di.Message):
-        if not isinstance(after.channel, di.DMChannel):
+        if user == self.user:
             return
 
-        contact = await self.get_contact(after.channel.recipient)
-        if after.author == self.user:
-            return await self.on_carbon_edit(before, after, contact)
+        contact = await self.get_contact(user)
 
-        contact.correct(after.id, after.content)
+        if isinstance(channel, di.DMChannel):
+            return contact.composing()
+
+        if isinstance(channel, di.TextChannel):
+            muc = await self.session.bookmarks.by_legacy_id(channel.id)
+            part = await muc.get_participant_by_contact(contact)
+            return part.composing()
+
+    async def on_message_edit(self, before: di.Message, after: di.Message):
+        channel = after.channel
+
+        if isinstance(channel, di.DMChannel):
+            correcter = await self.get_contact(channel.recipient)
+            if after.author == self.user:
+                return await self.on_carbon_edit(before, after, correcter)
+
+        elif isinstance(channel, di.TextChannel):
+            muc = await self.session.bookmarks.by_legacy_id(after.channel.id)
+            if after.author.id == self.user.id:  # type:ignore
+                correcter = await muc.get_user_participant()
+            else:
+                contact = await self.get_contact(after.author)
+                correcter = await muc.get_participant_by_contact(contact)
+
+        else:
+            self.log.debug("Ignoring edit in: %s", after.channel)
+            return
+
+        correcter.correct(after.id, after.content)
 
     async def on_carbon_edit(
         self, before: di.Message, after: di.Message, contact: "Contact"
@@ -72,16 +106,26 @@ class Discord(di.Client):
         fut.set_result(True)
 
     async def on_message_delete(self, m: di.Message):
-        if not isinstance(m.channel, di.DMChannel):
+        channel = m.channel
+        if isinstance(channel, di.DMChannel):
+            deleter = await self.get_contact(channel.recipient)
+
+            if m.author == self.user:
+                fut = self.session.delete_futures.get(m.id)
+                if fut is None:
+                    return deleter.retract(m.id, carbon=True)
+                return fut.set_result(True)
+
+            deleter.retract(m.id)
+        elif isinstance(channel, di.TextChannel):
+            contact = await self.get_contact(m.author)
+            muc = await self.session.bookmarks.by_legacy_id(m.channel.id)
+            deleter = await muc.get_participant_by_contact(contact)
+        else:
+            self.log.debug("Ignoring delete in: %s", channel)
             return
 
-        contact = await self.get_contact(m.channel.recipient)
-        if m.author == self.user:
-            fut = self.session.delete_futures.get(m.id)
-            if fut is None:
-                return contact.retract(m.id, carbon=True)
-            return fut.set_result(True)
-        await contact.retract(m.id)
+        deleter.retract(m.id)
 
     async def on_reaction_add(
         self, reaction: di.Reaction, user: Union[di.User, di.ClientUser]
@@ -96,16 +140,26 @@ class Discord(di.Client):
     async def update_reactions(
         self, reaction: di.Reaction, user: Union[di.User, di.ClientUser]
     ):
-        message: di.Message = reaction.message
-        if not isinstance(message.channel, di.DMChannel):
-            return
+        message = reaction.message
+        channel = message.channel
 
-        if isinstance(user, di.ClientUser):
-            await self.session.update_reactions(message)
-        else:
-            await (await self.session.contacts.by_discord_user(user)).update_reactions(
-                message
-            )
+        if isinstance(message.channel, di.DMChannel):
+            if isinstance(user, di.ClientUser):
+                await self.session.update_reactions(message)
+            else:
+                contact = await self.get_contact(user)
+                await contact.update_reactions(message)
+
+        elif isinstance(channel, di.TextChannel):
+            muc = await self.session.bookmarks.by_legacy_id(channel.id)
+            async for reacter in reaction.users():
+                self.log.debug("Reacter: %s", reacter)
+                if reacter.id == self.user.id:  # type:ignore
+                    participant = await muc.get_user_participant()
+                else:
+                    contact = await self.get_contact(reacter)
+                    participant = await muc.get_participant_by_contact(contact)
+                await participant.update_reactions(message)
 
     async def get_contact(self, user: Union[di.User, di.Member]):
         return await self.session.contacts.by_discord_user(user)
