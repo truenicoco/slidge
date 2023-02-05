@@ -3,6 +3,8 @@ packages:
   - python3-dev
   - docker
   - docker-cli-buildx
+  - rust
+  - cargo
 sources:
   - https://git.sr.ht/~nicoco/slidge
 secrets:

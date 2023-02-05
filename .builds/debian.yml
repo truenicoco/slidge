@@ -27,8 +27,8 @@ tasks:
       curl -sSL https://install.python-poetry.org | python3 -
       sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
-      poetry export --extras "$POETRY_EXTRAS_AMD64" > requirements-amd64.txt
-      poetry export --extras "$POETRY_EXTRAS_ARM64" > requirements-arm64.txt
+      poetry export --extras "$POETRY_EXTRAS_AMD64" --without-hashes > requirements-amd64.txt
+      poetry export --extras "$POETRY_EXTRAS_ARM64" --without-hashes > requirements-arm64.txt
   - setup-docker: |
       sudo service docker start
       sudo addgroup build docker
