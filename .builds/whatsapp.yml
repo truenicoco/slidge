@@ -22,6 +22,8 @@ tasks:
       curl -sSL https://install.python-poetry.org | python3 -
       sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
+      export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
+      sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
       poetry install --all-extras
       poetry build
   - mypy: |
