@@ -47,6 +47,8 @@ class TableResult:
     A description of the content of the table.
     """
 
+    jids_are_mucs: bool = False
+
     def get_xml(self):
         """
         Get a slixmpp "form" (with <reported> header)to represent the data

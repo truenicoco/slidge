@@ -187,15 +187,18 @@ class ChatCommandProvider:
                 msg.reply("Empty results").send()
                 return
 
+            body = ""
             for item in result.items:
-                body = ""
                 for f in result.fields:
                     if f.type == "jid-single":
-                        value = f"xmpp:{percent_encode(JID(item[f.var]))}"
+                        j = JID(item[f.var])
+                        value = f"xmpp:{percent_encode(j)}"
+                        if result.jids_are_mucs:
+                            value += "?join"
                     else:
                         value = item[f.var]
                     body += f"\n{f.label or f.var}: {value}"
-                msg.reply(body).send()
+            msg.reply(body).send()
 
     @staticmethod
     async def __wrap_handler(msg, f: Union[Callable, functools.partial], *a, **k):

@@ -157,6 +157,7 @@ class ListGroups(Command):
             description="Your groups",
             fields=[FormField("name"), FormField("jid", type="jid-single")],
             items=[{"name": g.name, "jid": g.jid.bare} for g in groups],
+            jids_are_mucs=True,
         )
 
 
