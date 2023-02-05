@@ -20,6 +20,7 @@ from ..util.types import (
     PresenceShow,
     SessionType,
 )
+from ..util.xep_0461.stanza import FeatureFallBack
 from . import config
 from .command.base import SearchResult
 from .contact import LegacyRoster
@@ -246,7 +247,7 @@ class BaseSession(
             url = None
 
         text = m["body"]
-        if m.xml.find("{urn:xmpp:fallback:0}fallback") is not None and (
+        if m.xml.find(f"{{{FeatureFallBack.namespace}}}fallback") is not None and (
             isinstance(e, LegacyMUC) or e.REPLIES  # type: ignore
         ):
             text = m["feature_fallback"].get_stripped_body()
