@@ -35,12 +35,31 @@ class Mixin:
                     legacy_reactions.append(r.emoji)
         self.react(m.id, legacy_reactions)
 
-    async def get_reply_to_kwargs(self, message: di.Message) -> dict:
-        raise NotImplementedError
+    async def get_reply_to_kwargs(self, message: di.Message):
+        quoted_msg_id = message.reference.message_id if message.reference else None
+
+        reply_kwargs = dict[str, Any]()
+        if not quoted_msg_id:
+            return None, reply_kwargs
+
+        reply_kwargs["reply_to"] = quoted_msg_id
+
+        try:
+            quoted_msg = await message.channel.fetch_message(quoted_msg_id)
+        except di.errors.NotFound:
+            reply_kwargs = {
+                "reply_to_fallback_text": "[quoted message could not be fetched]"
+            }
+            quoted_msg = None
+        else:
+            assert quoted_msg is not None
+            reply_kwargs["reply_to_fallback_text"] = quoted_msg.content
+            reply_kwargs["reply_self"] = quoted_msg.author == message.author
+
+        return quoted_msg, reply_kwargs
 
     async def send_message(self, message: di.Message, archive_only=False):
-        reply_to = message.reference.message_id if message.reference else None
-        reply_kwargs = await self.get_reply_to_kwargs(message)
+        _, reply_kwargs = await self.get_reply_to_kwargs(message)
 
         self.session.log.debug("REPLY TO KWARGS %s", reply_kwargs)
 
@@ -52,7 +71,6 @@ class Mixin:
             return self.send_text(
                 text,
                 legacy_msg_id=msg_id,
-                reply_to_msg_id=reply_to,
                 when=message.created_at,
                 **reply_kwargs,
                 archive_only=archive_only,

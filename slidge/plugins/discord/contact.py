@@ -23,18 +23,6 @@ class Contact(LegacyContact[Session, int], Mixin):  # type: ignore
         assert self.discord_user.dm_channel is not None
         return self.discord_user.dm_channel.id
 
-    async def get_reply_to_kwargs(self, message: di.Message):
-        reference = message.reference.message_id if message.reference else None
-        reply_kwargs = dict[str, Any](reply_to=reference)
-        if not reference:
-            return reply_kwargs
-
-        reply_to_message = await message.channel.fetch_message(reference)
-        reply_kwargs["reply_to_fallback_text"] = reply_to_message.content
-        reply_kwargs["reply_self"] = reply_to_message.author == message.author
-
-        return reply_kwargs
-
     async def update_info(self):
         u = self.discord_user
         self.name = name = u.display_name

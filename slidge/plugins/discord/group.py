@@ -24,26 +24,19 @@ class Participant(LegacyParticipant, Mixin):  # type: ignore
     contact: "Contact"
 
     async def get_reply_to_kwargs(self, message: di.Message):
-        reference = message.reference.message_id if message.reference else None
-        reply_kwargs = dict[str, Any](reply_to=reference)
-        if not reference:
-            return reply_kwargs
-
-        reply_to_message = await message.channel.fetch_message(reference)
-        reply_kwargs["reply_to_fallback_text"] = reply_to_message.content
-        reply_kwargs["reply_self"] = reply_to_message.author == message.author
+        quoted_msg, reply_kwargs = await super().get_reply_to_kwargs(message)
+        if not quoted_msg:
+            return None, reply_kwargs
 
         muc = self.muc
-        if reply_to_message.author == self.session.discord.user:
+        if quoted_msg.author == self.session.discord.user:
             reply_to_author = await muc.get_user_participant()
         else:
-            contact = await self.session.contacts.by_discord_user(
-                reply_to_message.author
-            )
+            contact = await self.session.contacts.by_discord_user(quoted_msg.author)
             reply_to_author = await muc.get_participant_by_contact(contact)
         reply_kwargs["reply_to_author"] = reply_to_author
 
-        return reply_kwargs
+        return quoted_msg, reply_kwargs
 
     @property
     def discord_user(self) -> Union[di.User, di.ClientUser]:  # type:ignore
