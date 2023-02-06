@@ -1,36 +1,29 @@
 image: alpine/edge
 packages:
-  - python3-dev
   - docker
   - docker-cli-buildx
 sources:
   - https://git.sr.ht/~nicoco/slidge
+secrets:
+  - 173244e1-c233-43de-969f-65965c5487e1
 environment:
+  REGISTRY_PREFIX: docker.io/nicocool84/slidge
+  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord
   DOCKER_BUILDKIT: "1"
-  POETRY_EXTRAS: facebook signal skype mattermost steam discord telegram
-artifacts:
-  - slidge-debian-arm64.tar
-  - slidge-latest-arm64.deb
-  - slidge-debian-amd64.tar
-  - slidge-latest-amd64.deb
 tasks:
   - version: |
       cd slidge
       export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
       echo VER=$VER >> ~/.buildenv
+      echo TAG=latest >> ~/.buildenv
       for TAG in $(git tag --points-at HEAD); do
         if [[ $TAG == v* ]] ; then
           export VER=$(echo $TAG | cut -c2-)
           echo VER=$VER >> ~/.buildenv
-          sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
+          echo TAG=$VER >> ~/.buildenv
         fi
       done
       sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
-  - setup-poetry: |
-      curl -sSL https://install.python-poetry.org | python3 -
-      sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
-      cd slidge
-      poetry export --extras "$POETRY_EXTRAS" --without-hashes > requirements.txt
   - setup-docker1: |
       sudo service docker start
       sudo addgroup build docker
@@ -40,14 +33,13 @@ tasks:
       docker buildx create --use
   - build: |
       cd slidge
-      docker buildx build \
-        -f dev/Containerfile-debian \
-        -o /home/build \
-        --platform linux/arm64,linux/amd64 \
-        --build-arg VER=$VER .
-  - tar: |
-      ls -l
-      for p in arm64 amd64; do
-        tar cf slidge-debian-${p}.tar linux_${p}/slidge*${p}* linux_${p}/slidge*${p}*
-        mv linux_${p}/slidge_${VER}_${p}.deb slidge-latest-${p}.deb
+      for LEGACY in $PLUGINS; do
+        export NAME=$REGISTRY_PREFIX-$LEGACY:$TAG
+        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --build-arg SLIDGE_PLUGIN=$LEGACY --target slidge-$LEGACY ."
+        docker buildx build $ARGS
+        if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
+          docker buildx build --push $ARGS || echo "We can't push to docker.io, continuing anyway"
+        else
+          echo Not on master, not publishing
+        fi
       done

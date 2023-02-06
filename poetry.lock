@@ -802,6 +802,14 @@ python-versions = "*"
 pyasn1 = ">=0.4.6,<0.5.0"
 
 [[package]]
+name = "pybindgen"
+version = "0.22.1"
+description = "Python Bindings Generator"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pycares"
 version = "4.3.0"
 description = "Python interface for c-ares"
@@ -1443,7 +1451,7 @@ telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "deb00091c1a5eb5e08926f68c7c06382a9fccf1e7fad40e8ea8ad08f51fbb88d"
+content-hash = "b4476d69a3ab50731545db714a021ac07fd7bb5a8835cab8fae2df4f736a2f3f"
 
 [metadata.files]
 aiodns = [
@@ -2482,6 +2490,10 @@ pyasn1 = [
 pyasn1-modules = [
     {file = "pyasn1-modules-0.2.8.tar.gz", hash = "sha256:905f84c712230b2c592c19470d3ca8d552de726050d1d1716282a1f6146be65e"},
     {file = "pyasn1_modules-0.2.8-py2.py3-none-any.whl", hash = "sha256:a50b808ffeb97cb3601dd25981f6b016cbb3d31fbf57a8b8a87428e6158d0c74"},
+]
+pybindgen = [
+    {file = "PyBindGen-0.22.1-py2.py3-none-any.whl", hash = "sha256:e9c2dad3c3e9da7811c271b5d6dcbb59ee59a2fe7877b4277556f95a9aea296e"},
+    {file = "PyBindGen-0.22.1.tar.gz", hash = "sha256:8c7f22391a49a84518f5a2ad06e3a5b1e839d10e34da7631519c8a28fcba3764"},
 ]
 pycares = [
     {file = "pycares-4.3.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:19c9cdd3322d422931982939773e453e491dfc5c0b2e23d7266959315c7a0824"},
