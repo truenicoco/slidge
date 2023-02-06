@@ -11,8 +11,7 @@ RUN for PLUGIN in $PLUGINS; do \
      sed "s/--PLUGIN--/$PLUGIN/" tpl.conf > etc/$PLUGIN.conf.example; \
     done
 
-ARG TARGETARCH
-COPY ./requirements-${TARGETARCH}.txt /build/requirements.txt
+COPY ./requirements.txt /build/requirements.txt
 COPY ./slidge /build/slidge
 
 # gopy build

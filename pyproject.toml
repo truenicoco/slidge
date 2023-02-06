@@ -15,7 +15,11 @@ Pillow = ">=8.1.0"
 aiohttp = "^3.8.3"
 ConfigArgParse = "^1.5.3"
 
-aiotdlib = { version = "^0.19.2", optional = true }
+aiotdlib = [
+    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_x86_64.whl", markers = "sys_platform == 'linux' and platform_machine == 'x86_64'", optional = true },
+    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_aarch64.whl", markers = "sys_platform == 'linux' and platform_machine == 'arm64'", optional = true },
+    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_i686.whl", markers = "sys_platform == 'linux' and platform_machine == 'i686'", optional = true}
+]
 pydantic = { version = "*", optional = true }
 aiosignald = { version = "^0.3.6", optional = true }
 mautrix-facebook = { version = "^0.4.1", optional = true }

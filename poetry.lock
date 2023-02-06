@@ -64,6 +64,41 @@ pydantic = ">=1.9.1,<2.0.0"
 sortedcontainers = ">=2.4.0,<3.0.0"
 ujson = ">=5.4.0,<6.0.0"
 
+[package.source]
+type = "url"
+url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_aarch64.whl"
+[[package]]
+name = "aiotdlib"
+version = "0.19.2"
+description = "Python asyncio Telegram client based on TDLib"
+category = "main"
+optional = true
+python-versions = ">=3.9,<4.0"
+
+[package.dependencies]
+pydantic = ">=1.9.1,<2.0.0"
+sortedcontainers = ">=2.4.0,<3.0.0"
+ujson = ">=5.4.0,<6.0.0"
+
+[package.source]
+type = "url"
+url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_i686.whl"
+[[package]]
+name = "aiotdlib"
+version = "0.19.2"
+description = "Python asyncio Telegram client based on TDLib"
+category = "main"
+optional = true
+python-versions = ">=3.9,<4.0"
+
+[package.dependencies]
+pydantic = ">=1.9.1,<2.0.0"
+sortedcontainers = ">=2.4.0,<3.0.0"
+ujson = ">=5.4.0,<6.0.0"
+
+[package.source]
+type = "url"
+url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_x86_64.whl"
 [[package]]
 name = "alabaster"
 version = "0.7.13"
@@ -910,7 +945,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "qrcode"
-version = "7.4.1"
+version = "7.4.2"
 description = "QR Code image generator"
 category = "main"
 optional = false
@@ -1341,7 +1376,7 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.12.0"
+version = "3.12.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "dev"
 optional = false
@@ -1403,12 +1438,12 @@ mattermost = ["mattermost-api-reference-client", "emoji"]
 signal = ["aiosignald"]
 skype = ["SkPy"]
 steam = ["steam"]
-telegram = ["aiotdlib", "pydantic"]
+telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "124d2ba303e144176b5b5237191aa4c7f1e23a36a517257a4f523bf8ed96a2d1"
+content-hash = "7edee9b908e023232ae59454df7e6f601cd3690888f81816ba7117e091dadfa2"
 
 [metadata.files]
 aiodns = [
@@ -1512,10 +1547,7 @@ aiosignald = [
     {file = "aiosignald-0.3.6-py3-none-any.whl", hash = "sha256:418588412c42fc2e95c0a30179a195814ce1e93dee24705d40cd8c0520214857"},
     {file = "aiosignald-0.3.6.tar.gz", hash = "sha256:9cf166e8c6ef5d7ea9c2928fd062b580c8c94207964897afb79292e36cfe09af"},
 ]
-aiotdlib = [
-    {file = "aiotdlib-0.19.2-py3-none-any.whl", hash = "sha256:b830a2aee78513a24886832a6f9d7f8e5622fcd9c94aa08629e4db0e0a5f7698"},
-    {file = "aiotdlib-0.19.2.tar.gz", hash = "sha256:151adc466c573b395848c24ef46555d602b1214bdb4e09496d3fdbefef8f5843"},
-]
+aiotdlib = []
 alabaster = [
     {file = "alabaster-0.7.13-py3-none-any.whl", hash = "sha256:1ee19aca801bbabb5ba3f5f258e4422dfa86f82f3e9cefb0859b283cdd7f62a3"},
     {file = "alabaster-0.7.13.tar.gz", hash = "sha256:a27a4a084d5e690e16e01e03ad2b2e552c61a65469419b907243193de1a84ae2"},
@@ -2688,8 +2720,8 @@ pyyaml = [
     {file = "PyYAML-6.0.tar.gz", hash = "sha256:68fb519c14306fec9720a2a5b45bc9f0c8d1b9c72adf45c37baedfcd949c35a2"},
 ]
 qrcode = [
-    {file = "qrcode-7.4.1-py3-none-any.whl", hash = "sha256:ba7520e031f28dadcd92049a88832a585111d09342bd0d15ddae5ccf5af98c12"},
-    {file = "qrcode-7.4.1.tar.gz", hash = "sha256:26185f4c48ea8a896d5c9a0b080c41b75448e30b533b418ea0c65d91d10f0901"},
+    {file = "qrcode-7.4.2-py3-none-any.whl", hash = "sha256:581dca7a029bcb2deef5d01068e39093e80ef00b4a61098a2182eac59d01643a"},
+    {file = "qrcode-7.4.2.tar.gz", hash = "sha256:9dd969454827e127dbd93696b20747239e6d540e082937c90f14ac95b30f5845"},
 ]
 requests = [
     {file = "requests-2.28.2-py3-none-any.whl", hash = "sha256:64299f4909223da747622c030b781c0d7811e359c37124b4bd368fb8c6518baa"},
@@ -3053,8 +3085,8 @@ yarl = [
     {file = "yarl-1.8.2.tar.gz", hash = "sha256:49d43402c6e3013ad0978602bf6bf5328535c48d192304b91b97a3c6790b1562"},
 ]
 zipp = [
-    {file = "zipp-3.12.0-py3-none-any.whl", hash = "sha256:9eb0a4c5feab9b08871db0d672745b53450d7f26992fd1e4653aa43345e97b86"},
-    {file = "zipp-3.12.0.tar.gz", hash = "sha256:73efd63936398aac78fd92b6f4865190119d6c91b531532e798977ea8dd402eb"},
+    {file = "zipp-3.12.1-py3-none-any.whl", hash = "sha256:6c4fe274b8f85ec73c37a8e4e3fa00df9fb9335da96fb789e3b96b318e5097b3"},
+    {file = "zipp-3.12.1.tar.gz", hash = "sha256:a3cac813d40993596b39ea9e93a18e8a2076d5c378b8bc88ec32ab264e04ad02"},
 ]
 zope-event = [
     {file = "zope.event-4.6-py2.py3-none-any.whl", hash = "sha256:73d9e3ef750cca14816a9c322c7250b0d7c9dbc337df5d1b807ff8d3d0b9e97c"},
