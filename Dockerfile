@@ -74,13 +74,6 @@ USER root
 # libc++ required by tdlib
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libc++1
-# aiotdlib ships useless Mac OS dylibs and does not include arm64 binaries
-RUN cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib/ && \
-    rm *.dylib && \
-    if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-      rm *amd64.so && \
-      wget https://slidge.im/libtdjson_linux_arm64.so; \
-    fi
 
 USER slidge
 
@@ -156,12 +149,6 @@ ARG TARGETPLATFORM="linux/amd64"
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libc++1 curl
-
-RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-      cd /venv/lib/python3.9/site-packages/aiotdlib/tdlib && \
-      rm -f *amd64.so && \
-      curl -O https://slidge.im/libtdjson_linux_arm64.so; \
-    fi
 
 FROM slidge-dev AS slidge-whatsapp-dev
 ENV GOBIN="/usr/local/bin"

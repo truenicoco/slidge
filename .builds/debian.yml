@@ -7,8 +7,7 @@ sources:
   - https://git.sr.ht/~nicoco/slidge
 environment:
   DOCKER_BUILDKIT: "1"
-  POETRY_EXTRAS_AMD64: facebook signal skype mattermost steam discord telegram
-  POETRY_EXTRAS_ARM64: facebook signal skype mattermost steam discord
+  POETRY_EXTRAS: facebook signal skype mattermost steam discord telegram
 artifacts:
   - slidge-debian-arm64.tar
   - slidge-latest-arm64.deb
@@ -27,8 +26,7 @@ tasks:
       curl -sSL https://install.python-poetry.org | python3 -
       sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
-      poetry export --extras "$POETRY_EXTRAS_AMD64" --without-hashes > requirements-amd64.txt
-      poetry export --extras "$POETRY_EXTRAS_ARM64" --without-hashes > requirements-arm64.txt
+      poetry export --extras "$POETRY_EXTRAS" --without-hashes > requirements.txt
   - setup-docker: |
       sudo service docker start
       sudo addgroup build docker
