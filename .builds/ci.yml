@@ -30,7 +30,9 @@ tasks:
       poetry build
   - muc-bot: |
       cd slidge
-      poetry run python dev/muc_bot.py || true  # let's not block if this fails
+      if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
+        poetry run python dev/muc_bot.py || true  # let's not block if this fails
+      fi
   - mypy: |
       cd slidge
       poetry run mypy slidge
