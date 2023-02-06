@@ -9,6 +9,7 @@ from typing import IO, Iterable, Optional, Union
 from uuid import uuid4
 
 from slixmpp import JID, Message
+from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
 
@@ -218,7 +219,7 @@ class AttachmentMixin(MessageMaker):
                 content_type=content_type,
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
             )
-        except FileUploadError as e:
+        except (FileUploadError, IqError) as e:
             log.warning(
                 "Something is wrong with the upload service, see the traceback below"
             )
