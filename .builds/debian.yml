@@ -27,14 +27,15 @@ tasks:
       sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
       cd slidge
       poetry export --extras "$POETRY_EXTRAS" --without-hashes > requirements.txt
-  - setup-docker: |
+  - setup-docker1: |
       sudo service docker start
       sudo addgroup build docker
-  - build: |
-      cd slidge
+  - setup-docker2: |
       while ! test -e /var/run/docker.sock; do sleep 1; done
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
       docker buildx create --use
+  - build: |
+      cd slidge
       docker buildx build \
         -f dev/Containerfile-debian \
         -o /home/build \

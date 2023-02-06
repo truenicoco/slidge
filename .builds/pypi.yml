@@ -18,14 +18,15 @@ tasks:
           echo VER=$(echo $TAG | cut -c2-) >> ~/.buildenv
         fi
       done
-  - setup-docker: |
+  - setup-docker1: |
       sudo service docker start
       sudo addgroup build docker
+  - setup-docker2: |
       while ! test -e /var/run/docker.sock; do sleep 1; done
-  - build: |
-      cd slidge
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
       docker buildx create --use
+  - build: |
+      cd slidge
       docker buildx build . \
         --platform linux/amd64 \
         -f dev/Containerfile-wheel \

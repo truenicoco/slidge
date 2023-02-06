@@ -7,10 +7,12 @@ sources:
 artifacts:
   - ./slidge-docs.tar.gz
 tasks:
-  - setup-docker: |
+  - setup-docker1: |
       sudo service docker start
       sudo addgroup build docker
+  - setup-docker2: |
       while ! test -e /var/run/docker.sock; do sleep 1; done
       docker buildx create --use
   - tests: |
-      docker buildx build -f slidge/dev/Containerfile-tests . -o ./
+      cd slidge
+      docker buildx build -f dev/Containerfile-tests . -o ./
