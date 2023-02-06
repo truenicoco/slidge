@@ -1,69 +1,42 @@
 image: alpine/edge
 packages:
-  - python3-dev
   - docker
   - docker-cli-buildx
-  - rust
-  - cargo
 sources:
   - https://git.sr.ht/~nicoco/slidge
 secrets:
-  - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
   - 173244e1-c233-43de-969f-65965c5487e1
-  - 600fb955-af99-4541-a28e-44879f4b2cfc
-  - dc710d9d-8043-4e1d-9837-b35bfa02800a
 environment:
   REGISTRY_PREFIX: docker.io/nicocool84/slidge
-  PLUGINS: whatsapp
+  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord
   DOCKER_BUILDKIT: "1"
 artifacts:
   - ./slidge/dist/slidge-0.0.0.dev0-py3-none-any.whl
   - ./slidge/dist/slidge-0.0.0.dev0.tar.gz
 tasks:
-  - setup-poetry: |
-      curl -sSL https://install.python-poetry.org | python3 -
-      sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
+  - version: |
       cd slidge
-      export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
+      echo VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5) >> ~/.buildenv
+      for TAG in $(git tag --points-at HEAD); do
+        if [[ $TAG == v* ]] ; then
+          echo VER=$(echo $TAG | cut -c2-) >> ~/.buildenv
+        fi
+      done
       sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
-      poetry install --all-extras
-      poetry build
-  - mypy: |
-      cd slidge
-      poetry run mypy slidge
-  - pytest: |
-      cd slidge
-      poetry run pytest tests
-  - black: |
-      cd slidge
-      poetry run black --check slidge
-  - docker-setup: |
+      sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
+  - setup-docker: |
       sudo service docker start
       sudo addgroup build docker
-  - container: |
-      cd slidge
       while ! test -e /var/run/docker.sock; do sleep 1; done
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
       docker buildx create --use
+  - build: |
+      cd slidge
       for LEGACY in $PLUGINS; do
         export NAME=$REGISTRY_PREFIX-$LEGACY:latest
         export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --build-arg SLIDGE_PLUGIN=$LEGACY --target slidge-$LEGACY ."
         docker buildx build $ARGS
         if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
           docker buildx build --push $ARGS || echo "We can't push to docker.io, continuing anyway"
-        fi
-      done
-  - release: |
-      cd slidge
-      for TAG in $(git tag --points-at HEAD); do
-        if [[ $TAG == v* ]] ; then
-          VER=$(echo $TAG | cut -c2-)
-          for LEGACY in $PLUGINS; do
-            docker buildx build \
-              --push \
-              --platform linux/arm64,linux/amd64 \
-              --tag $REGISTRY_PREFIX-$LEGACY:$VER \
-              --target slidge-$LEGACY .
-          done
         fi
       done

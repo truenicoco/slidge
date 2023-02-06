@@ -6,6 +6,14 @@ authors = ["Nicolas Cedilnik <nicoco@nicoco.fr>"]
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 homepage = "https://sr.ht/~nicoco/slidge/"
+include = [
+    {path = "slidge/plugins/whatsapp/generated/*.py", format = "wheel"},
+    {path = "slidge/plugins/whatsapp/generated/*.so", format = "wheel"}
+]
+
+[tool.poetry.build]
+script = "dev/build.py"
+generate-setup-file = false
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -31,7 +39,7 @@ steam = {extras = ["client"], version = "^1.4.4", optional = true }
 pickle-secure = "^0.9.99"
 python-magic = "^0.4.27"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
 pytest-asyncio = "*"
 black = { version = "*", extras = ["d"] }
@@ -44,6 +52,7 @@ mypy = "^0.991"
 types-requests = "^2.28.1"
 isort = "^5.11.4"
 types-emoji = "^2.0.0"
+pybindgen = "^0.22.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

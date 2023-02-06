@@ -1,0 +1,34 @@
+FROM docker.io/library/python:3.9-slim AS builder-docs
+
+RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/backports.list && \
+    apt update -y && apt install -yt bullseye-backports golang
+
+RUN apt-get install -y --no-install-recommends curl rustc cargo gcc libssl-dev
+
+RUN python3 -m pip install wheel pybindgen
+RUN curl -fL https://install.python-poetry.org | python3 - || cat /poetry-installer-error-*
+
+ENV GOBIN="/usr/local/bin"
+RUN go install github.com/go-python/gopy@latest && \
+    go install golang.org/x/tools/cmd/goimports@latest
+
+WORKDIR /build
+COPY poetry.lock pyproject.toml /build/
+COPY slidge /build/slidge
+COPY tests /build/tests
+COPY docs /build/docs
+COPY dev/build.py /build/dev/build.py
+COPY README.md /build
+
+ENV PATH=/root/.local/bin:$PATH
+RUN poetry install
+RUN poetry run mypy slidge
+RUN poetry run pytest tests
+RUN poetry run black --slidge
+
+WORKDIR slidge/docs/
+RUN make html
+RUN cd build/html; tar czf /slidge-docs.tar.gz .
+
+FROM scratch
+COPY --from=builder-docs /slidge-docs.tar.gz /slidge-docs.tar.gz

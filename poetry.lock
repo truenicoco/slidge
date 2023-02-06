@@ -752,15 +752,15 @@ tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "pa
 
 [[package]]
 name = "platformdirs"
-version = "2.6.2"
+version = "3.0.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx (>=5.3)", "sphinx-autodoc-typehints (>=1.19.5)"]
-test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest (>=7.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)"]
+docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx (>=6.1.3)", "sphinx-autodoc-typehints (>=1.22,!=1.23.4)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest (>=7.2.1)", "pytest-cov (>=4)", "pytest-mock (>=3.10)"]
 
 [[package]]
 name = "pluggy"
@@ -800,6 +800,14 @@ python-versions = "*"
 
 [package.dependencies]
 pyasn1 = ">=0.4.6,<0.5.0"
+
+[[package]]
+name = "pybindgen"
+version = "0.22.1"
+description = "Python Bindings Generator"
+category = "dev"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "pycares"
@@ -1292,7 +1300,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-requests"
-version = "2.28.11.8"
+version = "2.28.11.9"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
@@ -1443,7 +1451,7 @@ telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "7edee9b908e023232ae59454df7e6f601cd3690888f81816ba7117e091dadfa2"
+content-hash = "a36c9365c33b75d57617fcca5895c4b453ff53cb54f06556157102d79cb9d966"
 
 [metadata.files]
 aiodns = [
@@ -2444,8 +2452,8 @@ pillow = [
     {file = "Pillow-9.4.0.tar.gz", hash = "sha256:a1c2d7780448eb93fbcc3789bf3916aa5720d942e37945f4056680317f1cd23e"},
 ]
 platformdirs = [
-    {file = "platformdirs-2.6.2-py3-none-any.whl", hash = "sha256:83c8f6d04389165de7c9b6f0c682439697887bca0aa2f1c87ef1826be3584490"},
-    {file = "platformdirs-2.6.2.tar.gz", hash = "sha256:e1fea1fe471b9ff8332e229df3cb7de4f53eeea4998d3b6bfff542115e998bd2"},
+    {file = "platformdirs-3.0.0-py3-none-any.whl", hash = "sha256:b1d5eb14f221506f50d6604a561f4c5786d9e80355219694a1b244bcd96f4567"},
+    {file = "platformdirs-3.0.0.tar.gz", hash = "sha256:8a1228abb1ef82d788f74139988b137e78692984ec7b08eaa6c65f1723af28f9"},
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -2482,6 +2490,10 @@ pyasn1 = [
 pyasn1-modules = [
     {file = "pyasn1-modules-0.2.8.tar.gz", hash = "sha256:905f84c712230b2c592c19470d3ca8d552de726050d1d1716282a1f6146be65e"},
     {file = "pyasn1_modules-0.2.8-py2.py3-none-any.whl", hash = "sha256:a50b808ffeb97cb3601dd25981f6b016cbb3d31fbf57a8b8a87428e6158d0c74"},
+]
+pybindgen = [
+    {file = "PyBindGen-0.22.1-py2.py3-none-any.whl", hash = "sha256:e9c2dad3c3e9da7811c271b5d6dcbb59ee59a2fe7877b4277556f95a9aea296e"},
+    {file = "PyBindGen-0.22.1.tar.gz", hash = "sha256:8c7f22391a49a84518f5a2ad06e3a5b1e839d10e34da7631519c8a28fcba3764"},
 ]
 pycares = [
     {file = "pycares-4.3.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:19c9cdd3322d422931982939773e453e491dfc5c0b2e23d7266959315c7a0824"},
@@ -2852,8 +2864,8 @@ types-emoji = [
     {file = "types_emoji-2.1.0.1-py3-none-any.whl", hash = "sha256:fbbc07b57d82cdb7be3e34f3aad3a4157063f929668016bd27e62e528f3e656d"},
 ]
 types-requests = [
-    {file = "types-requests-2.28.11.8.tar.gz", hash = "sha256:e67424525f84adfbeab7268a159d3c633862dafae15c5b19547ce1b55954f0a3"},
-    {file = "types_requests-2.28.11.8-py3-none-any.whl", hash = "sha256:61960554baca0008ae7e2db2bd3b322ca9a144d3e80ce270f5fb640817e40994"},
+    {file = "types-requests-2.28.11.9.tar.gz", hash = "sha256:b942e832566810c4b521c2ae70c6cd990abd7f518e0c661d9a8d90a29b1cd19a"},
+    {file = "types_requests-2.28.11.9-py3-none-any.whl", hash = "sha256:8fd62803b8830d8f88591a40d95e92a34e2495fff052b8d7f713a5008a5fb0fa"},
 ]
 types-urllib3 = [
     {file = "types-urllib3-1.26.25.4.tar.gz", hash = "sha256:eec5556428eec862b1ac578fb69aab3877995a99ffec9e5a12cf7fbd0cc9daee"},

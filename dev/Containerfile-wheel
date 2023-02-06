@@ -1,0 +1,29 @@
+FROM docker.io/library/python:3.9-slim AS builder-wheel
+
+RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/backports.list && \
+    apt update -y && apt install -yt bullseye-backports golang
+
+RUN apt-get install -y --no-install-recommends curl rustc cargo gcc libssl-dev
+
+RUN python3 -m pip install wheel pybindgen
+RUN curl -fL https://install.python-poetry.org | python3 - || cat /poetry-installer-error-*
+
+ENV GOBIN="/usr/local/bin"
+RUN go install github.com/go-python/gopy@latest && \
+    go install golang.org/x/tools/cmd/goimports@latest
+
+WORKDIR /build
+COPY poetry.lock pyproject.toml /build/
+COPY slidge /build/slidge
+COPY dev/build.py /build/dev/build.py
+COPY README.md /build
+
+ARG VER="0.0.0-dev"
+RUN sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
+RUN sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
+
+ENV PATH=/root/.local/bin:$PATH
+RUN poetry build
+
+FROM scratch as wheel
+COPY --from=builder-wheel ./build/dist/* /

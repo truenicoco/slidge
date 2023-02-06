@@ -1,0 +1,43 @@
+image: alpine/edge
+packages:
+  - python3-dev
+  - docker
+  - docker-cli-buildx
+sources:
+  - https://git.sr.ht/~nicoco/slidge
+secrets:
+  - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
+artifacts:
+  - slidge.tar
+tasks:
+  - version: |
+      cd slidge
+      echo VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5) >> ~/.buildenv
+      for TAG in $(git tag --points-at HEAD); do
+        if [[ $TAG == v* ]] ; then
+          echo VER=$(echo $TAG | cut -c2-) >> ~/.buildenv
+        fi
+      done
+  - setup-docker: |
+      sudo service docker start
+      sudo addgroup build docker
+      while ! test -e /var/run/docker.sock; do sleep 1; done
+  - build: |
+      cd slidge
+      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
+      docker buildx create --use
+      docker buildx build . \
+        --platform linux/amd64 \
+        -f dev/Containerfile-wheel \
+        -o ./dist/
+  - setup-poetry: |
+      curl -sSL https://install.python-poetry.org | python3 -
+      sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
+
+      set +x
+      export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
+      set -x
+
+      poetry publish || echo Could not publish to pypi
+  - tar: |
+      tar cf slidge.tar slidge/dist
