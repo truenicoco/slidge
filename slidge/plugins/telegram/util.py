@@ -197,7 +197,13 @@ class TelegramToXMPPMixin:
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
-        best_file_downloaded: tgapi.File = await self.session.tg.request(query)
+        try:
+            best_file_downloaded: tgapi.File = await self.session.tg.request(query)
+        except tgapi.BadRequest as e:
+            return await self.send_text(
+                f"/me tried to send an attachment but something went wrong: {e}",
+                **kwargs,
+            )
         await self.send_file(
             best_file_downloaded.local.path,
             caption=caption,
