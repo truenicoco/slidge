@@ -178,6 +178,59 @@ class LinkDevice(Command):
         return "Your new device is now linked to your signal account."
 
 
+class ChangeContactName(Command):
+    NAME = "Rename a signal contact"
+    HELP = "Change the contact_name of a signal contact. This is stored on your signal account only."
+    CHAT_COMMAND = NODE = "contact-name"
+    ACCESS = CommandAccess.USER_LOGGED
+
+    xmpp: "Gateway"
+
+    async def run(self, session, ifrom: JID, *args):
+        assert session is not None
+        signal = await self.xmpp.signal
+        contacts = (
+            await signal.list_contacts(account=session.user.registration_form["phone"])
+        ).profiles
+        options = [
+            {
+                "value": c.address.uuid,
+                "label": repr(c.contact_name)
+                + " - "
+                + repr(c.profile_name)
+                + " - "
+                + str(c.address.uuid),
+            }
+            for c in contacts
+        ]
+
+        return Form(
+            title=self.NAME,
+            instructions=self.HELP,
+            fields=[
+                FormField(
+                    "uuid",
+                    label="Signal contact",
+                    type="list-single",
+                    options=options,  # type:ignore
+                    required=True,
+                ),
+                FormField("name", label="New name", required=True),
+            ],
+            handler=self.finish,
+        )
+
+    async def finish(self, form_values, session: "Session", _ifrom):
+        name = form_values["name"]
+        uuid = form_values["uuid"]
+        await (await self.xmpp.signal).update_contact(
+            account=session.user.registration_form["phone"],
+            address=sigapi.JsonAddressv1(uuid=uuid),
+            name=name,
+        )
+        return "Contact renamed successfully."
+
+
 class Gateway(BaseGateway):
     COMPONENT_NAME = "Signal (slidge)"
     COMPONENT_TYPE = "signal"
