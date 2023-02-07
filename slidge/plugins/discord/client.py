@@ -86,6 +86,11 @@ class Discord(di.Client):
     async def on_message_edit(self, before: di.Message, after: di.Message):
         channel = after.channel
 
+        if before.content == after.content:
+            # edit events are emitted on various occasion,
+            # for instance when a thread is created
+            return
+
         if isinstance(channel, di.DMChannel):
             correcter = await self.get_contact(channel.recipient)
             if after.author == self.user:
