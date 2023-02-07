@@ -99,8 +99,11 @@ class Session(
             return
 
         recipient = await get_recipient(c)
-        m = await recipient.fetch_message(legacy_msg_id)
-        self.log.debug("Message %s should be marked as read", m)
+        try:
+            m = await recipient.fetch_message(legacy_msg_id)
+        except di.errors.NotFound:
+            return
+
         try:
             await m.ack()  # triggers 404, maybe does not work for DM?
         except Exception as e:
