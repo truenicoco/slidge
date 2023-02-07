@@ -112,3 +112,13 @@ class MUC(LegacyMUC[Session, int, Participant, int]):
                     # deleted users
                     p = await self.get_participant(author.name)
             await p.send_message(msg, archive_only=True)
+
+    async def get_participant_by_discord_user(self, user: di.User):
+        if user.id == self.session.discord.user.id:  # type:ignore
+            return self.get_user_participant()
+        try:
+            return await self.get_participant_by_contact(
+                await self.session.contacts.by_discord_user(user)
+            )
+        except XMPPError:
+            return await self.get_participant(user.display_name)

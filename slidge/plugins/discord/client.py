@@ -42,9 +42,7 @@ class Discord(di.Client):
 
         if isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(channel.id)
-            participant = await muc.get_participant_by_contact(
-                await self.get_contact(author)
-            )
+            participant = await muc.get_participant_by_discord_user(author)
 
             return await participant.send_message(message)
 
@@ -95,11 +93,7 @@ class Discord(di.Client):
 
         elif isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(after.channel.id)
-            if after.author.id == self.user.id:  # type:ignore
-                correcter = await muc.get_user_participant()
-            else:
-                contact = await self.get_contact(after.author)
-                correcter = await muc.get_participant_by_contact(contact)
+            correcter = await muc.get_participant_by_discord_user(after.author)
 
         else:
             self.log.debug("Ignoring edit in: %s", after.channel)
