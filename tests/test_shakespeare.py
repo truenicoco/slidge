@@ -533,6 +533,7 @@ class TestAimShakespeareBase(SlidgeTest):
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit" node="info" name="List registered users" />
                 <item jid="aim.shakespeare.lit" node="delete_user" name="Delete a user" />
+                <item jid="aim.shakespeare.lit" node="loglevel" name="Change the verbosity of the logs"/>
                 <item jid="aim.shakespeare.lit" node="jabber:iq:register" name="Register to the gateway"/>
               </query>
             </iq>

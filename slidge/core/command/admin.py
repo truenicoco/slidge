@@ -1,6 +1,7 @@
 """
 Commands only accessible for slidge admins
 """
+import logging
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -62,3 +63,33 @@ class DeleteUser(AdminCommand):
             handler=lambda *_: user_store.remove_by_jid(jid),
             handler_args=(jid,),
         )
+
+
+class ChangeLoglevel(AdminCommand):
+    NAME = "Change the verbosity of the logs"
+    HELP = "Set the logging level"
+    NODE = CHAT_COMMAND = "loglevel"
+
+    async def run(self, _session, _ifrom, *_):
+        return Form(
+            title=self.NAME,
+            instructions=self.HELP,
+            fields=[
+                FormField(
+                    "level",
+                    label="Log level",
+                    required=True,
+                    type="list-single",
+                    options=[
+                        {"label": "WARNING (quiet)", "value": str(logging.WARNING)},
+                        {"label": "INFO (normal)", "value": str(logging.INFO)},
+                        {"label": "DEBUG (verbose)", "value": str(logging.DEBUG)},
+                    ],
+                )
+            ],
+            handler=self.finish,
+        )
+
+    @staticmethod
+    async def finish(form_values: dict[str, str], _session, _ifrom):
+        logging.getLogger().setLevel(int(form_values["level"]))
