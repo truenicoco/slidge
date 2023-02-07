@@ -10,7 +10,7 @@ secrets:
   - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
   - dc710d9d-8043-4e1d-9837-b35bfa02800a
 artifacts:
-  - ./slidge/slidge-docs.tar.gz
+  - ./slidge-docs.tar.gz
   - ./slidge.tar
 tasks:
   - muc-bot: |
