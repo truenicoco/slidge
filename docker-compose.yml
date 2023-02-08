@@ -42,6 +42,22 @@ services:
       - prosody
     network_mode: service:nginx
 
+  slidge-telegram-debian:
+    build:
+      context: .
+      dockerfile: dev/Containerfile-debian-test
+    command:
+      - --config=/slidge-tg.ini
+      - --legacy-module=slidge.plugins.telegram
+      - --jid=telegram.localhost
+    volumes:
+      - ./persistent:/var/lib/slidge
+      - ./persistent/web:/slidge-web
+      - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
+    depends_on:
+      - prosody
+    network_mode: service:nginx
+
   slidge-signal:
     build:
       context: .

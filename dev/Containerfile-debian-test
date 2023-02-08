@@ -1,0 +1,8 @@
+# docker container to build the debian packages
+
+FROM docker.io/nicocool84/slidge-debian-builder:latest AS builder
+
+COPY ./slidge_0.0.0-dev_amd64.deb ./slidge_0.0.0-dev_amd64.deb
+RUN apt install ./slidge_0.0.0-dev_amd64.deb -y
+
+ENTRYPOINT ["/usr/bin/slidge"]
