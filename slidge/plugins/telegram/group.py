@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
@@ -180,15 +181,24 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
         i = 0
         last_message_id = m.id
         while True:
-            fetched = (
-                await tg.api.get_chat_history(
-                    chat_id=self.legacy_id,
-                    from_message_id=last_message_id,
-                    offset=0,
-                    limit=10,
-                    only_local=False,
+            try:
+                fetched = (
+                    await tg.api.get_chat_history(
+                        chat_id=self.legacy_id,
+                        from_message_id=last_message_id,
+                        offset=0,
+                        limit=10,
+                        only_local=False,
+                    )
+                ).messages
+            except asyncio.TimeoutError:
+                self.log.warning(
+                    "Timeout while trying to fetch chat history for %s. "
+                    "We could only fetch %s message",
+                    self,
+                    len(messages),
                 )
-            ).messages
+                break
             if len(fetched) == 0:
                 break
             messages.extend(fetched)
