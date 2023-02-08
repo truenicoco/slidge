@@ -38,6 +38,7 @@ def get_file_name(content: tgapi.MessageContent) -> Optional[str]:
 class AvailableEmojisMixin:
     session: "Session"
     chat_id: int
+    REACTIONS_SINGLE_EMOJI = True
 
     async def available_emojis(self, legacy_msg_id):
         available = await self.session.tg.api.get_message_available_reactions(
