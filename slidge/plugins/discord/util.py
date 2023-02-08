@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class Mixin(ContentMessageMixin):
     legacy_id: int  # type:ignore
     avatar: str
-    discord_user: Union[di.User, di.ClientUser]
+    discord_user: Union[di.User, di.ClientUser]  # type: ignore
 
     MARKS = False
 

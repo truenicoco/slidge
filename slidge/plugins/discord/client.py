@@ -188,5 +188,31 @@ class Discord(di.Client):
 
             await participant.update_reactions(message)
 
+    async def on_presence_update(
+        self,
+        _before: Union[di.Member, di.Relationship],
+        after: Union[di.Member, di.Relationship],
+    ):
+        if not self.user:
+            # should not happen (receiving presences when not logged)
+            return
+
+        if after.id == self.user.id:
+            # we don't care about self presences
+            return
+
+        if not isinstance(after, di.Relationship):
+            # we only parse friends presences now
+            # TODO: parse guild presences
+            return
+
+        if not after.type == di.RelationshipType.friend:
+            # we only parse friends presences now
+            return
+
+        c = await self.session.contacts.by_discord_user(after.user)
+        self.log.debug("Activity %s", after.activity)
+        c.update_status(after.status, after.activity)
+
     async def get_contact(self, user: Union[di.User, di.Member]):
         return await self.session.contacts.by_discord_user(user)

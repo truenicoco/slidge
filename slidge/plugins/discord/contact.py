@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import discord as di
 
@@ -14,18 +14,39 @@ class Contact(Mixin, LegacyContact[int]):  # type: ignore
     session: "Session"
 
     @property
-    def discord_user(self) -> di.User:  # type:ignore
+    def discord_user(self) -> di.User:  # type: ignore
         self.session.log.debug("Searching for user: %s", self.legacy_id)
-        if (u := self.session.discord.get_user(self.legacy_id)) is None:
+        user = self.session.discord.get_user(self.legacy_id)
+        # self.session.discord.get_guild().get_member()
+        if user is None:
             raise XMPPError(
                 "item-not-found", text=f"Cannot find the discord user {self.legacy_id}"
             )
-        return u
+        return user
 
     @property
     def direct_channel_id(self):
         assert self.discord_user.dm_channel is not None
         return self.discord_user.dm_channel.id
+
+    def update_status(
+        self,
+        status: di.Status,
+        activity: Optional[
+            Union[di.Activity, di.Game, di.CustomActivity, di.Streaming, di.Spotify]
+        ],
+    ):
+        # TODO: implement timeouts for activities (the Activity object has timestamps
+        #       attached to it)
+        msg = str(activity) if activity else None
+        if status == di.Status.online:
+            self.online(msg)
+        elif status == di.Status.offline:
+            self.offline(msg)
+        elif status == di.Status.idle:
+            self.away(msg)
+        elif status == di.Status.dnd:
+            self.busy(msg)
 
     async def update_info(self):
         u = self.discord_user
@@ -87,14 +108,12 @@ class Roster(LegacyRoster[int, Contact]):
         return str(discord_user_id)
 
     async def fill(self):
-        for u in self.session.discord.users:
+        for relationship in self.session.discord.friends:
+            u = relationship.user
+            self.session.log.debug("Friend: %r", u)
             if not isinstance(u, di.User):
                 self.session.log.debug("Skipping %s", u)
                 continue
-            if not u.is_friend():
-                self.session.log.debug("%s is not a friend", u)
-                continue
             c = await self.by_legacy_id(u.id)
             await c.add_to_roster()
-            # TODO: parse presence
-            c.online()
+            c.update_status(relationship.status, relationship.activity)
