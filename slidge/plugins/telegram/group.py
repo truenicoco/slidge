@@ -45,7 +45,7 @@ class Bookmarks(LegacyBookmarks):
                 await self.by_legacy_id(chat.id)
 
 
-class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
+class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     name = "unnamed"
@@ -54,7 +54,9 @@ class MUC(LegacyMUC["Session", int, "Participant", int], AvailableEmojisMixin):
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self.reactions = defaultdict[int, set[Participant]](set)
+        self.chat_id = self.legacy_id
+        #                                     tuple[participant, emoji]
+        self.reactions = defaultdict[int, set[tuple[Participant, str]]](set)
         self.session.xmpp.loop.create_task(self.update_subject_from_msg())
 
     async def update_info(self):
@@ -220,4 +222,6 @@ class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):
         self.chat_id = self.muc.legacy_id
 
     def __hash__(self):
+        if self.is_user:
+            return 0
         return self.contact.legacy_id

@@ -272,20 +272,34 @@ class TelegramClient(aiotdlib.Client):
         if update.interaction_info is None:
             while True:
                 try:
-                    reacter = muc.reactions[update.message_id].pop()
+                    reacter, _ = muc.reactions[update.message_id].pop()
                 except KeyError:
                     return
                 reacter.react(update.message_id)
 
+        old_reacters = muc.reactions[update.message_id]
+        new_reacters = set()
         for reaction in update.interaction_info.reactions:
             emoji = reaction.reaction
+
             for sender_id in reaction.recent_sender_ids:
                 if isinstance(sender_id, tgapi.MessageSenderUser):
                     reacter = await muc.participant_by_tg_user_id(sender_id.user_id)
                 else:
                     reacter = await muc.participant_system()
-                muc.reactions[update.message_id].add(reacter)
-                reacter.react(update.message_id, emoji)
+                new_reacters.add((reacter, emoji))
+
+        self.log.debug("Old reacters: %s", old_reacters)
+        self.log.debug("New reacters: %s", new_reacters)
+
+        old_all_reacters = {x[0] for x in old_reacters}
+        new_all_reacters = {x[0] for x in new_reacters}
+        for unreacter in old_all_reacters - new_all_reacters:
+            unreacter.react(update.message_id)
+        for reacter, emoji in new_reacters - old_reacters:
+            reacter.react(update.message_id, emoji)
+
+        muc.reactions[update.message_id] = new_reacters
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
