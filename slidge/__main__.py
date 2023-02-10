@@ -175,7 +175,7 @@ def main():
 def get_version():
     try:
         git = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode()
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.CalledProcessError):
         pass
     else:
         return "git-" + git[:10]
