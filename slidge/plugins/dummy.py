@@ -85,7 +85,7 @@ class Contact(LegacyContact):
 
 class Gateway(BaseGateway):
     COMPONENT_NAME = "The great legacy network (slidge)"
-    COMPONENT_AVATAR = ASSETS_DIR / "gateway.png"
+    COMPONENT_AVATAR = ASSETS_DIR / "slidge-color.png"
     COMPONENT_TYPE = "aim"
     GROUPS = True
     REGISTRATION_INSTRUCTIONS = (
@@ -219,8 +219,8 @@ class Session(
     ):
         if isinstance(chat, LegacyContact):
             await chat.send_file(
-                ASSETS_DIR / "buddy1.png",
-                file_name="buddy1.jpg",
+                ASSETS_DIR / "slidge-mono-black.png",
+                file_name="slidge-mono-black.jpg",
                 caption="This is a caption",
             )
 
@@ -260,7 +260,9 @@ class Session(
         else:
             replier = chat  # type: ignore
         replier.send_text(url)
-        await replier.send_file(ASSETS_DIR / "buddy1.png", caption="This is a caption")
+        await replier.send_file(
+            ASSETS_DIR / "slidge-mono-black.png", caption="This is a caption"
+        )
         return i
 
     async def later(self, c: LegacyContact, trigger_msg_id: int, body: str):
@@ -333,7 +335,7 @@ class Session(
 BUDDIES = ["baba", "bibi"]
 AVATARS = ["https://wallpapercave.com/wp/PSksftM.jpg"]
 
-with (ASSETS_DIR / "buddy2.png").open("rb") as fp:
+with (ASSETS_DIR / "slidge-mono-white.png").open("rb") as fp:
     AVATARS.append(fp.read())  # type:ignore
 
 log = logging.getLogger(__name__)

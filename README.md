@@ -1,5 +1,5 @@
-Slidge 🛷
-========
+![Slidge 🛷](./dev/assets/slidge-color.png)
+===========================================
 
 [Home](https://sr.ht/~nicoco/slidge) |
 [Docs](https://slidge.im) |
@@ -132,3 +132,5 @@ Related projects
 -   [Bifröst](https://github.com/matrix-org/matrix-bifrost)
 -   [Mautrix](https://github.com/mautrix)
 -   [matterbridge](https://github.com/42wim/matterbridge)
+
+Thank you, [Trung](https://trung.fun/), for the slidge logo!
