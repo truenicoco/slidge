@@ -1,5 +1,4 @@
-Slidge 🛷
-========
+![Slidge logo](./dev/assets/slidge-color-small.png)
 
 [Home](https://sr.ht/~nicoco/slidge) |
 [Docs](https://slidge.im) |
@@ -8,10 +7,7 @@ Slidge 🛷
 [Patches](https://lists.sr.ht/~nicoco/public-inbox) |
 [Chat](xmpp:slidge@conference.nicoco.fr?join)
 
-Turn any XMPP client into that fancy multi-protocol chat app that every cool kid want.
-
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
-[![Debian package](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
 
 Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
@@ -76,8 +72,7 @@ Containers for arm64 and amd64 are available on
 
 ### debian
 
-Debian packages for *bullseye* (amd64 only for now, help welcome
-to support other architectures)
+Debian packages for *bullseye* (amd64 and arm64)
 are built on each push to master as artifacts of
 [this build job](https://builds.sr.ht/~nicoco/slidge/commits/master/debian.yml?).
 
@@ -132,3 +127,5 @@ Related projects
 -   [Bifröst](https://github.com/matrix-org/matrix-bifrost)
 -   [Mautrix](https://github.com/mautrix)
 -   [matterbridge](https://github.com/42wim/matterbridge)
+
+Thank you, [Trung](https://trung.fun/), for the slidge logo!
