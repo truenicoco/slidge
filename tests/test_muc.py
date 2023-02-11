@@ -397,16 +397,6 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
-            <iq id="1"
-                from="aim.shakespeare.lit"
-                to="romeo@montague.lit/gajim"
-                type="get">
-                <query xmlns="http://jabber.org/protocol/disco#info"/>
-            </iq>
-            """
-        )
-        self.send(
-            """
             <presence
                 from='coven@aim.shakespeare.lit'
                 id='n13mt3l'
@@ -436,16 +426,6 @@ class TestMuc(SlidgeTest):
             </presence>
             """
         )
-        self.send(
-            """
-            <iq id="1"
-                from="aim.shakespeare.lit"
-                to="romeo@montague.lit/gajim"
-                type="get">
-                <query xmlns="http://jabber.org/protocol/disco#info"/>
-            </iq>
-            """
-        )  # slixmpp wants to update disco info
         self.send(
             """
             <presence
@@ -511,16 +491,6 @@ class TestMuc(SlidgeTest):
                 to='room-public@aim.shakespeare.lit/thirdwitch'>
               <x xmlns='http://jabber.org/protocol/muc'/>
             </presence>
-            """
-        )
-        self.send(
-            """
-            <iq id="1"
-                from="aim.shakespeare.lit"
-                to="romeo@montague.lit/gajim"
-                type="get">
-                <query xmlns="http://jabber.org/protocol/disco#info"/>
-            </iq>
             """
         )
         self.send(
