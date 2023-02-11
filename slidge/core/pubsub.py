@@ -4,10 +4,10 @@ import io
 import logging
 from copy import copy
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from PIL import Image, UnidentifiedImageError
-from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, Presence, StanzaPath
+from slixmpp import JID, CoroutineCallback, Iq, Presence, StanzaPath
 from slixmpp.plugins.base import BasePlugin, register_plugin
 from slixmpp.plugins.xep_0060.stanza import Event, EventItem, EventItems, Item
 from slixmpp.plugins.xep_0084 import Data as AvatarData
@@ -21,6 +21,9 @@ from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
 from . import config
 from .cache import avatar_cache
+
+if TYPE_CHECKING:
+    from slidge import BaseGateway
 
 VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
@@ -110,7 +113,7 @@ class PepNick(PepItem):
 
 
 class PubSubComponent(BasePlugin):
-    xmpp: ComponentXMPP
+    xmpp: "BaseGateway"
 
     name = "pubsub"
     description = "Pubsub component"
@@ -164,6 +167,22 @@ class PubSubComponent(BasePlugin):
         from_ = p.get_from()
         ver_string = p["caps"]["ver"]
         info = None
+
+        to = p.get_to()
+
+        # we don't want to push anything for contacts that are not in the user's roster
+        if to != self.xmpp.boundjid.bare:
+            session = self.xmpp.get_session_from_stanza(p)  # type:ignore
+
+            if session is None:
+                return
+            try:
+                contact = await session.contacts.by_jid(to)
+            except XMPPError:
+                return
+            if not contact.added_to_roster:
+                return
+
         if ver_string:
             await asyncio.sleep(5)
             info = await self.xmpp.plugin["xep_0115"].get_caps(from_)
