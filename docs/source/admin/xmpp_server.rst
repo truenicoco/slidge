@@ -79,8 +79,9 @@ ejabberd
 Slidge uses different containers/processes for each gateway. Therefore administrators
 should setup these steps for each individual gateway. This is because each gateway
 makes use of an individual JID (such as telegram.example.com, whatsapp.example.com, etc).
-Only exceptions are the 'mod_http_upload', 'mod_privilege' and 'mod_roster', these modules
+Only exceptions are the 'mod_http_upload', 'mod_privilege', 'mod_roster' and 'access_rules', these 
 stay the same for each gateway you add. So, there is no need to repeat these steps for new gateways.
+For the 'slidge_acl' add each new Gateway as a new 'server:' entry.
 
 
 Add the slidge component
@@ -124,13 +125,24 @@ These same principles also apply to ACL.
 ACL
 ***
 
-Create a policy for the component:
+Create an `acl <https://docs.ejabberd.im/admin/configuration/basic/#acl>`_ for the component:
 
 .. code-block:: yaml
 
     acl:
-      slidge:
+      slidge_acl:
         server: superduper.example.com
+
+Acess Rule
+**********
+
+Create an access_rule `access_rule <https://docs.ejabberd.im/admin/configuration/basic/#access-rules>`_ for the component:
+
+.. code-block:: yaml
+
+    access_rules:
+      slidge_rule:
+        - allow: slidge_acl
 
 mod_privilege
 *************
@@ -142,9 +154,9 @@ Make slidge a "privileged entity" and enable roster versioning.
     modules:
       mod_privilege:
         roster:
-          both: slidge
+          both: slidge_rule
         message:
-          outgoing: slidge
+          outgoing: slidge_rule          
       mod_roster:
         versioning: true
 
@@ -172,7 +184,7 @@ so you need to use a pseudo user on the component domain, eg,
         put_url: "https://@HOST@:5443/upload"
         access:
           - allow: local
-          - allow: slidge
+          - allow: slidge_acl
 
 
 To get more information about component configuration, see `ejabberd's docs
