@@ -79,9 +79,8 @@ ejabberd
 Slidge uses different containers/processes for each gateway. Therefore administrators
 should setup these steps for each individual gateway. This is because each gateway
 makes use of an individual JID (such as telegram.example.com, whatsapp.example.com, etc).
-Only exceptions are the 'mod_http_upload', 'mod_privilege', 'mod_roster' and 'access_rules', these 
-stay the same for each gateway you add. So, there is no need to repeat these steps for new gateways.
-For the 'slidge_acl' add each new Gateway as a new 'server:' entry.
+Only exceptions are the ``mod_http_upload``, ``mod_privilege``, ``mod_roster`` and ``access_rules``.
+These stay the same for each gateway you add, so there is no need to repeat these steps for new gateways.
 
 
 Add the slidge component
@@ -118,7 +117,7 @@ Example:
 .. code-block:: yaml
 
         hosts:
-          - example.com
+          - "example.com"
 
 These same principles also apply to ACL.
 
@@ -131,12 +130,13 @@ Create an `acl <https://docs.ejabberd.im/admin/configuration/basic/#acl>`_ for t
 
     acl:
       slidge_acl:
-        server: superduper.example.com
+        server:
+          - "superduper.example.com"
 
 Acess Rule
 **********
 
-Create an access_rule `access_rule <https://docs.ejabberd.im/admin/configuration/basic/#access-rules>`_ for the component:
+Create an `access_rule <https://docs.ejabberd.im/admin/configuration/basic/#access-rules>`_ for the component:
 
 .. code-block:: yaml
 
@@ -147,7 +147,7 @@ Create an access_rule `access_rule <https://docs.ejabberd.im/admin/configuration
 mod_privilege
 *************
 
-Make slidge a "privileged entity" and enable roster versioning.
+Make slidge a "`privileged entity <https://docs.ejabberd.im/admin/configuration/modules/#mod-privilege>`_" and enable roster versioning.
 
 .. code-block:: yaml
 
