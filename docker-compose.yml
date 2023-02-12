@@ -74,8 +74,10 @@ services:
       - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
     depends_on:
-      - prosody
-      - signald
+      prosody:
+        condition: service_started
+      signald:
+        condition: service_healthy
 
   slidge-facebook:
     build:
@@ -212,6 +214,11 @@ services:
     environment:
       - SIGNALD_TRUST_ALL_KEYS:true
       - SIGNALD_TRUST_NEW_KEYS:true
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "signaldctl raw --socket /signald/signald.sock v1 version '{}' >/dev/null 2>&1" ]
+      interval: 5s
+      timeout: 1s
+      retries: 5
 
   postgresql:
     environment:
