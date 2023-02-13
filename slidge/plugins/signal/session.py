@@ -204,6 +204,12 @@ class Session(
 
         contact = await self.contacts.by_json_address(msg.source)
 
+        if msg.call_message is not None:
+            contact.send_text(
+                "/me tried to call you but this is not supported by this slidge-signal"
+            )
+            return
+
         if (data := msg.data_message) is not None:
             if data.group:
                 return
