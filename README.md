@@ -90,7 +90,7 @@ echo "deb [signed-by=/usr/share/keyrings/slidge.gpg] http://deb.slidge.im/repo/d
 apt update && apt install slidge -y
 ```
 
-Refer to [the docs](https://slidge.readthedocs.io/en/latest/admin/launch.html#debian-packages)
+Refer to [the docs](https://slidge.im/admin/launch.html#debian-packages)
 for information about how to use the provided systemd service files.
 
 ### pipx
