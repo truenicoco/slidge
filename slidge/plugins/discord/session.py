@@ -5,7 +5,7 @@ import discord as di
 
 from slidge import *
 
-from ...util.types import Chat
+from ...util.types import Recipient
 
 if TYPE_CHECKING:
     from . import Contact, Gateway
@@ -75,7 +75,7 @@ class Session(
     async def logout(self):
         await self.discord.close()
 
-    async def send_file(self, url: str, chat: Chat, **kwargs):
+    async def send_file(self, url: str, chat: Recipient, **kwargs):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
         recipient = await get_recipient(chat)
         await recipient.send(url)

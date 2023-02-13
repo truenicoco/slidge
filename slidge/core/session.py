@@ -10,7 +10,6 @@ from ..util.db import GatewayUser, user_store
 from ..util.error import XMPPError
 from ..util.types import (
     BookmarksType,
-    Chat,
     GatewayType,
     LegacyContactType,
     LegacyMessageType,
@@ -18,6 +17,7 @@ from ..util.types import (
     LegacyParticipantType,
     LegacyRosterType,
     PresenceShow,
+    Recipient,
     SessionType,
 )
 from ..util.xep_0461.stanza import FeatureFallBack
@@ -614,7 +614,7 @@ class BaseSession(
     async def send_text(
         self,
         text: str,
-        chat: Chat,
+        chat: Recipient,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
@@ -644,7 +644,7 @@ class BaseSession(
     async def send_file(
         self,
         url: str,
-        chat: Chat,
+        chat: Recipient,
         *,
         http_response: aiohttp.ClientResponse,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
@@ -666,7 +666,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def active(self, c: Chat):
+    async def active(self, c: Recipient):
         """
         Triggered when the user sends an 'active' chat state to the legacy network (:xep:`0085`)
 
@@ -674,7 +674,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def inactive(self, c: Chat):
+    async def inactive(self, c: Recipient):
         """
         Triggered when the user sends an 'inactive' chat state to the legacy network (:xep:`0085`)
 
@@ -682,7 +682,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def composing(self, c: Chat):
+    async def composing(self, c: Recipient):
         """
         Triggered when the user starts typing in the window of a legacy contact (:xep:`0085`)
 
@@ -690,7 +690,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def paused(self, c: Chat):
+    async def paused(self, c: Recipient):
         """
         Triggered when the user pauses typing in the window of a legacy contact (:xep:`0085`)
 
@@ -698,7 +698,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def displayed(self, legacy_msg_id: LegacyMessageType, c: Chat):
+    async def displayed(self, legacy_msg_id: LegacyMessageType, c: Recipient):
         """
         Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
 
@@ -712,7 +712,7 @@ class BaseSession(
         raise NotImplementedError
 
     async def correct(
-        self, text: str, legacy_msg_id: LegacyMessageType, c: Chat
+        self, text: str, legacy_msg_id: LegacyMessageType, c: Recipient
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
@@ -738,7 +738,9 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def react(self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: Chat):
+    async def react(
+        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: Recipient
+    ):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
 
@@ -749,7 +751,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def retract(self, legacy_msg_id: LegacyMessageType, c: Chat):
+    async def retract(self, legacy_msg_id: LegacyMessageType, c: Recipient):
         """
         Triggered when the user retracts (:xep:`0424`) a message.
 

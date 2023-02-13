@@ -21,7 +21,7 @@ LegacyRosterType = TypeVar("LegacyRosterType", bound="LegacyRoster")
 LegacyUserIdType = TypeVar("LegacyUserIdType", bound=Hashable)
 PepItemType = TypeVar("PepItemType", bound="PepItem")
 SessionType = TypeVar("SessionType", bound="BaseSession")
-Chat = Union[LegacyMUCType, LegacyContactType]
+Recipient = Union[LegacyMUCType, LegacyContactType]
 AvatarType = Union[bytes, str, Path]
 
 ChatState = Literal["active", "composing", "gone", "inactive", "paused"]

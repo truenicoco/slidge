@@ -11,7 +11,7 @@ from aiotdlib.api.errors import BadRequest
 
 from slidge import *
 
-from ...util.types import Chat
+from ...util.types import Recipient
 from . import config
 from .client import TelegramClient
 from .contact import Contact, Roster
@@ -28,7 +28,7 @@ def catch_chat_not_found(coroutine):
             if e.code == 400:
                 # FIXME: Chat should always be the first arg for a cleaner API...
                 if len(a) == 1:
-                    chat: Chat = a[0]
+                    chat: Recipient = a[0]
                 elif len(a) == 2:
                     chat = a[1]
                 else:
@@ -103,7 +103,7 @@ class Session(
 
     @catch_chat_not_found
     async def send_file(
-        self, url: str, chat: Chat, http_response, reply_to_msg_id=None, **_
+        self, url: str, chat: Recipient, http_response, reply_to_msg_id=None, **_
     ) -> int:
         type_, _subtype = http_response.content_type.split("/")
         kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
