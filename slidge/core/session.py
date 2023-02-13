@@ -294,13 +294,13 @@ class BaseSession(
                         "OOB url cannot be downloaded: %s, sending the URL as text instead.",
                         response,
                     )
-                    legacy_msg_id = await self.send_text(url, e, **kwargs)
+                    legacy_msg_id = await self.send_text(e, url, **kwargs)
                 else:
                     legacy_msg_id = await self.send_file(
-                        url, e, http_response=response, **kwargs
+                        e, url, http_response=response, **kwargs
                     )
         elif text:
-            legacy_msg_id = await self.send_text(text, e, **kwargs)
+            legacy_msg_id = await self.send_text(e, text, **kwargs)
         else:
             log.debug("Ignoring %s", m)
             return
@@ -411,7 +411,7 @@ class BaseSession(
             to_mark = [displayed_msg_id]
         for xmpp_id in to_mark:
             if legacy := self.__xmpp_msg_id_to_legacy(xmpp_id):
-                await self.displayed(legacy, e)
+                await self.displayed(e, legacy)
                 if isinstance(e, LegacyMUC):
                     await e.echo(m, None)
             else:
@@ -429,9 +429,9 @@ class BaseSession(
 
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            new_legacy_msg_id = await self.send_text("Correction:" + m["body"], e)
+            new_legacy_msg_id = await self.send_text(e, "Correction:" + m["body"])
         elif e.CORRECTION:
-            new_legacy_msg_id = await self.correct(m["body"], legacy_id, e)
+            new_legacy_msg_id = await self.correct(e, m["body"], legacy_id)
         else:
             self.send_gateway_message(
                 "Last message correction is not supported by this legacy service. "
@@ -446,9 +446,9 @@ class BaseSession(
                     self.send_gateway_message(
                         "Slidge will attempt to retract the original message you wanted to edit."
                     )
-                    await self.retract(legacy_id, e)
+                    await self.retract(e, legacy_id)
 
-            new_legacy_msg_id = await self.send_text("Correction: " + m["body"], e)
+            new_legacy_msg_id = await self.send_text(e, "Correction: " + m["body"])
 
         if isinstance(e, LegacyMUC):
             if new_legacy_msg_id is not None:
@@ -490,10 +490,10 @@ class BaseSession(
             if not isinstance(e, LegacyMUC):
                 # no need to carbon for groups, we just don't echo the stanza
                 e.react(legacy_id, carbon=True)  # type: ignore
-            await self.react(legacy_id, [], e)
+            await self.react(e, legacy_id, [])
             raise XMPPError("not-acceptable", text=error_msg)
 
-        await self.react(legacy_id, emojis, e)
+        await self.react(e, legacy_id, emojis)
         if isinstance(e, LegacyMUC):
             await e.echo(m, None)
         else:
@@ -511,7 +511,7 @@ class BaseSession(
         xmpp_id: str = m["apply_to"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id:
-            await self.retract(legacy_id, e)
+            await self.retract(e, legacy_id)
             if isinstance(e, LegacyMUC):
                 await e.echo(m, None)
         else:
@@ -613,8 +613,8 @@ class BaseSession(
 
     async def send_text(
         self,
-        text: str,
         chat: Recipient,
+        text: str,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
@@ -643,8 +643,8 @@ class BaseSession(
 
     async def send_file(
         self,
-        url: str,
         chat: Recipient,
+        url: str,
         *,
         http_response: aiohttp.ClientResponse,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
@@ -698,7 +698,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def displayed(self, legacy_msg_id: LegacyMessageType, c: Recipient):
+    async def displayed(self, c: Recipient, legacy_msg_id: LegacyMessageType):
         """
         Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
 
@@ -712,7 +712,7 @@ class BaseSession(
         raise NotImplementedError
 
     async def correct(
-        self, text: str, legacy_msg_id: LegacyMessageType, c: Recipient
+        self, c: Recipient, text: str, legacy_msg_id: LegacyMessageType
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
@@ -739,7 +739,7 @@ class BaseSession(
         raise NotImplementedError
 
     async def react(
-        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: Recipient
+        self, c: Recipient, legacy_msg_id: LegacyMessageType, emojis: list[str]
     ):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
@@ -751,7 +751,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def retract(self, legacy_msg_id: LegacyMessageType, c: Recipient):
+    async def retract(self, c: Recipient, legacy_msg_id: LegacyMessageType):
         """
         Triggered when the user retracts (:xep:`0424`) a message.
 

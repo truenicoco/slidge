@@ -317,7 +317,7 @@ class Session(
     async def logout(self):
         pass
 
-    async def send_text(self, text: str, chat: Contact, **k):
+    async def send_text(self, chat: Contact, text: str, **k):
         if not text:
             return
         job_id = self.steam.send_um(
@@ -331,8 +331,8 @@ class Session(
         f = self.job_futures[job_id] = self.xmpp.loop.create_future()
         return (await f).server_timestamp
 
-    async def send_file(self, url: str, chat: Contact, **k):
-        return await self.send_text(url, chat)
+    async def send_file(self, chat: Contact, url: str, *a, **k):
+        return await self.send_text(chat, url)
 
     async def active(self, c: Contact):
         pass
@@ -352,16 +352,16 @@ class Session(
     async def paused(self, c: Contact):
         pass
 
-    async def displayed(self, legacy_msg_id: Any, c: Contact):
+    async def displayed(self, c: Contact, legacy_msg_id: Any):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: Any):
         pass
 
     async def search(self, form_values: dict[str, str]):
         pass
 
-    async def react(self, legacy_msg_id: Any, emojis: list[str], c: Contact):
+    async def react(self, c: Contact, legacy_msg_id: Any, emojis: list[str]):
         old = c.user_reactions[legacy_msg_id]
         new = set[str]()
         for emoji in emojis:
@@ -400,7 +400,7 @@ class Session(
         c.user_reactions[legacy_msg_id] = new
         c.react(legacy_msg_id, new, carbon=True)
 
-    async def retract(self, legacy_msg_id: Any, c: Contact):
+    async def retract(self, c: Contact, legacy_msg_id: Any):
         pass
 
 

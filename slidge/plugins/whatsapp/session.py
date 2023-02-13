@@ -213,8 +213,8 @@ class Session(
 
     async def send_text(
         self,
-        text: str,
         chat: Union[Contact, LegacyMUC],
+        text: str,
         reply_to_msg_id: Optional[str] = None,
         reply_to_fallback_text: Optional[str] = None,
         **_,
@@ -237,8 +237,8 @@ class Session(
 
     async def send_file(
         self,
-        url: str,
         chat: Union[Contact, LegacyMUC],
+        url: str,
         http_response,
         reply_to_msg_id: Optional[str] = None,
         **_,
@@ -297,7 +297,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def displayed(self, legacy_msg_id: str, c: Contact):
+    async def displayed(self, c: Contact, legacy_msg_id: str):
         """
         Send "read" receipt, signifying that the WhatsApp message sent has been displayed on the XMPP
         client.
@@ -310,7 +310,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
+    async def react(self, c: Contact, legacy_msg_id: str, emojis: list[str]):
         """
         Send or remove emoji reaction to existing WhatsApp message.
         Slidge core makes sure that the emojis parameter is always empty or a
@@ -328,7 +328,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def retract(self, legacy_msg_id: str, c: Contact):
+    async def retract(self, c: Contact, legacy_msg_id: str):
         """
         Request deletion (aka retraction) for a given WhatsApp message.
         """
@@ -340,7 +340,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def correct(self, text: str, legacy_msg_id: str, c: Contact):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: str):
         pass
 
     async def search(self, form_values: dict[str, str]):

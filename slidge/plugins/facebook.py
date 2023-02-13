@@ -298,7 +298,7 @@ class Session(
         pass
 
     async def send_text(
-        self, text: str, chat: Contact, *, reply_to_msg_id=None, **kwargs
+        self, chat: Contact, text: str, *, reply_to_msg_id=None, **kwargs
     ) -> str:
         resp: mqtt_t.SendMessageResponse = await self.mqtt.send_message(
             target=chat.legacy_id,
@@ -317,7 +317,7 @@ class Session(
         return fb_msg.mid
 
     async def send_file(
-        self, url: str, chat: Contact, http_response, reply_to_msg_id=None, **_
+        self, chat: Contact, url: str, http_response, reply_to_msg_id=None, **_
     ):
         oti = self.mqtt.generate_offline_threading_id()
         fut = self.ack_futures[oti] = self.xmpp.loop.create_future()
@@ -346,7 +346,7 @@ class Session(
     async def paused(self, c: Contact):
         await self.mqtt.set_typing(target=c.legacy_id, typing=False)
 
-    async def displayed(self, legacy_msg_id: str, c: Contact):
+    async def displayed(self, c: Contact, legacy_msg_id: str):
         # fb_id = await c.fb_id()
         try:
             t = self.received_messages[c.legacy_id].by_mid[legacy_msg_id].timestamp_ms
@@ -507,10 +507,10 @@ class Session(
         else:
             contact.retract(unsend.message_id)
 
-    async def correct(self, text: str, legacy_msg_id: str, c: Contact):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: str):
         pass
 
-    async def react(self, legacy_msg_id: str, emojis: list[str], c: Contact):
+    async def react(self, c: Contact, legacy_msg_id: str, emojis: list[str]):
         # only reaction per msg on facebook, but this is handled by slidge core
         if len(emojis) == 0:
             emoji = None
@@ -520,7 +520,7 @@ class Session(
         await self.api.react(legacy_msg_id, emoji)
         await f
 
-    async def retract(self, legacy_msg_id: str, c: Contact):
+    async def retract(self, c: Contact, legacy_msg_id: str):
         f = self.unsend_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.api.unsend(legacy_msg_id)
         await f

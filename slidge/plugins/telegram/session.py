@@ -85,8 +85,8 @@ class Session(
     @catch_chat_not_found
     async def send_text(
         self,
-        text: str,
         chat: Union[Contact, MUC],
+        text: str,
         *,
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
@@ -103,7 +103,7 @@ class Session(
 
     @catch_chat_not_found
     async def send_file(
-        self, url: str, chat: Recipient, http_response, reply_to_msg_id=None, **_
+        self, chat: Recipient, url: str, http_response, reply_to_msg_id=None, **_
     ) -> int:
         type_, _subtype = http_response.content_type.split("/")
         kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
@@ -152,7 +152,7 @@ class Session(
         pass
 
     @catch_chat_not_found
-    async def displayed(self, tg_id: int, c: "Contact"):
+    async def displayed(self, c: "Contact", tg_id: int):
         res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
             message_thread_id=0,
@@ -162,7 +162,7 @@ class Session(
         self.log.debug("Send chat action res: %s", res)
 
     @catch_chat_not_found
-    async def correct(self, text: str, legacy_msg_id: int, c: "Contact"):
+    async def correct(self, c: "Contact", text: str, legacy_msg_id: int):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
@@ -218,7 +218,7 @@ class Session(
             self.log.debug("Remove reaction response: %s", r)
 
     @catch_chat_not_found
-    async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
+    async def react(self, c: "Contact", legacy_msg_id: int, emojis: list[str]):
         if len(emojis) == 0:
             await self.remove_reactions(legacy_msg_id, c)
             return
@@ -237,7 +237,7 @@ class Session(
             self.log.debug("Message reaction response: %s", r)
 
     @catch_chat_not_found
-    async def retract(self, legacy_msg_id, c):
+    async def retract(self, c, legacy_msg_id):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         r = await self.tg.api.delete_messages(c.legacy_id, [legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)

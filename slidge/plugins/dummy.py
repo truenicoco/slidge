@@ -191,7 +191,7 @@ class Session(
     async def paused(self, c: LegacyContact):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
+    async def correct(self, c: LegacyContact, text: str, legacy_msg_id: Any):
         pass
 
     async def login(self):
@@ -212,8 +212,8 @@ class Session(
 
     async def send_text(
         self,
-        text: str,
         chat: Union[LegacyContact, MUC],
+        text: str,
         *,
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
@@ -254,7 +254,9 @@ class Session(
     async def crash(self):
         raise RuntimeError("PANIC222!!!")
 
-    async def send_file(self, url: str, chat: Union[LegacyContact, MUC], **k) -> int:
+    async def send_file(
+        self, chat: Union[LegacyContact, MUC], url: str, *_, **__
+    ) -> int:
         i = self.counter
         self.counter = i + 1
         if isinstance(chat, MUC):
@@ -309,7 +311,7 @@ class Session(
     async def composing(self, c: LegacyContact):
         log.debug("User is composing for contact %s", c)
 
-    async def displayed(self, legacy_msg_id: int, c: LegacyContact):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: int):
         log.debug("Message #%s was read by the user", legacy_msg_id)
 
     async def search(self, form_values: dict[str, str]):
@@ -322,7 +324,7 @@ class Session(
                 items=[{"name": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
             )
 
-    async def react(self, legacy_msg_id, emojis, c):
+    async def react(self, c, legacy_msg_id, emojis):
         if "😈" in emojis:
             c.send_text("That's forbidden")
             c.react(legacy_msg_id, "", carbon=True)
@@ -330,7 +332,7 @@ class Session(
         else:
             c.react(legacy_msg_id, "♥")
 
-    async def retract(self, legacy_msg_id, c):
+    async def retract(self, c, legacy_msg_id):
         log.debug("User has retracted their msg: '%s' (sent to '%s')", legacy_msg_id, c)
 
 

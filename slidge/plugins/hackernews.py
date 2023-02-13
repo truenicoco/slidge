@@ -118,7 +118,7 @@ class Session(BaseSession):
     async def logout(self):
         pass
 
-    async def send_text(self, text: str, chat: LegacyContact, **k):
+    async def send_text(self, chat: LegacyContact, text: str, **k):
         goto = f"threads?id={self.hn_username}#{chat.legacy_id}"
         url = f"{REPLY_URL}?id={chat.legacy_id}&goto={goto}"
         async with self.http_session.get(url) as r:
@@ -165,7 +165,7 @@ class Session(BaseSession):
 
     # none of the following make sense in a HN context,
     # this is just to avoid raising NotImplementedErrors
-    async def send_file(self, *a, **k):
+    async def send_file(self, chat, url, *_a, **_k):
         pass
 
     async def active(self, c: LegacyContact):
@@ -180,10 +180,10 @@ class Session(BaseSession):
     async def paused(self, c: LegacyContact):
         pass
 
-    async def displayed(self, legacy_msg_id: Any, c: LegacyContact):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Any):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContact):
+    async def correct(self, c: LegacyContact, text: str, legacy_msg_id: Any):
         pass
 
     async def search(self, form_values: dict[str, str]):

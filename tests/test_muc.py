@@ -54,8 +54,8 @@ class Session(BaseSession):
 
     async def send_text(
         self,
-        text: str,
         chat: LegacyContact,
+        text: str,
         *,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
@@ -64,7 +64,7 @@ class Session(BaseSession):
         self.SENT_TEXT.append(locals())
         return "legacy-id"
 
-    async def send_file(self, url: str, c: LegacyContact, **kwargs):
+    async def send_file(self, c: LegacyContact, url: str, **kwargs):
         pass
 
     async def active(self, c: LegacyContact):
@@ -76,11 +76,11 @@ class Session(BaseSession):
     async def composing(self, c: LegacyContact):
         pass
 
-    async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable):
         pass
 
     async def react(
-        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: LegacyContact
+        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str]
     ):
         self.REACTED.append(locals())
 

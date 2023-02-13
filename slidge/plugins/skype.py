@@ -247,7 +247,7 @@ class Session(
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await asyncio.to_thread(event.ack)
 
-    async def send_text(self, text: str, chat: LegacyContact, **k):
+    async def send_text(self, chat: LegacyContact, text: str, **k):
         skype_chat = self.sk.contacts[chat.legacy_id].chat
         self.send_lock.acquire()
         msg = await asyncio.to_thread(skype_chat.sendMsg, text)
@@ -264,7 +264,7 @@ class Session(
             self.thread.stop()
             self.thread.join()
 
-    async def send_file(self, url: str, chat: LegacyContact, http_response, **kwargs):
+    async def send_file(self, chat: LegacyContact, url: str, http_response, **kwargs):
         fname = url.split("/")[-1]
         await asyncio.to_thread(
             self.sk.contacts[chat.legacy_id].chat.sendFile,
@@ -285,7 +285,7 @@ class Session(
     async def paused(self, c: LegacyContact):
         await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, False)
 
-    async def displayed(self, legacy_msg_id: int, c: LegacyContact):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: int):
         try:
             skype_msg = self.unread_by_user.pop(legacy_msg_id)
         except KeyError:
@@ -301,11 +301,11 @@ class Session(
                 # https://github.com/Terrance/SkPy/issues/207
                 self.log.debug("Skype read marker failed: %r", e)
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: Contact):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: Any):
         m = self.get_msg(legacy_msg_id, c)
         await asyncio.to_thread(m.edit, text)
 
-    async def retract(self, legacy_msg_id: Any, c: Contact):
+    async def retract(self, c: Contact, legacy_msg_id: Any):
         m = self.get_msg(legacy_msg_id, c)
         log.debug("Deleting %s", m)
         await asyncio.to_thread(m.delete)

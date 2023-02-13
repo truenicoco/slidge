@@ -46,7 +46,7 @@ class Session(BaseSession):
     async def paused(self, c: LegacyContactType):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any):
         pass
 
     async def search(self, form_values: Dict[str, str]):
@@ -67,8 +67,8 @@ class Session(BaseSession):
 
     async def send_text(
         self,
-        text: str,
         chat: LegacyContact,
+        text: str,
         *,
         reply_to=None,
         reply_to_msg_id=None,
@@ -81,7 +81,7 @@ class Session(BaseSession):
         chat.send_text("I love you")
         return 0
 
-    async def send_file(self, url: str, chat: LegacyContact, *, reply_to_msg_id=None):
+    async def send_file(self, chat: LegacyContact, url: str, *a, **k):
         pass
 
     async def active(self, c: LegacyContact):
@@ -93,11 +93,11 @@ class Session(BaseSession):
     async def composing(self, c: LegacyContact):
         composing_chat_states_received_by_juliet.append(c)
 
-    async def displayed(self, legacy_msg_id: Hashable, c: LegacyContact):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable):
         pass
 
     async def react(
-        self, legacy_msg_id: LegacyMessageType, emojis: list[str], c: LegacyContact
+        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str]
     ):
         if c.jid_username == "juliet":
             for e in emojis:
@@ -220,7 +220,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet
             </text></error></message>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_from_romeo_to_juliet(self):
@@ -363,7 +363,7 @@ class TestAimShakespeareBase(SlidgeTest):
             </error>
            </iq>
             """,
-            use_values=False
+            use_values=False,
         )
         self.recv(
             """
@@ -384,7 +384,7 @@ class TestAimShakespeareBase(SlidgeTest):
             </error>
            </iq>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_reactions(self):

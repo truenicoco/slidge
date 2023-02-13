@@ -51,8 +51,8 @@ class Session(
 
     async def send_text(
         self,
-        text: str,
         chat,
+        text: str,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
         **kwargs,
@@ -75,7 +75,7 @@ class Session(
     async def logout(self):
         await self.discord.close()
 
-    async def send_file(self, url: str, chat: Recipient, **kwargs):
+    async def send_file(self, chat: Recipient, url: str, **kwargs):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
         recipient = await get_recipient(chat)
         await recipient.send(url)
@@ -93,7 +93,7 @@ class Session(
     async def paused(self, c: "Contact"):
         pass
 
-    async def displayed(self, legacy_msg_id: int, c: "Contact"):
+    async def displayed(self, c: "Contact", legacy_msg_id: int):
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
@@ -111,7 +111,7 @@ class Session(
                 "Message %s should have been marked as read but this raised %s", m, e
             )
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: "Contact"):
+    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any):
         channel = await get_recipient(c)
 
         m = await channel.fetch_message(legacy_msg_id)
@@ -119,7 +119,7 @@ class Session(
         await m.edit(content=text)
         await self.edit_futures[legacy_msg_id]
 
-    async def react(self, legacy_msg_id: int, emojis: list[str], c: "Contact"):
+    async def react(self, c: "Contact", legacy_msg_id: int, emojis: list[str]):
         channel = await get_recipient(c)
 
         m = await channel.fetch_message(legacy_msg_id)
@@ -133,7 +133,7 @@ class Session(
         for e in legacy_reactions - xmpp_reactions:
             await m.remove_reaction(e, self.discord.user)  # type:ignore
 
-    async def retract(self, legacy_msg_id: Any, c: "Contact"):
+    async def retract(self, c: "Contact", legacy_msg_id: Any):
         channel = await get_recipient(c)
 
         m = await channel.fetch_message(legacy_msg_id)
