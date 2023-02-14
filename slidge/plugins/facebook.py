@@ -157,8 +157,9 @@ class Contact(LegacyContact["Session", int]):
         self, participant: ParticipantNode, update_avatar=True
     ):
         if self.legacy_id != int(participant.messaging_actor.id):
-            raise RuntimeError(
-                "Attempted to populate a contact with a non-corresponding participant"
+            raise XMPPError(
+                "bad-request",
+                f"Legacy ID {self.legacy_id} does not match participant {participant.messaging_actor.id}",
             )
         self.name = participant.messaging_actor.name
         if self.avatar is None or update_avatar:
@@ -192,7 +193,9 @@ class Roster(LegacyRoster["Session", Contact, int]):
 
     async def by_thread(self, t: Thread):
         if t.is_group_thread:
-            raise RuntimeError("Tried to populate a user from a group chat")
+            raise XMPPError(
+                "bad-request", f"Legacy ID {t.id} is a group chat, not a contact"
+            )
 
         participant = self.get_friend_participant(t.all_participants.nodes)
         contact = await self.by_legacy_id(int(participant.messaging_actor.id))
