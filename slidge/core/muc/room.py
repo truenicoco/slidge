@@ -85,8 +85,6 @@ class LegacyMUC(
 
         self.Participant = LegacyParticipant.get_self_or_unique_subclass()
 
-        self.DISCO_NAME = str(legacy_id)
-
         self.xmpp.add_event_handler(
             "presence_unavailable", self._on_presence_unavailable
         )
