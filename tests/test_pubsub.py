@@ -48,6 +48,12 @@ class TestPubSubDisco(SlixTest):
         )
 
 
+class MockSession:
+    @staticmethod
+    async def get_contact_or_group_or_participant(j):
+        return
+
+
 class TestPubSubNickname(SlixTest):
     def setUp(self):
         self.stream_start(
@@ -56,6 +62,7 @@ class TestPubSubNickname(SlixTest):
             plugins={"pubsub"},
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
+        self.xmpp.get_session_from_jid = lambda j: MockSession
 
     def test_new_nick(self):
         self.pubsub.set_nick("stan@pubsub.south.park", "BUBU", "kenny@south.park")
@@ -98,6 +105,7 @@ class TestPubSubAvatar(SlixTest):
             plugins={"pubsub"},
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
+        self.xmpp.get_session_from_jid = lambda j: MockSession
 
     def advertise_avatar(self):
         img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
@@ -231,7 +239,7 @@ class TestPubSubAvatar(SlixTest):
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
             </error></iq>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_single_metadata_retrieval(self):

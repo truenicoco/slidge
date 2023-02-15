@@ -21,6 +21,7 @@ from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
 from . import config
 from .cache import avatar_cache
+from .contact import LegacyContact
 
 if TYPE_CHECKING:
     from slidge import BaseGateway
@@ -202,7 +203,7 @@ class PubSubComponent(BasePlugin):
             except XMPPError:
                 pass
             else:
-                self._broadcast(
+                await self._broadcast(
                     data=pep_avatar.metadata,
                     from_=p.get_to(),
                     to=from_,
@@ -214,7 +215,7 @@ class PubSubComponent(BasePlugin):
             except XMPPError:
                 pass
             else:
-                self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
+                await self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
         if VCARD4_NAMESPACE + "+notify" in features:
             self.broadcast_vcard_event(p.get_to(), to=from_)
@@ -229,12 +230,14 @@ class PubSubComponent(BasePlugin):
         # but movim expects it to be here, and I guess
 
         log.debug("Broadcast vcard4 event: %s", vcard)
-        self._broadcast(
-            data=vcard,
-            from_=JID(from_).bare,
-            to=to,
-            id="current",
-            node=VCARD4_NAMESPACE,
+        self.xmpp.loop.create_task(
+            self._broadcast(
+                data=vcard,
+                from_=JID(from_).bare,
+                to=to,
+                id="current",
+                node=VCARD4_NAMESPACE,
+            )
         )
 
     @staticmethod
@@ -315,7 +318,17 @@ class PubSubComponent(BasePlugin):
         result["pubsub"]["items"].append(item)
         result.send()
 
-    def _broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
+    async def _broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
+        from_ = JID(from_)
+        if from_ != self.xmpp.boundjid.bare and to is not None:
+            to = JID(to)
+            session = self.xmpp.get_session_from_jid(to)
+            if session is None:
+                return
+            entity = await session.get_contact_or_group_or_participant(from_)
+            if isinstance(entity, LegacyContact) and not entity.added_to_roster:
+                return
+
         item = EventItem()
         if data:
             item.set_payload(data.xml)
@@ -355,7 +368,7 @@ class PubSubComponent(BasePlugin):
                 del self._avatars[jid]
             except KeyError:
                 pass
-            self._broadcast(AvatarMetadata(), jid, restrict_to)
+            await self._broadcast(AvatarMetadata(), jid, restrict_to)
         else:
             pep_avatar = PepAvatar()
             try:
@@ -368,7 +381,7 @@ class PubSubComponent(BasePlugin):
             self._avatars[jid] = pep_avatar
             if pep_avatar.metadata is None:
                 raise RuntimeError
-            self._broadcast(
+            await self._broadcast(
                 pep_avatar.metadata,
                 jid,
                 restrict_to,
@@ -385,7 +398,7 @@ class PubSubComponent(BasePlugin):
         nickname = PepNick(restrict_to, nick)
         self._nicks[jid] = nickname
         log.debug("NICK: %s", nickname.nick)
-        self._broadcast(nickname.nick, jid, restrict_to)
+        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, restrict_to))
 
 
 log = logging.getLogger(__name__)
