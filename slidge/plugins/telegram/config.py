@@ -37,3 +37,8 @@ OUTGOING_STICKERS_REGEXP__DOC = (
     "as telegram custom stickers. Example: 'outgoing-stickers-regexp=.*\.webp' for "
     "webp images."
 )
+
+ATTACHMENT_MAX_SIZE: int = 10 * 1024**2
+ATTACHMENT_MAX_SIZE__DOC = (
+    "Maximum file size (in bytes) to download from telegram automatically/"
+)
