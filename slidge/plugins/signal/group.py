@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiosignald.generated as sigapi
@@ -61,6 +62,7 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
         self.subject = group.description
         self.description = group.description
         self.n_participants = len(group.members)
+        self.avatar = Path(group.avatar)
 
 
 class Bookmarks(LegacyBookmarks["Session", MUC, str]):
