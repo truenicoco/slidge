@@ -56,6 +56,7 @@ class LegacyBookmarks(
             if not muc.user_nick:
                 muc.user_nick = self._user_nick
             await muc.update_info()
+            await muc.fill_participants()
             await muc.backfill()
             self.session.log.debug("MUC created: %r", muc)
             self._mucs_by_legacy_id[legacy_id] = muc
@@ -80,6 +81,7 @@ class LegacyBookmarks(
             if not muc.user_nick:
                 muc.user_nick = self._user_nick
             await muc.update_info()
+            await muc.fill_participants()
             await muc.backfill()
             self.log.debug("MUC CLASS: %s", self._muc_class)
 

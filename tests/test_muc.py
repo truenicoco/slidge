@@ -100,6 +100,11 @@ class Roster(LegacyRoster):
             raise XMPPError(text="Only juliet", condition="item-not-found")
 
 
+class Contact(LegacyContact):
+    async def update_info(self):
+        self.name = self.jid.local
+
+
 class Participant(LegacyParticipant):
     pass
 
@@ -122,19 +127,31 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
                 archive_only=True,
             )
 
-    async def get_participants(self):
-        first = Participant(self, "firstwitch")
+    async def fill_participants(self):
+        if "private" in str(self.legacy_id):
+            first = await self.get_participant_by_contact(
+                await self.session.contacts.by_legacy_id(111)
+            )
+            # first.nickname = "firstwitch"
+            second = await self.get_participant_by_contact(
+                await self.session.contacts.by_legacy_id(222)
+            )
+            # second.nickname = "secondwitch"
+        else:
+            first = await self.get_participant("firstwitch")
+            second = await self.get_participant("secondwitch")
         first.affiliation = "owner"
         first.role = "moderator"
-        if "private" in str(self.legacy_id):
-            first.contact = await self.session.contacts.by_legacy_id(111)
-        yield first
-        second = Participant(self, "secondwitch")
+        # if "private" in str(self.legacy_id):
+        #     first.contact = await self.session.contacts.by_legacy_id(111)
+        # yield first
+
+        # second = await self.get_participant("secondwitch")
         second.affiliation = "admin"
         second.role = "moderator"
-        if "private" in str(self.legacy_id):
-            second.contact = await self.session.contacts.by_legacy_id(222)
-        yield second
+        # if "private" in str(self.legacy_id):
+        #     second.contact = await self.session.contacts.by_legacy_id(222)
+        # yield second
 
     async def update_info(self):
         if self.jid.local == "room-private":
@@ -163,7 +180,7 @@ class Bookmarks(LegacyBookmarks[Session, MUC, str]):
 
     async def by_jid(self, jid: JID):
         muc = await super().by_jid(jid)
-        if not(x in jid.local for x in ["private", "public", "coven"]):
+        if not (x in jid.local for x in ["private", "public", "coven"]):
             raise XMPPError("item-not-found")
         return muc
 
@@ -171,6 +188,7 @@ class Bookmarks(LegacyBookmarks[Session, MUC, str]):
         await self.by_legacy_id("room-private")
         await self.by_legacy_id("room-public")
         await self.by_legacy_id("coven")
+
 
 class TestMuc(SlidgeTest):
     plugin = globals()
@@ -217,7 +235,7 @@ class TestMuc(SlidgeTest):
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
             </error></iq>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_disco_group(self):
@@ -458,6 +476,16 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
+            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
+                <x xmlns="http://jabber.org/protocol/muc#user">
+                    <item affiliation="member" role="participant"/>
+                </x>
+                <priority>0</priority>
+            </presence>
+            """
+        )
+        self.send(
+            """
             <presence
                 id='n13mt3l'
                 from='room-private@aim.shakespeare.lit/thirdwitch'
@@ -685,6 +713,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
+        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
         participant.send_text("the body", legacy_msg_id="legacy-XXX")
         self.send(
             f"""
@@ -710,6 +739,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
+        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -744,6 +774,7 @@ class TestMuc(SlidgeTest):
         second_witch = self.xmpp.loop.run_until_complete(
             muc.get_participant("secondwitch")
         )
+        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -775,6 +806,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
+        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
         second_witch = self.xmpp.loop.run_until_complete(
             muc.get_participant("secondwitch")
         )
@@ -848,6 +880,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
+        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
         participant.react(legacy_msg_id="legacy-XXX", emojis="👋")
         self.send(
             f"""
@@ -1084,7 +1117,7 @@ class TestMuc(SlidgeTest):
               </error>
             </iq>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_last_page(self):

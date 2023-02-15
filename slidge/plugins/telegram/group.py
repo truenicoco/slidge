@@ -100,7 +100,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
         if isinstance(content, tgapi.MessageText):
             self.subject = content.text.text
 
-    async def get_participants(self):
+    async def fill_participants(self):
         self.log.debug("Getting participants")
         chat = await self.session.tg.get_chat(chat_id=self.legacy_id)
         if not isinstance(
@@ -134,7 +134,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
                 continue
             if sender.user_id == await self.session.tg.get_my_id():
                 continue
-            yield await self.participant_by_tg_user(
+            await self.participant_by_tg_user(
                 await self.session.tg.get_user(sender.user_id)
             )
 

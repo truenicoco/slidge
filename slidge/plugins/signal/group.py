@@ -42,14 +42,13 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
             account=self.session.phone, groupID=self.legacy_id
         )
 
-    async def get_participants(self):
+    async def fill_participants(self):
         group = await self.get_signal_group()
         for m in group.members:
             if m.uuid == await self.session.user_uuid:
                 continue
             contact = await self.session.contacts.by_uuid(m.uuid)
-            participant = await self.get_participant_by_contact(contact)
-            yield participant
+            await self.get_participant_by_contact(contact)
 
     async def get_participant_by_contact(self, contact):
         p = await super().get_participant_by_contact(contact)

@@ -143,7 +143,7 @@ class TelegramClient(aiotdlib.Client):
             contact.displayed(update.last_read_outbox_message_id)
         else:
             muc = await self.bookmarks.by_legacy_id(update.chat_id)
-            async for p in muc.get_participants():
+            for p in muc.get_participants():
                 p.displayed(update.last_read_outbox_message_id)
 
     async def handle_ChatAction(self, action: tgapi.UpdateChatAction):

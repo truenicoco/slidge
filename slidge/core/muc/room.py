@@ -91,6 +91,9 @@ class LegacyMUC(
         self.archive: MessageArchive = MessageArchive()
         self.user_nick = self.user.jid.node
 
+        self._participants_by_nicknames = dict[str, LegacyParticipantType]()
+        self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
+
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
 
@@ -294,8 +297,9 @@ class LegacyMUC(
             requested_nickname,
         )
 
-        async for participant in self.get_participants():
+        for participant in self._participants_by_nicknames.values():
             participant.send_initial_presence(full_jid=user_full_jid)
+
         user_nick = self.user_nick
         user_participant = await self.get_user_participant()
         user_participant.send_initial_presence(
@@ -331,21 +335,39 @@ class LegacyMUC(
         return self.Participant(self, self.user_nick, is_user=True)
 
     async def get_participant(self, nickname: str) -> LegacyParticipantType:
-        return self.Participant(self, nickname)
+        p = self._participants_by_nicknames.get(nickname)
+        if p is None:
+            p = self.Participant(self, nickname)
+            self._participants_by_nicknames[nickname] = p
+        return p
 
     async def get_participant_by_contact(
         self, c: "LegacyContact"
     ) -> LegacyParticipantType:
-        p = self.Participant(self, c.name)
-        p.contact = c
+        p = self._participants_by_contacts.get(c)
+        if p is None:
+            p = self.Participant(self, c.name)
+            p.contact = c
+            self._participants_by_contacts[c] = p
+            self._participants_by_nicknames[c.name] = p
         return p
 
-    async def get_participants(self) -> AsyncIterable[LegacyParticipantType]:
+    def get_participants(self):
+        return self._participants_by_nicknames.values()
+
+    def remove_participant(self, p: LegacyParticipantType):
+        if p.contact is not None:
+            del self._participants_by_contacts[p.contact]
+        del self._participants_by_nicknames[p.nickname]  # type:ignore
+        p.leave()
+
+    async def fill_participants(self):
         """
-        This async generator should yield instances of Participants,
-        but *not* the user participant.
+        In here, call self.get_participant() or self.get_participant_by_contact()
+        to make an initial list of participant.
+        This should not include the participant of the user, only other participants.
         """
-        yield NotImplemented
+        pass
 
     async def _fill_history(
         self,

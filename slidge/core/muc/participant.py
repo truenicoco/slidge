@@ -50,6 +50,7 @@ class LegacyParticipant(
 
         self.log.debug("NEW PARTICIPANT: %r", self)
         self.contact: Optional["LegacyContact"] = None
+        self._sent_presences_to = set[JID]()
 
     def __repr__(self):
         return f"<{self.__class__} {self.nickname} of {self.muc}>"
@@ -97,15 +98,32 @@ class LegacyParticipant(
     ):
         if full_jid:
             stanza["to"] = full_jid
+            if (
+                not archive_only
+                and isinstance(stanza, Message)
+                and full_jid not in self._sent_presences_to
+            ):
+                self.send_initial_presence(full_jid)
             stanza.send()
         else:
             if isinstance(stanza, Message) and stanza["hint"] != "no-store":
                 self.muc.archive.add(stanza)
             if archive_only:
+                try:
+                    self.muc.remove_participant(self)
+                except KeyError:
+                    # a single participant instance may be used to send several history
+                    # messages, so this only works for the first archive message they send
+                    pass
                 return
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
+                if (
+                    isinstance(stanza, Message)
+                    and user_full_jid not in self._sent_presences_to
+                ):
+                    self.send_initial_presence(user_full_jid)
                 stanza.send()
 
     def mucadmin_item(self):
@@ -157,6 +175,15 @@ class LegacyParticipant(
         if presence_id:
             p["id"] = presence_id
         self._send(p, full_jid)
+        self._sent_presences_to.add(full_jid)
+
+    def leave(self):
+        """
+        To be called only by room. To remove a participant, call
+        Room.remove_participant(self) instead.
+        """
+        p = self._make_presence(ptype="unavailable")
+        self._send(p)
 
     def send_text(
         self,

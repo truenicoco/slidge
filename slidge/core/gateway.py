@@ -194,6 +194,7 @@ class BaseGateway(  # type:ignore
 
         self.get_session_from_stanza = self.session_cls.from_stanza
         self.get_session_from_user = self.session_cls.from_user
+
         self.register_plugins()
         self.__register_slixmpp_api()
         self.__register_handlers()
@@ -252,6 +253,12 @@ class BaseGateway(  # type:ignore
         )
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
+
+    def get_session_from_jid(self, j: JID):
+        try:
+            return self.session_cls.from_jid(j)
+        except XMPPError:
+            pass
 
     async def __handle_ping(self, iq: Iq):
         ito = iq.get_to()
@@ -502,7 +509,7 @@ class BaseGateway(  # type:ignore
         reply.enable("mucadmin_query")
         muc = await self.get_muc_from_iq(iq)
         reply = iq.reply()
-        async for participant in muc.get_participants():
+        for participant in muc.get_participants():
             if not participant.affiliation == affiliation:
                 continue
             reply["mucadmin_query"].append(participant.mucadmin_item())

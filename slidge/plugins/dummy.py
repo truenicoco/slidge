@@ -54,14 +54,13 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
                 archive_only=True,
             )
 
-    async def get_participants(self):
+    async def fill_participants(self):
         if self.legacy_id == "prout-1":
             for nick in "anon1", "anon2":
-                yield Participant(self, nick)
-                break
+                await self.get_participant(nick)
         elif self.legacy_id == "prout2":
             for nick in "anon1", "anon2", "anon3", "anon4":
-                yield Participant(self, nick)
+                await self.get_participant(nick)
 
     async def send_text(self, text: str) -> str:
         self.msg_ids[self.legacy_id] += 1
