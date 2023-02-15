@@ -263,19 +263,19 @@ class Session(
             raise XMPPError(text=str(err))
         return message_id
 
-    async def active(self, c: Contact):
+    async def active(self, c: Contact, thread=None):
         """
         WhatsApp has no equivalent to the "active" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def inactive(self, c: Contact):
+    async def inactive(self, c: Contact, thread=None):
         """
         WhatsApp has no equivalent to the "inactive" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def composing(self, c: Contact):
+    async def composing(self, c: Contact, thread=None):
         """
         Send "composing" chat state to given WhatsApp contact, signifying that a message is currently
         being composed.
@@ -286,7 +286,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def paused(self, c: Contact):
+    async def paused(self, c: Contact, thread=None):
         """
         Send "paused" chat state to given WhatsApp contact, signifying that an (unsent) message is no
         longer being composed.
@@ -297,7 +297,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def displayed(self, c: Contact, legacy_msg_id: str):
+    async def displayed(self, c: Contact, legacy_msg_id: str, thread=None):
         """
         Send "read" receipt, signifying that the WhatsApp message sent has been displayed on the XMPP
         client.
@@ -310,7 +310,9 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def react(self, c: Contact, legacy_msg_id: str, emojis: list[str]):
+    async def react(
+        self, c: Contact, legacy_msg_id: str, emojis: list[str], thread=None
+    ):
         """
         Send or remove emoji reaction to existing WhatsApp message.
         Slidge core makes sure that the emojis parameter is always empty or a
@@ -328,7 +330,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def retract(self, c: Contact, legacy_msg_id: str):
+    async def retract(self, c: Contact, legacy_msg_id: str, thread=None):
         """
         Request deletion (aka retraction) for a given WhatsApp message.
         """
@@ -340,7 +342,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: str):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: str, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):

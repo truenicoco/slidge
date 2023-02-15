@@ -192,10 +192,12 @@ class Session(
         p = await muc.get_participant("live-messager")
         p.send_text("Live message!", uuid.uuid4())
 
-    async def paused(self, c: LegacyContact):
+    async def paused(self, c: LegacyContact, thread=None):
         pass
 
-    async def correct(self, c: LegacyContact, text: str, legacy_msg_id: Any):
+    async def correct(
+        self, c: LegacyContact, text: str, legacy_msg_id: Any, thread=None
+    ):
         pass
 
     async def login(self):
@@ -222,6 +224,7 @@ class Session(
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
         reply_to=None,
+        thread=None,
     ):
         if isinstance(chat, LegacyContact):
             await chat.send_file(
@@ -306,16 +309,16 @@ class Session(
         await asyncio.sleep(1)
         c.retract(trigger_msg_id, carbon=True)
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContact, thread=None):
         log.debug("User is active for contact %s", c)
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContact, thread=None):
         log.debug("User is inactive for contact %s", c)
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContact, thread=None):
         log.debug("User is composing for contact %s", c)
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: int):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: int, thread=None):
         log.debug("Message #%s was read by the user", legacy_msg_id)
 
     async def search(self, form_values: dict[str, str]):

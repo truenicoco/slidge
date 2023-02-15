@@ -77,7 +77,7 @@ class Session(
             account=self.phone, typing=False, address=address, group=group
         )
 
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any):
+    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):
@@ -388,10 +388,10 @@ class Session(
                 )
                 return signal_r.timestamp
 
-    async def active(self, c: "Contact"):
+    async def active(self, c: "Contact", thread=None):
         pass
 
-    async def inactive(self, c: "Contact"):
+    async def inactive(self, c: "Contact", thread=None):
         pass
 
     @staticmethod

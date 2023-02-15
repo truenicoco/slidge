@@ -359,35 +359,37 @@ class Session(
         file_id = await self.mm_client.upload_file(channel_id, url, http_response)
         return await self.mm_client.send_message_with_file(channel_id, file_id)
 
-    async def active(self, c: Contact):
+    async def active(self, c: Contact, thread=None):
         pass
 
-    async def inactive(self, c: Contact):
+    async def inactive(self, c: Contact, thread=None):
         pass
 
-    async def composing(self, c: Contact):
+    async def composing(self, c: Contact, thread=None):
         await self.ws.user_typing(await c.direct_channel_id())
 
-    async def paused(self, c: Contact):
+    async def paused(self, c: Contact, thread=None):
         # no equivalent in MM, seems to have an automatic timeout in clients
         pass
 
-    async def displayed(self, c: Contact, legacy_msg_id: Any):
+    async def displayed(self, c: Contact, legacy_msg_id: Any, thread=None):
         channel = await c.direct_channel_id()
         f = self.view_futures[channel] = self.xmpp.loop.create_future()
         await self.mm_client.view_channel(channel)
         await f
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: Any):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: Any, thread=None):
         await self.mm_client.update_post(legacy_msg_id, text)
 
     async def search(self, form_values: dict[str, str]):
         pass
 
-    async def retract(self, c: Contact, legacy_msg_id: Any):
+    async def retract(self, c: Contact, legacy_msg_id: Any, thread=None):
         await self.mm_client.delete_post(legacy_msg_id)
 
-    async def react(self, c: Contact, legacy_msg_id: Any, emojis: list[str]):
+    async def react(
+        self, c: Contact, legacy_msg_id: Any, emojis: list[str], thread=None
+    ):
         mm_reactions = await self.get_mm_reactions(
             legacy_msg_id, await self.mm_client.mm_id
         )

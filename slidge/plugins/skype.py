@@ -273,19 +273,19 @@ class Session(
             http_response.content_type.startswith("image"),
         )
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContact, thread=None):
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContact, thread=None):
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContact, thread=None):
         await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, True)
 
-    async def paused(self, c: LegacyContact):
+    async def paused(self, c: LegacyContact, thread=None):
         await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, False)
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: int):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: int, thread=None):
         try:
             skype_msg = self.unread_by_user.pop(legacy_msg_id)
         except KeyError:
@@ -301,11 +301,11 @@ class Session(
                 # https://github.com/Terrance/SkPy/issues/207
                 self.log.debug("Skype read marker failed: %r", e)
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: Any):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: Any, thread=None):
         m = self.get_msg(legacy_msg_id, c)
         await asyncio.to_thread(m.edit, text)
 
-    async def retract(self, c: Contact, legacy_msg_id: Any):
+    async def retract(self, c: Contact, legacy_msg_id: Any, thread=None):
         m = self.get_msg(legacy_msg_id, c)
         log.debug("Deleting %s", m)
         await asyncio.to_thread(m.delete)

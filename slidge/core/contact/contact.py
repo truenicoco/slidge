@@ -10,13 +10,14 @@ from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType, Sessi
 from ...util.xep_0292.stanza import VCard4
 from .. import config
 from ..mixins import FullCarbonMixin
-from ..mixins.base import ReactionRecipientMixin
+from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
 
 
 class LegacyContact(
     Generic[SessionType, LegacyUserIdType],
     FullCarbonMixin,
     ReactionRecipientMixin,
+    ThreadRecipientMixin,
     metaclass=SubclassableOnce,
 ):
     """

@@ -23,7 +23,7 @@ from ...util.types import (
     SessionType,
 )
 from .. import config
-from ..mixins.base import ReactionRecipientMixin
+from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
 from ..mixins.disco import ChatterDiscoMixin
 from ..mixins.lock import NamedLockMixin
 from .archive import MessageArchive
@@ -46,6 +46,7 @@ class LegacyMUC(
     NamedLockMixin,
     ChatterDiscoMixin,
     ReactionRecipientMixin,
+    ThreadRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
 ):
     subject_date: Optional[datetime] = None

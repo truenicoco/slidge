@@ -15,7 +15,7 @@ from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.types import MessageTypes
 
 from slidge.core import config
-from slidge.util.types import LegacyMessageType
+from slidge.util.types import LegacyMessageType, LegacyThreadType
 
 from ...util import BiDict
 from ...util.types import ChatState, Marker, ProcessingHint
@@ -45,6 +45,7 @@ class MessageMaker(BaseSender):
         body = kwargs.pop("mbody", None)
         mfrom = kwargs.pop("mfrom", self.jid)
         mto = kwargs.pop("mto", None)
+        thread = kwargs.pop("thread", None)
         if carbon:
             # the msg needs to have jabber:client as xmlns, so
             # we don't want to associate with the XML stream
@@ -55,6 +56,9 @@ class MessageMaker(BaseSender):
         if body:
             msg["body"] = body
             state = "active"
+        if thread:
+            known_threads = self.session.threads.inverse  # type:ignore
+            msg["thread"] = known_threads.get(thread) or str(thread)
         if state:
             msg["chat_state"] = state
         for hint in hints:
@@ -427,6 +431,7 @@ class AttachmentMixin(MessageMaker):
         when: Optional[datetime] = None,
         caption: Optional[str] = None,
         legacy_file_id: Optional[Union[str, int]] = None,
+        thread: Optional[LegacyThreadType] = None,
         **kwargs,
     ):
         """
@@ -447,6 +452,7 @@ class AttachmentMixin(MessageMaker):
         :param caption: an optional text that is linked to the file
         :param legacy_file_id: A unique identifier for the file on the legacy network.
              Plugins should try their best to provide it, to avoid duplicates.
+        :param thread:
         """
         carbon = kwargs.pop("carbon", False)
         mto = kwargs.pop("mto", None)
@@ -457,6 +463,7 @@ class AttachmentMixin(MessageMaker):
             reply_to_jid=reply_to_jid,
             carbon=carbon,
             mto=mto,
+            thread=thread,
         )
         is_temp, local_path, new_url = await self.__get_url(
             Path(file_path) if file_path else None,
@@ -498,6 +505,7 @@ class ContentMessageMixin(AttachmentMixin):
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to_jid: Optional[JID] = None,
+        thread: Optional[LegacyThreadType] = None,
         **kwargs,
     ):
         """
@@ -510,6 +518,7 @@ class ContentMessageMixin(AttachmentMixin):
         :param reply_to_msg_id: Quote another message (:xep:`0461`)
         :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
         :param reply_to_jid: JID of the quoted message author
+        :param thread:
         """
         msg = self._make_message(
             mbody=body,
@@ -520,10 +529,17 @@ class ContentMessageMixin(AttachmentMixin):
             reply_to_jid=reply_to_jid,
             hints=kwargs.get("hints") or {"markable", "store"},
             carbon=kwargs.get("carbon"),
+            thread=thread,
         )
         self._send(msg, **kwargs)
 
-    def correct(self, legacy_msg_id: LegacyMessageType, new_text: str, **kwargs):
+    def correct(
+        self,
+        legacy_msg_id: LegacyMessageType,
+        new_text: str,
+        thread: Optional[LegacyThreadType] = None,
+        **kwargs,
+    ):
         """
         Call this when a legacy contact has modified his last message content.
 
@@ -531,31 +547,46 @@ class ContentMessageMixin(AttachmentMixin):
 
         :param legacy_msg_id: Legacy message ID this correction refers to
         :param new_text: The new text
+        :param thread:
         """
-        msg = self._make_message(mbody=new_text, carbon=kwargs.get("carbon"))
+        msg = self._make_message(
+            mbody=new_text, carbon=kwargs.get("carbon"), thread=thread
+        )
         msg["replace"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         self._send(msg, **kwargs)
 
     def react(
-        self, legacy_msg_id: LegacyMessageType, emojis: Iterable[str] = (), **kwargs
+        self,
+        legacy_msg_id: LegacyMessageType,
+        emojis: Iterable[str] = (),
+        thread: Optional[LegacyThreadType] = None,
+        **kwargs,
     ):
         """
         Call this when a legacy contact reacts to a message
 
         :param legacy_msg_id: The message which the reaction refers to.
         :param emojis: An iterable of emojis used as reactions
-        :return:
+        :param thread:
         """
-        msg = self._make_message(hints={"store"}, carbon=kwargs.get("carbon"))
+        msg = self._make_message(
+            hints={"store"}, carbon=kwargs.get("carbon"), thread=thread
+        )
         xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
         self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=emojis)
         self._send(msg, **kwargs)
 
-    def retract(self, legacy_msg_id: LegacyMessageType, **kwargs):
+    def retract(
+        self,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+        **kwargs,
+    ):
         """
         Call this when a legacy contact retracts (:XEP:`0424`) a message
 
         :param legacy_msg_id: Legacy ID of the message to delete
+        :param thread:
         """
         msg = self._make_message(
             state=None,
@@ -563,6 +594,7 @@ class ContentMessageMixin(AttachmentMixin):
             mbody=f"I have deleted the message {legacy_msg_id}, "
             "but your XMPP client does not support that",
             carbon=kwargs.get("carbon"),
+            thread=thread,
         )
         msg.enable("fallback")
         msg["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)

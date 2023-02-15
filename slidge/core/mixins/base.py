@@ -42,3 +42,8 @@ class ReactionRecipientMixin:
         :return: A set of emojis or None if any emoji is allowed
         """
         return None
+
+
+class ThreadRecipientMixin:
+    async def create_thread(self, xmpp_id: str) -> Union[int, str]:
+        return xmpp_id

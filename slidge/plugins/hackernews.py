@@ -168,22 +168,24 @@ class Session(BaseSession):
     async def send_file(self, chat, url, *_a, **_k):
         pass
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContact, thread=None):
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContact, thread=None):
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContact, thread=None):
         pass
 
-    async def paused(self, c: LegacyContact):
+    async def paused(self, c: LegacyContact, thread=None):
         pass
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: Any):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Any, thread=None):
         pass
 
-    async def correct(self, c: LegacyContact, text: str, legacy_msg_id: Any):
+    async def correct(
+        self, c: LegacyContact, text: str, legacy_msg_id: Any, thread=None
+    ):
         pass
 
     async def search(self, form_values: dict[str, str]):

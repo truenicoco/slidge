@@ -87,8 +87,8 @@ class LegacyBookmarks(
                     muc.user_nick = self._user_nick
                 await muc.update_info()
 
-                self._mucs_by_legacy_id[legacy_id] = muc
-                self._mucs_by_bare_jid[muc.jid.bare] = muc
+            self._mucs_by_legacy_id[legacy_id] = muc
+            self._mucs_by_bare_jid[muc.jid.bare] = muc
             return muc
 
     async def fill(self):

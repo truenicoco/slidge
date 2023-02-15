@@ -37,10 +37,10 @@ class Session(BaseSession):
     def legacy_msg_id_to_xmpp_msg_id(i: str) -> str:
         return i[7:]
 
-    async def paused(self, c: LegacyContactType):
+    async def paused(self, c: LegacyContactType, thread=None):
         pass
 
-    async def correct(self, text: str, legacy_msg_id: Any, c: LegacyContactType):
+    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: Dict[str, str]):
@@ -60,6 +60,7 @@ class Session(BaseSession):
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to=None,
+        thread=None
     ):
         self.SENT_TEXT.append(locals())
         return "legacy-id"
@@ -67,20 +68,20 @@ class Session(BaseSession):
     async def send_file(self, c: LegacyContact, url: str, **kwargs):
         pass
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContact, thread=None):
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContact, thread=None):
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContact, thread=None):
         pass
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable, thread=None):
         pass
 
     async def react(
-        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str]
+        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str], thread=None
     ):
         self.REACTED.append(locals())
 

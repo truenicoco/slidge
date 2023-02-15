@@ -334,13 +334,13 @@ class Session(
     async def send_file(self, chat: Contact, url: str, *a, **k):
         return await self.send_text(chat, url)
 
-    async def active(self, c: Contact):
+    async def active(self, c: Contact, thread=None):
         pass
 
-    async def inactive(self, c: Contact):
+    async def inactive(self, c: Contact, thread=None):
         pass
 
-    async def composing(self, c: Contact):
+    async def composing(self, c: Contact, thread=None):
         self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
@@ -349,19 +349,21 @@ class Session(
             },
         )
 
-    async def paused(self, c: Contact):
+    async def paused(self, c: Contact, thread=None):
         pass
 
-    async def displayed(self, c: Contact, legacy_msg_id: Any):
+    async def displayed(self, c: Contact, legacy_msg_id: Any, thread=None):
         pass
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: Any):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):
         pass
 
-    async def react(self, c: Contact, legacy_msg_id: Any, emojis: list[str]):
+    async def react(
+        self, c: Contact, legacy_msg_id: Any, emojis: list[str], thread=None
+    ):
         old = c.user_reactions[legacy_msg_id]
         new = set[str]()
         for emoji in emojis:
@@ -400,7 +402,7 @@ class Session(
         c.user_reactions[legacy_msg_id] = new
         c.react(legacy_msg_id, new, carbon=True)
 
-    async def retract(self, c: Contact, legacy_msg_id: Any):
+    async def retract(self, c: Contact, legacy_msg_id: Any, thread=None):
         pass
 
 

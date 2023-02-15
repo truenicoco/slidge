@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import logging
 from typing import Generic, Optional, Type, Union, cast
@@ -16,6 +17,7 @@ from ..util.types import (
     LegacyMUCType,
     LegacyParticipantType,
     LegacyRosterType,
+    LegacyThreadType,
     PresenceShow,
     Recipient,
     SessionType,
@@ -110,6 +112,9 @@ class BaseSession(
         )
 
         self.http = self.xmpp.http  # type: ignore
+
+        self.threads = BiDict[str, LegacyThreadType]()
+        self.__thread_creation_lock = asyncio.Lock()
 
     def shutdown(self):
         for c in self.contacts:
@@ -281,10 +286,13 @@ class BaseSession(
             reply_to_msg_xmpp_id = None
             reply_to = None
 
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
+
         kwargs = dict(
             reply_to_msg_id=reply_to_msg_xmpp_id,
             reply_to_fallback_text=reply_fallback,
             reply_to=reply_to,
+            thread=legacy_thread,
         )
 
         if url:
@@ -313,6 +321,16 @@ class BaseSession(
             self.__ack(m)
             if legacy_msg_id is not None:
                 self.sent[legacy_msg_id] = m.get_id()
+
+    async def __xmpp_to_legacy_thread(self, msg: Message, recipient: Recipient):
+        xmpp_thread = msg["thread"]
+        if xmpp_thread:
+            async with self.__thread_creation_lock:
+                legacy_thread = self.threads.get(xmpp_thread)
+                if legacy_thread is None:
+                    legacy_thread = await recipient.create_thread(xmpp_thread)
+                    self.threads[xmpp_thread] = legacy_thread
+            return legacy_thread
 
     def __ack(self, msg: Message):
         if (
@@ -345,7 +363,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        await self.active(await self.__get_entity(m))
+        e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
+        await self.active(e, legacy_thread)
 
     @ignore_message_to_component
     async def inactive_from_msg(self, m: Message):
@@ -355,7 +375,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        await self.inactive(await self.__get_entity(m))
+        e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
+        await self.inactive(e, legacy_thread)
 
     @ignore_message_to_component
     async def composing_from_msg(self, m: Message):
@@ -365,7 +387,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        await self.composing(await self.__get_entity(m))
+        e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
+        await self.composing(e, legacy_thread)
 
     @ignore_message_to_component
     async def paused_from_msg(self, m: Message):
@@ -375,7 +399,9 @@ class BaseSession(
         :param m:
         :return:
         """
-        await self.paused(await self.__get_entity(m))
+        e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
+        await self.paused(e, legacy_thread)
 
     def __xmpp_msg_id_to_legacy(self, xmpp_id: str):
         sent = self.sent.inverse.get(xmpp_id)
@@ -401,6 +427,7 @@ class BaseSession(
         :return:
         """
         e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         displayed_msg_id = m["displayed"]["id"]
         if not isinstance(e, LegacyMUC) and self.xmpp.MARK_ALL_MESSAGES:
             to_mark = e.get_msg_xmpp_id_up_to(displayed_msg_id)  # type: ignore
@@ -411,7 +438,7 @@ class BaseSession(
             to_mark = [displayed_msg_id]
         for xmpp_id in to_mark:
             if legacy := self.__xmpp_msg_id_to_legacy(xmpp_id):
-                await self.displayed(e, legacy)
+                await self.displayed(e, legacy, legacy_thread)
                 if isinstance(e, LegacyMUC):
                     await e.echo(m, None)
             else:
@@ -421,6 +448,7 @@ class BaseSession(
     @ignore_sent_carbons
     async def correct_from_msg(self, m: Message):
         e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         xmpp_id = m["replace"]["id"]
         if isinstance(e, LegacyMUC):
             legacy_id = self.muc_sent_msg_ids.inverse.get(xmpp_id)
@@ -429,9 +457,13 @@ class BaseSession(
 
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            new_legacy_msg_id = await self.send_text(e, "Correction:" + m["body"])
+            new_legacy_msg_id = await self.send_text(
+                e, "Correction:" + m["body"], thread=legacy_thread
+            )
         elif e.CORRECTION:
-            new_legacy_msg_id = await self.correct(e, m["body"], legacy_id)
+            new_legacy_msg_id = await self.correct(
+                e, m["body"], legacy_id, thread=legacy_thread
+            )
         else:
             self.send_gateway_message(
                 "Last message correction is not supported by this legacy service. "
@@ -446,9 +478,11 @@ class BaseSession(
                     self.send_gateway_message(
                         "Slidge will attempt to retract the original message you wanted to edit."
                     )
-                    await self.retract(e, legacy_id)
+                    await self.retract(e, legacy_id, thread=legacy_thread)
 
-            new_legacy_msg_id = await self.send_text(e, "Correction: " + m["body"])
+            new_legacy_msg_id = await self.send_text(
+                e, "Correction: " + m["body"], thread=legacy_thread
+            )
 
         if isinstance(e, LegacyMUC):
             if new_legacy_msg_id is not None:
@@ -464,6 +498,7 @@ class BaseSession(
     async def react_from_msg(self, m: Message):
         e = await self.__get_entity(m)
         react_to: str = m["reactions"]["id"]
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         legacy_id = self.__xmpp_msg_id_to_legacy(react_to)
 
         if not legacy_id:
@@ -490,10 +525,10 @@ class BaseSession(
             if not isinstance(e, LegacyMUC):
                 # no need to carbon for groups, we just don't echo the stanza
                 e.react(legacy_id, carbon=True)  # type: ignore
-            await self.react(e, legacy_id, [])
+            await self.react(e, legacy_id, [], thread=legacy_thread)
             raise XMPPError("not-acceptable", text=error_msg)
 
-        await self.react(e, legacy_id, emojis)
+        await self.react(e, legacy_id, emojis, thread=legacy_thread)
         if isinstance(e, LegacyMUC):
             await e.echo(m, None)
         else:
@@ -503,6 +538,7 @@ class BaseSession(
     @ignore_sent_carbons
     async def retract_from_msg(self, m: Message):
         e = await self.__get_entity(m)
+        legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         if not e.RETRACTION:
             raise XMPPError(
                 "bad-request",
@@ -511,7 +547,7 @@ class BaseSession(
         xmpp_id: str = m["apply_to"]["id"]
         legacy_id = self.__xmpp_msg_id_to_legacy(xmpp_id)
         if legacy_id:
-            await self.retract(e, legacy_id)
+            await self.retract(e, legacy_id, thread=legacy_thread)
             if isinstance(e, LegacyMUC):
                 await e.echo(m, None)
         else:
@@ -619,6 +655,7 @@ class BaseSession(
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to: Optional[Union["LegacyContactType", "LegacyParticipantType"]] = None,
+        thread: Optional[LegacyThreadType] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
@@ -635,6 +672,7 @@ class BaseSession(
             by XMPP clients
         :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
             1:1 chat, :class:`LegacyParticipant` instance for groups.
+        :param thread:
 
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
@@ -650,6 +688,7 @@ class BaseSession(
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to: Optional[Union[LegacyContactType, "LegacyParticipantType"]] = None,
+        thread: Optional[LegacyThreadType] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user has sends a file using HTTP Upload (:xep:`0363`)
@@ -660,13 +699,14 @@ class BaseSession(
         :param reply_to_msg_id: See :meth:`.BaseSession.send_text`
         :param reply_to_fallback_text: See :meth:`.BaseSession.send_text`
         :param reply_to: See :meth:`.BaseSession.send_text`
+        :param thread:
 
         :return: An ID of some sort that can be used later to ack and mark the message
             as read by the user
         """
         raise NotImplementedError
 
-    async def active(self, c: Recipient):
+    async def active(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user sends an 'active' chat state to the legacy network (:xep:`0085`)
 
@@ -674,7 +714,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def inactive(self, c: Recipient):
+    async def inactive(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user sends an 'inactive' chat state to the legacy network (:xep:`0085`)
 
@@ -682,7 +722,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def composing(self, c: Recipient):
+    async def composing(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user starts typing in the window of a legacy contact (:xep:`0085`)
 
@@ -690,7 +730,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def paused(self, c: Recipient):
+    async def paused(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user pauses typing in the window of a legacy contact (:xep:`0085`)
 
@@ -698,7 +738,12 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def displayed(self, c: Recipient, legacy_msg_id: LegacyMessageType):
+    async def displayed(
+        self,
+        c: Recipient,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+    ):
         """
         Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
 
@@ -712,7 +757,11 @@ class BaseSession(
         raise NotImplementedError
 
     async def correct(
-        self, c: Recipient, text: str, legacy_msg_id: LegacyMessageType
+        self,
+        c: Recipient,
+        text: str,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrected a message using :xep:`0308`
@@ -739,7 +788,11 @@ class BaseSession(
         raise NotImplementedError
 
     async def react(
-        self, c: Recipient, legacy_msg_id: LegacyMessageType, emojis: list[str]
+        self,
+        c: Recipient,
+        legacy_msg_id: LegacyMessageType,
+        emojis: list[str],
+        thread: Optional[LegacyThreadType] = None,
     ):
         """
         Triggered when the user sends message reactions (:xep:`0444`).
@@ -751,7 +804,12 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def retract(self, c: Recipient, legacy_msg_id: LegacyMessageType):
+    async def retract(
+        self,
+        c: Recipient,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+    ):
         """
         Triggered when the user retracts (:xep:`0424`) a message.
 

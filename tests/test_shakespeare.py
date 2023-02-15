@@ -43,10 +43,10 @@ class Gateway(BaseGateway):
 
 
 class Session(BaseSession):
-    async def paused(self, c: LegacyContactType):
+    async def paused(self, c: LegacyContactType, thread=None):
         pass
 
-    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any):
+    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: Dict[str, str]):
@@ -73,6 +73,7 @@ class Session(BaseSession):
         reply_to=None,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
+        thread=None
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
@@ -84,20 +85,20 @@ class Session(BaseSession):
     async def send_file(self, chat: LegacyContact, url: str, *a, **k):
         pass
 
-    async def active(self, c: LegacyContact):
+    async def active(self, c: LegacyContact, thread=None):
         pass
 
-    async def inactive(self, c: LegacyContact):
+    async def inactive(self, c: LegacyContact, thread=None):
         pass
 
-    async def composing(self, c: LegacyContact):
+    async def composing(self, c: LegacyContact, thread=None):
         composing_chat_states_received_by_juliet.append(c)
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable):
+    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable, thread=None):
         pass
 
     async def react(
-        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str]
+        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str], thread=None
     ):
         if c.jid_username == "juliet":
             for e in emojis:

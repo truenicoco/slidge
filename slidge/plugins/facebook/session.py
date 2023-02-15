@@ -118,19 +118,19 @@ class Session(
         log.debug("Upload ack: %s", ack)
         return resp.media_id
 
-    async def active(self, c: Contact):
+    async def active(self, c: Contact, thread=None):
         pass
 
-    async def inactive(self, c: Contact):
+    async def inactive(self, c: Contact, thread=None):
         pass
 
-    async def composing(self, c: Contact):
+    async def composing(self, c: Contact, thread=None):
         await self.mqtt.set_typing(target=c.legacy_id)
 
-    async def paused(self, c: Contact):
+    async def paused(self, c: Contact, thread=None):
         await self.mqtt.set_typing(target=c.legacy_id, typing=False)
 
-    async def displayed(self, c: Contact, legacy_msg_id: str):
+    async def displayed(self, c: Contact, legacy_msg_id: str, thread=None):
         # fb_id = await c.fb_id()
         try:
             t = self.received_messages[c.legacy_id].by_mid[legacy_msg_id].timestamp_ms
@@ -139,10 +139,12 @@ class Session(
         else:
             await self.mqtt.mark_read(target=c.legacy_id, read_to=t, is_group=False)
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: str):
+    async def correct(self, c: Contact, text: str, legacy_msg_id: str, thread=None):
         pass
 
-    async def react(self, c: Contact, legacy_msg_id: str, emojis: list[str]):
+    async def react(
+        self, c: Contact, legacy_msg_id: str, emojis: list[str], thread=None
+    ):
         # only reaction per msg on facebook, but this is handled by slidge core
         if len(emojis) == 0:
             emoji = None
@@ -152,7 +154,7 @@ class Session(
         await self.api.react(legacy_msg_id, emoji)
         await f
 
-    async def retract(self, c: Contact, legacy_msg_id: str):
+    async def retract(self, c: Contact, legacy_msg_id: str, thread=None):
         f = self.unsend_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.api.unsend(legacy_msg_id)
         await f
