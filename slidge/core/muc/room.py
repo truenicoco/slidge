@@ -1,10 +1,14 @@
+import hashlib
+import io
 import logging
 from copy import copy
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterable, Generic, Optional
 from uuid import uuid4
 
+from PIL import Image
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.xmlstream import ET
@@ -12,11 +16,13 @@ from slixmpp.xmlstream import ET
 from ...util import ABCSubclassableOnceAtMost
 from ...util.error import XMPPError
 from ...util.types import (
+    AvatarType,
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
     SessionType,
 )
+from .. import config
 from ..mixins.base import ReactionRecipientMixin
 from ..mixins.disco import ChatterDiscoMixin
 from .archive import MessageArchive
@@ -93,9 +99,52 @@ class LegacyMUC(
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
         self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
+        self._avatar: Optional[AvatarType] = None
+        self._avatar_hash: Optional[str] = None
 
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
+
+    @property
+    def avatar(self):
+        return self._avatar
+
+    @avatar.setter
+    def avatar(self, a: Optional[AvatarType]):
+        if a != self._avatar:
+            self.xmpp.loop.create_task(self.__set_avatar(a))
+
+    async def __set_avatar(self, a: Optional[AvatarType]):
+        if isinstance(a, str):
+            async with self.xmpp.http.get(a) as r:  # type:ignore
+                b = await r.read()
+        elif isinstance(a, bytes):
+            b = a
+        elif isinstance(a, Path):
+            b = a.read_bytes()
+        elif a is None:
+            self._avatar = None
+            self._avatar_hash = None
+            self._send_room_presence()
+            return
+        else:
+            raise TypeError("Avatar must be bytes, a Path or a str (URL)", a)
+
+        img = Image.open(io.BytesIO(b))
+        if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
+            img.thumbnail((size, size))
+            log.debug("Resampled image to %s", img.size)
+            with io.BytesIO() as f:
+                img.save(f, format="PNG")
+                b = f.getvalue()
+
+        vcard = self.xmpp.plugin["xep_0054"].make_vcard()
+        vcard["PHOTO"]["BINVAL"] = b
+        vcard["PHOTO"]["TYPE"] = "image/" + img.format.lower()
+        await self.xmpp.plugin["xep_0054"].api["set_vcard"](self.jid, None, None, vcard)
+        self._avatar = a
+        self._avatar_hash = hashlib.sha1(b).hexdigest()
+        self._send_room_presence()
 
     @property
     def name(self):
@@ -169,6 +218,7 @@ class LegacyMUC(
             "urn:xmpp:mam:2#extended",
             "urn:xmpp:sid:0",
             "muc_persistent",
+            "vcard-temp",
         ]
         if self.type == MucType.GROUP:
             features.extend(["muc_membersonly", "muc_nonanonymous", "muc_hidden"])
@@ -281,6 +331,19 @@ class LegacyMUC(
 
             msg.send()
 
+    def _send_room_presence(self, user_full_jid: Optional[JID] = None):
+        if user_full_jid is None:
+            tos = self.user_full_jids()
+        else:
+            tos = [user_full_jid]
+        for to in tos:
+            p = self.xmpp.make_presence(pfrom=self.jid, pto=to)
+            if self._avatar_hash:
+                p["vcard_temp_update"]["photo"] = self._avatar_hash
+            else:
+                p["vcard_temp_update"]["photo"] = ""
+            p.send()
+
     async def join(self, join_presence: Presence):
         user_full_jid = join_presence.get_from()
         requested_nickname = join_presence.get_to().resource
@@ -296,6 +359,9 @@ class LegacyMUC(
             self.legacy_id,
             requested_nickname,
         )
+
+        if self._avatar_hash:
+            self._send_room_presence(user_full_jid)
 
         for participant in self._participants_by_nicknames.values():
             participant.send_initial_presence(full_jid=user_full_jid)

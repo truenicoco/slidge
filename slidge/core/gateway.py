@@ -872,6 +872,7 @@ SLIXMPP_PLUGINS = [
     "xep_0030",  # Service discovery
     "xep_0045",  # Multi-User Chat
     "xep_0050",  # Adhoc commands
+    "xep_0054",  # VCard-temp (avatar of the MUC room)
     "xep_0055",  # Jabber search
     "xep_0059",  # Result Set Management
     "xep_0066",  # Out of Band Data
@@ -882,6 +883,7 @@ SLIXMPP_PLUGINS = [
     "xep_0106",  # JID Escaping
     "xep_0115",  # Entity capabilities
     "xep_0122",  # Data Forms Validation
+    "xep_0153",  # vCard-Based Avatars (avatar of the MUC room)
     "xep_0172",  # User nickname
     "xep_0184",  # Message Delivery Receipts
     "xep_0199",  # XMPP Ping

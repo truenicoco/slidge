@@ -9,8 +9,10 @@ from .core.session import BaseSession
 from .util import (
     xep_0030,
     xep_0050,
+    xep_0054,
     xep_0077,
     xep_0100,
+    xep_0153,
     xep_0234,
     xep_0292,
     xep_0313,

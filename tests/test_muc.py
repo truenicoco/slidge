@@ -1,5 +1,8 @@
 import datetime
+import hashlib
 import uuid
+from base64 import b64encode
+from pathlib import Path
 from typing import Hashable, Optional, Dict, Any
 
 from slixmpp import JID
@@ -167,6 +170,7 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
             return
 
         if self.jid.local == "coven":
+            self.avatar = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
             self.name = "The coven"
 
 
@@ -262,6 +266,7 @@ class TestMuc(SlidgeTest):
                 <feature var="urn:xmpp:sid:0" />
                 <feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
+           		<feature var="vcard-temp"/>
                 <x xmlns="jabber:x:data" type="result">
                     <field var="FORM_TYPE" type="hidden">
                         <value>http://jabber.org/protocol/muc#roominfo</value>
@@ -345,6 +350,7 @@ class TestMuc(SlidgeTest):
                 <feature var="muc_semianonymous"/>
         		<feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
+           		<feature var="vcard-temp"/>
                 <x xmlns="jabber:x:data" type="result">
                     <field var="FORM_TYPE" type="hidden">
                         <value>http://jabber.org/protocol/muc#roominfo</value>
@@ -1419,3 +1425,76 @@ class TestMuc(SlidgeTest):
             </iq>
             """
         )
+
+    def test_room_avatar(self):
+        v = b64encode(avatar_path.read_bytes()).decode()
+        self.xmpp.loop.run_until_complete(self.get_romeo_session().bookmarks.fill())
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='get1' to='room-private@aim.shakespeare.lit'>
+                <vCard xmlns='vcard-temp'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq from="room-private@aim.shakespeare.lit"
+                type="error"
+                to="romeo@montague.lit/gajim"
+                id="get1">
+             	<error type="cancel">
+               		<item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+               	</error>
+            </iq>
+            """,
+            use_values=False,
+        )
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='get1' to='coven@aim.shakespeare.lit'>
+                <vCard xmlns='vcard-temp'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq from="coven@aim.shakespeare.lit"
+                type="result"
+                to="romeo@montague.lit/gajim"
+                id="get1">
+             <vCard xmlns="vcard-temp">
+                <PHOTO>
+                  <TYPE>image/png</TYPE>
+                  <BINVAL>{v}</BINVAL>
+                </PHOTO>
+             </vCard>
+            </iq>
+            """
+        )
+
+    def test_join_room_avatar(self):
+        self.get_private_muc("coven")
+        self.recv(
+            """
+            <presence
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='coven@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc'/>
+            </presence>
+            """
+        )
+        self.send(
+            f"""
+            <presence
+                from='coven@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+                <x xmlns='vcard-temp:x:update'>
+                    <photo>{hashlib.sha1(avatar_path.read_bytes()).hexdigest()}</photo>
+                  </x>
+            </presence>
+            """,
+        )
+
+
+avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

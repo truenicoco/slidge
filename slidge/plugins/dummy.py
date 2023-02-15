@@ -54,6 +54,9 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
                 archive_only=True,
             )
 
+    async def update_info(self):
+        self.avatar = AVATARS[0]
+
     async def fill_participants(self):
         if self.legacy_id == "prout-1":
             for nick in "anon1", "anon2":
