@@ -162,12 +162,12 @@ class LegacyMUC(
             return
         if (resource := pfrom.resource) in (resources := self.user_resources):
             if pto.resource != self.user_nick:
-                self.log.warning(
+                self.log.debug(
                     "Received 'leave group' request but with wrong nickname. %s", p
                 )
             resources.remove(resource)
         else:
-            self.log.warning(
+            self.log.debug(
                 "Received 'leave group' request but resource was not listed. %s", p
             )
 

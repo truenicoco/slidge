@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from slixmpp import JID, Iq, Message, Presence, register_stanza_plugin
 from slixmpp.plugins.base import BasePlugin
@@ -88,7 +89,7 @@ class XEP_0100(BasePlugin):
                     jid=jid.bare, roster_items=items
                 )
             except PermissionError:
-                log.warning(
+                warnings.warn(
                     "Slidge does not have the privilege to manage users' rosters. "
                     "Users should add the slidge component to their rosters manually."
                 )

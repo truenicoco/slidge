@@ -1,4 +1,5 @@
 import logging
+import warnings
 from datetime import date, datetime
 from typing import Generic, Iterable, Optional, Union
 
@@ -278,7 +279,7 @@ class LegacyContact(
             try:
                 await self.xmpp["xep_0356_old"].set_roster(**kw)
             except PermissionError:
-                log.warning(
+                warnings.warn(
                     "Slidge does not have privileges to add contacts to the roster."
                     "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
                     "for more info."

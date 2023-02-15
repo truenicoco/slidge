@@ -3,6 +3,7 @@ import os
 import shutil
 import stat
 import tempfile
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import IO, Iterable, Optional, Union
@@ -220,10 +221,7 @@ class AttachmentMixin(MessageMaker):
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
             )
         except (FileUploadError, IqError) as e:
-            log.warning(
-                "Something is wrong with the upload service, see the traceback below"
-            )
-            log.exception(e)
+            warnings.warn(f"Something is wrong with the upload service: {e}")
             return None, None
         finally:
             if d is not None:
@@ -577,7 +575,7 @@ class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
             try:
                 self.xmpp["xep_0356_old"].send_privileged_message(msg)
             except PermissionError:
-                log.warning(
+                warnings.warn(
                     "Slidge does not have privileges to send message on behalf of user."
                     "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
                     "for more info."

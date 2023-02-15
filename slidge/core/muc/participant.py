@@ -1,4 +1,5 @@
 import string
+import warnings
 from copy import copy
 from datetime import datetime
 from typing import Generic, Optional, Union
@@ -77,9 +78,8 @@ class LegacyParticipant(
             elif self.contact:
                 p["muc"]["jid"] = self.contact.jid
             else:
-                self.log.warning(
-                    "Public group but no Contact or user_full_jid associated to %s",
-                    self.jid,
+                warnings.warn(
+                    f"Public group but no Contact or user_full_jid associated to {self.jid}",
                 )
 
         p["muc"]["status_codes"] = codes
@@ -137,9 +137,8 @@ class LegacyParticipant(
             elif self.contact:
                 item["jid"] = self.contact.jid.bare
             else:
-                self.log.warning(
-                    "Public group but no Contact or user_full_jid associated to %s",
-                    self.jid,
+                warnings.warn(
+                    f"Public group but no Contact or user_full_jid associated to {self.jid}",
                 )
         return item
 
