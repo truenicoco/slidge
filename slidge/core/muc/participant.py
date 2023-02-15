@@ -10,12 +10,16 @@ from slixmpp.types import MessageTypes
 from ...util import SubclassableOnce
 from ...util.types import LegacyMessageType, LegacyMUCType
 from ..contact import LegacyContact
-from ..mixins import MessageMixin, PresenceMixin
+from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 from .room import MucType
 
 
 class LegacyParticipant(
-    Generic[LegacyMUCType], PresenceMixin, MessageMixin, metaclass=SubclassableOnce
+    Generic[LegacyMUCType],
+    PresenceMixin,
+    MessageMixin,
+    ChatterDiscoMixin,
+    metaclass=SubclassableOnce,
 ):
     mtype: MessageTypes = "groupchat"
     USE_STANZA_ID = True
@@ -79,6 +83,10 @@ class LegacyParticipant(
 
         p["muc"]["status_codes"] = codes
         return p
+
+    @property
+    def DISCO_NAME(self):
+        return self.nickname
 
     def _send(
         self,
@@ -191,3 +199,8 @@ class LegacyParticipant(
             hints={"markable"},
             **kwargs,
         )
+
+    def get_disco_info(self):
+        if self.contact is not None:
+            return self.contact.get_disco_info()
+        return super().get_disco_info()

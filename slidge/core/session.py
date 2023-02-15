@@ -758,6 +758,18 @@ class BaseSession(
         """
         raise NotImplementedError
 
+    async def get_contact_or_group_or_participant(self, jid: JID):
+        try:
+            return await self.contacts.by_jid(jid)
+        except XMPPError:
+            try:
+                muc = await self.bookmarks.by_jid(jid)
+            except XMPPError:
+                return
+            if nick := jid.resource:
+                return await muc.get_participant(nick)
+            return muc
+
 
 def remove_emoji_variation_selector_16(emoji: str):
     # this is required for compatibility with dino, and maybe other future clients?

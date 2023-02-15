@@ -1,12 +1,10 @@
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
-from slixmpp import JID
 from slixmpp.types import OptJid
 
 from ..util.db import user_store
 from ..util.error import XMPPError
-from ..util.xep_0030.stanza.info import DiscoInfo
 from ..util.xep_0030.stanza.items import DiscoItems
 
 if TYPE_CHECKING:
@@ -36,10 +34,7 @@ class Disco:
     ):
         base = self.xmpp.plugin["xep_0030"].static.get_info(jid, node, ifrom, data)
 
-        if ifrom == self.xmpp.boundjid.bare:
-            return base
-
-        if jid == self.xmpp.boundjid.bare:
+        if ifrom == self.xmpp.boundjid.bare or jid in (self.xmpp.boundjid.bare, None):
             return base
 
         if ifrom is None:
@@ -50,17 +45,12 @@ class Disco:
             raise XMPPError("registration-required")
         session = self.xmpp.get_session_from_user(user)  # type:ignore
         log.debug("Looking for entity: %s", jid)
-        try:
-            entity = await session.contacts.by_jid(jid)
-        except XMPPError:
-            entity = await session.bookmarks.by_jid(jid)
-            if nick := JID(jid).resource:
-                log.debug("Returning empty disco for participant")
-                d = DiscoInfo()
-                d.set_identities([("client", "pc", None, nick)])
-                return d
 
-        log.debug("entity: %s", entity)
+        entity = await session.get_contact_or_group_or_participant(jid)
+
+        if entity is None:
+            raise XMPPError("item-not-found")
+
         return entity.get_disco_info()
 
     async def get_items(

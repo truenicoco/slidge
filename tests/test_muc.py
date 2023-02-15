@@ -378,7 +378,15 @@ class TestMuc(SlidgeTest):
                 to="romeo@montague.lit/gajim" id="123">
               <query xmlns='http://jabber.org/protocol/disco#info'>
                 <identity category="client" type="pc" name="firstwitch"/>
-                <feature var="http://jabber.org/protocol/disco#info"/>
+                <feature var="http://jabber.org/protocol/chatstates"/>
+           		<feature var="urn:xmpp:receipts"/>
+           		<feature var="urn:xmpp:message-correct:0"/>
+           		<feature var="urn:xmpp:chat-markers:0"/>
+           		<feature var="jabber:x:oob"/>
+           		<feature var="urn:xmpp:reactions:0"/>
+          		<feature var="urn:xmpp:message-retract:0"/>
+           		<feature var="urn:xmpp:reply:0"/>
+           		<feature var="urn:ietf:params:xml:ns:vcard-4.0"/>
               </query>
             </iq>
             """
