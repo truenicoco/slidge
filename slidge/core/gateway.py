@@ -380,7 +380,8 @@ class BaseGateway(  # type:ignore
         elif isinstance(exc, SystemExit):
             log.debug("SystemExit called in an asyncio task")
         else:
-            log.exception("Crash in an asyncio task: %s", context)
+            log.error("Crash in an asyncio task: %s", context)
+            log.exception("Crash in task", exc_info=exc)
             self.has_crashed = True
             loop.stop()
 
