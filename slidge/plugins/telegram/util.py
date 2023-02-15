@@ -1,7 +1,10 @@
+import asyncio
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
+
+from . import config
 
 if TYPE_CHECKING:
     from .group import MUC
@@ -197,10 +200,16 @@ class TelegramToXMPPMixin:
         query = tgapi.DownloadFile.construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
+        size = best_file.size
+        if size > config.ATTACHMENT_MAX_SIZE:
+            return self.send_text(
+                f"/me tried to send an attachment larger than {config.ATTACHMENT_MAX_SIZE}",
+                **kwargs,
+            )
         try:
             best_file_downloaded: tgapi.File = await self.session.tg.request(query)
-        except tgapi.BadRequest as e:
-            return await self.send_text(
+        except (tgapi.BadRequest, asyncio.TimeoutError) as e:
+            return self.send_text(
                 f"/me tried to send an attachment but something went wrong: {e}",
                 **kwargs,
             )
