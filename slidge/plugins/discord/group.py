@@ -83,6 +83,8 @@ class MUC(LegacyMUC[Session, int, Participant, int]):
         self.subject = chan.topic
 
         self.n_participants = chan.guild.approximate_member_count
+        if icon := chan.guild.icon:
+            self.avatar = str(icon)
 
     async def backfill(self):
         try:
