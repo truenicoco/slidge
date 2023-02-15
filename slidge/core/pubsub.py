@@ -178,6 +178,11 @@ class PubSubComponent(BasePlugin):
                 return
             try:
                 contact = await session.contacts.by_jid(to)
+            except XMPPError as e:
+                log.debug(
+                    "Could not determine if %s was added to the roster: %s", to, e
+                )
+                return
             except Exception as e:
                 log.warning("Could not determine if %s was added to the roster.", to)
                 log.exception(e)
