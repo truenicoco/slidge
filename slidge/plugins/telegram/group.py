@@ -1,6 +1,7 @@
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
@@ -49,7 +50,6 @@ class Bookmarks(LegacyBookmarks):
 class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
-    name = "unnamed"
     # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
     type = MucType.GROUP
 
@@ -65,10 +65,23 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
         chat = await tg.get_chat(self.legacy_id)
         if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
             group = await tg.get_basic_group(chat.type_.basic_group_id)
+            info = await tg.get_basic_group_full_info(group.id)
         elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
             group = await tg.get_supergroup(chat.type_.supergroup_id)
+            info = await tg.get_supergroup_full_info(group.id)
         else:
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
+        if photo := info.photo:
+            best = min(photo.sizes, key=lambda x: x.width).photo
+            file = await tg.api.download_file(
+                best.id,
+                priority=32,
+                offset=0,
+                limit=0,
+                skip_validation=True,
+                synchronous=True,
+            )
+            self.avatar = Path(file.local.path)
         self.n_participants = group.member_count
         self.name = self.description = chat.title
 
