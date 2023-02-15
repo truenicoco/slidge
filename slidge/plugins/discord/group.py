@@ -32,8 +32,12 @@ class Participant(LegacyParticipant, Mixin):  # type: ignore
         if quoted_msg.author == self.session.discord.user:
             reply_to_author = await muc.get_user_participant()
         else:
-            contact = await self.session.contacts.by_discord_user(quoted_msg.author)
-            reply_to_author = await muc.get_participant_by_contact(contact)
+            try:
+                contact = await self.session.contacts.by_discord_user(quoted_msg.author)
+            except XMPPError:
+                reply_to_author = await muc.get_participant(str(quoted_msg.author))
+            else:
+                reply_to_author = await muc.get_participant_by_contact(contact)
         reply_kwargs["reply_to_author"] = reply_to_author
 
         return quoted_msg, reply_kwargs
