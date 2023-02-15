@@ -131,3 +131,17 @@ class MUC(LegacyMUC[Session, int, Participant, int]):
             )
         except XMPPError:
             return await self.get_participant(user.display_name)
+
+    async def create_thread(self, xmpp_id: str) -> int:
+        ch = await self.get_discord_channel()
+
+        try:
+            thread_id = int(xmpp_id)
+        except ValueError:
+            pass
+        else:
+            if thread_id in (t.id for t in ch.threads):
+                return thread_id
+
+        thread = await ch.create_thread(name=xmpp_id, type=di.ChannelType.public_thread)
+        return thread.id

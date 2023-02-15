@@ -45,7 +45,12 @@ class Mixin:
         reply_kwargs["reply_to_msg_id"] = quoted_msg_id
 
         try:
-            quoted_msg = await message.channel.fetch_message(quoted_msg_id)
+            if message.type == di.MessageType.thread_starter_message:
+                assert isinstance(message.channel, di.Thread)
+                assert isinstance(message.channel.parent, di.TextChannel)
+                quoted_msg = await message.channel.parent.fetch_message(quoted_msg_id)
+            else:
+                quoted_msg = await message.channel.fetch_message(quoted_msg_id)
         except di.errors.NotFound:
             reply_kwargs = {
                 "reply_to_fallback_text": "[quoted message could not be fetched]"
@@ -63,15 +68,31 @@ class Mixin:
 
         self.session.log.debug("REPLY TO KWARGS %s", reply_kwargs)
 
-        text = message.content
+        mtype = message.type
+        if mtype == di.MessageType.thread_created:
+            text = f"/me created a thread named '{message.content}'"
+        elif mtype == di.MessageType.thread_starter_message:
+            text = f"I started a new thread from this message ↑"
+        else:
+            text = message.content
+
         attachments = message.attachments
         msg_id = message.id
+
+        channel = message.channel
+        if isinstance(channel, di.Thread):
+            thread = channel.id
+            if message.type == di.MessageType.channel_name_change:
+                text = f"/me renamed this thread: {text}"
+        else:
+            thread = None
 
         if not attachments:
             return self.send_text(
                 text,
                 legacy_msg_id=msg_id,
                 when=message.created_at,
+                thread=thread,
                 **reply_kwargs,
                 archive_only=archive_only,
             )
@@ -85,6 +106,7 @@ class Mixin:
                 content_type=attachment.content_type,
                 legacy_msg_id=msg_id if last else None,
                 caption=text if last else None,
+                thread=thread,
                 **reply_kwargs if last else {},
                 archive_only=archive_only,
                 when=message.created_at,

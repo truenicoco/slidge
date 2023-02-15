@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Union
 
 import discord as di
-from discord.threads import Thread
 
 if TYPE_CHECKING:
     from . import Contact
@@ -28,8 +27,12 @@ class Discord(di.Client):
         if isinstance(channel, di.GroupChannel):
             return
 
-        if isinstance(channel, Thread):
-            return
+        if isinstance(channel, di.Thread):
+            parent = channel.parent
+            if isinstance(parent, di.TextChannel):
+                channel = parent
+            else:
+                return
 
         # types: TextChannel, VoiceChannel, Thread, DMChannel, PartialMessageable, GroupChannel
 
@@ -52,7 +55,7 @@ class Discord(di.Client):
             return await participant.send_message(message)
 
     async def on_carbon(self, message: di.Message):
-        assert isinstance(message.channel, (di.DMChannel, di.TextChannel))
+        assert isinstance(message.channel, (di.DMChannel, di.TextChannel, di.Thread))
 
         async with self.session.send_lock:
             fut = self.session.send_futures.get(message.id)
@@ -66,8 +69,14 @@ class Discord(di.Client):
             elif isinstance(message.channel, di.TextChannel):
                 muc = await self.session.bookmarks.by_legacy_id(message.channel.id)
                 participant = await muc.get_user_participant()
+                participant.send_text(message.content, legacy_msg_id=message.id)
+            elif isinstance(message.channel, di.Thread):
+                muc = await self.session.bookmarks.by_legacy_id(
+                    message.channel.parent_id
+                )
+                participant = await muc.get_user_participant()
                 participant.send_text(
-                    message.content, legacy_msg_id=message.id, carbon=True
+                    message.content, legacy_msg_id=message.id, thread=message.channel.id
                 )
             else:
                 self.log.warning("Ignoring carbon? %s", message)

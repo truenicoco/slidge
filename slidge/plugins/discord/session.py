@@ -54,10 +54,10 @@ class Session(
         chat,
         text: str,
         reply_to_msg_id=None,
-        reply_to_fallback_text: Optional[str] = None,
+        thread=None,
         **kwargs,
     ):
-        recipient = await get_recipient(chat)
+        recipient = await get_recipient(chat, thread)
         if reply_to_msg_id is None:
             reference = None
         else:
@@ -75,30 +75,30 @@ class Session(
     async def logout(self):
         await self.discord.close()
 
-    async def send_file(self, chat: Recipient, url: str, **kwargs):
+    async def send_file(self, chat: Recipient, url: str, thread=None, **kwargs):
         # discord clients inline previews of external URLs, so no need to actually send on discord servers
-        recipient = await get_recipient(chat)
+        recipient = await get_recipient(chat, thread)
         await recipient.send(url)
 
-    async def active(self, c: "Contact"):
+    async def active(self, c: "Contact", thread=None):
         pass
 
-    async def inactive(self, c: "Contact"):
+    async def inactive(self, c: "Contact", thread=None):
         pass
 
-    async def composing(self, c: "Contact"):
-        recipient = await get_recipient(c)
+    async def composing(self, c: "Contact", thread=None):
+        recipient = await get_recipient(c, thread)
         await recipient.trigger_typing()
 
-    async def paused(self, c: "Contact"):
+    async def paused(self, c: "Contact", thread=None):
         pass
 
-    async def displayed(self, c: "Contact", legacy_msg_id: int):
+    async def displayed(self, c: "Contact", legacy_msg_id: int, thread=None):
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
 
-        recipient = await get_recipient(c)
+        recipient = await get_recipient(c, thread)
         try:
             m = await recipient.fetch_message(legacy_msg_id)
         except di.errors.NotFound:
@@ -111,16 +111,18 @@ class Session(
                 "Message %s should have been marked as read but this raised %s", m, e
             )
 
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any):
-        channel = await get_recipient(c)
+    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
+        channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
         self.edit_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await m.edit(content=text)
         await self.edit_futures[legacy_msg_id]
 
-    async def react(self, c: "Contact", legacy_msg_id: int, emojis: list[str]):
-        channel = await get_recipient(c)
+    async def react(
+        self, c: "Contact", legacy_msg_id: int, emojis: list[str], thread=None
+    ):
+        channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
 
@@ -133,8 +135,8 @@ class Session(
         for e in legacy_reactions - xmpp_reactions:
             await m.remove_reaction(e, self.discord.user)  # type:ignore
 
-    async def retract(self, c: "Contact", legacy_msg_id: Any):
-        channel = await get_recipient(c)
+    async def retract(self, c: "Contact", legacy_msg_id: Any, thread=None):
+        channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
         self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
@@ -167,9 +169,14 @@ class Session(
 
 
 async def get_recipient(
-    chat: Union["Contact", "MUC"]
-) -> Union[di.User, di.TextChannel]:
+    chat: Union["Contact", "MUC"], thread: Optional[int]
+) -> Union[di.User, di.TextChannel, di.Thread]:
     if chat.is_group:
-        return await chat.get_discord_channel()  # type:ignore
+        channel = await chat.get_discord_channel()  # type:ignore
+        if thread:
+            discord_thread = channel.get_thread(thread)
+            if discord_thread is not None:
+                return discord_thread
+        return channel
     else:
         return chat.discord_user  # type:ignore
