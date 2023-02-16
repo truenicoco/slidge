@@ -4,8 +4,8 @@ Slidge can be configured via CLI args, environment variables and/or INI files.
 To use env vars, use this convention: ``--home-dir`` becomes ``HOME_DIR``.
 
 Everything in ``/etc/slidge/conf.d/*`` is automatically used.
-To use a plugin-specific INI file, put in another dir, and launch slidge with
-``-c /path/to/plugin-specific.conf``.
+To use a plugin-specific INI file, put it in another dir,
+and launch slidge with ``-c /path/to/plugin-specific.conf``.
 Use the long version of the CLI arg without the double dash prefix inside this
 INI file, eg ``debug=true``.
 

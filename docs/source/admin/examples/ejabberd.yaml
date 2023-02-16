@@ -1,0 +1,51 @@
+listen:
+  -
+    ip: 127.0.0.1
+    port: 5347
+    module: ejabberd_service
+    hosts:
+      - "superduper.example.org":
+          password: secret
+      - "other-walled-garden.example.org":
+          password: some-other-secret
+      # repeat for other slidge plugins…
+      # upload-service=example.org in Slidge's config
+      - "example.org"
+
+  # HTTP upload service (XEP-0363)
+  -
+    port: 5443
+    module: ejabberd_http
+    tls: true
+    request_handlers:
+      /upload: mod_http_upload
+
+acl:
+  slidge_acl:
+    server:
+      - "superduper.example.org"
+      - "other-walled-garden.example.org"
+      # repeat for other slidge plugins…
+
+access_rules:
+  slidge_rule:
+    - allow: slidge_acl
+
+modules:
+  mod_http_upload:
+    # A path that ejabberd has Read and Write access to
+    docroot: /ejabberd/upload
+    put_url: "https://@HOST@:5443/upload"
+    access:
+      - allow: local
+      - allow: slidge_acl
+
+  # for roster auto-fill and "carbons from legacy apps"
+  # (broken in ejabberd when this was written, hopefully fixed since)
+  mod_privilege:
+    roster:
+      both: slidge_rule
+    message:
+      outgoing: slidge_rule
+  mod_roster:
+    versioning: true

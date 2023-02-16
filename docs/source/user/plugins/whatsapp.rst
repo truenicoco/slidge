@@ -9,7 +9,7 @@ WhatsApp
 Roster
 ******
 
-Contact JIDs are of the form ``+<phone-number>@slidge-whatsapp.example.com``, where
+Contact JIDs are of the form ``+<phone-number>@slidge-whatsapp.example.org``, where
 ``<phone-number>`` is the contact's phone number in international format (e.g. ``+442087599036``.
 Contacts will be added to the roster as they engage with your account, and may not all appear at
 once as they exist in the official client.

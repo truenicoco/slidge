@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc.typehints",
+    "sphinx.ext.autosectionlabel",
     "sphinxarg.ext",
     "autoapi.extension",
 ]

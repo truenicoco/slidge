@@ -7,7 +7,7 @@ Steam
 Roster
 ******
 
-Contact JIDs are of the form ``123459789@slidge-steam.example.com`` where ``123459789`` is a
+Contact JIDs are of the form ``123459789@slidge-steam.example.org`` where ``123459789`` is a
 steam user ID.
 
 Your friends are added to your roster on registration.

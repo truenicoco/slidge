@@ -1,9 +1,22 @@
-============================
-Launch the gateway component
-============================
+===================
+Running as a daemon
+===================
 
-Debian packages
-===============
+While you can launch slidge interactively from the command-line, it is recommended
+to set up a way to launch slidge automatically on startup, i.e., as a *daemon*.
+
+This page describes how to achieve that with the :ref:`Debian packages (systemd)` or
+with :ref:`Containers` (using systemd and podman).
+
+Other options (SysV, docker, ...) are also possible but not documented here (as usual,
+contributions are welcome).
+
+.. note::
+
+    In this page we assume that you have fulfilled the basic :ref:`XMPP server config`.
+
+Debian packages (systemd)
+=========================
 
 Edit and remove the ``.example`` extension for ``/etc/slidge/conf.d/common.conf``
 and ``/etc/slidge/superduper.conf.example``.
@@ -11,11 +24,6 @@ Enable and start the service with ``sudo systemctl enable --now slidge@superdupe
 
 Containers
 ==========
-
-.. note::
-    The guide describes how to run slidge as containers with podman, but it is also possible
-    to set it up differently, for instance by using the OS's python install, a virtual environment,
-    pipx, ...
 
 Installation
 ------------
@@ -32,7 +40,7 @@ Let's launch the container:
       --detach \                  # detach from tty
       docker.io/nicocool84/slidge-superduper:latest \
       --secret=secret \           # secret used to connect, as per the XMPP server config
-      --jid=telegram.example.com  # JID of the gateway component, as per the XMPP server config
+      --jid=telegram.example.org  # JID of the gateway component, as per the XMPP server config
 
 Congrats, users of your XMPP server can now chat with their buddies on the "Super Duper Chat Network",
 yoohoo!
@@ -81,8 +89,8 @@ Create slidge conf files, to avoid passing everything as CLI arguments (as root)
 .. code-block:: bash
 
     mkdir -p /etc/slidge/conf.d/
-    echo "admins=admin@example.com" > /etc/slidge/conf.d/common.conf
-    echo "jid=superduper.example.com" > /etc/slidge/conf.d/superduper.conf
+    echo "admins=admin@example.org" > /etc/slidge/conf.d/common.conf
+    echo "jid=superduper.example.org" > /etc/slidge/conf.d/superduper.conf
     echo "secret=a_real_secret" >> /etc/slidge/conf.d/superduper.conf
 
 

@@ -17,7 +17,7 @@ login is detected as suspicious by facebook's automated security stuff.
 Roster
 ******
 
-Contact JIDs are of the form ``john.doe123@slidge-facebook.example.com`` where ``john.doe123`` is a
+Contact JIDs are of the form ``john.doe123@slidge-facebook.example.org`` where ``john.doe123`` is a
 facebook username (also seen in ``https://facebook.com/john.doe123``).
 
 The 2 last facebook friends you interacted with should be added to your roster on slidge's registration.

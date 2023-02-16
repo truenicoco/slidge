@@ -1,10 +1,6 @@
 Slidge
 ======
 
-.. image:: https://badge.fury.io/py/slidge.svg
-  :alt: PyPI package
-  :target: https://pypi.org/project/slidge/
-
 Slidge is a general purpose XMPP gateway framework in python.
 
 Blog posts about slidge for a general overview of what slidge does:
@@ -24,8 +20,8 @@ Issue tracker: https://todo.sr.ht/~nicoco/slidge
 .. toctree::
    :maxdepth: 2
 
-   user/index
    admin/index
+   user/index
    dev/index
    glossary
 

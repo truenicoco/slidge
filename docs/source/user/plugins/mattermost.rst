@@ -10,7 +10,7 @@ Mattermost
 Roster
 ******
 
-Your contacts' puppet JIDs are of the form ``john.doe@slidge-mattermost.example.com`` where
+Your contacts' puppet JIDs are of the form ``john.doe@slidge-mattermost.example.org`` where
 ``john.doe`` is their mattermost usernames.
 Your roster is filled on startup with the users you interacted with, eg, have a
 "direct message channel" with.

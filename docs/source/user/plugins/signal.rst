@@ -14,10 +14,10 @@ Roster
 If you link your signal account to a "primary" signal device (eg, the official android signal app),
 your contacts should be added to your roster on slidge registration.
 
-Contact JIDs are of the form ``<UUID>@slidge-signal.example.com``.
+Contact JIDs are of the form ``<UUID>@slidge-signal.example.org``.
 To search for a UUID using a phone number, use the dedicated search command or the ``find``
 chat command.
-More info: `Finding legacy contacts`_.
+More info: :ref:`Finding legacy contacts`.
 
 Presences
 *********

@@ -9,5 +9,5 @@ Discord
 Roster
 ******
 
-Contact JIDs are of the form ``123456@slidge-discord.example.com`` where ``123456`` is a
+Contact JIDs are of the form ``123456@slidge-discord.example.org`` where ``123456`` is a
 discord user ID.
