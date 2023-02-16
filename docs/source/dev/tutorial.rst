@@ -37,18 +37,11 @@ Put this in a file called ``superduper.py``:
             await self.legacy.login()
 
         async def incoming_legacy_message(self, msg: super_duper.api.Message):
-            contact = self.contacts.by_legacy_id(msg.sender)
+            contact = await self.contacts.by_legacy_id(msg.sender)
             contact.send_text(msg.text)
 
-        async def send_text(
-            self,
-            text: str,
-            c: LegacyContact,
-            *,
-            reply_to_msg_id=None,
-            reply_to_fallback_text=None
-        ):
-            self.legacy.send_message(text=text, destination=c.legacy_id)
+        async def send_text(self, chat: Recipient, text: str, *kwargs):
+            self.legacy.send_message(text=text, destination=chat.legacy_id)
 
 
 This can now be launched using ``slidge --legacy-network=superduper --server=...``
@@ -104,7 +97,7 @@ Login
 
 .. code-block:: python
 
-        async def login(self, p: Presence):
+        async def login(self):
             await self.legacy.login()
 
 When the gateway user is logged, this method is called on its :py:attr:`slidge.Session.user`
@@ -117,7 +110,7 @@ From legacy to XMPP
 .. code-block:: python
 
         async def incoming_legacy_message(self, msg: super_duper.api.Message):
-            contact = self.contacts.by_legacy_id(msg.sender)
+            contact = await self.contacts.by_legacy_id(msg.sender)
             contact.send_text(msg.body, legacy_msg_id=msg.id)
 
 We are really lucky, superduper user IDs can directly be mapped to the user part
@@ -130,15 +123,8 @@ From XMPP to legacy
 
 .. code-block:: python
 
-        async def send_text(
-            self,
-            text: str,
-            c: LegacyContact,
-            *,
-            reply_to_msg_id=None,
-            reply_to_fallback_text=None
-        ):
-            self.legacy.send_message(text=text, destination=c.legacy_id)
+        async def send_text(self, chat: Recipient, text: str, *kwargs):
+            self.legacy.send_message(text=text, destination=chat.legacy_id)
 
 When our user sends a message to ``something@superduper.example.com``,
 this method is automagically called, allowing us to transmit the message to the legacy network.

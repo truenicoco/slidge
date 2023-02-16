@@ -1,0 +1,41 @@
+listen:
+  -
+    ip: 127.0.0.1
+    port: 5347
+    module: ejabberd_service
+    hosts:
+      - "superduper.example.com":
+          password: secret
+      - "example.com"
+  -  # for the 'upload' option for attachments
+    port: 5443
+    module: ejabberd_http
+    tls: true
+    request_handlers:
+      /upload: mod_http_upload
+
+acl:
+  slidge_acl:
+    server:
+      - "superduper.example.com"
+
+access_rules:
+  slidge_rule:
+    - allow: slidge_acl
+
+modules:
+  # for the 'upload' option for attachments
+  mod_http_upload:
+    docroot: /ejabberd/upload     # Can be any path as long as ejabberd has Read and Write access to the directory.
+    put_url: "https://@HOST@:5443/upload"
+    access:
+      - allow: local
+      - allow: slidge_acl
+  # for privileges
+  mod_privilege:
+    roster:
+      both: slidge_rule
+    message:
+      outgoing: slidge_rule
+  mod_roster:
+    versioning: true

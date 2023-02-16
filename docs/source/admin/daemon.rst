@@ -1,6 +1,14 @@
-============================
-Launch the gateway component
-============================
+===================
+Running as a daemon
+===================
+
+While you can launch slidge interactively from the command-line, it is recommended
+to set up a way to launch slidge automatically on startup, i.e., as a *daemon*.
+
+This page describes how to achieve that with the slidge debian packages (using systemd) or
+with containers (using systemd and podman).
+
+Other options (SysV, docker, ...) are also possible but not documented here.
 
 Debian packages
 ===============
@@ -11,11 +19,6 @@ Enable and start the service with ``sudo systemctl enable --now slidge@superdupe
 
 Containers
 ==========
-
-.. note::
-    The guide describes how to run slidge as containers with podman, but it is also possible
-    to set it up differently, for instance by using the OS's python install, a virtual environment,
-    pipx, ...
 
 Installation
 ------------
