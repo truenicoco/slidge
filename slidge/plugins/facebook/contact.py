@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 from maufbapi.types import mqtt as mqtt_t
@@ -30,12 +31,13 @@ class Contact(LegacyContact["Session", int]):
     async def get_thread(self, **kwargs):
         return (await self.session.api.fetch_thread_info(self.legacy_id, **kwargs))[0]
 
-    async def send_fb_sticker(self, sticker_id: int, legacy_msg_id: str):
+    async def send_fb_sticker(self, sticker_id: int, legacy_msg_id: str, **kwargs):
         resp = await self.session.api.fetch_stickers([sticker_id])
         await self.send_file(
             file_url=resp.nodes[0].preview_image.uri,
             legacy_file_id=f"sticker-{sticker_id}",
             legacy_msg_id=legacy_msg_id,
+            **kwargs,
         )
 
     async def update_info(self):
@@ -45,6 +47,68 @@ class Contact(LegacyContact["Session", int]):
             t.all_participants.nodes
         )
         await self.populate_from_participant(participant)
+
+    async def send_fb_message(self, msg: mqtt_t.Message, **kwargs):
+        meta = msg.metadata
+        kwargs["legacy_msg_id"] = msg.metadata.id
+
+        sticker = msg.sticker
+        if sticker is not None:
+            return await self.send_fb_sticker(sticker, **kwargs)
+
+        if msg.attachments:
+            return await self.send_fb_attachment(msg, **kwargs)
+
+        text = msg.text
+
+        if text:
+            self.send_text(text, **kwargs)
+
+    async def send_fb_attachment(self, msg, **kwargs):
+        attachments = msg.attachments
+        meta = msg.metadata
+        thread_key = meta.thread
+        msg_id = meta.id
+        last_attachment_i = len(attachments) - 1
+        text = msg.text
+        carbon = kwargs.pop("carbon", False)
+        for i, a in enumerate(attachments):
+            last = i == last_attachment_i
+            url = await self.get_attachment_url(a, thread_key, msg_id)
+            if url is None:
+                log.warning("Unhandled attachment: %s", a)
+                self.send_text(
+                    "/me sent an attachment that slidge does not support", carbon=carbon
+                )
+                continue
+            await self.send_file(
+                file_name=a.file_name,
+                content_type=a.mime_type,
+                file_url=url,
+                caption=text if last else None,
+                legacy_file_id=a.media_id,
+                carbon=carbon,
+                **(kwargs if last else {}),
+            )
+
+    async def get_attachment_url(
+        self, attachment: mqtt_t.Attachment, thread_key, msg_id
+    ):
+        try:
+            if v := attachment.video_info:
+                return v.download_url
+            if a := attachment.audio_info:
+                return a.url
+            if i := attachment.image_info:
+                return i.uri_map.get(0)
+        except AttributeError:
+            media_id = getattr(attachment, "media_id", None)
+            if media_id:
+                return await self.session.api.get_file_url(
+                    thread_key.thread_fbid or thread_key.other_user_id,
+                    msg_id,
+                    media_id,
+                )
 
 
 class Roster(LegacyRoster["Session", Contact, int]):
@@ -78,3 +142,6 @@ class Roster(LegacyRoster["Session", Contact, int]):
             raise XMPPError(
                 "internal-server-error", "Couldn't find friend in thread participants"
             )
+
+
+log = logging.getLogger(__name__)

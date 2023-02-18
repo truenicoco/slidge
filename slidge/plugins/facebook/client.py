@@ -114,71 +114,27 @@ class AndroidMQTT(AndroidMQTTOriginal):
 
         contact = await self.session.contacts.by_thread_key(thread_key)
 
+        fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
+
         if not contact.added_to_roster:
             await contact.add_to_roster()
 
-        fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
         if meta.sender == self.session.my_id:
             try:
                 fut = self.session.ack_futures.pop(meta.offline_threading_id)
             except KeyError:
                 log.debug("Received carbon %s - %s", meta.id, msg.text)
-                contact.send_text(body=msg.text, legacy_id=meta.id, carbon=True)
+                kwargs["carbon"] = True
                 log.debug("Sent carbon")
                 self.session.sent_messages[thread_key.other_user_id].add(fb_msg)
             else:
                 log.debug("Received echo of %s", meta.offline_threading_id)
                 fut.set_result(fb_msg)
+                return
         else:
             self.session.received_messages[thread_key.other_user_id].add(fb_msg)
-            msg_id = meta.id
-            kwargs["legacy_msg_id"] = msg_id
 
-            sticker = msg.sticker
-            if sticker is not None:
-                return await contact.send_fb_sticker(sticker, **kwargs)
-
-            text = msg.text
-            if not (attachments := msg.attachments):
-                if text:
-                    contact.send_text(text, **kwargs)
-                return
-
-            last_attachment_i = len(attachments) - 1
-            for i, a in enumerate(attachments):
-                last = i == last_attachment_i
-                try:
-                    url = (
-                        ((v := a.video_info) and v.download_url)
-                        or ((au := a.audio_info) and au.url)
-                        or a.image_info.uri_map.get(0)
-                    )
-                except AttributeError:
-                    media_id = getattr(a, "media_id", None)
-                    if media_id:
-                        url = await self.session.api.get_file_url(
-                            thread_key.thread_fbid or thread_key.other_user_id,
-                            msg_id,
-                            media_id,
-                        )
-                    else:
-                        log.warning("Unhandled attachment: %s", a)
-                        contact.send_text(
-                            "/me sent an attachment that slidge does not support"
-                        )
-                        continue
-                if url is None:
-                    if last:
-                        contact.send_text(text, **kwargs)
-                    continue
-                await contact.send_file(
-                    file_name=a.file_name,
-                    content_type=a.mime_type,
-                    file_url=url,
-                    caption=text if last else None,
-                    legacy_file_id=a.media_id,
-                    **(kwargs if last else {}),
-                )
+        await contact.send_fb_message(msg, **kwargs)
 
     async def on_fb_message_read(self, receipt: mqtt_t.ReadReceipt):
         log.debug("Facebook read: %s", receipt)
