@@ -42,7 +42,7 @@ class Mixin:
         if not quoted_msg_id:
             return None, reply_kwargs
 
-        reply_kwargs["reply_to"] = quoted_msg_id
+        reply_kwargs["reply_to_msg_id"] = quoted_msg_id
 
         try:
             quoted_msg = await message.channel.fetch_message(quoted_msg_id)
