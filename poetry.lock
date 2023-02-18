@@ -363,8 +363,8 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 [package.source]
 type = "git"
 url = "https://github.com/dolfies/discord.py-self.git"
-reference = "b5c506e"
-resolved_reference = "b5c506e488100ec6e1a28e7f8111f9be8376f73f"
+reference = "6887e34"
+resolved_reference = "6887e34fcd3854ad2a3b145fae34cb6c2aa66fb8"
 
 [[package]]
 name = "docutils"
@@ -1381,7 +1381,7 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.13.0"
+version = "3.14.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "dev"
 optional = false
@@ -1448,7 +1448,7 @@ telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "af2dda2b41760a30f56ac5f1e89cdef49975f9d0d0feaf4f7f65c972a6adc8df"
+content-hash = "769939a7c9f19f08bdfd2bf45028b74ee6eec57c7e8b68515500f06794eac4d2"
 
 [metadata.files]
 aiodns = [
@@ -3180,8 +3180,8 @@ yarl = [
     {file = "yarl-1.8.2.tar.gz", hash = "sha256:49d43402c6e3013ad0978602bf6bf5328535c48d192304b91b97a3c6790b1562"},
 ]
 zipp = [
-    {file = "zipp-3.13.0-py3-none-any.whl", hash = "sha256:e8b2a36ea17df80ffe9e2c4fda3f693c3dad6df1697d3cd3af232db680950b0b"},
-    {file = "zipp-3.13.0.tar.gz", hash = "sha256:23f70e964bc11a34cef175bc90ba2914e1e4545ea1e3e2f67c079671883f9cb6"},
+    {file = "zipp-3.14.0-py3-none-any.whl", hash = "sha256:188834565033387710d046e3fe96acfc9b5e86cbca7f39ff69cf21a4128198b7"},
+    {file = "zipp-3.14.0.tar.gz", hash = "sha256:9e5421e176ef5ab4c0ad896624e87a7b2f07aca746c9b2aa305952800cb8eecb"},
 ]
 zope-event = [
     {file = "zope.event-4.6-py2.py3-none-any.whl", hash = "sha256:73d9e3ef750cca14816a9c322c7250b0d7c9dbc337df5d1b807ff8d3d0b9e97c"},
