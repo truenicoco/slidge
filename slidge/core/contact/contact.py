@@ -82,7 +82,7 @@ class LegacyContact(
         self.added_to_roster = False
 
         self._name: Optional[str] = None
-        self._avatar: Optional[AvatarType] = None
+        self._avatar: Optional[Union[AvatarType, bool]] = None
 
         self._subscribe_from = True
         self._subscribe_to = True
@@ -198,14 +198,13 @@ class LegacyContact(
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
-        if a == self._avatar:
-            return
         self.xmpp.loop.create_task(
             self.xmpp.pubsub.set_avatar(
                 jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
             )
         )
-        self._avatar = a
+        # if it's bytes, we don't want to cache it in RAM, so just a bool to know it has been set
+        self._avatar = isinstance(a, bytes) or a
 
     def set_vcard(
         self,
