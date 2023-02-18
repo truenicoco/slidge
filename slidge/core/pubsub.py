@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import io
 import logging
+import uuid
 from copy import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
@@ -38,8 +39,17 @@ class PepAvatar(PepItem):
     def __init__(self, authorized_jid: Optional[JidStr] = None):
         super().__init__(authorized_jid)
         self.metadata: Optional[AvatarMetadata] = None
-        self.data: Optional[AvatarData] = None
         self.id: Optional[str] = None
+        self._avatar_data_path: Optional[Path] = None
+        self._cache_dir = avatar_cache.dir
+
+    @property
+    def data(self) -> Optional[AvatarData]:
+        if self._avatar_data_path is None:
+            return None
+        data = AvatarData()
+        data.set_value(self._avatar_data_path.read_bytes())
+        return data
 
     async def set_avatar(self, avatar: AvatarType):
         if isinstance(avatar, str):
@@ -80,9 +90,9 @@ class PepAvatar(PepItem):
         )
         self.metadata = metadata
 
-        data = AvatarData()
-        data.set_value(avatar_bytes)
-        self.data = data
+        path = (self._cache_dir / str(uuid.uuid4())).with_suffix(".png")
+        path.write_bytes(avatar_bytes)
+        self._avatar_data_path = path
 
     async def set_avatar_from_url(self, url: str):
         avatar = await avatar_cache.get_avatar(url)
@@ -96,10 +106,7 @@ class PepAvatar(PepItem):
             width=str(avatar.width),
         )
         self.metadata = metadata
-
-        data = AvatarData()
-        data.set_value(avatar.data)
-        self.data = data
+        self._avatar_data_path = avatar.path
 
 
 class PepNick(PepItem):

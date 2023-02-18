@@ -1,8 +1,10 @@
+import tempfile
 from base64 import b64encode
 from pathlib import Path
 
 from slixmpp.test import SlixTest
 
+from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PubSubComponent
 
 
@@ -106,6 +108,8 @@ class TestPubSubAvatar(SlixTest):
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
         self.xmpp.get_session_from_jid = lambda j: MockSession
+        self.temp_dir = tempfile.TemporaryDirectory()
+        avatar_cache.dir = Path(self.temp_dir.name)
 
     def advertise_avatar(self):
         img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

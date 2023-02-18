@@ -27,16 +27,20 @@ class CachedAvatar:
 
     @property
     def data(self):
-        return (self.root / self.filename).read_bytes()
+        return self.path.read_bytes()
+
+    @property
+    def path(self):
+        return self.root / self.filename
 
 
 class AvatarCache:
     _shelf: shelve.Shelf[CachedAvatar]
-    _dir: Path
+    dir: Path
 
     def set_dir(self, path: Path):
-        self._dir = path
-        self._dir.mkdir(exist_ok=True)
+        self.dir = path
+        self.dir.mkdir(exist_ok=True)
         self._shelf = shelve.open(str(path / "slidge_url_avatars.shelf"))  # type: ignore
 
     def close(self):
@@ -46,7 +50,7 @@ class AvatarCache:
     async def get_avatar(self, url: str):
         cached = self._shelf.get(url)
         headers = {}
-        if cached and (self._dir / cached.filename).exists():
+        if cached and (self.dir / cached.filename).exists():
             if last_modified := cached.last_modified:
                 headers["If-Modified-Since"] = last_modified
             if etag := cached.etag:
@@ -72,7 +76,7 @@ class AvatarCache:
             log.debug("Resampled image to %s", img.size)
 
         filename = str(uuid.uuid1())
-        file_path = self._dir / filename
+        file_path = self.dir / filename
 
         with io.BytesIO() as f:
             img.save(f, format="PNG")
@@ -90,7 +94,7 @@ class AvatarCache:
             width=img.width,
             etag=response_headers.get("etag"),
             last_modified=response_headers.get("last-modified"),
-            root=self._dir,
+            root=self.dir,
         )
         self._shelf[url] = avatar
         self._shelf.sync()
