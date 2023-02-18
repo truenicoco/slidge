@@ -6,7 +6,7 @@ def facebook():
     import slidge.plugins.facebook
     import slidge
 
-    yield slidge.plugins.facebook
+    yield slidge.plugins.facebook.util
 
     # https://stackoverflow.com/a/14422979/5902284
 

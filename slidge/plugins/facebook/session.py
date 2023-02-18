@@ -1,221 +1,22 @@
 import asyncio
-import json
 import logging
-import random
 import shelve
-import zlib
-from collections import OrderedDict, defaultdict
-from dataclasses import dataclass
-from typing import Optional, Union
+from collections import defaultdict
+from typing import Union
 
-import maufbapi.types.graphql
-from maufbapi import AndroidAPI
-from maufbapi import AndroidMQTT as AndroidMQTTOriginal
-from maufbapi import AndroidState
-from maufbapi.mqtt.subscription import RealtimeTopic
-from maufbapi.proxy import ProxyHandler
-from maufbapi.thrift import ThriftObject
+import maufbapi.types
+from maufbapi import AndroidAPI, AndroidState, ProxyHandler
 from maufbapi.types import mqtt as mqtt_t
-from maufbapi.types.graphql import Participant, ParticipantNode, Thread
+from maufbapi.types.graphql import Participant
 from maufbapi.types.graphql.responses import FriendshipStatus
-from slixmpp import JID
 
 from slidge import *
-from slidge.core.command.register import RegistrationType, TwoFactorNotRequired
 
-
-class AndroidMQTT(AndroidMQTTOriginal):
-    # TODO: remove publish() and request() on maufbapi next release
-    #       since our PR has been merged
-    def publish(
-        self,
-        topic,
-        payload,
-        prefix: bytes = b"",
-        compress: bool = True,
-    ) -> asyncio.Future:
-        if isinstance(payload, dict):
-            payload = json.dumps(payload)
-        if isinstance(payload, str):
-            payload = payload.encode("utf-8")
-        if isinstance(payload, ThriftObject):
-            payload = payload.to_thrift()
-        if compress:
-            payload = zlib.compress(prefix + payload, level=9)
-        elif prefix:
-            payload = prefix + payload
-        info = self._client.publish(
-            topic.encoded if isinstance(topic, RealtimeTopic) else topic, payload, qos=1
-        )
-        fut = self._loop.create_future()
-        timeout_handle = self._loop.call_later(REQUEST_TIMEOUT, self._cancel_later, fut)
-        fut.add_done_callback(lambda _: timeout_handle.cancel())
-        self._publish_waiters[info.mid] = fut
-        return fut
-
-    async def request(
-        self,
-        topic: RealtimeTopic,
-        response: RealtimeTopic,
-        payload,
-        prefix: bytes = b"",
-    ):
-        async with self._response_waiter_locks[response]:
-            fut = self._loop.create_future()
-            self._response_waiters[response] = fut
-            await self.publish(topic, payload, prefix)
-            timeout_handle = self._loop.call_later(
-                REQUEST_TIMEOUT, self._cancel_later, fut
-            )
-            fut.add_done_callback(lambda _: timeout_handle.cancel())
-            return await fut
-
-    async def _dispatch(self, evt) -> None:
-        # by default, AndroidMQTT logs any exceptions here, but we actually
-        # want to let it propagate
-        for handler in self._event_handlers[type(evt)]:
-            self.log.trace("Dispatching event %s", evt)
-            await handler(evt)
-
-
-class Config:
-    CHATS_TO_FETCH = 20
-    CHATS_TO_FETCH__DOC = (
-        "The number of most recent chats to fetch on startup. "
-        "Getting all chats might hit rate limiting and possibly account lock. "
-        "Please report if you try with high values and don't hit any problem!"
-    )
-
-
-class Gateway(BaseGateway):
-    REGISTRATION_INSTRUCTIONS = "Enter facebook credentials"
-    REGISTRATION_FIELDS = [
-        FormField(var="email", label="Email", required=True),
-        FormField(var="password", label="Password", required=True, private=True),
-    ]
-    REGISTRATION_MULTISTEP = True
-    REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
-
-    ROSTER_GROUP = "Facebook"
-
-    COMPONENT_NAME = "Facebook (slidge)"
-    COMPONENT_TYPE = "facebook"
-    COMPONENT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
-
-    SEARCH_TITLE = "Search in your facebook friends"
-    SEARCH_INSTRUCTIONS = "Enter something that can be used to search for one of your friends, eg, a first name"
-    SEARCH_FIELDS = [FormField(var="query", label="Search term(s)", required=True)]
-
-    def __init__(self):
-        super().__init__()
-        self._pending_reg = dict[str, AndroidAPI]()
-
-    async def validate(
-        self, user_jid: JID, registration_form: dict[str, Optional[str]]
-    ):
-        s = AndroidState()
-        x = ProxyHandler(None)
-        api = AndroidAPI(state=s, proxy_handler=x)
-        s.generate(random.randbytes(30))  # type: ignore
-        await api.mobile_config_sessionless()
-        try:
-            await api.login(
-                email=registration_form["email"], password=registration_form["password"]
-            )
-        except maufbapi.http.errors.TwoFactorRequired:
-            self._pending_reg[user_jid.bare] = api
-        except maufbapi.http.errors.OAuthException as e:
-            raise XMPPError("not-authorized", text=str(e))
-        else:
-            save_state(user_jid.bare, api.state)
-            raise TwoFactorNotRequired
-
-    async def validate_two_factor_code(self, user: GatewayUser, code):
-        api = self._pending_reg.pop(user.bare_jid)
-        try:
-            await api.login_2fa(email=user.registration_form["email"], code=code)
-        except maufbapi.http.errors as e:
-            raise XMPPError("not-authorized", text=str(e))
-        save_state(user.bare_jid, api.state)
-
-
-def get_shelf_path(user_bare_jid):
-    return str(global_config.HOME_DIR / user_bare_jid)
-
-
-def save_state(user_bare_jid: str, state: AndroidState):
-    shelf_path = get_shelf_path(user_bare_jid)
-    with shelve.open(shelf_path) as shelf:
-        shelf["state"] = state
-
-
-class Contact(LegacyContact["Session", int]):
-    CORRECTION = False
-    REACTIONS_SINGLE_EMOJI = True
-
-    async def populate_from_participant(
-        self, participant: ParticipantNode, update_avatar=True
-    ):
-        if self.legacy_id != int(participant.messaging_actor.id):
-            raise XMPPError(
-                "bad-request",
-                f"Legacy ID {self.legacy_id} does not match participant {participant.messaging_actor.id}",
-            )
-        self.name = participant.messaging_actor.name
-        if self.avatar is None or update_avatar:
-            self.avatar = participant.messaging_actor.profile_pic_large.uri
-
-    async def get_thread(self, **kwargs):
-        return (await self.session.api.fetch_thread_info(self.legacy_id, **kwargs))[0]
-
-    async def send_fb_sticker(self, sticker_id: int, legacy_msg_id: str):
-        resp = await self.session.api.fetch_stickers([sticker_id])
-        await self.send_file(
-            file_url=resp.nodes[0].preview_image.uri,
-            legacy_file_id=f"sticker-{sticker_id}",
-            legacy_msg_id=legacy_msg_id,
-        )
-
-    async def update_info(self):
-        t = await self.get_thread(msg_count=0)
-
-        participant = self.session.contacts.get_friend_participant(
-            t.all_participants.nodes
-        )
-        await self.populate_from_participant(participant)
-
-
-class Roster(LegacyRoster["Session", Contact, int]):
-    async def by_thread_key(self, t: mqtt_t.ThreadKey):
-        if is_group_thread(t):
-            raise ValueError("Thread seems to be a group thread")
-        return await self.by_legacy_id(t.other_user_id)
-
-    async def by_thread(self, t: Thread):
-        if t.is_group_thread:
-            raise XMPPError(
-                "bad-request", f"Legacy ID {t.id} is a group chat, not a contact"
-            )
-
-        participant = self.get_friend_participant(t.all_participants.nodes)
-        contact = await self.by_legacy_id(int(participant.messaging_actor.id))
-        await contact.populate_from_participant(participant)
-        return contact
-
-    def get_friend_participant(self, nodes: list[ParticipantNode]) -> ParticipantNode:
-        if len(nodes) != 2:
-            raise XMPPError(
-                "internal-server-error",
-                "This facebook thread has more than two participants. This is a slidge bug.",
-            )
-
-        for participant in nodes:
-            if int(participant.id) != self.session.my_id:
-                return participant
-        else:
-            raise XMPPError(
-                "internal-server-error", "Couldn't find friend in thread participants"
-            )
+from . import config
+from .client import AndroidMQTT
+from .contact import Contact, Roster
+from .gateway import Gateway
+from .util import FacebookMessage, Messages, get_shelf_path, is_group_thread
 
 
 class Session(
@@ -276,7 +77,7 @@ class Session(
 
     async def add_friends(self):
         thread_list = await self.api.fetch_thread_list(
-            msg_count=0, thread_count=Config.CHATS_TO_FETCH
+            msg_count=0, thread_count=config.CHATS_TO_FETCH
         )
         self.mqtt.seq_id = int(thread_list.sync_sequence_id)
         self.log.debug("SEQ ID: %s", self.mqtt.seq_id)
@@ -555,46 +356,6 @@ class Session(
     @staticmethod
     async def on_fb_event(evt):
         log.debug("Facebook event: %s", evt)
-
-
-@dataclass
-class FacebookMessage:
-    mid: str
-    timestamp_ms: int
-
-
-class Messages:
-    def __init__(self):
-        self.by_mid: OrderedDict[str, FacebookMessage] = OrderedDict()
-        self.by_timestamp_ms: OrderedDict[int, FacebookMessage] = OrderedDict()
-
-    def __len__(self):
-        return len(self.by_mid)
-
-    def add(self, m: FacebookMessage):
-        self.by_mid[m.mid] = m
-        self.by_timestamp_ms[m.timestamp_ms] = m
-
-    def pop_up_to(self, approx_t: int) -> FacebookMessage:
-        i = 0
-        for i, t in enumerate(self.by_timestamp_ms.keys()):
-            if t > approx_t:
-                i -= 1
-                break
-        for j, t in enumerate(list(self.by_timestamp_ms.keys())):
-            msg = self.by_timestamp_ms.pop(t)
-            self.by_mid.pop(msg.mid)
-            if j == i:
-                return msg
-        else:
-            raise KeyError(approx_t)
-
-
-def is_group_thread(t: mqtt_t.ThreadKey):
-    return t.other_user_id is None and t.thread_fbid is not None
-
-
-REQUEST_TIMEOUT = 60
 
 
 log = logging.getLogger(__name__)
