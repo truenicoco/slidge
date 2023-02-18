@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
@@ -84,8 +85,7 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
 
         if photo := user.profile_photo:
             if (local := photo.small.local) and (path := local.path):
-                with open(path, "rb") as f:
-                    self.avatar = f.read()
+                self.avatar = Path(path)
             else:
                 try:
                     response = await self.session.tg.api.download_file(
@@ -99,8 +99,7 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
                     self.session.log.warning("Could not download avatar of %s", self)
                     self.session.log.exception(e)
                 else:
-                    with open(response.local.path, "rb") as f:
-                        self.avatar = f.read()
+                    self.avatar = Path(response.local.path)
 
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives
