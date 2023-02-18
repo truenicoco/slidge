@@ -305,7 +305,11 @@ class AttachmentMixin(MessageMaker):
         if legacy_file_id:
             cache = self.__legacy_file_ids_to_urls.get(legacy_file_id)
             if cache is not None:
-                return False, None, cache
+                async with self.session.http.head(cache) as r:
+                    if r.status < 400:
+                        return False, None, cache
+                    else:
+                        del self.__legacy_file_ids_to_urls[legacy_file_id]
 
         if file_url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             return False, None, file_url
