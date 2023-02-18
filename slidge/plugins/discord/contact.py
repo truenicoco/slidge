@@ -33,16 +33,17 @@ class Contact(LegacyContact[Session, int], Mixin):  # type: ignore
         if not u.is_friend():
             return
 
-        try:
-            profile = await u.profile()
-        except di.Forbidden:
-            self.session.log.debug("Forbidden to fetch the profile of %s", u)
-        except di.HTTPException as e:
-            self.session.log.debug(
-                "HTTP exception %s when fetch the profile of %s", e, u
-            )
-        else:
-            self.set_vcard(full_name=name, note=profile.bio)
+        # TODO: load vcard only on demand because this seems to easily hit rate limiting
+        # try:
+        #     profile = await u.profile(fetch_note=False)
+        # except di.Forbidden:
+        #     self.session.log.debug("Forbidden to fetch the profile of %s", u)
+        # except di.HTTPException as e:
+        #     self.session.log.debug(
+        #         "HTTP exception %s when fetch the profile of %s", e, u
+        #     )
+        # else:
+        #     self.set_vcard(full_name=name, note=profile.bio)
 
         # TODO: use the relationship here
         # relationship = u.relationship
