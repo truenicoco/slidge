@@ -178,12 +178,14 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
     async def get_tg_chat(self):
         return await self.session.tg.get_chat(self.legacy_id)
 
-    async def backfill(self):
-        for m in await self.fetch_history(config.GROUP_HISTORY_MAXIMUM_MESSAGES):
+    async def backfill(self, oldest_message_id=None, oldest_date=None):
+        for m in await self.fetch_history(
+            config.GROUP_HISTORY_MAXIMUM_MESSAGES, oldest_message_id
+        ):
             part = await self.participant_by_sender_id(m.sender_id)
             await part.send_tg_message(m, archive_only=True)
 
-    async def fetch_history(self, n: int, since: Optional[datetime] = None):
+    async def fetch_history(self, n: int, before: Optional[int] = None):
         tg = self.session.tg
         chat = await self.get_tg_chat()
         m = chat.last_message
@@ -219,12 +221,18 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
             if i > n:
                 break
 
-            if since is not None and fetched[-1].date < since.timestamp():
-                break
-
             last_message_id = fetched[-1].id
 
-        return reversed(messages)
+        messages = messages[::-1]
+        if before is not None:
+            try:
+                i = [m.id for m in messages].index(before)
+            except ValueError:
+                self.log.warning("Did not find oldest message in archive")
+            else:
+                messages = messages[:i]
+
+        return messages
 
     async def participant_by_sender_id(self, sender_id: tgapi.MessageSender):
         if isinstance(sender_id, tgapi.MessageSenderUser):

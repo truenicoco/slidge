@@ -118,7 +118,7 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
         self.history = []
         self.user_nick = "thirdwitch"
 
-    async def backfill(self):
+    async def backfill(self, _id=None, _when=None):
         for hour in range(10):
             sender = await self.get_participant(f"history-man-{hour}")
             sender.send_text(
@@ -145,16 +145,10 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
             second = await self.get_participant("secondwitch")
         first.affiliation = "owner"
         first.role = "moderator"
-        # if "private" in str(self.legacy_id):
-        #     first.contact = await self.session.contacts.by_legacy_id(111)
-        # yield first
 
-        # second = await self.get_participant("secondwitch")
         second.affiliation = "admin"
         second.role = "moderator"
-        # if "private" in str(self.legacy_id):
-        #     second.contact = await self.session.contacts.by_legacy_id(222)
-        # yield second
+
 
     async def update_info(self):
         if self.jid.local == "room-private":
@@ -460,6 +454,16 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
+            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
+                <x xmlns="http://jabber.org/protocol/muc#user">
+                    <item affiliation="member" role="participant"/>
+                </x>
+                <priority>0</priority>
+            </presence>
+            """
+        )
+        self.send(
+            """
             <presence
                 from='room-private@aim.shakespeare.lit/firstwitch'
                 to='romeo@montague.lit/gajim'>
@@ -479,16 +483,6 @@ class TestMuc(SlidgeTest):
               </x>
             </presence>
             """,
-        )
-        self.send(
-            """
-            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
-                <x xmlns="http://jabber.org/protocol/muc#user">
-                    <item affiliation="member" role="participant"/>
-                </x>
-                <priority>0</priority>
-            </presence>
-            """
         )
         self.send(
             """
@@ -939,8 +933,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_all(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -982,8 +974,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_page_limit(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1037,8 +1027,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_page_after(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1093,8 +1081,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_page_after_not_found(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1127,8 +1113,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_last_page(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1179,8 +1163,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_flip(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1232,8 +1214,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_flip_no_max(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1277,8 +1257,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_metadata(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1299,8 +1277,7 @@ class TestMuc(SlidgeTest):
 
     def test_mam_metadata_empty(self):
         muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
-        muc.archive._msgs = []
+        muc._LegacyMUC__history_filled = True
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1317,8 +1294,6 @@ class TestMuc(SlidgeTest):
         )
 
     def test_mam_with(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
         for i in range(10):
             self.recv(
                 f"""

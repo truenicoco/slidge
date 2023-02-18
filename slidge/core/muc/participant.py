@@ -106,8 +106,8 @@ class LegacyParticipant(
                 self.send_initial_presence(full_jid)
             stanza.send()
         else:
-            if isinstance(stanza, Message) and stanza["hint"] != "no-store":
-                self.muc.archive.add(stanza)
+            if isinstance(stanza, Message):
+                self.muc.archive.add(stanza, archive_only)
             if archive_only:
                 try:
                     self.muc.remove_participant(self)

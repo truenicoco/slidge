@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any, Union
+from datetime import datetime
+from typing import Optional, Union
 
 import discord as di
 import discord.errors
@@ -90,19 +91,21 @@ class MUC(LegacyMUC[Session, int, Participant, int]):
         if icon := chan.guild.icon:
             self.avatar = str(icon)
 
-    async def backfill(self):
+    async def backfill(self, oldest_id=None, oldest_date=None):
         try:
-            await self.history()
+            await self.history(oldest_date)
         except discord.errors.Forbidden:
             self.log.warning("Could not fetch history of %r", self.name)
 
-    async def history(self):
+    async def history(self, oldest: Optional[datetime] = None):
         if not config.MUC_BACK_FILL:
             return
 
         chan = await self.get_discord_channel()
 
-        messages = [msg async for msg in chan.history(limit=config.MUC_BACK_FILL)]
+        messages = [
+            msg async for msg in chan.history(limit=config.MUC_BACK_FILL, before=oldest)
+        ]
         self.log.debug("Fetched %s messages for %r", len(messages), self.name)
         for i, msg in enumerate(reversed(messages)):
             self.log.debug("Message %s", i)

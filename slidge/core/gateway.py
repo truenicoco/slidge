@@ -363,7 +363,7 @@ class BaseGateway(  # type:ignore
 
     async def __handle_mam_metadata(self, iq: Iq):
         muc = await self.get_muc_from_iq(iq)
-        await muc.archive.send_metadata(iq)
+        await muc.send_mam_metadata(iq)
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -501,23 +501,9 @@ class BaseGateway(  # type:ignore
     async def _handle_admin(self, iq: Iq):
         if iq["type"] != "get":
             raise XMPPError("not-authorized")
-        affiliation = iq["mucadmin_query"]["item"]["affiliation"]
 
-        if not affiliation:
-            raise XMPPError("bad-request")
-
-        reply = iq.reply()
-        reply.enable("mucadmin_query")
         muc = await self.get_muc_from_iq(iq)
-        reply = iq.reply()
-        for participant in muc.get_participants():
-            if not participant.affiliation == affiliation:
-                continue
-            reply["mucadmin_query"].append(participant.mucadmin_item())
-        if affiliation == "member":
-            participant = await muc.get_user_participant()
-            reply["mucadmin_query"].append(participant.mucadmin_item())
-        reply.send()
+        await muc.handle_admin(iq)
 
     async def _handle_gateway_iq(self, iq: Iq):
         user = user_store.get_by_jid(iq.get_from())

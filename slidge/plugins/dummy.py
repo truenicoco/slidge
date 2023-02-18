@@ -41,16 +41,16 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
         self.user_nick = "SomeNick"
         await super().join(p)
 
-    async def backfill(self):
+    async def backfill(self, oldest_message_id=None, oldest_date=None):
         part = await self.get_participant("someone")
-        log.debug("PART")
+        await asyncio.sleep(5)
         for i in range(10, 0, -1):
             log.debug("HISTORY")
             ui = uuid.uuid4()
             part.send_text(
                 f"history {i} {ui}",
                 f"-{i}-{ui}",
-                when=datetime.now() - timedelta(seconds=i),
+                when=datetime.now() - timedelta(minutes=i),
                 archive_only=True,
             )
 
@@ -187,6 +187,10 @@ class Session(
             legacy_msg_id=i,
             when=datetime.now() - timedelta(hours=4),
         )
+
+        muc = await self.bookmarks.by_legacy_id("prout-1")
+        p = await muc.get_participant("live-messager")
+        p.send_text("Live message!", uuid.uuid4())
 
     async def paused(self, c: LegacyContact):
         pass

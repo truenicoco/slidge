@@ -5,7 +5,7 @@ from copy import copy
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterable, Generic, Optional
+from typing import TYPE_CHECKING, Generic, Optional
 from uuid import uuid4
 
 from PIL import Image
@@ -25,6 +25,7 @@ from ...util.types import (
 from .. import config
 from ..mixins.base import ReactionRecipientMixin
 from ..mixins.disco import ChatterDiscoMixin
+from ..mixins.lock import NamedLockMixin
 from .archive import MessageArchive
 
 if TYPE_CHECKING:
@@ -42,6 +43,7 @@ ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
 class LegacyMUC(
     Generic[SessionType, LegacyGroupIdType, LegacyParticipantType, LegacyMessageType],
+    NamedLockMixin,
     ChatterDiscoMixin,
     ReactionRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
@@ -71,6 +73,7 @@ class LegacyMUC(
     """
 
     def __init__(self, session: SessionType, legacy_id: LegacyGroupIdType, jid: JID):
+        super().__init__()
         from .participant import LegacyParticipant
 
         self.session = session
@@ -100,8 +103,48 @@ class LegacyMUC(
         self._avatar: Optional[AvatarType] = None
         self._avatar_hash: Optional[str] = None
 
+        self.__participants_filled = False
+        self.__history_filled = False
+
     def __repr__(self):
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
+
+    async def __fill_participants(self):
+        async with self.get_lock("fill participants"):
+            if self.__participants_filled:
+                return
+            await self.fill_participants()
+            self.__participants_filled = True
+
+    async def __fill_history(self):
+        async with self.get_lock("fill history"):
+            if self.__history_filled:
+                log.debug("History has already been fetched %s", self)
+                return
+            log.info("Fetching history for %s", self)
+            oldest = self.archive.get_oldest_message()
+            if oldest:
+                await self.backfill(oldest.id, oldest.when)
+            else:
+                await self.backfill()
+            self.__history_filled = True
+
+    async def handle_admin(self, iq: Iq):
+        affiliation = iq["mucadmin_query"]["item"]["affiliation"]
+
+        if not affiliation:
+            raise XMPPError("bad-request")
+
+        reply = iq.reply()
+        reply.enable("mucadmin_query")
+        for participant in await self.get_participants():
+            if not participant.affiliation == affiliation:
+                continue
+            reply["mucadmin_query"].append(participant.mucadmin_item())
+        if affiliation == "member":
+            participant = await self.get_user_participant()
+            reply["mucadmin_query"].append(participant.mucadmin_item())
+        reply.send()
 
     @property
     def avatar(self):
@@ -171,12 +214,20 @@ class LegacyMUC(
                 "Received 'leave group' request but resource was not listed. %s", p
             )
 
-    async def backfill(self):
+    async def backfill(
+        self,
+        oldest_message_id: Optional[LegacyMessageType] = None,
+        oldest_message_date: Optional[datetime] = None,
+    ):
         """
         Override this if the legacy network provide server-side archive.
         In it, send history messages using ``self.get_participant().send*``,
         with the ``archive_only=True`` kwarg.
 
+        You only need to fetch messages older than ``oldest_message_id``.
+
+        :param oldest_message_id: The oldest message ID already present in the archive
+        :param oldest_message_date: The oldest message date already present in the archive
         """
         return
 
@@ -358,6 +409,9 @@ class LegacyMUC(
             requested_nickname,
         )
 
+        await self.__fill_participants()
+        await self.__fill_history()
+
         if self._avatar_hash:
             self._send_room_presence(user_full_jid)
 
@@ -416,7 +470,8 @@ class LegacyMUC(
             self._participants_by_nicknames[c.name] = p
         return p
 
-    def get_participants(self):
+    async def get_participants(self):
+        await self.__fill_participants()
         return self._participants_by_nicknames.values()
 
     def remove_participant(self, p: LegacyParticipantType):
@@ -473,6 +528,8 @@ class LegacyMUC(
             msg.send()
 
     async def send_mam(self, iq: Iq):
+        await self.__fill_history()
+
         form_values = iq["mam"]["form"].get_values()
 
         start_date = str_to_datetime_or_none(form_values.get("start"))
@@ -548,6 +605,10 @@ class LegacyMUC(
         reply["mam_fin"]["rsm"]["last"] = last
         reply["mam_fin"]["rsm"]["count"] = str(count)
         reply.send()
+
+    async def send_mam_metadata(self, iq: Iq):
+        await self.__fill_history()
+        await self.archive.send_metadata(iq)
 
 
 def set_origin_id(msg: Message, origin_id: str):

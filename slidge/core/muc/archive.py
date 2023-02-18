@@ -1,3 +1,5 @@
+import logging
+from bisect import bisect
 from copy import copy
 from datetime import datetime, timezone
 from typing import Collection, Optional
@@ -14,18 +16,34 @@ class MessageArchive:
         self._msg_by_ids = dict[str, HistoryMessage]()
         self._msgs = list[HistoryMessage]()
 
-    def add(self, msg: Message):
+    def add(self, msg: Message, archive_only=False):
         """
         Add a message to the archive if it is deemed archivable
 
         :param msg:
+        :param archive_only:
         """
         if not archivable(msg):
             return
 
-        archived = HistoryMessage(msg)
-        self._msgs.append(archived)
-        self._msg_by_ids[archived.id] = archived
+        to_archive = HistoryMessage(msg)
+
+        if archive_only and len(self._msgs) != 0:
+            # archive_only is for muc.backfill()
+            # since live messages may have arrived before we backfill (lazy, on group first join)
+            # we must make sure we store them in the right order, and without
+            # duplicated messages
+            # TODO: use insort(key=) when we bump python minimal version
+            # insort(self._msgs, to_archive, key=lambda m: m.when)
+            if to_archive.id in self._msg_by_ids:
+                log.debug("Not archiving %s because it's already here", to_archive.id)
+                return
+            i = bisect([m.when for m in self._msgs], to_archive.when)
+            self._msgs.insert(i, to_archive)
+        else:
+            # we assume 'live' messages are in the right order
+            self._msgs.append(to_archive)
+        self._msg_by_ids[to_archive.id] = to_archive
 
     def get_all(
         self,
@@ -95,6 +113,10 @@ class MessageArchive:
             reply.enable("mam_metadata")
         reply.send()
 
+    def get_oldest_message(self):
+        if self._msgs:
+            return self._msgs[0]
+
 
 class HistoryMessage:
     def __init__(self, stanza: Message):
@@ -130,6 +152,9 @@ def archivable(msg: Message):
     :param msg:
     :return:
     """
+    if msg["hint"] == "no-store":
+        return False
+
     if msg["body"]:
         return True
 
@@ -156,3 +181,6 @@ def fix_namespaces(xml, old="{jabber:component:accept}", new="{jabber:client}"):
     xml.tag = xml.tag.replace(old, new)
     for child in xml:
         fix_namespaces(child, old, new)
+
+
+log = logging.getLogger(__name__)
