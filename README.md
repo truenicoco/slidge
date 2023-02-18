@@ -9,6 +9,8 @@
 
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
+![debian version](https://slidge.im/debian-release.svg)
+![debian nightly package](https://slidge.im/debian-nightly.svg)
 
 Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
 It's a work in progress, but it should make
