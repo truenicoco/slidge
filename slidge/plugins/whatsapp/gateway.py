@@ -35,6 +35,7 @@ class Gateway(BaseGateway):
         self.whatsapp.SetLogHandler(handle_log)
         self.whatsapp.DBPath = str(config.DB_PATH)
         self.whatsapp.SkipVerifyTLS = config.SKIP_VERIFY_TLS
+        self.whatsapp.EnableProfiling = config.ENABLE_PROFILING
         self.whatsapp.Name = "Slidge on " + str(global_config.JID)
         self.whatsapp.Init()
 

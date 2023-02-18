@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"runtime"
 	"time"
 
@@ -71,12 +72,22 @@ func (h HandleLogFunc) Sub(string) walog.Logger {
 	return h
 }
 
+// Default host and port for our internal HTTP server, if enabled for profiling.
+const (
+	defaultHTTPHost = "localhost"
+	defaultHTTPPort = "6060"
+
+	defaultProfileBlockRateNs = 50 // The minimum amount of nanoseconds of blocking to report.
+	defaultProfileMutexRatio  = 5  // The ratio of mutex contention events to report.
+)
+
 // A Gateway represents a persistent process for establishing individual sessions between linked
 // devices and WhatsApp.
 type Gateway struct {
-	DBPath        string // The filesystem path for the client database.
-	Name          string // The name to display when linking devices on WhatsApp.
-	SkipVerifyTLS bool   // Whether or not our internal HTTP client will skip TLS certificate verification.
+	DBPath          string // The filesystem path for the client database.
+	Name            string // The name to display when linking devices on WhatsApp.
+	SkipVerifyTLS   bool   // Whether or not our internal HTTP client will skip TLS certificate verification.
+	EnableProfiling bool   // Whether or not to enable profiling under an internal HTTP server.
 
 	// Internal variables.
 	container  *sqlstore.Container
@@ -119,6 +130,12 @@ func (w *Gateway) Init() error {
 	container, err := sqlstore.New("sqlite3", w.DBPath, w.logger)
 	if err != nil {
 		return err
+	}
+
+	if w.EnableProfiling {
+		runtime.SetBlockProfileRate(defaultProfileBlockRateNs)
+		runtime.SetMutexProfileFraction(defaultProfileMutexRatio)
+		go http.ListenAndServe(defaultHTTPHost+":"+defaultHTTPPort, nil)
 	}
 
 	if w.Name != "" {

@@ -15,3 +15,6 @@ ALWAYS_SYNC_ROSTER__DOC = (
 
 SKIP_VERIFY_TLS = False
 SKIP_VERIFY_TLS__DOC = "Whether or not HTTPS connections made by this plugin should verify TLS certificates."
+
+ENABLE_PROFILING = True
+ENABLE_PROFILING__DOC = "Whether or not to enable profiling under HTTP port 6060"
