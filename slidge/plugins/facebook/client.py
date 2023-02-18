@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import zlib
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from maufbapi import AndroidMQTT as AndroidMQTTOriginal
 from maufbapi.mqtt.subscription import RealtimeTopic
@@ -25,7 +25,7 @@ class AndroidMQTT(AndroidMQTTOriginal):
     def register_handlers(self):
         self.seq_id_update_callback = lambda i: setattr(self, "seq_id", i)
         self.add_event_handler(mqtt_t.Message, self.on_fb_message)
-        self.add_event_handler(mqtt_t.ExtendedMessage, self.on_fb_message)
+        self.add_event_handler(mqtt_t.ExtendedMessage, self.on_fb_extended_message)
         self.add_event_handler(mqtt_t.ReadReceipt, self.on_fb_message_read)
         self.add_event_handler(mqtt_t.TypingNotification, self.on_fb_typing)
         self.add_event_handler(mqtt_t.OwnReadReceipt, self.on_fb_user_read)
@@ -93,33 +93,30 @@ class AndroidMQTT(AndroidMQTTOriginal):
             self.log.trace("Dispatching event %s", evt)
             await handler(evt)
 
-    async def on_fb_message(self, evt: Union[mqtt_t.Message, mqtt_t.ExtendedMessage]):
-        if isinstance(evt, mqtt_t.ExtendedMessage):
-            msg = evt.message
-        else:
-            msg = evt
+    async def on_fb_extended_message(self, evt: mqtt_t.ExtendedMessage):
+        log.debug("Extended message")
+        kwargs = {}
+        msg = evt.message
+
+        if reply_to_fb_msg := evt.reply_to_message:
+            log.debug("Reply-to")
+            kwargs["reply_to_msg_id"] = reply_to_fb_msg.metadata.id
+            kwargs["reply_to_fallback_text"] = reply_to_fb_msg.text
+            kwargs["reply_self"] = (
+                reply_to_fb_msg.metadata.sender == msg.metadata.sender
+            )
+        await self.on_fb_message(msg, **kwargs)
+
+    async def on_fb_message(self, msg: mqtt_t.Message, **kwargs):
         meta = msg.metadata
         if is_group_thread(thread_key := meta.thread):
             return
-
-        kwargs = {}
-        if isinstance(evt, mqtt_t.ExtendedMessage):
-            log.debug("Extended message")
-            if reply_to_fb_msg := evt.reply_to_message:
-                log.debug("Reply-to")
-                kwargs["reply_to_msg_id"] = reply_to_fb_msg.metadata.id
-                kwargs["reply_to_fallback_text"] = reply_to_fb_msg.text
-                kwargs["reply_self"] = (
-                    reply_to_fb_msg.metadata.sender == msg.metadata.sender
-                )
-        log.debug("kwargs %s", kwargs)
 
         contact = await self.session.contacts.by_thread_key(thread_key)
 
         if not contact.added_to_roster:
             await contact.add_to_roster()
 
-        log.debug("Facebook message: %s", evt)
         fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
         if meta.sender == self.session.my_id:
             try:
