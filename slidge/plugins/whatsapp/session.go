@@ -21,6 +21,9 @@ import (
 const (
 	// The default host part for user JIDs on WhatsApp.
 	DefaultUserServer = types.DefaultUserServer
+
+	// The number of times keep-alive checks can fail before attempting to re-connect the session.
+	keepAliveFailureThreshold = 3
 )
 
 // HandleEventFunc represents a handler for incoming events sent to the Python Session, accepting an
@@ -357,6 +360,16 @@ func (s *Session) handleEvent(evt interface{}) {
 		s.propagateEvent(EventPairSuccess, &EventPayload{PairDeviceID: deviceID})
 		if err := s.gateway.CleanupSession(LinkedDevice{ID: deviceID}); err != nil {
 			s.gateway.logger.Warnf("Failed to clean up devices after pair: %s", err)
+		}
+	case *events.KeepAliveTimeout:
+		if evt.ErrorCount > keepAliveFailureThreshold {
+			s.gateway.logger.Debugf("Forcing reconnection after keep-alive timeouts...")
+			go func() {
+				s.client.Disconnect()
+				if err := s.client.Connect(); err != nil {
+					s.gateway.logger.Errorf("Error reconnecting after keep-alive timeouts: %s", err)
+				}
+			}()
 		}
 	}
 }
