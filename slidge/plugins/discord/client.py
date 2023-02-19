@@ -33,16 +33,21 @@ class Discord(di.Client):
 
         # types: TextChannel, VoiceChannel, Thread, DMChannel, PartialMessageable, GroupChannel
 
-        if (author := message.author) == self.user:
-            return await self.on_carbon(message)
+        author = message.author
 
         if isinstance(channel, di.DMChannel):
+            if author == self.user:
+                return await self.on_carbon(message)
+
             contact = await self.get_contact(author)
             return await contact.send_message(message)
 
         if isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(channel.id)
-            participant = await muc.get_participant_by_discord_user(author)
+            if author == self.user:
+                participant = await muc.get_user_participant()
+            else:
+                participant = await muc.get_participant_by_discord_user(author)
 
             return await participant.send_message(message)
 
