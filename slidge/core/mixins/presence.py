@@ -6,6 +6,10 @@ from .. import config
 from .base import BaseSender
 
 
+class _NoChange(Exception):
+    pass
+
+
 @dataclass
 class _CachedPresence:
     presence_kwargs: dict[str, str]
@@ -14,16 +18,28 @@ class _CachedPresence:
 
 class PresenceMixin(BaseSender):
     _last_presence: Optional[_CachedPresence] = None
+    _ONLY_SEND_PRESENCE_CHANGES = False
 
     def _make_presence(
         self,
         *,
         last_seen: Optional[datetime] = None,
+        force=False,
         **presence_kwargs,
     ):
+        old = self._last_presence
         self._last_presence = _CachedPresence(
             last_seen=last_seen, presence_kwargs=presence_kwargs
         )
+
+        if not force and self._ONLY_SEND_PRESENCE_CHANGES:
+            if old == self._last_presence:
+                self.session.log.debug("Presence is the same as cached")
+                raise _NoChange
+            self.session.log.debug(
+                "Presence is not the same as cached: %s vs %s", old, self._last_presence
+            )
+
         p = self.xmpp.make_presence(pfrom=self.jid, **presence_kwargs)
         if last_seen:
             if config.LAST_SEEN_FALLBACK and not presence_kwargs.get("pstatus"):
@@ -37,7 +53,9 @@ class PresenceMixin(BaseSender):
         if (cache := self._last_presence) is None:
             return
         self._send(
-            self._make_presence(last_seen=cache.last_seen, **cache.presence_kwargs)
+            self._make_presence(
+                last_seen=cache.last_seen, force=True, **cache.presence_kwargs
+            )
         )
 
     def online(
@@ -51,7 +69,10 @@ class PresenceMixin(BaseSender):
         :param status: Arbitrary text, details of the status, eg: "Listening to Britney Spears"
         :param last_seen: For :xep:`0319`
         """
-        self._send(self._make_presence(pstatus=status, last_seen=last_seen))
+        try:
+            self._send(self._make_presence(pstatus=status, last_seen=last_seen))
+        except _NoChange:
+            pass
 
     def away(
         self,
@@ -67,9 +88,12 @@ class PresenceMixin(BaseSender):
         :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
         :param last_seen: For :xep:`0319`
         """
-        self._send(
-            self._make_presence(pstatus=status, pshow="away", last_seen=last_seen)
-        )
+        try:
+            self._send(
+                self._make_presence(pstatus=status, pshow="away", last_seen=last_seen)
+            )
+        except _NoChange:
+            pass
 
     def extended_away(
         self,
@@ -85,7 +109,12 @@ class PresenceMixin(BaseSender):
         :param status: Arbitrary text, details of the status, eg: "Gone to fight capitalism"
         :param last_seen: For :xep:`0319`
         """
-        self._send(self._make_presence(pstatus=status, pshow="xa", last_seen=last_seen))
+        try:
+            self._send(
+                self._make_presence(pstatus=status, pshow="xa", last_seen=last_seen)
+            )
+        except _NoChange:
+            pass
 
     def busy(
         self,
@@ -98,9 +127,12 @@ class PresenceMixin(BaseSender):
         :param status: eg: "Trying to make sense of XEP-0100"
         :param last_seen: For :xep:`0319`
         """
-        self._send(
-            self._make_presence(pstatus=status, pshow="busy", last_seen=last_seen)
-        )
+        try:
+            self._send(
+                self._make_presence(pstatus=status, pshow="busy", last_seen=last_seen)
+            )
+        except _NoChange:
+            pass
 
     def offline(
         self,
@@ -113,8 +145,11 @@ class PresenceMixin(BaseSender):
         :param status: eg: "Trying to make sense of XEP-0100"
         :param last_seen: For :xep:`0319`
         """
-        self._send(
-            self._make_presence(
-                pstatus=status, ptype="unavailable", last_seen=last_seen
+        try:
+            self._send(
+                self._make_presence(
+                    pstatus=status, ptype="unavailable", last_seen=last_seen
+                )
             )
-        )
+        except _NoChange:
+            pass

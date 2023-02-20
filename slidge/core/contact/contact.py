@@ -63,6 +63,8 @@ class LegacyContact(
     mtype = "chat"
     is_group = False
 
+    _ONLY_SEND_PRESENCE_CHANGES = True
+
     def __init__(
         self,
         session: "SessionType",
