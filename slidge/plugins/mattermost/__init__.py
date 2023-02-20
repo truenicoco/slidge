@@ -1,1 +1,1 @@
-from .gateway import Gateway, Session
+from . import contact, gateway, session
