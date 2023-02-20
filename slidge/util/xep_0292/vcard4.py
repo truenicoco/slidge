@@ -62,9 +62,13 @@ class VCard4Provider(BasePlugin):
         /,
         authorized_jids: Optional[set[JidStr]] = None,
     ):
-        self._vcards[jid] = StoredVCard(
+        cache = self._vcards.get(jid)
+        new = StoredVCard(
             vcard, authorized_jids if authorized_jids is not None else set()
         )
+        self._vcards[jid] = new
+        if cache == new:
+            return
         if self.xmpp["pubsub"] and authorized_jids:
             for to in authorized_jids:
                 self.xmpp["pubsub"].broadcast_vcard_event(jid, to)
