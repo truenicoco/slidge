@@ -9,7 +9,7 @@ class NamedLockMixin:
         self.__locks = dict[Hashable, asyncio.Lock]()
 
     @asynccontextmanager
-    async def get_lock(self, id_: Hashable):
+    async def lock(self, id_: Hashable):
         log.debug("getting %s", id_)
         locks = self.__locks
         if not locks.get(id_):
@@ -22,6 +22,9 @@ class NamedLockMixin:
         if not waiters:
             del locks[id_]
             log.debug("erasing %s", id_)
+
+    def get_lock(self, id_: Hashable):
+        return self.__locks.get(id_)
 
 
 log = logging.getLogger(__name__)

@@ -5,6 +5,7 @@ from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ...util import SubclassableOnce
+from ...util.error import XMPPError
 from ...util.types import LegacyContactType, LegacyUserIdType, SessionType
 from ..mixins.lock import NamedLockMixin
 from .contact import LegacyContact
@@ -61,19 +62,19 @@ class LegacyRoster(
         :return:
         """
         bare = contact_jid.bare
-        async with self.get_lock(bare):
+        async with self.lock(bare):
             c = self._contacts_by_bare_jid.get(bare)
             if c is None:
                 jid_username = str(contact_jid.username)
+                legacy_id = await self.jid_username_to_legacy_id(jid_username)
+                if self.get_lock(legacy_id):
+                    log.debug("Already updating the same contact")
+                    return await self.by_legacy_id(legacy_id)
                 log.debug("Contact %s not found", contact_jid)
-                c = self._contact_cls(
-                    self.session,
-                    await self.jid_username_to_legacy_id(jid_username),
-                    jid_username,
-                )
+                c = self._contact_cls(self.session, legacy_id, jid_username)
                 await c.update_caps()
                 await c.update_info()
-                self._contacts_by_legacy_id[c.legacy_id] = self._contacts_by_bare_jid[
+                self._contacts_by_legacy_id[legacy_id] = self._contacts_by_bare_jid[
                     bare
                 ] = c
             return c
@@ -89,7 +90,7 @@ class LegacyRoster(
         :param legacy_id:
         :return:
         """
-        async with self.get_lock(legacy_id):
+        async with self.lock(legacy_id):
             c = self._contacts_by_legacy_id.get(legacy_id)
             if c is None:
                 log.debug("Contact %s not found in roster", legacy_id)
@@ -98,6 +99,9 @@ class LegacyRoster(
                     legacy_id,
                     await self.legacy_id_to_jid_username(legacy_id),
                 )
+                if self.get_lock(c.jid.bare):
+                    log.debug("Already updating the same contact")
+                    return await self.by_jid(c.jid)
                 await c.update_caps()
                 await c.update_info()
                 self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[

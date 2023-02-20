@@ -4,6 +4,7 @@ from slixmpp import JID
 from slixmpp.jid import _unescape_node
 
 from ...util import SubclassableOnce
+from ...util.error import XMPPError
 from ...util.types import LegacyGroupIdType, LegacyMUCType, SessionType
 from ..contact.roster import ESCAPE_TABLE
 from ..mixins.lock import NamedLockMixin
@@ -49,7 +50,7 @@ class LegacyBookmarks(
 
     async def by_jid(self, jid: JID):
         bare = jid.bare
-        async with self.get_lock(bare):
+        async with self.lock(bare):
             muc = self._mucs_by_bare_jid.get(bare)
             if muc is None:
                 self.session.log.debug(
@@ -57,6 +58,8 @@ class LegacyBookmarks(
                 )
                 local_part = jid.node
                 legacy_id = await self.jid_local_part_to_legacy_id(local_part)
+                if self.get_lock(legacy_id):
+                    return await self.by_legacy_id(legacy_id)
                 self.session.log.debug("%r is group %r", local_part, legacy_id)
                 muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
                 if not muc.user_nick:
@@ -70,14 +73,17 @@ class LegacyBookmarks(
             return muc
 
     async def by_legacy_id(self, legacy_id: LegacyGroupIdType):
-        async with self.get_lock(legacy_id):
+        async with self.lock(legacy_id):
             muc = self._mucs_by_legacy_id.get(legacy_id)
             if muc is None:
                 self.session.log.debug(
                     "Create new MUC instance for legacy ID %s", legacy_id
                 )
                 local = await self.legacy_id_to_jid_local_part(legacy_id)
-                jid = JID(f"{local}@{self.xmpp.boundjid}")
+                bare = f"{local}@{self.xmpp.boundjid}"
+                jid = JID(bare)
+                if self.get_lock(bare):
+                    return await self.by_jid(jid)
                 muc = self._muc_class(
                     self.session,
                     legacy_id=legacy_id,

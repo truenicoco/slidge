@@ -111,14 +111,14 @@ class LegacyMUC(
         return f"<MUC '{self.legacy_id}' - {self.jid}>"
 
     async def __fill_participants(self):
-        async with self.get_lock("fill participants"):
+        async with self.lock("fill participants"):
             if self.__participants_filled:
                 return
             await self.fill_participants()
             self.__participants_filled = True
 
     async def __fill_history(self):
-        async with self.get_lock("fill history"):
+        async with self.lock("fill history"):
             if self.__history_filled:
                 log.debug("History has already been fetched %s", self)
                 return
