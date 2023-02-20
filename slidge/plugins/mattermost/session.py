@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 import emoji
+from mattermost_api_reference_client.models.user import User
 
 from slidge import BaseSession, LegacyBookmarks, LegacyMUC, LegacyParticipant, XMPPError
 
@@ -45,6 +46,7 @@ class Session(
     async def login(self):
         await self.mm_client.login()
         self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
+        self.xmpp.loop.create_task(self.contacts.update_statuses())
         return f"Connected as '{(await self.mm_client.me).username}'"
 
     async def on_mm_event(self, event: MattermostEvent):
@@ -200,6 +202,12 @@ class Session(
             await (await self.contacts.by_mm_user_id(who)).update_reactions(
                 reaction["post_id"]
             )
+
+    async def on_mm_UserUpdated(self, event: MattermostEvent):
+        user = User.from_dict(event.data["user"])
+        assert isinstance(user.username, str)
+        c = await self.contacts.by_legacy_id(user.username)
+        await c.update_info(user)
 
     async def logout(self):
         pass

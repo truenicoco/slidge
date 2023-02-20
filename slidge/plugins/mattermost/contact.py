@@ -1,10 +1,14 @@
+import asyncio
+import json
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-import emoji
-from mattermost_api_reference_client.models import Status, User
+from mattermost_api_reference_client.models import UpdateUserCustomStatusJsonBody, User
 from mattermost_api_reference_client.types import Unset
 
 from slidge import LegacyContact, LegacyRoster
+
+from .util import emojize
 
 if TYPE_CHECKING:
     from .session import Session
@@ -19,19 +23,57 @@ class Contact(LegacyContact["Session", str]):
         super().__init__(*a, **kw)
         self._direct_channel_id: Optional[str] = None
         self._mm_id: Optional[str] = None
+        self._custom_status: Optional[UpdateUserCustomStatusJsonBody] = None
+        self._custom_status_expires: Optional[datetime] = None
 
-    def update_status(self, status: Optional[str]):
+    async def fetch_status(self):
+        if not self.session.ws.ready.done():
+            return
+        i = await self.mm_id()
+        status = await self.session.mm_client.get_user_status(i)
+        self.update_status(status.status)
+
+    def update_status(
+        self,
+        status: Optional[str] = None,
+        custom_status: Optional[UpdateUserCustomStatusJsonBody] = None,
+    ):
+        if custom_status:
+            self._custom_status = custom_status
+            if expire_str := custom_status.expires_at:
+                assert isinstance(expire_str, str)
+                try:
+                    self._custom_status_expires = datetime.fromisoformat(
+                        expire_str[:-5]
+                    )
+                except ValueError:
+                    pass
+
+        if (when := self._custom_status_expires) and datetime.now() > when:
+            self._custom_status = None
+            self._custom_status_expires = None
+
+        if c := self._custom_status:
+            if c.emoji:
+                e = emojize(f":{c.emoji}:")
+                parts = [e, c.text]
+            else:
+                parts = [c.text]
+            text = " ".join(parts)
+        else:
+            text = None
+
         if status is None:  # custom status
             self.session.log.debug("Status is None: %s", status)
-            self.online()
+            self.online(text)
         elif status == "online":
-            self.online()
+            self.online(text)
         elif status == "offline":
-            self.offline()
+            self.offline(text)
         elif status == "away":
-            self.away()
+            self.away(text)
         elif status == "dnd":
-            self.busy()
+            self.busy(text)
         else:
             self.session.log.warning(
                 "Unknown status for '%s':",
@@ -61,7 +103,7 @@ class Contact(LegacyContact["Session", str]):
             legacy_msg_id,
             [
                 # TODO: find a better when than these non standard emoji aliases replace
-                emoji.emojize(f":{x.replace('_3_', '_three_')}:", language="alias")
+                emojize(x)
                 for x in await self.session.get_mm_reactions(
                     legacy_msg_id, await self.mm_id()
                 )
@@ -86,15 +128,52 @@ class Contact(LegacyContact["Session", str]):
         )
         self.avatar = await self.session.mm_client.get_profile_image(user.id)
 
+        props = user.props
+        if not props:
+            return
+
+        custom = props.additional_properties.get("customStatus")  # type:ignore
+
+        if not custom:
+            return
+
+        custom = UpdateUserCustomStatusJsonBody.from_dict(json.loads(custom))
+
+        self.update_status(None, custom)
+
 
 class Roster(LegacyRoster["Session", Contact, str]):
     user_id_to_username: dict[str, str]
     direct_channel_id_to_username: dict[str, str]
+    STATUS_POLL_INTERVAL = 300
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.user_id_to_username = {}
         self.direct_channel_id_to_username = {}
+
+    async def by_jid(self, jid):
+        c = await super().by_jid(jid)
+        await c.fetch_status()
+        return c
+
+    async def by_legacy_id(self, legacy_id: str):
+        c = await super().by_legacy_id(legacy_id)
+        await c.fetch_status()
+        return c
+
+    async def update_statuses(self):
+        while True:
+            await asyncio.sleep(self.STATUS_POLL_INTERVAL)
+            statuses = await self.session.ws.get_statuses()
+            self.session.log.debug("Statuses: %s", statuses)
+            for user_id, status in statuses.items():
+                username = self.user_id_to_username.get(user_id)
+                if username is None:
+                    continue
+                c = self._contacts_by_legacy_id.get(username)
+                if c is not None and c.added_to_roster:
+                    c.update_status(status)
 
     async def by_mm_user_id(self, user_id: str):
         try:
@@ -117,13 +196,7 @@ class Roster(LegacyRoster["Session", Contact, str]):
     async def fill(self):
         mm = self.session.mm_client
         user_ids = await mm.get_contacts()
-        contact_mm_users = await mm.get_users_by_ids(user_ids)
-        contact_mm_statuses = await mm.get_users_statuses_by_ids(user_ids)
 
-        statuses = {s.user_id: s for s in contact_mm_statuses}
-
-        for user in contact_mm_users:
-            status: Status = statuses[user.id]
-            contact = await self.by_legacy_id(user.username)
+        for user_id in user_ids:
+            contact = await self.by_mm_user_id(user_id)
             await contact.add_to_roster()
-            contact.update_status(str(status.status))

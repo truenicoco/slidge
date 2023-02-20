@@ -95,6 +95,7 @@ class Websocket:
         ] = asyncio.get_event_loop().create_future()
         self._futures: dict[int, asyncio.Future[dict]] = {}
         self._seq_cursor = 0
+        self.ready = asyncio.get_event_loop().create_future()
 
     async def connect(self, event_handler):
         """
@@ -118,11 +119,13 @@ class Websocket:
                     async with session.ws_connect(url, ssl=context) as websocket:
                         self.websocket.set_result(websocket)
                         await self._authenticate_websocket(websocket)
+                        self.ready.set_result(True)
                         while self._alive:
                             try:
                                 await self._start_loop(websocket, event_handler)
                             except aiohttp.ClientError:
                                 break
+                        self.ready = asyncio.get_event_loop().create_future()
                         if (not self.keep_alive) or (not self._alive):
                             break
             except Exception as e:
@@ -210,8 +213,9 @@ class Websocket:
             log.error("Websocket authentication failed")
 
     async def user_typing(self, channel_id):
-        seq = self._seq_cursor
+        await self.ready
         self._seq_cursor += 1
+        seq = self._seq_cursor
         f = self._futures[seq] = asyncio.get_event_loop().create_future()
         payload = json.dumps(
             {
@@ -224,6 +228,31 @@ class Websocket:
         await (await self.websocket).send_str(payload)
         r = await f
         log.debug("Confirmation %s", r)
+
+    async def get_statuses(self):
+        await self.ready
+        self._seq_cursor += 1
+        seq = self._seq_cursor
+        f = self._futures[seq] = asyncio.get_event_loop().create_future()
+        payload = json.dumps({"seq": seq, "action": "get_statuses"})
+        log.debug("Sending %s", payload)
+        await (await self.websocket).send_str(payload)
+        r = await f
+        return r.get("data")
+
+    async def get_statuses_by_ids(self, ids: list[str]):
+        await self.ready
+        self._seq_cursor += 1
+        seq = self._seq_cursor
+        f = self._futures[seq] = asyncio.get_event_loop().create_future()
+        payload = json.dumps(
+            {"seq": seq, "action": "get_statuses_by_ids", "data": {"user_ids": ids}}
+        )
+        log.debug("Sending %s", payload)
+        await (await self.websocket).send_str(payload)
+        r = await f
+        log.debug("get_statuses_by_ids: %s", r)
+        return r.get("data")
 
 
 async def handle_event(d, event_handler):

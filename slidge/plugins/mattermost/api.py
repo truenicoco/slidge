@@ -22,7 +22,10 @@ from mattermost_api_reference_client.api.reactions import (
     get_reactions,
     save_reaction,
 )
-from mattermost_api_reference_client.api.status import get_users_statuses_by_ids
+from mattermost_api_reference_client.api.status import (
+    get_user_status,
+    get_users_statuses_by_ids,
+)
 from mattermost_api_reference_client.api.teams import get_teams_for_user
 from mattermost_api_reference_client.api.users import (
     get_profile_image,
@@ -274,6 +277,9 @@ class MattermostClient:
             client=self.http,
             json_body=ViewChannelJsonBody(channel_id=channel_id),
         )
+
+    async def get_user_status(self, user_id: str):
+        return await get_user_status.asyncio(user_id, client=self.http)
 
 
 def demojize(emoji_char: str):
