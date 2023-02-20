@@ -331,7 +331,7 @@ class Session(
                 items=[{"name": "bubu", "jid": f"bubu@{self.xmpp.boundjid.bare}"}],
             )
 
-    async def react(self, c, legacy_msg_id, emojis):
+    async def react(self, c, legacy_msg_id, emojis, thread=None):
         if "😈" in emojis:
             c.send_text("That's forbidden")
             c.react(legacy_msg_id, "", carbon=True)
@@ -339,7 +339,7 @@ class Session(
         else:
             c.react(legacy_msg_id, "♥")
 
-    async def retract(self, c, legacy_msg_id):
+    async def retract(self, c, legacy_msg_id, thread=None):
         log.debug("User has retracted their msg: '%s' (sent to '%s')", legacy_msg_id, c)
 
 

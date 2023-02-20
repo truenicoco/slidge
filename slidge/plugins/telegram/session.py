@@ -129,17 +129,17 @@ class Session(
         return new_message_id
 
     @catch_chat_not_found
-    async def active(self, c: "Contact"):
+    async def active(self, c: "Contact", thread=None):
         res = await self.tg.api.open_chat(chat_id=c.legacy_id)
         self.log.debug("Open chat res: %s", res)
 
     @catch_chat_not_found
-    async def inactive(self, c: "Contact"):
+    async def inactive(self, c: "Contact", thread=None):
         res = await self.tg.api.close_chat(chat_id=c.legacy_id)
         self.log.debug("Close chat res: %s", res)
 
     @catch_chat_not_found
-    async def composing(self, c: "Contact"):
+    async def composing(self, c: "Contact", thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
@@ -148,11 +148,11 @@ class Session(
         self.log.debug("Send composing res: %s", res)
 
     @catch_chat_not_found
-    async def paused(self, c: "Contact"):
+    async def paused(self, c: "Contact", thread=None):
         pass
 
     @catch_chat_not_found
-    async def displayed(self, c: "Contact", tg_id: int):
+    async def displayed(self, c: "Contact", tg_id: int, thread=None):
         res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
             message_thread_id=0,
@@ -162,7 +162,7 @@ class Session(
         self.log.debug("Send chat action res: %s", res)
 
     @catch_chat_not_found
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: int):
+    async def correct(self, c: "Contact", text: str, legacy_msg_id: int, thread=None):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
@@ -218,7 +218,9 @@ class Session(
             self.log.debug("Remove reaction response: %s", r)
 
     @catch_chat_not_found
-    async def react(self, c: "Contact", legacy_msg_id: int, emojis: list[str]):
+    async def react(
+        self, c: "Contact", legacy_msg_id: int, emojis: list[str], thread=None
+    ):
         if len(emojis) == 0:
             await self.remove_reactions(legacy_msg_id, c)
             return
@@ -237,7 +239,7 @@ class Session(
             self.log.debug("Message reaction response: %s", r)
 
     @catch_chat_not_found
-    async def retract(self, c, legacy_msg_id):
+    async def retract(self, c, legacy_msg_id, thread=None):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         r = await self.tg.api.delete_messages(c.legacy_id, [legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)

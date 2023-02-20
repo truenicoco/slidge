@@ -71,12 +71,13 @@ class Session(
             raise NotImplementedError
 
     @handle_unregistered_recipient
-    async def paused(self, c):
+    async def paused(self, c, thread=None):
         address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
             account=self.phone, typing=False, address=address, group=group
         )
 
+    @handle_unregistered_recipient
     async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
         pass
 
@@ -302,6 +303,7 @@ class Session(
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
         reply_to: Optional[Union["Contact", "Participant"]] = None,
+        thread=None,
     ) -> int:
         address, group = self._get_args_from_entity(chat)
         if reply_to_msg_id is None:
@@ -368,6 +370,7 @@ class Session(
         reply_to_msg_id=None,
         reply_to_fallback_text=None,
         reply_to: Optional[Union["Contact", "Participant"]] = None,
+        thread=None,
     ):
         s = await self.signal
         address, group = self._get_args_from_entity(chat)
@@ -405,7 +408,7 @@ class Session(
         return address, group
 
     @handle_unregistered_recipient
-    async def composing(self, c: "Contact"):
+    async def composing(self, c: "Contact", thread=None):
         self.log.debug("COMPOSING %s", c)
         address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
@@ -416,7 +419,9 @@ class Session(
         )
 
     @handle_unregistered_recipient
-    async def displayed(self, entity: Union["Contact", "MUC"], legacy_msg_id: int):
+    async def displayed(
+        self, entity: Union["Contact", "MUC"], legacy_msg_id: int, thread=None
+    ):
         if entity.is_group:
             entity = cast("MUC", entity)
             address = entity.sent.get(legacy_msg_id)
@@ -437,7 +442,11 @@ class Session(
 
     @handle_unregistered_recipient
     async def react(
-        self, chat: Union["Contact", "MUC"], legacy_msg_id: int, emojis: list[str]
+        self,
+        chat: Union["Contact", "MUC"],
+        legacy_msg_id: int,
+        emojis: list[str],
+        thread=None,
     ):
         address, group = self._get_args_from_entity(chat)
         if legacy_msg_id in self.sent:
@@ -501,7 +510,7 @@ class Session(
         chat.user_reactions[legacy_msg_id] = emoji
 
     @handle_unregistered_recipient
-    async def retract(self, c: "Contact", legacy_msg_id: int):
+    async def retract(self, c: "Contact", legacy_msg_id: int, thread=None):
         address, group = self._get_args_from_entity(c)
         try:
             await (await self.signal).remote_delete(
