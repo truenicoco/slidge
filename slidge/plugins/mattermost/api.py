@@ -4,10 +4,9 @@ import json
 import logging
 
 import aiohttp
-import emoji
+import emoji as emoji_lib
 from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
-    get_all_channels,
     get_channel_members,
     get_channels_for_team_for_user,
     get_channels_for_user,
@@ -257,23 +256,27 @@ class MattermostClient:
             raise RuntimeError(r)
         return r.file_infos[0].id
 
-    async def react(self, post_id: str, emoji_char: str):
+    async def react(self, post_id: str, emoji: str):
         return await save_reaction.asyncio(
             client=self.http,
             json_body=Reaction(
                 user_id=await self.mm_id,
                 post_id=post_id,
-                emoji_name=demojize(emoji_char),
+                emoji_name=demojize(emoji),
             ),
         )
 
-    async def get_reactions(self, post_id: str):
+    async def get_reactions(self, post_id: str) -> set[tuple[str, str]]:
         try:
-            return await get_reactions.asyncio(post_id, client=self.http)
+            r = await get_reactions.asyncio(post_id, client=self.http)
         except TypeError:
-            return []
+            return set()
+        if not r:
+            return set()
+        return {(x.user_id, emojize(x.emoji_name)) for x in r}  # type:ignore
 
-    async def delete_reaction(self, post_id: str, emoji_name: str):
+    async def delete_reaction(self, post_id: str, emoji: str):
+        emoji_name = demojize(emoji)
         await delete_reaction.asyncio(
             await self.mm_id, post_id, emoji_name=emoji_name, client=self.http
         )
@@ -289,12 +292,17 @@ class MattermostClient:
         return await get_user_status.asyncio(user_id, client=self.http)
 
 
+def emoji_name_conversion(x: str):
+    return x.replace("_3_", "_three_").replace("thumbsup", "+1")
+
+
+def emojize(x: str):
+    return emoji_lib.emojize(f":{emoji_name_conversion(x)}:", language="alias")
+
+
 def demojize(emoji_char: str):
-    # TODO: find a better when than these non standard emoji aliases replace
-    return (
-        emoji.demojize(emoji_char, delimiters=("", ""), language="alias")
-        .replace("_three_", "_3_")
-        .replace("thumbsup", "+1")
+    return emoji_name_conversion(
+        emoji_lib.demojize(emoji_char, delimiters=("", ""), language="alias")
     )
 
 

@@ -1,10 +1,8 @@
 import asyncio
-import pprint
 import re
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
-import emoji
+from mattermost_api_reference_client.models import Post, Reaction
 from mattermost_api_reference_client.models.user import User
 
 from slidge import BaseSession, LegacyBookmarks, LegacyMUC, LegacyParticipant, XMPPError
@@ -58,62 +56,31 @@ class Session(
         self.log.debug("Ignored event: %s", event.type)
 
     async def on_mm_Posted(self, event: MattermostEvent):
-        post = event.data["post"]
-        self.log.debug("Post: %s", pprint.pformat(post))
+        post = get_post_from_dict(event.data["post"])
+        self.log.debug("Post: %s", post)
+        user_id = post.user_id
+        assert isinstance(user_id, str)
+        assert isinstance(post.id, str)
 
-        text = post["message"]
-        post_id = post["id"]
-        user_id = post["user_id"]
+        if event.data["channel_type"] == "D":  # Direct messages
+            carbon = post.user_id == await self.mm_client.mm_id
+            if carbon:
+                try:
+                    async with self.send_lock:
+                        self.messages_waiting_for_echo.remove(post.id)
+                except KeyError:
+                    contact = await self.contacts.by_direct_channel_id(post.channel_id)
+                else:
+                    return
+            else:
+                contact = await self.contacts.by_mm_user_id(user_id)
+            if not carbon and event.data.get("set_online"):
+                contact.update_status()
+            await contact.send_mm_post(post, carbon)
 
-        if event.data["channel_type"] == "D":  # Direct messages?
-            if user_id == await self.mm_client.mm_id:
-                return await self.on_mm_carbon(event)
-
-            contact = await self.contacts.by_mm_user_id(user_id)
-            if event.data.get("set_online"):
-                contact.online()
-            file_metas = post.get("metadata", {}).get("files", [])
-
-            if not file_metas:
-                contact.send_text(text, legacy_msg_id=post_id)
-                return
-
-            last_file_i = len(file_metas) - 1
-
-            for i, file_meta in enumerate(file_metas):
-                last = i == last_file_i
-                await contact.send_file(
-                    file_name=file_meta["name"],
-                    data=await self.mm_client.get_file(file_meta["id"]),
-                    legacy_file_id=file_meta["id"],
-                    legacy_msg_id=post_id if last else None,
-                    caption=text if last else None,
-                )
         elif event.data["channel_type"] == "P":
             # private channel
             pass
-
-    async def on_mm_carbon(self, event: MattermostEvent):
-        post = event.data["post"]
-        text = post["message"]
-        channel_id = post["channel_id"]
-        post_id = post["id"]
-        try:
-            async with self.send_lock:
-                self.messages_waiting_for_echo.remove(post_id)
-        except KeyError:
-            members = await self.mm_client.get_channel_members(channel_id)
-            if len(members) > 2:
-                raise RuntimeError("Not a direct message after all")
-
-            contact = await self.contacts.by_direct_channel_id(channel_id)
-
-            contact.send_text(
-                text,
-                legacy_msg_id=post_id,
-                when=datetime.fromtimestamp(post["update_at"] / 1000),
-                carbon=True,
-            )
 
     async def on_mm_ChannelViewed(self, event: MattermostEvent):
         channel_id = event.data["channel_id"]
@@ -145,35 +112,32 @@ class Session(
 
     async def on_mm_Typing(self, event: MattermostEvent):
         contact = await self.contacts.by_mm_user_id(event.data["user_id"])
-        contact.composing()
+        if event.broadcast["channel_id"] == await contact.direct_channel_id():
+            contact.composing()
 
     async def on_mm_PostEdited(self, event: MattermostEvent):
-        post = event.data["post"]
-        if post["user_id"] == await self.mm_client.mm_id:
-            if (
-                c := await self.contacts.by_direct_channel_id(post["channel_id"])
-            ) is None:
+        post = get_post_from_dict(event.data["post"])
+        if post.user_id == await self.mm_client.mm_id:
+            if (c := await self.contacts.by_direct_channel_id(post.channel_id)) is None:
                 self.log.debug("Ignoring edit in unknown channel")
             else:
-                c.correct(post["id"], post["message"], carbon=True)
+                c.correct(post.id, post.message, carbon=True)
         else:
-            contact = await self.contacts.by_mm_user_id(post["user_id"])
-            if post["channel_id"] == await contact.direct_channel_id():
-                contact.correct(post["id"], post["message"])
+            contact = await self.contacts.by_mm_user_id(post.user_id)
+            if post.channel_id == await contact.direct_channel_id():
+                contact.correct(post.id, post.message)
 
     async def on_mm_PostDeleted(self, event: MattermostEvent):
-        post = event.data["post"]
-        if post["user_id"] == await self.mm_client.mm_id:
-            if (
-                c := await self.contacts.by_direct_channel_id(post["channel_id"])
-            ) is None:
+        post = get_post_from_dict(event.data["post"])
+        if post.user_id == await self.mm_client.mm_id:
+            if (c := await self.contacts.by_direct_channel_id(post.channel_id)) is None:
                 self.log.debug("Ignoring edit in unknown channel")
             else:
-                c.retract(post["id"], carbon=True)
+                c.retract(post.id, carbon=True)
         else:
-            contact = await self.contacts.by_mm_user_id(post["user_id"])
-            if post["channel_id"] == await contact.direct_channel_id():
-                contact.retract(post["id"])
+            contact = await self.contacts.by_mm_user_id(post.user_id)
+            if post.channel_id == await contact.direct_channel_id():
+                contact.retract(post.id)
 
     async def on_mm_ReactionAdded(self, event: MattermostEvent):
         await self.on_mm_reaction(event)
@@ -182,25 +146,20 @@ class Session(
         await self.on_mm_reaction(event)
 
     async def on_mm_reaction(self, event: MattermostEvent):
-        reaction = event.data["reaction"]
-        legacy_msg_id = reaction["post_id"]
-        if (who := reaction["user_id"]) == await self.mm_client.mm_id:
-            user_reactions_name = {
-                f":{x}:" for x in await self.get_mm_reactions(legacy_msg_id, who)
-            }
-            user_reactions_char = {
-                # TODO: find a better when than these non standard emoji aliases replace
-                emoji.emojize(x.replace("_3_", "_three_"), language="alias")
-                for x in user_reactions_name
-            }
-            self.log.debug("carbon: %s vs %s", user_reactions_name, user_reactions_char)
+        reaction = get_reaction_from_dict(event.data["reaction"])
+        legacy_msg_id = reaction.post_id
+        if (who := reaction.user_id) == await self.mm_client.mm_id:
             contact = await self.contacts.by_direct_channel_id(
                 event.broadcast["channel_id"]
             )
-            contact.react(legacy_msg_id, user_reactions_char, carbon=True)
+            contact.react(
+                legacy_msg_id,
+                await self.get_mm_reactions(legacy_msg_id, who),
+                carbon=True,
+            )
         else:
             await (await self.contacts.by_mm_user_id(who)).update_reactions(
-                reaction["post_id"]
+                reaction.post_id
             )
 
     async def on_mm_UserUpdated(self, event: MattermostEvent):
@@ -263,9 +222,7 @@ class Session(
         mm_reactions = await self.get_mm_reactions(
             legacy_msg_id, await self.mm_client.mm_id
         )
-        xmpp_reactions = {
-            emoji.demojize(x, language="alias", delimiters=("", "")) for x in emojis
-        }
+        xmpp_reactions = {x for x in emojis}
         self.log.debug("%s vs %s", mm_reactions, xmpp_reactions)
         for e in xmpp_reactions - mm_reactions:
             await self.mm_client.react(legacy_msg_id, e)
@@ -274,7 +231,22 @@ class Session(
 
     async def get_mm_reactions(self, legacy_msg_id: str, user_id: Optional[str]):
         return {
-            x.emoji_name
-            for x in await self.mm_client.get_reactions(legacy_msg_id)
-            if x.user_id == user_id
+            x
+            for i, x in await self.mm_client.get_reactions(legacy_msg_id)
+            if i == user_id
         }
+
+
+def get_post_from_dict(data: dict):
+    p = Post.from_dict(data)
+    assert isinstance(p.user_id, str)
+    assert isinstance(p.id, str)
+    assert isinstance(p.channel_id, str)
+    return p
+
+
+def get_reaction_from_dict(data: dict):
+    r = Reaction.from_dict(data)
+    assert isinstance(r.user_id, str)
+    assert isinstance(r.emoji_name, str)
+    return r

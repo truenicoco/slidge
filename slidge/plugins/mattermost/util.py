@@ -13,7 +13,3 @@ def get_client_from_registration_form(f: dict[str, Optional[str]]):
         timeout=5,
         token=f["token"],
     )
-
-
-def emojize(x: str):
-    return emoji.emojize(x.replace("_3_", "_three_"), language="alias")

@@ -3,12 +3,16 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from mattermost_api_reference_client.models import UpdateUserCustomStatusJsonBody, User
+from mattermost_api_reference_client.models import (
+    Post,
+    UpdateUserCustomStatusJsonBody,
+    User,
+)
 from mattermost_api_reference_client.types import Unset
 
 from slidge import LegacyContact, LegacyRoster
 
-from .util import emojize
+from .api import emojize
 
 if TYPE_CHECKING:
     from .session import Session
@@ -56,7 +60,7 @@ class Contact(LegacyContact["Session", str]):
 
         if c := self._custom_status:
             if c.emoji:
-                e = emojize(f":{c.emoji}:")
+                e = emojize(c.emoji)
                 parts = [e, c.text]
             else:
                 parts = [c.text]
@@ -99,13 +103,7 @@ class Contact(LegacyContact["Session", str]):
     async def update_reactions(self, legacy_msg_id):
         self.react(
             legacy_msg_id,
-            [
-                # TODO: find a better when than these non standard emoji aliases replace
-                emojize(x)
-                for x in await self.session.get_mm_reactions(
-                    legacy_msg_id, await self.mm_id()
-                )
-            ],
+            await self.session.get_mm_reactions(legacy_msg_id, await self.mm_id()),
         )
 
     async def update_info(self, user: Optional[User] = None):
@@ -142,6 +140,43 @@ class Contact(LegacyContact["Session", str]):
         custom = UpdateUserCustomStatusJsonBody.from_dict(json.loads(custom))
 
         self.update_status(None, custom)
+
+    async def send_mm_post(self, post: Post, carbon=False):
+        assert not isinstance(post.metadata, Unset)
+        assert not isinstance(post.update_at, Unset)
+
+        file_metas = post.metadata.files
+        text = post.message
+        post_id = post.id
+
+        when = datetime.fromtimestamp(post.update_at / 1000)
+
+        assert isinstance(text, str)
+        if not file_metas:
+            self.send_text(
+                text,
+                legacy_msg_id=post_id,
+                when=when,
+                carbon=carbon,
+            )
+            return
+
+        assert isinstance(file_metas, list)
+        last_file_i = len(file_metas) - 1
+
+        for i, file_meta in enumerate(file_metas):
+            assert isinstance(file_meta.name, str)
+            assert isinstance(file_meta.id, str)
+            last = i == last_file_i
+            await self.send_file(
+                file_name=file_meta.name,
+                data=await self.session.mm_client.get_file(file_meta.id),
+                legacy_file_id=file_meta.id,
+                legacy_msg_id=post_id if last else None,
+                caption=text if last else None,
+                carbon=carbon,
+                when=when,
+            )
 
 
 class Roster(LegacyRoster["Session", Contact, str]):
