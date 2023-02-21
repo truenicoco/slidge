@@ -452,6 +452,9 @@ class BaseGateway(  # type:ignore
             if m.get_from().server == self.boundjid.bare:
                 log.debug("Ignoring echo")
                 return
+            if m.get_to() == self.boundjid.bare:
+                log.debug("Ignoring message to component")
+                return
             s = self.get_session_from_stanza(m)
             await cb(s, m)
 

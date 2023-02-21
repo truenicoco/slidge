@@ -42,17 +42,6 @@ def ignore_sent_carbons(func):
     return wrapped
 
 
-def ignore_message_to_component(func):
-    @functools.wraps(func)
-    async def wrapped(self: SessionType, msg: Message):
-        if msg.get_to() != self.xmpp.boundjid.bare:
-            return await func(self, msg)
-        else:
-            log.debug("Ignoring message to component: %s %s", self, msg)
-
-    return wrapped
-
-
 class BaseSession(
     Generic[
         GatewayType,
@@ -165,6 +154,7 @@ class BaseSession(
     @classmethod
     def _from_user_or_none(cls, user):
         if user is None:
+            log.debug("user not found", stack_info=True)
             raise XMPPError(text="User not found", condition="subscription-required")
 
         session = _sessions.get(user)
@@ -225,7 +215,6 @@ class BaseSession(
         del user
         del session
 
-    @ignore_message_to_component
     @ignore_sent_carbons
     async def send_from_msg(self, m: Message):
         """
@@ -355,7 +344,6 @@ class BaseSession(
         else:
             return await self.contacts.by_jid(m.get_to())
 
-    @ignore_message_to_component
     async def active_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -367,7 +355,6 @@ class BaseSession(
         legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         await self.active(e, legacy_thread)
 
-    @ignore_message_to_component
     async def inactive_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -379,7 +366,6 @@ class BaseSession(
         legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         await self.inactive(e, legacy_thread)
 
-    @ignore_message_to_component
     async def composing_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -391,7 +377,6 @@ class BaseSession(
         legacy_thread = await self.__xmpp_to_legacy_thread(m, e)
         await self.composing(e, legacy_thread)
 
-    @ignore_message_to_component
     async def paused_from_msg(self, m: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -417,7 +402,6 @@ class BaseSession(
                 e.args,
             )
 
-    @ignore_message_to_component
     @ignore_sent_carbons
     async def displayed_from_msg(self, m: Message):
         """
@@ -444,7 +428,6 @@ class BaseSession(
             else:
                 log.debug("Ignored displayed marker for msg: %r", xmpp_id)
 
-    @ignore_message_to_component
     @ignore_sent_carbons
     async def correct_from_msg(self, m: Message):
         e = await self.__get_entity(m)
@@ -493,7 +476,6 @@ class BaseSession(
             if new_legacy_msg_id is not None:
                 self.sent[new_legacy_msg_id] = m.get_id()
 
-    @ignore_message_to_component
     @ignore_sent_carbons
     async def react_from_msg(self, m: Message):
         e = await self.__get_entity(m)
@@ -534,7 +516,6 @@ class BaseSession(
         else:
             self.__ack(m)
 
-    @ignore_message_to_component
     @ignore_sent_carbons
     async def retract_from_msg(self, m: Message):
         e = await self.__get_entity(m)
