@@ -154,6 +154,11 @@ class ChatCommandProvider:
                     form_values[f.var] = f.validate(
                         await self.xmpp.input(msg.get_from(), (f.label or f.var) + "?")
                     )
+                    if ans.lower() == "abort":
+                        return await self._handle_result(
+                            "Command aborted", msg, session
+                        )
+                    form_values[f.var] = f.validate(ans)
             result = await self.__wrap_handler(
                 msg,
                 result.handler,
