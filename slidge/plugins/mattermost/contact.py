@@ -25,6 +25,7 @@ class Contact(LegacyContact["Session", str]):
         self._mm_id: Optional[str] = None
         self._custom_status: Optional[UpdateUserCustomStatusJsonBody] = None
         self._custom_status_expires: Optional[datetime] = None
+        self._last_mm_picture_update = None
 
     async def fetch_status(self):
         if not self.session.ws.ready.done():
@@ -75,10 +76,7 @@ class Contact(LegacyContact["Session", str]):
         elif status == "dnd":
             self.busy(text)
         else:
-            self.session.log.warning(
-                "Unknown status for '%s':",
-                status,
-            )
+            self.session.log.warning("Unknown status for '%s':", status)
 
     async def direct_channel_id(self):
         if self._direct_channel_id is None:
@@ -126,7 +124,11 @@ class Contact(LegacyContact["Session", str]):
             surname=user.last_name,  # type:ignore
             email=user.email,  # type:ignore
         )
-        self.avatar = await self.session.mm_client.get_profile_image(user.id)
+
+        if self._last_mm_picture_update != user.last_picture_update:
+            self.avatar = await self.session.mm_client.get_profile_image(user.id)
+
+        self._last_mm_picture_update = user.last_picture_update
 
         props = user.props
         if not props:
