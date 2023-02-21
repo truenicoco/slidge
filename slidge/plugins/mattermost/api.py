@@ -1,13 +1,16 @@
 import asyncio
 import io
+import json
 import logging
 
 import aiohttp
 import emoji
 from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
+    get_all_channels,
     get_channel_members,
     get_channels_for_team_for_user,
+    get_channels_for_user,
     view_channel,
 )
 from mattermost_api_reference_client.api.files import get_file, upload_file
@@ -28,6 +31,7 @@ from mattermost_api_reference_client.api.status import (
 )
 from mattermost_api_reference_client.api.teams import get_teams_for_user
 from mattermost_api_reference_client.api.users import (
+    get_known_users,
     get_profile_image,
     get_user,
     get_user_by_username,
@@ -35,8 +39,10 @@ from mattermost_api_reference_client.api.users import (
 )
 from mattermost_api_reference_client.client import AuthenticatedClient
 from mattermost_api_reference_client.models import (
+    Channel,
     Reaction,
     Status,
+    Team,
     User,
     ViewChannelJsonBody,
 )
@@ -80,48 +86,49 @@ class MattermostClient:
         self.mm_id.set_result(my_id)
         log.debug("Me: %s", me)
 
-    async def get_contacts(self) -> list[str]:
+    async def get_known_users(self) -> list[str]:
+        r = await get_known_users.asyncio_detailed(client=self.http)
+        return json.loads(r.content)
+
+    async def get_teams(self) -> list[Team]:
+        return await get_teams_for_user.asyncio("me", client=self.http) or []
+
+    async def get_channels(self) -> list[Channel]:
         mm = self.http
-        my_id = await self.mm_id
+        channels = await get_channels_for_user.asyncio("me", client=mm)
+        log.debug("Channels: %s", channels)
 
-        contact_mm_ids: list[str] = []
-
-        teams = await get_teams_for_user.asyncio("me", client=mm)
-
-        if teams is None:
-            raise RuntimeError
-
-        for team in teams:
-            if isinstance(team.id, Unset):
-                log.warning("Team without ID")
-                continue
-            channels = await get_channels_for_team_for_user.asyncio(
-                "me", team.id, client=mm
-            )
-
-            if channels is None:
-                log.warning("Team without channels")
-                continue
-
-            for channel in channels:
-                if isinstance(channel.id, Unset):
-                    log.warning("Channel without ID")
+        if not channels:
+            # happens on INRIA's matternost, maybe disabled by admin instance?
+            channels = []
+            for team in await self.get_teams():
+                if isinstance(team.id, Unset):
+                    log.warning("Team without ID")
                     continue
-                members = await self.get_channel_members(channel.id, per_page=4)
-                if len(members) == 2:
-                    user_ids = {m.user_id for m in members}
-                    try:
-                        user_ids.remove(my_id)
-                    except KeyError:
-                        log.warning("Weird 2 person channel: %s", members)
-                    else:
-                        contact_id = user_ids.pop()
-                        if not isinstance(contact_id, str):
-                            log.warning("Weird contact: %s", members)
-                            continue
-                        contact_mm_ids.append(contact_id)
 
-        return contact_mm_ids
+                team_channels = await get_channels_for_team_for_user.asyncio(
+                    "me", team.id, client=mm
+                )
+
+                if not team_channels:
+                    log.warning("Team without channels")
+                    continue
+
+                for channel in team_channels:
+                    channels.append(channel)
+        return channels
+
+    async def get_contacts(self):
+        me = await self.mm_id
+        user_ids = []
+        for c in await self.get_channels():
+            if c.type != "D":
+                continue
+            assert isinstance(c.name, str)
+            for user_id in c.name.split("__"):
+                if user_id != me:
+                    user_ids.append(user_id)
+        return user_ids
 
     async def get_channel_members(
         self, channel_id: str, *, page: int = 0, per_page: int = 10
