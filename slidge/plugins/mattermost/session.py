@@ -71,7 +71,7 @@ class Session(BaseSession[str, Recipient]):
             else:
                 contact = await self.contacts.by_mm_user_id(user_id)
             if not carbon and event.data.get("set_online"):
-                contact.update_status()
+                await contact.update_status()
             await contact.send_mm_post(post, carbon)
 
         elif event.data["channel_type"] == "P":
@@ -104,7 +104,7 @@ class Session(BaseSession[str, Recipient]):
             self.log.debug("Own status change")
         else:
             contact = await self.contacts.by_mm_user_id(user_id)
-            contact.update_status(event.data["status"])
+            await contact.update_status(event.data["status"])
 
     async def on_mm_Typing(self, event: MattermostEvent):
         contact = await self.contacts.by_mm_user_id(event.data["user_id"])

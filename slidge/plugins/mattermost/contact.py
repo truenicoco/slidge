@@ -37,9 +37,9 @@ class Contact(LegacyContact[str]):
             return
         i = await self.mm_id()
         status = await self.session.mm_client.get_user_status(i)
-        self.update_status(status.status)
+        await self.update_status(status.status)
 
-    def update_status(
+    async def update_status(
         self,
         status: Optional[str] = None,
         custom_status: Optional[UpdateUserCustomStatusJsonBody] = None,
@@ -69,10 +69,12 @@ class Contact(LegacyContact[str]):
         else:
             text = None
 
-        if status is None:  # custom status
-            self.session.log.debug("Status is None: %s", status)
-            self.online(text)
-        elif status == "online":
+        if status is None:
+            status = (
+                await self.session.mm_client.get_user_status(await self.mm_id())
+            ).status
+
+        if status == "online":
             self.online(text)
         elif status == "offline":
             self.offline(text)
@@ -140,7 +142,7 @@ class Contact(LegacyContact[str]):
 
         custom = UpdateUserCustomStatusJsonBody.from_dict(json.loads(custom))
 
-        self.update_status(None, custom)
+        await self.update_status(None, custom)
 
     async def send_mm_post(self, post: Post, carbon=False):
         assert not isinstance(post.metadata, Unset)
@@ -215,7 +217,7 @@ class Roster(LegacyRoster[str, Contact]):
                     continue
                 c = self._contacts_by_legacy_id.get(username)
                 if c is not None and c.added_to_roster:
-                    c.update_status(status)
+                    await c.update_status(status)
 
     async def by_mm_user_id(self, user_id: str):
         try:
