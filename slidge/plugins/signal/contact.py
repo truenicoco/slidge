@@ -13,13 +13,14 @@ from . import config
 from .util import AttachmentSenderMixin
 
 if TYPE_CHECKING:
-    from .group import Participant
+    # from .group import Participant
     from .session import Session
 
 
-class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
+class Contact(AttachmentSenderMixin, LegacyContact[str]):
     CORRECTION = False
     REACTIONS_SINGLE_EMOJI = True
+    session: "Session"
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -91,7 +92,9 @@ class Contact(AttachmentSenderMixin, LegacyContact["Session", str]):
         self.online()
 
 
-class Roster(LegacyRoster["Session", Contact, str]):
+class Roster(LegacyRoster[str, Contact]):
+    session: "Session"
+
     async def by_uuid(self, uuid: str):
         return await self.by_json_address(sigapi.JsonAddressv1(uuid=uuid))
 

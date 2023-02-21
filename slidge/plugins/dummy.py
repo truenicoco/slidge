@@ -31,7 +31,7 @@ class Bookmarks(LegacyBookmarks):
             muc.DISCO_NAME = f"A friendly name {i}"
 
 
-class MUC(LegacyMUC["Session", str, "Participant", str]):
+class MUC(LegacyMUC):
     REACTIONS_SINGLE_EMOJI = True
 
     session: "Session"
@@ -72,7 +72,7 @@ class MUC(LegacyMUC["Session", str, "Participant", str]):
         return str(self.msg_ids[self.legacy_id])
 
 
-class Participant(LegacyParticipant[MUC]):
+class Participant(LegacyParticipant):
     pass
 
 
@@ -129,11 +129,7 @@ class Roster(LegacyRoster):
         return jid_username
 
 
-class Session(
-    BaseSession[
-        Gateway, int, LegacyRoster, LegacyContact, LegacyBookmarks, MUC, Participant
-    ]
-):
+class Session(BaseSession):
     def __init__(self, user):
         super(Session, self).__init__(user)
         self.counter = 0

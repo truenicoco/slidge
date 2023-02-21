@@ -11,11 +11,9 @@ from aiotdlib.api.errors import BadRequest
 
 from slidge import *
 
-from ...util.types import Recipient
 from . import config
 from .client import TelegramClient
 from .contact import Contact, Roster
-from .gateway import Gateway
 from .group import MUC
 
 
@@ -51,9 +49,10 @@ def catch_chat_not_found(coroutine):
     return wrapped
 
 
-class Session(
-    BaseSession[Gateway, int, Roster, Contact, LegacyBookmarks, MUC, LegacyParticipant]
-):
+Recipient = Union[Contact, MUC]
+
+
+class Session(BaseSession[int, Recipient]):
     def __init__(self, user):
         super().__init__(user)
         self.sent_read_marks = set[int]()
@@ -85,7 +84,7 @@ class Session(
     @catch_chat_not_found
     async def send_text(
         self,
-        chat: Union[Contact, MUC],
+        chat: Recipient,
         text: str,
         *,
         reply_to_msg_id=None,
@@ -129,17 +128,17 @@ class Session(
         return new_message_id
 
     @catch_chat_not_found
-    async def active(self, c: "Contact", thread=None):
+    async def active(self, c: Recipient, thread=None):
         res = await self.tg.api.open_chat(chat_id=c.legacy_id)
         self.log.debug("Open chat res: %s", res)
 
     @catch_chat_not_found
-    async def inactive(self, c: "Contact", thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         res = await self.tg.api.close_chat(chat_id=c.legacy_id)
         self.log.debug("Close chat res: %s", res)
 
     @catch_chat_not_found
-    async def composing(self, c: "Contact", thread=None):
+    async def composing(self, c: Recipient, thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),
@@ -148,11 +147,11 @@ class Session(
         self.log.debug("Send composing res: %s", res)
 
     @catch_chat_not_found
-    async def paused(self, c: "Contact", thread=None):
+    async def paused(self, c: Recipient, thread=None):
         pass
 
     @catch_chat_not_found
-    async def displayed(self, c: "Contact", tg_id: int, thread=None):
+    async def displayed(self, c: Recipient, tg_id: int, thread=None):
         res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
             message_thread_id=0,
@@ -162,7 +161,7 @@ class Session(
         self.log.debug("Send chat action res: %s", res)
 
     @catch_chat_not_found
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: int, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: int, thread=None):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
@@ -219,7 +218,7 @@ class Session(
 
     @catch_chat_not_found
     async def react(
-        self, c: "Contact", legacy_msg_id: int, emojis: list[str], thread=None
+        self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
     ):
         if len(emojis) == 0:
             await self.remove_reactions(legacy_msg_id, c)
@@ -239,7 +238,7 @@ class Session(
             self.log.debug("Message reaction response: %s", r)
 
     @catch_chat_not_found
-    async def retract(self, c, legacy_msg_id, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id, thread=None):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         r = await self.tg.api.delete_messages(c.legacy_id, [legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)

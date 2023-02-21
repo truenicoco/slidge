@@ -1,14 +1,18 @@
-from typing import Any, Union
+from typing import TYPE_CHECKING, Union
 
 import discord as di
 
 from slidge import LegacyContact, LegacyRoster, XMPPError
 
-from .session import Session
 from .util import Mixin
 
+if TYPE_CHECKING:
+    from .session import Session
 
-class Contact(LegacyContact[Session, int], Mixin):  # type: ignore
+
+class Contact(LegacyContact[int], Mixin):  # type: ignore
+    session: "Session"
+
     @property
     def discord_user(self) -> di.User:  # type:ignore
         self.session.log.debug("Searching for user: %s", self.legacy_id)
@@ -49,7 +53,9 @@ class Contact(LegacyContact[Session, int], Mixin):  # type: ignore
         # relationship = u.relationship
 
 
-class Roster(LegacyRoster["Session", Contact, int]):
+class Roster(LegacyRoster[int, Contact]):
+    session: "Session"
+
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
 

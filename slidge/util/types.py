@@ -10,19 +10,25 @@ if TYPE_CHECKING:
     from ..core.pubsub import PepItem
     from ..core.session import BaseSession
 
-BookmarksType = TypeVar("BookmarksType", bound="LegacyBookmarks")
-GatewayType = TypeVar("GatewayType", bound="BaseGateway")
-LegacyContactType = TypeVar("LegacyContactType", bound="LegacyContact")
+
 LegacyGroupIdType = TypeVar("LegacyGroupIdType", bound=Hashable)
 LegacyMessageType = TypeVar("LegacyMessageType", bound=Hashable)
+LegacyThreadType = TypeVar("LegacyThreadType", bound=Hashable)
+LegacyUserIdType = TypeVar("LegacyUserIdType", bound=Hashable)
+
+# BookmarksType = TypeVar("BookmarksType", bound="LegacyBookmarks")
+LegacyContactType = TypeVar("LegacyContactType", bound="LegacyContact")
+# GatewayType = TypeVar("GatewayType", bound="BaseGateway")
 LegacyMUCType = TypeVar("LegacyMUCType", bound="LegacyMUC")
 LegacyParticipantType = TypeVar("LegacyParticipantType", bound="LegacyParticipant")
-LegacyThreadType = TypeVar("LegacyThreadType", bound=Hashable)
-LegacyRosterType = TypeVar("LegacyRosterType", bound="LegacyRoster")
-LegacyUserIdType = TypeVar("LegacyUserIdType", bound=Hashable)
+# LegacyRosterType = TypeVar("LegacyRosterType", bound="LegacyRoster")
+# SessionType = TypeVar("SessionType", bound="BaseSession")
+
 PepItemType = TypeVar("PepItemType", bound="PepItem")
-SessionType = TypeVar("SessionType", bound="BaseSession")
-Recipient = Union[LegacyMUCType, LegacyContactType]
+
+Recipient = Union["LegacyMUC", "LegacyContact"]
+RecipientType = TypeVar("RecipientType", bound=Recipient)
+Sender = Union["LegacyContact", "LegacyParticipant"]
 AvatarType = Union[bytes, str, Path]
 
 ChatState = Literal["active", "composing", "gone", "inactive", "paused"]

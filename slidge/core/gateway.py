@@ -6,7 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Collection, Generic, Optional, Sequence, Type, Union
+from typing import Callable, Collection, Optional, Sequence, Union
 
 import aiohttp
 import qrcode
@@ -35,15 +35,10 @@ from .command.register import RegistrationType
 from .disco import Disco
 from .mixins import MessageMixin
 from .pubsub import PubSubComponent
-from .session import BaseSession, SessionType
+from .session import BaseSession
 
 
-class BaseGateway(  # type:ignore
-    Generic[SessionType],
-    ComponentXMPP,
-    MessageMixin,
-    metaclass=ABCSubclassableOnceAtMost,
-):
+class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMost):
     """
     Must be subclassed by a plugin to set up various aspects of the XMPP
     component behaviour, such as its display name or its registration process.
@@ -154,6 +149,8 @@ class BaseGateway(  # type:ignore
 
     GROUPS = False
 
+    jid: JID  # type: ignore
+
     def __init__(self):
         self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
         super().__init__(
@@ -189,11 +186,15 @@ class BaseGateway(  # type:ignore
 
         self.jid_validator = re.compile(config.USER_JID_VALIDATOR)
 
-        self.session_cls: Type[SessionType] = BaseSession.get_unique_subclass()
+        self.session_cls: BaseSession = BaseSession.get_unique_subclass()
         self.session_cls.xmpp = self
 
-        self.get_session_from_stanza = self.session_cls.from_stanza
-        self.get_session_from_user = self.session_cls.from_user
+        self.get_session_from_stanza: Callable[
+            [Union[Message, Presence, Iq]], BaseSession
+        ] = self.session_cls.from_stanza
+        self.get_session_from_user: Callable[
+            [GatewayUser], BaseSession
+        ] = self.session_cls.from_user
 
         self.register_plugins()
         self.__register_slixmpp_api()
@@ -566,7 +567,7 @@ class BaseGateway(  # type:ignore
 
         log.info("Slidge has successfully started")
 
-    async def _login_wrap(self, session: "SessionType"):
+    async def _login_wrap(self, session: "BaseSession"):
         session.send_gateway_status("Logging in…", show="dnd")
         try:
             status = await session.login()
@@ -596,7 +597,7 @@ class BaseGateway(  # type:ignore
         else:
             session.send_gateway_status(status, show="chat")
 
-    def re_login(self, session: "SessionType"):
+    def re_login(self, session: "BaseSession"):
         async def w():
             await session.logout()
             await self._login_wrap(session)

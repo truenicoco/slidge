@@ -2,21 +2,23 @@ import string
 import warnings
 from copy import copy
 from datetime import datetime
-from typing import Generic, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce
-from ...util.types import LegacyMessageType, LegacyMUCType
+from ...util.types import LegacyMessageType
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 from .room import MucType
 
+if TYPE_CHECKING:
+    from .room import LegacyMUC
+
 
 class LegacyParticipant(
-    Generic[LegacyMUCType],
     PresenceMixin,
     MessageMixin,
     ChatterDiscoMixin,
@@ -26,7 +28,7 @@ class LegacyParticipant(
     USE_STANZA_ID = True
     STRIP_SHORT_DELAY = False
 
-    def __init__(self, muc: LegacyMUCType, nickname: str, is_user=False):
+    def __init__(self, muc: "LegacyMUC", nickname: str, is_user=False):
         self.muc = muc
         self.session = session = muc.session
         self.log = session.log
@@ -39,7 +41,7 @@ class LegacyParticipant(
         self.nickname = nickname
         self.log.debug("NEW PARTICIPANT: %r", nickname)
 
-        j: JID = copy(self.muc.jid)  # type:ignore
+        j: JID = copy(self.muc.jid)
         try:
             j.resource = nickname
         except InvalidJID:

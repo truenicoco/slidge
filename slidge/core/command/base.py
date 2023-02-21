@@ -20,11 +20,12 @@ from slixmpp.types import JidStr
 
 from ...util.db import user_store
 from ...util.error import XMPPError
-from ...util.types import FieldType, SessionType
+from ...util.types import FieldType
 from .. import config
 
 if TYPE_CHECKING:
     from ..gateway import BaseGateway
+    from ..session import BaseSession
 
 
 @dataclass
@@ -307,7 +308,7 @@ class Command(ABC):
         cls.subclasses.append(cls)
 
     async def run(
-        self, session: Optional[SessionType], ifrom: JID, *args
+        self, session: Optional["BaseSession"], ifrom: JID, *args
     ) -> CommandResponseType:
         """
         Entry point of the command
@@ -324,7 +325,7 @@ class Command(ABC):
     def _get_session(self, jid: JID):
         user = user_store.get_by_jid(jid)
         if user is not None:
-            return self.xmpp.get_session_from_user(user)  # type:ignore
+            return self.xmpp.get_session_from_user(user)
 
     def raise_if_not_authorized(self, jid: JID):
         """

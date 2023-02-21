@@ -43,9 +43,10 @@ class Disco:
         user = user_store.get_by_jid(ifrom)
         if user is None:
             raise XMPPError("registration-required")
-        session = self.xmpp.get_session_from_user(user)  # type:ignore
+        session = self.xmpp.get_session_from_user(user)
         log.debug("Looking for entity: %s", jid)
 
+        assert jid is not None
         entity = await session.get_contact_or_group_or_participant(jid)
 
         if entity is None:
@@ -63,7 +64,7 @@ class Disco:
         if user is None:
             raise XMPPError("registration-required")
 
-        session = self.xmpp.get_session_from_user(user)  # type:ignore
+        session = self.xmpp.get_session_from_user(user)
 
         d = DiscoItems()
         for muc in session.bookmarks:

@@ -11,7 +11,7 @@ from .contact import Contact
 from .session import Session
 
 
-class Gateway(BaseGateway[Session]):
+class Gateway(BaseGateway):
     COMPONENT_NAME = "Discord (slidge)"
     COMPONENT_TYPE = "discord"
     COMPONENT_AVATAR = "https://www.usff.fr/wp-content/uploads/2018/05/Discord_logo.png"

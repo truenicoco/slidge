@@ -11,7 +11,6 @@ import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 
 from slidge import *
-from slidge.core.muc.room import MucType
 from slidge.util.util import is_valid_phone_number
 
 if TYPE_CHECKING:
@@ -41,12 +40,17 @@ def handle_unregistered_recipient(func):
     return wrapped
 
 
-class Session(
-    BaseSession["Gateway", int, "Roster", "Contact", "Bookmarks", "MUC", "Participant"]
-):
+Recipient = Union["Contact", "MUC"]
+
+
+class Session(BaseSession[int, Recipient]):
     """
     Represents a signal account
     """
+
+    xmpp: "Gateway"
+    contacts: "Roster"
+    bookmarks: "Bookmarks"
 
     def __init__(self, user: GatewayUser):
         """
@@ -71,14 +75,14 @@ class Session(
             raise NotImplementedError
 
     @handle_unregistered_recipient
-    async def paused(self, c, thread=None):
+    async def paused(self, c: Recipient, thread=None):
         address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
             account=self.phone, typing=False, address=address, group=group
         )
 
     @handle_unregistered_recipient
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):
@@ -297,7 +301,7 @@ class Session(
     @handle_unregistered_recipient
     async def send_text(
         self,
-        chat: Union["Contact", "MUC"],
+        chat: Recipient,
         text: str,
         *,
         reply_to_msg_id=None,
@@ -363,7 +367,7 @@ class Session(
     @handle_unregistered_recipient
     async def send_file(
         self,
-        chat: "Contact",
+        chat: "Recipient",
         url: str,
         *,
         http_response,
@@ -391,10 +395,10 @@ class Session(
                 )
                 return signal_r.timestamp
 
-    async def active(self, c: "Contact", thread=None):
+    async def active(self, c: Recipient, thread=None):
         pass
 
-    async def inactive(self, c: "Contact", thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         pass
 
     @staticmethod
@@ -408,7 +412,7 @@ class Session(
         return address, group
 
     @handle_unregistered_recipient
-    async def composing(self, c: "Contact", thread=None):
+    async def composing(self, c: Recipient, thread=None):
         self.log.debug("COMPOSING %s", c)
         address, group = self._get_args_from_entity(c)
         await (await self.signal).typing(
@@ -419,9 +423,7 @@ class Session(
         )
 
     @handle_unregistered_recipient
-    async def displayed(
-        self, entity: Union["Contact", "MUC"], legacy_msg_id: int, thread=None
-    ):
+    async def displayed(self, entity: Recipient, legacy_msg_id: int, thread=None):
         if entity.is_group:
             entity = cast("MUC", entity)
             address = entity.sent.get(legacy_msg_id)
@@ -443,7 +445,7 @@ class Session(
     @handle_unregistered_recipient
     async def react(
         self,
-        chat: Union["Contact", "MUC"],
+        chat: Recipient,
         legacy_msg_id: int,
         emojis: list[str],
         thread=None,
@@ -510,7 +512,7 @@ class Session(
         chat.user_reactions[legacy_msg_id] = emoji
 
     @handle_unregistered_recipient
-    async def retract(self, c: "Contact", legacy_msg_id: int, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: int, thread=None):
         address, group = self._get_args_from_entity(c)
         try:
             await (await self.signal).remote_delete(

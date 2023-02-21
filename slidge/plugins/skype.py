@@ -5,7 +5,7 @@ import pprint
 import threading
 from pathlib import Path
 from threading import Lock, Thread
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import skpy
 from requests.exceptions import ConnectionError
@@ -14,7 +14,7 @@ from slixmpp import JID
 from slidge import *
 
 
-class Gateway(BaseGateway["Session"]):
+class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter skype credentials"
     REGISTRATION_FIELDS = [
         FormField(var="username", label="Username", required=True),
@@ -44,7 +44,9 @@ class Gateway(BaseGateway["Session"]):
             raise XMPPError("forbidden")
 
 
-class Contact(LegacyContact["Session", str]):
+class Contact(LegacyContact[str]):
+    session: "Session"
+
     def update_presence(self, status: skpy.SkypeUtils.Status):
         if status == skpy.SkypeUtils.Status.Offline:
             self.offline()
@@ -123,23 +125,18 @@ class ListenThread(Thread):
 
 
 class Roster(LegacyRoster):
+    session: "Session"
+
     async def fill(self):
         for contact in self.session.sk.contacts:
             c = await self.by_legacy_id(contact.id)
             await c.add_to_roster()
 
 
-class Session(
-    BaseSession[
-        Gateway,
-        int,
-        Roster,
-        Contact,
-        LegacyBookmarks,
-        LegacyMUC,
-        LegacyParticipant,
-    ]
-):
+Recipient = Union[Contact, LegacyMUC]
+
+
+class Session(BaseSession[int, Recipient]):
     skype_token_path: Path
     sk: skpy.Skype
 
@@ -247,7 +244,7 @@ class Session(
         # No 'contact has read' event :( https://github.com/Terrance/SkPy/issues/206
         await asyncio.to_thread(event.ack)
 
-    async def send_text(self, chat: LegacyContact, text: str, **k):
+    async def send_text(self, chat: Recipient, text: str, **k):
         skype_chat = self.sk.contacts[chat.legacy_id].chat
         self.send_lock.acquire()
         msg = await asyncio.to_thread(skype_chat.sendMsg, text)
@@ -264,7 +261,7 @@ class Session(
             self.thread.stop()
             self.thread.join()
 
-    async def send_file(self, chat: LegacyContact, url: str, http_response, **kwargs):
+    async def send_file(self, chat: Recipient, url: str, http_response, **kwargs):
         fname = url.split("/")[-1]
         await asyncio.to_thread(
             self.sk.contacts[chat.legacy_id].chat.sendFile,
@@ -273,19 +270,19 @@ class Session(
             http_response.content_type.startswith("image"),
         )
 
-    async def active(self, c: LegacyContact, thread=None):
+    async def active(self, c: Recipient, thread=None):
         pass
 
-    async def inactive(self, c: LegacyContact, thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         pass
 
-    async def composing(self, c: LegacyContact, thread=None):
+    async def composing(self, c: Recipient, thread=None):
         await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, True)
 
-    async def paused(self, c: LegacyContact, thread=None):
+    async def paused(self, c: Recipient, thread=None):
         await asyncio.to_thread(self.sk.contacts[c.legacy_id].chat.setTyping, False)
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: int, thread=None):
+    async def displayed(self, c: Recipient, legacy_msg_id: int, thread=None):
         try:
             skype_msg = self.unread_by_user.pop(legacy_msg_id)
         except KeyError:
@@ -301,11 +298,11 @@ class Session(
                 # https://github.com/Terrance/SkPy/issues/207
                 self.log.debug("Skype read marker failed: %r", e)
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
         m = self.get_msg(legacy_msg_id, c)
         await asyncio.to_thread(m.edit, text)
 
-    async def retract(self, c: Contact, legacy_msg_id: Any, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: Any, thread=None):
         m = self.get_msg(legacy_msg_id, c)
         log.debug("Deleting %s", m)
         await asyncio.to_thread(m.delete)
@@ -313,7 +310,7 @@ class Session(
     async def search(self, form_values: dict[str, str]):
         pass
 
-    def get_msg(self, legacy_msg_id: int, contact: Contact) -> skpy.SkypeTextMsg:
+    def get_msg(self, legacy_msg_id: int, contact: Recipient) -> skpy.SkypeTextMsg:
         for m in self.sk.contacts[contact.legacy_id].chat.getMsgs():
             log.debug("Message %r vs %r : %s", legacy_msg_id, m.clientId, m)
             if m.clientId == legacy_msg_id:

@@ -1,20 +1,23 @@
 import logging
 import warnings
 from datetime import date, datetime
-from typing import Generic, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
 
 from slixmpp import JID, Message, Presence
 
 from ...util import SubclassableOnce
-from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType, SessionType
+from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType
 from ...util.xep_0292.stanza import VCard4
 from .. import config
 from ..mixins import FullCarbonMixin
 from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
 
+if TYPE_CHECKING:
+    from ..session import BaseSession
+
 
 class LegacyContact(
-    Generic[SessionType, LegacyUserIdType],
+    Generic[LegacyUserIdType],
     FullCarbonMixin,
     ReactionRecipientMixin,
     ThreadRecipientMixin,
@@ -52,7 +55,7 @@ class LegacyContact(
     This will use :xep:`0363` to impersonate the XMPP user in order.
     """
 
-    session: "SessionType"
+    session: "BaseSession"
 
     RESOURCE: str = "slidge"
     """
@@ -67,7 +70,7 @@ class LegacyContact(
 
     def __init__(
         self,
-        session: "SessionType",
+        session: "BaseSession",
         legacy_id: LegacyUserIdType,
         jid_username: str,
     ):
@@ -126,7 +129,7 @@ class LegacyContact(
 
         Plugins have no reason to use this, but it is used by slidge core
         for legacy networks that need to mark all messages as read (most XMPP
-        clients only send a read marker for the latest message.
+        clients only send a read marker for the latest message).
 
         This has side effects, if the horizon XMPP id is found, messages up to
         this horizon are not cleared, to avoid sending the same read mark twice.

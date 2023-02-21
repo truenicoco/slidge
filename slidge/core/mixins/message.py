@@ -49,7 +49,7 @@ class MessageMaker(BaseSender):
         if carbon:
             # the msg needs to have jabber:client as xmlns, so
             # we don't want to associate with the XML stream
-            msg_cls = Message  # type:ignore
+            msg_cls = Message
         else:
             msg_cls = self.xmpp.Message  # type:ignore
         msg = msg_cls(sfrom=mfrom, stype=self.mtype, sto=mto, **kwargs)
@@ -241,7 +241,9 @@ class AttachmentMixin(MessageMaker):
         legacy_file_id: Optional[Union[str, int]] = None,
     ):
         file_id = str(uuid4()) if legacy_file_id is None else str(legacy_file_id)
-        destination_dir = Path(config.NO_UPLOAD_PATH) / file_id  # type:ignore
+        assert config.NO_UPLOAD_PATH is not None
+        assert config.NO_UPLOAD_URL_PREFIX is not None
+        destination_dir = Path(config.NO_UPLOAD_PATH) / file_id
 
         if destination_dir.exists():
             log.debug("Dest dir exists: %s", destination_dir)
@@ -255,7 +257,7 @@ class AttachmentMixin(MessageMaker):
                 name = files[0].name
                 uu = files[0].parent.name  # anti-obvious url trick, see below
                 return files[0], "/".join(
-                    [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
+                    [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]
                 )
             else:
                 log.warning(
@@ -290,9 +292,7 @@ class AttachmentMixin(MessageMaker):
             log.debug("Changing perms of %s", destination)
             destination.chmod(destination.stat().st_mode | stat.S_IROTH)
 
-        uploaded_url = "/".join(
-            [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]  # type:ignore
-        )
+        uploaded_url = "/".join([config.NO_UPLOAD_URL_PREFIX, file_id, uu, name])
 
         return destination, uploaded_url
 

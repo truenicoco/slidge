@@ -13,7 +13,9 @@ from .session import Session
 from .util import Mixin
 
 
-class Bookmarks(LegacyBookmarks):
+class Bookmarks(LegacyBookmarks[int, "MUC"]):
+    session: Session
+
     async def fill(self):
         for channel in self.session.discord.get_all_channels():
             if isinstance(channel, di.TextChannel):
@@ -22,7 +24,7 @@ class Bookmarks(LegacyBookmarks):
 
 class Participant(LegacyParticipant, Mixin):  # type: ignore
     session: Session
-    contact: "Contact"
+    contact: Contact
 
     async def get_reply_to_kwargs(self, message: di.Message):
         quoted_msg, reply_kwargs = await super().get_reply_to_kwargs(message)
@@ -51,7 +53,7 @@ class Participant(LegacyParticipant, Mixin):  # type: ignore
         return self.contact.discord_user
 
 
-class MUC(LegacyMUC[Session, int, Participant, int]):
+class MUC(LegacyMUC[int, int, Participant]):
     session: Session
     type = MucType.GROUP
 

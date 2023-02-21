@@ -2,13 +2,15 @@
 Commands available to users
 """
 
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
-from ...util.types import SessionType
 from .base import Command, CommandAccess, Confirmation, Form, FormField, TableResult
+
+if TYPE_CHECKING:
+    from ..session import BaseSession
 
 
 class Search(Command):
@@ -34,7 +36,7 @@ class Search(Command):
     @staticmethod
     async def search(
         form_values: dict[str, Union[str, JID]],
-        session: Optional[SessionType],
+        session: Optional["BaseSession"],
         _ifrom: JID,
     ):
         assert session is not None
@@ -58,7 +60,7 @@ class Unregister(Command):
             handler=self.unregister,
         )
 
-    async def unregister(self, session: Optional[SessionType], _ifrom: JID):
+    async def unregister(self, session: Optional["BaseSession"], _ifrom: JID):
         assert session is not None
         await self.xmpp.unregister_user(session.user)
         return "OK"
@@ -80,7 +82,7 @@ class SyncContacts(Command):
             handler=self.sync,
         )
 
-    async def sync(self, session: Optional[SessionType], _ifrom: JID):
+    async def sync(self, session: Optional["BaseSession"], _ifrom: JID):
         if session is None:
             raise RuntimeError
         roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.bare_jid)
@@ -168,7 +170,7 @@ class Login(Command):
 
     ACCESS = CommandAccess.USER_NON_LOGGED
 
-    async def run(self, session: Optional[SessionType], _ifrom, *_):
+    async def run(self, session: Optional["BaseSession"], _ifrom, *_):
         assert session is not None
         try:
             msg = await session.login()

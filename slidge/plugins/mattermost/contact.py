@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Contact(LegacyContact["Session", str]):
-    legacy_id: str
+class Contact(LegacyContact[str]):
+    session: "Session"
 
     MARKS = False
 
@@ -179,7 +179,9 @@ class Contact(LegacyContact["Session", str]):
             )
 
 
-class Roster(LegacyRoster["Session", Contact, str]):
+class Roster(LegacyRoster[str, Contact]):
+    session: "Session"
+
     user_id_to_username: dict[str, str]
     direct_channel_id_to_username: dict[str, str]
     STATUS_POLL_INTERVAL = 300

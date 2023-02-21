@@ -180,7 +180,7 @@ class PubSubComponent(BasePlugin):
 
         # we don't want to push anything for contacts that are not in the user's roster
         if to != self.xmpp.boundjid.bare:
-            session = self.xmpp.get_session_from_stanza(p)  # type:ignore
+            session = self.xmpp.get_session_from_stanza(p)
 
             if session is None:
                 return

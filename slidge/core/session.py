@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import logging
-from typing import Generic, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Generic, Optional, Union, cast
 
 import aiohttp
 from slixmpp import JID, Message, Presence
@@ -10,17 +10,10 @@ from ..util import ABCSubclassableOnceAtMost, BiDict
 from ..util.db import GatewayUser, user_store
 from ..util.error import XMPPError
 from ..util.types import (
-    BookmarksType,
-    GatewayType,
-    LegacyContactType,
     LegacyMessageType,
-    LegacyMUCType,
-    LegacyParticipantType,
-    LegacyRosterType,
     LegacyThreadType,
     PresenceShow,
-    Recipient,
-    SessionType,
+    RecipientType,
 )
 from ..util.xep_0461.stanza import FeatureFallBack
 from . import config
@@ -29,10 +22,16 @@ from .contact import LegacyRoster
 from .muc.bookmarks import LegacyBookmarks
 from .muc.room import LegacyMUC
 
+if TYPE_CHECKING:
+    from ..util.types import Sender
+    from .contact import LegacyContact
+    from .gateway import BaseGateway
+    from .muc.participant import LegacyParticipant
+
 
 def ignore_sent_carbons(func):
     @functools.wraps(func)
-    async def wrapped(self: SessionType, msg: Message):
+    async def wrapped(self: "BaseSession", msg: Message):
         if (i := msg.get_id()) in self.ignore_messages:
             self.log.debug("Ignored sent carbon: %s", i)
             self.ignore_messages.remove(i)
@@ -43,16 +42,7 @@ def ignore_sent_carbons(func):
 
 
 class BaseSession(
-    Generic[
-        GatewayType,
-        LegacyMessageType,
-        LegacyRosterType,
-        LegacyContactType,
-        BookmarksType,
-        LegacyMUCType,
-        LegacyParticipantType,
-    ],
-    metaclass=ABCSubclassableOnceAtMost,
+    Generic[LegacyMessageType, RecipientType], metaclass=ABCSubclassableOnceAtMost
 ):
     """
     Represents a gateway user logged in to the legacy network and performing actions.
@@ -71,7 +61,7 @@ class BaseSession(
     the official client of a legacy network.
     """
 
-    xmpp: "GatewayType"
+    xmpp: "BaseGateway"
     """
     The gateway instance singleton. Use it for low-level XMPP calls or custom methods that are not
     session-specific.
@@ -80,10 +70,6 @@ class BaseSession(
     http: aiohttp.ClientSession
 
     def __init__(self, user: GatewayUser):
-        self._roster_cls: Type[
-            LegacyRosterType
-        ] = LegacyRoster.get_self_or_unique_subclass()
-
         self.log = logging.getLogger(user.bare_jid)
 
         self.user = user
@@ -93,10 +79,10 @@ class BaseSession(
 
         self.ignore_messages = set[str]()
 
-        self.contacts: LegacyRosterType = self._roster_cls(self)
+        self.contacts: LegacyRoster = LegacyRoster.get_self_or_unique_subclass()(self)
         self.logged = False
 
-        self.bookmarks: BookmarksType = LegacyBookmarks.get_self_or_unique_subclass()(
+        self.bookmarks: LegacyBookmarks = LegacyBookmarks.get_self_or_unique_subclass()(
             self
         )
 
@@ -167,7 +153,7 @@ class BaseSession(
         return cls._from_user_or_none(user)
 
     @classmethod
-    def from_stanza(cls: Type[SessionType], s) -> SessionType:
+    def from_stanza(cls, s) -> "BaseSession":
         """
         Get a user's :class:`.LegacySession` using the "from" field of a stanza
 
@@ -179,7 +165,7 @@ class BaseSession(
         return cls._from_user_or_none(user_store.get_by_stanza(s))
 
     @classmethod
-    def from_jid(cls: Type[SessionType], jid: JID) -> SessionType:
+    def from_jid(cls, jid: JID) -> "BaseSession":
         """
         Get a user's :class:`.LegacySession` using its jid
 
@@ -311,7 +297,7 @@ class BaseSession(
             if legacy_msg_id is not None:
                 self.sent[legacy_msg_id] = m.get_id()
 
-    async def __xmpp_to_legacy_thread(self, msg: Message, recipient: Recipient):
+    async def __xmpp_to_legacy_thread(self, msg: Message, recipient: RecipientType):
         xmpp_thread = msg["thread"]
         if xmpp_thread:
             async with self.__thread_creation_lock:
@@ -334,7 +320,7 @@ class BaseSession(
             ack["receipt"] = msg["id"]
             ack.send()
 
-    async def __get_entity(self, m: Message) -> Union[LegacyContactType, LegacyMUCType]:
+    async def __get_entity(self, m: Message) -> RecipientType:
         self.raise_if_not_logged()
         if m.get_type() == "groupchat":
             muc = await self.bookmarks.by_jid(m.get_to())
@@ -630,12 +616,12 @@ class BaseSession(
 
     async def send_text(
         self,
-        chat: Recipient,
+        chat: RecipientType,
         text: str,
         *,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
-        reply_to: Optional[Union["LegacyContactType", "LegacyParticipantType"]] = None,
+        reply_to: Optional["Sender"] = None,
         thread: Optional[LegacyThreadType] = None,
     ) -> Optional[LegacyMessageType]:
         """
@@ -645,7 +631,7 @@ class BaseSession(
         Override this and implement sending a message to the legacy network in this method.
 
         :param text: Content of the message
-        :param chat: Recipient of the message. :class:`.LegacyContact` instance for 1:1 chat,
+        :param chat: RecipientType of the message. :class:`.LegacyContact` instance for 1:1 chat,
             :class:`.MUC` instance for groups.
         :param reply_to_msg_id: A legacy message ID if the message references (quotes)
             another message (:xep:`0461`)
@@ -662,13 +648,13 @@ class BaseSession(
 
     async def send_file(
         self,
-        chat: Recipient,
+        chat: RecipientType,
         url: str,
         *,
         http_response: aiohttp.ClientResponse,
         reply_to_msg_id: Optional[LegacyMessageType] = None,
         reply_to_fallback_text: Optional[str] = None,
-        reply_to: Optional[Union[LegacyContactType, "LegacyParticipantType"]] = None,
+        reply_to: Optional[Union["LegacyContact", "LegacyParticipant"]] = None,
         thread: Optional[LegacyThreadType] = None,
     ) -> Optional[LegacyMessageType]:
         """
@@ -687,15 +673,17 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def active(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
+    async def active(self, c: RecipientType, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user sends an 'active' chat state to the legacy network (:xep:`0085`)
 
-        :param c: Recipient of the active chat state
+        :param c: RecipientType of the active chat state
         """
         raise NotImplementedError
 
-    async def inactive(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
+    async def inactive(
+        self, c: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
         """
         Triggered when the user sends an 'inactive' chat state to the legacy network (:xep:`0085`)
 
@@ -703,7 +691,9 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def composing(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
+    async def composing(
+        self, c: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
         """
         Triggered when the user starts typing in the window of a legacy contact (:xep:`0085`)
 
@@ -711,7 +701,7 @@ class BaseSession(
         """
         raise NotImplementedError
 
-    async def paused(self, c: Recipient, thread: Optional[LegacyThreadType] = None):
+    async def paused(self, c: RecipientType, thread: Optional[LegacyThreadType] = None):
         """
         Triggered when the user pauses typing in the window of a legacy contact (:xep:`0085`)
 
@@ -721,7 +711,7 @@ class BaseSession(
 
     async def displayed(
         self,
-        c: Recipient,
+        c: RecipientType,
         legacy_msg_id: LegacyMessageType,
         thread: Optional[LegacyThreadType] = None,
     ):
@@ -739,7 +729,7 @@ class BaseSession(
 
     async def correct(
         self,
-        c: Recipient,
+        c: RecipientType,
         text: str,
         legacy_msg_id: LegacyMessageType,
         thread: Optional[LegacyThreadType] = None,
@@ -770,7 +760,7 @@ class BaseSession(
 
     async def react(
         self,
-        c: Recipient,
+        c: RecipientType,
         legacy_msg_id: LegacyMessageType,
         emojis: list[str],
         thread: Optional[LegacyThreadType] = None,
@@ -787,7 +777,7 @@ class BaseSession(
 
     async def retract(
         self,
-        c: Recipient,
+        c: RecipientType,
         legacy_msg_id: LegacyMessageType,
         thread: Optional[LegacyThreadType] = None,
     ):

@@ -5,26 +5,19 @@ import discord as di
 
 from slidge import *
 
-from ...util.types import Recipient
+# from ...util.types import Recipient
 
 if TYPE_CHECKING:
-    from . import Contact, Gateway
     from .client import Discord
-    from .contact import Roster
+    from .contact import Contact, Roster
     from .group import MUC
 
+Recipient = Union["MUC", "Contact"]
 
-class Session(
-    BaseSession[
-        "Gateway",
-        int,
-        "Roster",
-        "Contact",
-        LegacyBookmarks,
-        LegacyMUC,
-        LegacyParticipant,
-    ]
-):
+
+class Session(BaseSession[int, Recipient]):
+    contacts: "Roster"
+
     def __init__(self, user):
         super().__init__(user)
         from .client import Discord
@@ -51,7 +44,7 @@ class Session(
 
     async def send_text(
         self,
-        chat,
+        chat: Recipient,
         text: str,
         reply_to_msg_id=None,
         thread=None,
@@ -80,20 +73,20 @@ class Session(
         recipient = await get_recipient(chat, thread)
         await recipient.send(url)
 
-    async def active(self, c: "Contact", thread=None):
+    async def active(self, c: Recipient, thread=None):
         pass
 
-    async def inactive(self, c: "Contact", thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         pass
 
-    async def composing(self, c: "Contact", thread=None):
+    async def composing(self, c: Recipient, thread=None):
         recipient = await get_recipient(c, thread)
         await recipient.trigger_typing()
 
-    async def paused(self, c: "Contact", thread=None):
+    async def paused(self, c: Recipient, thread=None):
         pass
 
-    async def displayed(self, c: "Contact", legacy_msg_id: int, thread=None):
+    async def displayed(self, c: Recipient, legacy_msg_id: int, thread=None):
         if not isinstance(legacy_msg_id, int):
             self.log.debug("This is not a valid discord msg id: %s", legacy_msg_id)
             return
@@ -111,7 +104,7 @@ class Session(
                 "Message %s should have been marked as read but this raised %s", m, e
             )
 
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
         channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
@@ -120,7 +113,7 @@ class Session(
         await self.edit_futures[legacy_msg_id]
 
     async def react(
-        self, c: "Contact", legacy_msg_id: int, emojis: list[str], thread=None
+        self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
     ):
         channel = await get_recipient(c, thread)
 
@@ -135,7 +128,7 @@ class Session(
         for e in legacy_reactions - xmpp_reactions:
             await m.remove_reaction(e, self.discord.user)  # type:ignore
 
-    async def retract(self, c: "Contact", legacy_msg_id: Any, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: Any, thread=None):
         channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
@@ -169,7 +162,7 @@ class Session(
 
 
 async def get_recipient(
-    chat: Union["Contact", "MUC"], thread: Optional[int]
+    chat: Recipient, thread: Optional[int]
 ) -> Union[di.User, di.TextChannel, di.Thread]:
     if chat.is_group:
         channel = await chat.get_discord_channel()  # type:ignore

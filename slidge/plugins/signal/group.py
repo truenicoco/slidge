@@ -25,7 +25,7 @@ class Participant(AttachmentSenderMixin, LegacyParticipant):
         super().send_text(body, legacy_msg_id, **k)
 
 
-class MUC(LegacyMUC["Session", str, Participant, int]):
+class MUC(LegacyMUC[str, int, Participant]):
     REACTIONS_SINGLE_EMOJI = True
 
     session: "Session"
@@ -66,7 +66,9 @@ class MUC(LegacyMUC["Session", str, Participant, int]):
             self.avatar = Path(path)
 
 
-class Bookmarks(LegacyBookmarks["Session", MUC, str]):
+class Bookmarks(LegacyBookmarks[str, MUC]):
+    session: "Session"
+
     def __init__(self, session: "Session"):
         super().__init__(session)
 

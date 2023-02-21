@@ -7,19 +7,11 @@ from os.path import basename
 from shelve import open
 from typing import Optional, Union
 
-from slidge import (
-    BaseSession,
-    GatewayUser,
-    LegacyBookmarks,
-    LegacyMUC,
-    LegacyParticipant,
-    XMPPError,
-    global_config,
-)
+from slidge import BaseSession, GatewayUser, LegacyMUC, XMPPError, global_config
 from slidge.plugins.whatsapp.generated import go, whatsapp
 
 from . import config
-from .contact import Contact, Roster
+from .contact import Contact
 from .gateway import Gateway
 
 MESSAGE_PAIR_SUCCESS = (
@@ -33,11 +25,12 @@ MESSAGE_LOGGED_OUT = (
 )
 
 
-class Session(
-    BaseSession[
-        Gateway, str, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
-    ]
-):
+Recipient = Union[Contact, LegacyMUC]
+
+
+class Session(BaseSession[str, Recipient]):
+    xmpp: Gateway
+
     def __init__(self, user: GatewayUser):
         super().__init__(user)
         self.user_shelf_path = (
@@ -213,7 +206,7 @@ class Session(
 
     async def send_text(
         self,
-        chat: Union[Contact, LegacyMUC],
+        chat: Recipient,
         text: str,
         reply_to_msg_id: Optional[str] = None,
         reply_to_fallback_text: Optional[str] = None,
@@ -237,7 +230,7 @@ class Session(
 
     async def send_file(
         self,
-        chat: Union[Contact, LegacyMUC],
+        chat: Recipient,
         url: str,
         http_response,
         reply_to_msg_id: Optional[str] = None,
@@ -263,19 +256,19 @@ class Session(
             raise XMPPError(text=str(err))
         return message_id
 
-    async def active(self, c: Contact, thread=None):
+    async def active(self, c: Recipient, thread=None):
         """
         WhatsApp has no equivalent to the "active" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def inactive(self, c: Contact, thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         """
         WhatsApp has no equivalent to the "inactive" chat state, so calls to this function are no-ops.
         """
         pass
 
-    async def composing(self, c: Contact, thread=None):
+    async def composing(self, c: Recipient, thread=None):
         """
         Send "composing" chat state to given WhatsApp contact, signifying that a message is currently
         being composed.
@@ -286,7 +279,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def paused(self, c: Contact, thread=None):
+    async def paused(self, c: Recipient, thread=None):
         """
         Send "paused" chat state to given WhatsApp contact, signifying that an (unsent) message is no
         longer being composed.
@@ -297,7 +290,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def displayed(self, c: Contact, legacy_msg_id: str, thread=None):
+    async def displayed(self, c: Recipient, legacy_msg_id: str, thread=None):
         """
         Send "read" receipt, signifying that the WhatsApp message sent has been displayed on the XMPP
         client.
@@ -311,7 +304,7 @@ class Session(
             raise XMPPError(text=str(err))
 
     async def react(
-        self, c: Contact, legacy_msg_id: str, emojis: list[str], thread=None
+        self, c: Recipient, legacy_msg_id: str, emojis: list[str], thread=None
     ):
         """
         Send or remove emoji reaction to existing WhatsApp message.
@@ -330,7 +323,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def retract(self, c: Contact, legacy_msg_id: str, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: str, thread=None):
         """
         Request deletion (aka retraction) for a given WhatsApp message.
         """
@@ -342,7 +335,7 @@ class Session(
         except RuntimeError as err:
             raise XMPPError(text=str(err))
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: str, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: str, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):

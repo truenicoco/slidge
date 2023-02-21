@@ -13,7 +13,7 @@ login process seem a little too exotic for my taste.
 import asyncio
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import steam.enums
 from slixmpp import JID
@@ -32,7 +32,7 @@ from slidge.core.command.register import RegistrationType, TwoFactorNotRequired
 from slidge.util import BiDict
 
 
-class Gateway(BaseGateway["Session"]):
+class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = "Enter steam credentials"
     REGISTRATION_FIELDS = [
         FormField(var="username", label="Steam username", required=True),
@@ -98,10 +98,12 @@ class Gateway(BaseGateway["Session"]):
         self.steam_clients[user.bare_jid] = client
 
 
-class Contact(LegacyContact["Session", int]):
+class Contact(LegacyContact[int]):
     MARKS = False
     CORRECTION = False
     RETRACTION = False
+
+    session: "Session"
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -138,7 +140,9 @@ class Contact(LegacyContact["Session", int]):
         self.update_status(user.state)
 
 
-class Roster(LegacyRoster["Session", Contact, int]):
+class Roster(LegacyRoster[int, Contact]):
+    session: "Session"
+
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return int(jid_username)
@@ -166,11 +170,13 @@ class Roster(LegacyRoster["Session", Contact, int]):
             await c.add_to_roster()
 
 
-class Session(
-    BaseSession[
-        Gateway, int, Roster, Contact, LegacyBookmarks, LegacyMUC, LegacyParticipant
-    ]
-):
+Recipient = Union[Contact, LegacyMUC]
+
+
+class Session(BaseSession[int, Recipient]):
+    xmpp: "Gateway"
+    contacts: Roster
+
     def __init__(self, user):
         super().__init__(user)
         store_dir = global_config.HOME_DIR / self.user.bare_jid
@@ -317,7 +323,7 @@ class Session(
     async def logout(self):
         pass
 
-    async def send_text(self, chat: Contact, text: str, **k):
+    async def send_text(self, chat: Recipient, text: str, **k):
         if not text:
             return
         job_id = self.steam.send_um(
@@ -331,16 +337,16 @@ class Session(
         f = self.job_futures[job_id] = self.xmpp.loop.create_future()
         return (await f).server_timestamp
 
-    async def send_file(self, chat: Contact, url: str, *a, **k):
+    async def send_file(self, chat: Recipient, url: str, *a, **k):
         return await self.send_text(chat, url)
 
-    async def active(self, c: Contact, thread=None):
+    async def active(self, c: Recipient, thread=None):
         pass
 
-    async def inactive(self, c: Contact, thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         pass
 
-    async def composing(self, c: Contact, thread=None):
+    async def composing(self, c: Recipient, thread=None):
         self.steam.send_um(
             "FriendMessages.SendMessage#1",
             {
@@ -349,22 +355,22 @@ class Session(
             },
         )
 
-    async def paused(self, c: Contact, thread=None):
+    async def paused(self, c: Recipient, thread=None):
         pass
 
-    async def displayed(self, c: Contact, legacy_msg_id: Any, thread=None):
+    async def displayed(self, c: Recipient, legacy_msg_id: Any, thread=None):
         pass
 
-    async def correct(self, c: Contact, text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
         pass
 
     async def search(self, form_values: dict[str, str]):
         pass
 
     async def react(
-        self, c: Contact, legacy_msg_id: Any, emojis: list[str], thread=None
+        self, c: Recipient, legacy_msg_id: Any, emojis: list[str], thread=None
     ):
-        old = c.user_reactions[legacy_msg_id]
+        old = c.user_reactions[legacy_msg_id]  # type: ignore
         new = set[str]()
         for emoji in emojis:
             if emoji_translate.inverse.get(emoji) is None:
@@ -399,10 +405,10 @@ class Session(
                 },
             )
 
-        c.user_reactions[legacy_msg_id] = new
-        c.react(legacy_msg_id, new, carbon=True)
+        c.user_reactions[legacy_msg_id] = new  # type: ignore
+        c.react(legacy_msg_id, new, carbon=True)  # type: ignore
 
-    async def retract(self, c: Contact, legacy_msg_id: Any, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: Any, thread=None):
         pass
 
 

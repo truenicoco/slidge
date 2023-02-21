@@ -1,18 +1,20 @@
 import logging
-from typing import Generic, Type
+from typing import TYPE_CHECKING, Generic, Type
 
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ...util import SubclassableOnce
-from ...util.error import XMPPError
-from ...util.types import LegacyContactType, LegacyUserIdType, SessionType
+from ...util.types import LegacyContactType, LegacyUserIdType
 from ..mixins.lock import NamedLockMixin
 from .contact import LegacyContact
 
+if TYPE_CHECKING:
+    from ..session import BaseSession
+
 
 class LegacyRoster(
-    Generic[SessionType, LegacyContactType, LegacyUserIdType],
+    Generic[LegacyUserIdType, LegacyContactType],
     NamedLockMixin,
     metaclass=SubclassableOnce,
 ):
@@ -31,7 +33,7 @@ class LegacyRoster(
     if you need some characters when translation JID user parts and legacy IDs.
     """
 
-    def __init__(self, session: "SessionType"):
+    def __init__(self, session: "BaseSession"):
         self._contact_cls: Type[
             LegacyContactType
         ] = LegacyContact.get_self_or_unique_subclass()
@@ -109,7 +111,7 @@ class LegacyRoster(
                 ] = c
             return c
 
-    async def by_stanza(self, s) -> LegacyContactType:
+    async def by_stanza(self, s) -> LegacyContact:
         """
         Retrieve a contact by the destination of a stanza
 
@@ -161,7 +163,5 @@ class LegacyRoster(
         pass
 
 
-ESCAPE_TABLE = "".maketrans(
-    {v: k for k, v in JID_UNESCAPE_TRANSFORMATIONS.items()}  # type:ignore
-)
+ESCAPE_TABLE = "".maketrans({v: k for k, v in JID_UNESCAPE_TRANSFORMATIONS.items()})
 log = logging.getLogger(__name__)

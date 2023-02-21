@@ -121,7 +121,7 @@ class TerminateSession(SessionCommandMixin, Command):
         return "Session has been terminated"
 
 
-class Gateway(BaseGateway["Session"]):
+class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [FormField(var="phone", label="Phone number", required=True)]
     REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE

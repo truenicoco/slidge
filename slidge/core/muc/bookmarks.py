@@ -1,31 +1,33 @@
-from typing import Generic, Optional, Type
+from typing import TYPE_CHECKING, Generic, Type
 
 from slixmpp import JID
 from slixmpp.jid import _unescape_node
 
 from ...util import SubclassableOnce
-from ...util.error import XMPPError
-from ...util.types import LegacyGroupIdType, LegacyMUCType, SessionType
+from ...util.types import LegacyGroupIdType, LegacyMUCType
 from ..contact.roster import ESCAPE_TABLE
 from ..mixins.lock import NamedLockMixin
 from .room import LegacyMUC
 
+if TYPE_CHECKING:
+    from ..session import BaseSession
+
 
 class LegacyBookmarks(
-    Generic[SessionType, LegacyMUCType, LegacyGroupIdType],
+    Generic[LegacyGroupIdType, LegacyMUCType],
     NamedLockMixin,
     metaclass=SubclassableOnce,
 ):
-    def __init__(self, session: SessionType):
+    def __init__(self, session: "BaseSession"):
         self.session = session
         self.xmpp = session.xmpp
         self.user = session.user
         self.log = session.log
 
-        self._mucs_by_legacy_id = dict[LegacyGroupIdType, LegacyMUC]()
-        self._mucs_by_bare_jid = dict[str, LegacyMUC]()
+        self._mucs_by_legacy_id = dict[LegacyGroupIdType, LegacyMUCType]()
+        self._mucs_by_bare_jid = dict[str, LegacyMUCType]()
 
-        self._muc_class: Type[LegacyMUC] = LegacyMUC.get_self_or_unique_subclass()
+        self._muc_class: Type[LegacyMUCType] = LegacyMUC.get_self_or_unique_subclass()
 
         self._user_nick: str = self.session.user.jid.node
 
@@ -48,7 +50,7 @@ class LegacyBookmarks(
     async def jid_local_part_to_legacy_id(self, local_part: str):
         return _unescape_node(local_part)
 
-    async def by_jid(self, jid: JID):
+    async def by_jid(self, jid: JID) -> LegacyMUCType:
         bare = jid.bare
         async with self.lock(bare):
             muc = self._mucs_by_bare_jid.get(bare)
@@ -72,7 +74,7 @@ class LegacyBookmarks(
                 self.session.log.debug("Found MUC: %s -- %s", muc, type(muc))
             return muc
 
-    async def by_legacy_id(self, legacy_id: LegacyGroupIdType):
+    async def by_legacy_id(self, legacy_id: LegacyGroupIdType) -> LegacyMUCType:
         async with self.lock(legacy_id):
             muc = self._mucs_by_legacy_id.get(legacy_id)
             if muc is None:

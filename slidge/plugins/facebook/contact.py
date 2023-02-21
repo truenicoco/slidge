@@ -12,9 +12,10 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Contact(LegacyContact["Session", int]):
+class Contact(LegacyContact[int]):
     CORRECTION = False
     REACTIONS_SINGLE_EMOJI = True
+    session: "Session"
 
     async def populate_from_participant(
         self, participant: ParticipantNode, update_avatar=True
@@ -111,7 +112,9 @@ class Contact(LegacyContact["Session", int]):
                 )
 
 
-class Roster(LegacyRoster["Session", Contact, int]):
+class Roster(LegacyRoster[int, Contact]):
+    session: "Session"
+
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
             raise ValueError("Thread seems to be a group thread")

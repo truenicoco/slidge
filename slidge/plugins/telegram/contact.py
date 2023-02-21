@@ -19,9 +19,9 @@ async def noop():
     return
 
 
-class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMPPMixin):
+class Contact(AvailableEmojisMixin, LegacyContact[int], TelegramToXMPPMixin):
     CLIENT_TYPE = "phone"
-    session: "Session"  # type:ignore
+    session: "Session"
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -126,7 +126,9 @@ class Contact(AvailableEmojisMixin, LegacyContact["Session", int], TelegramToXMP
             self.update_status(user.status)
 
 
-class Roster(LegacyRoster["Session", "Contact", int]):
+class Roster(LegacyRoster[int, Contact]):
+    session: "Session"
+
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             tg_id = int(jid_username)

@@ -113,7 +113,7 @@ class Participant(LegacyParticipant):
     pass
 
 
-class MUC(LegacyMUC[Session, str, Participant, str]):
+class MUC(LegacyMUC):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.history = []
@@ -169,7 +169,7 @@ class MUC(LegacyMUC[Session, str, Participant, str]):
             self.name = "The coven"
 
 
-class Bookmarks(LegacyBookmarks[Session, MUC, str]):
+class Bookmarks(LegacyBookmarks):
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part: str):
         if not local_part.startswith("room") and local_part != "coven":

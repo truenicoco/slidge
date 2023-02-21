@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Bookmarks(LegacyBookmarks):
+class Bookmarks(LegacyBookmarks[int, "MUC"]):
     session: "Session"
 
     # COMPAT: We prefix with 'group' because movim does not like MUC local parts
@@ -47,7 +47,7 @@ class Bookmarks(LegacyBookmarks):
                 await self.by_legacy_id(chat.id)
 
 
-class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
+class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
@@ -243,9 +243,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC["Session", int, "Participant", int]):
             return await self.participant_system()
 
 
-class Participant(LegacyParticipant[MUC], TelegramToXMPPMixin):
+class Participant(LegacyParticipant, TelegramToXMPPMixin):
     contact: "Contact"
-    session: "Session"  # type:ignore
+    session: "Session"
     muc: "MUC"
 
     def __init__(self, *a, **k):

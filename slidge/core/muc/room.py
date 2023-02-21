@@ -20,7 +20,6 @@ from ...util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
-    SessionType,
 )
 from .. import config
 from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
@@ -31,6 +30,7 @@ from .archive import MessageArchive
 if TYPE_CHECKING:
     from ..contact import LegacyContact
     from ..gateway import BaseGateway
+    from ..session import BaseSession
 
 
 class MucType(int, Enum):
@@ -42,7 +42,7 @@ ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
 
 class LegacyMUC(
-    Generic[SessionType, LegacyGroupIdType, LegacyParticipantType, LegacyMessageType],
+    Generic[LegacyGroupIdType, LegacyMessageType, LegacyParticipantType],
     NamedLockMixin,
     ChatterDiscoMixin,
     ReactionRecipientMixin,
@@ -73,7 +73,7 @@ class LegacyMUC(
     This is just a flag on archive responses that most clients ignore anyway.
     """
 
-    def __init__(self, session: SessionType, legacy_id: LegacyGroupIdType, jid: JID):
+    def __init__(self, session: "BaseSession", legacy_id: LegacyGroupIdType, jid: JID):
         super().__init__()
         from .participant import LegacyParticipant
 
@@ -450,10 +450,10 @@ class LegacyMUC(
         self._make_subject_message(user_full_jid).send()
         self.user_resources.add(client_resource)
 
-    async def get_user_participant(self) -> LegacyParticipantType:
+    async def get_user_participant(self) -> "LegacyParticipantType":
         return self.Participant(self, self.user_nick, is_user=True)
 
-    async def get_participant(self, nickname: str) -> LegacyParticipantType:
+    async def get_participant(self, nickname: str) -> "LegacyParticipantType":
         p = self._participants_by_nicknames.get(nickname)
         if p is None:
             p = self.Participant(self, nickname)
@@ -462,7 +462,7 @@ class LegacyMUC(
 
     async def get_participant_by_contact(
         self, c: "LegacyContact"
-    ) -> LegacyParticipantType:
+    ) -> "LegacyParticipantType":
         p = self._participants_by_contacts.get(c)
         if p is None:
             p = self.Participant(self, c.name)
@@ -475,7 +475,7 @@ class LegacyMUC(
         await self.__fill_participants()
         return self._participants_by_nicknames.values()
 
-    def remove_participant(self, p: LegacyParticipantType):
+    def remove_participant(self, p: "LegacyParticipantType"):
         if p.contact is not None:
             del self._participants_by_contacts[p.contact]
         del self._participants_by_nicknames[p.nickname]  # type:ignore

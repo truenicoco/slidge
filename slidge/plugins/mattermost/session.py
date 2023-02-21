@@ -1,11 +1,11 @@
 import asyncio
 import re
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mattermost_api_reference_client.models import Post, Reaction
 from mattermost_api_reference_client.models.user import User
 
-from slidge import BaseSession, LegacyBookmarks, LegacyMUC, LegacyParticipant, XMPPError
+from slidge import *
 
 from .api import ContactNotFound
 from .util import get_client_from_registration_form
@@ -16,17 +16,12 @@ if TYPE_CHECKING:
     from .gateway import Gateway
 
 
-class Session(
-    BaseSession[
-        "Gateway",
-        str,
-        "Roster",
-        "Contact",
-        LegacyBookmarks,
-        LegacyMUC,
-        LegacyParticipant,
-    ]
-):
+Recipient = Union["Contact", "LegacyMUC"]
+
+
+class Session(BaseSession[str, Recipient]):
+    contacts: "Roster"
+
     def __init__(self, user):
         super().__init__(user)
         self.messages_waiting_for_echo = set[str]()
@@ -171,7 +166,7 @@ class Session(
     async def logout(self):
         pass
 
-    async def send_text(self, chat: "Contact", text: str, **k):
+    async def send_text(self, chat: Recipient, text: str, **k):
         async with self.send_lock:
             try:
                 msg_id = await self.mm_client.send_message_to_user(chat.legacy_id, text)
@@ -183,41 +178,44 @@ class Session(
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, chat: "Contact", url: str, http_response, **k):
-        channel_id = await chat.direct_channel_id()
+    async def send_file(self, chat: Recipient, url: str, http_response, **k):
+        # assert isinstance(chat, Contact)
+        channel_id = await chat.direct_channel_id()  # type:ignore
         file_id = await self.mm_client.upload_file(channel_id, url, http_response)
         return await self.mm_client.send_message_with_file(channel_id, file_id)
 
-    async def active(self, c: "Contact", thread=None):
+    async def active(self, c: Recipient, thread=None):
         pass
 
-    async def inactive(self, c: "Contact", thread=None):
+    async def inactive(self, c: Recipient, thread=None):
         pass
 
-    async def composing(self, c: "Contact", thread=None):
-        await self.ws.user_typing(await c.direct_channel_id())
+    async def composing(self, c: Recipient, thread=None):
+        # assert isinstance(c, Contact)
+        await self.ws.user_typing(await c.direct_channel_id())  # type:ignore
 
-    async def paused(self, c: "Contact", thread=None):
+    async def paused(self, c: Recipient, thread=None):
         # no equivalent in MM, seems to have an automatic timeout in clients
         pass
 
-    async def displayed(self, c: "Contact", legacy_msg_id: Any, thread=None):
-        channel = await c.direct_channel_id()
+    async def displayed(self, c: Recipient, legacy_msg_id: Any, thread=None):
+        # assert isinstance(c, Contact)
+        channel = await c.direct_channel_id()  # type:ignore
         f = self.view_futures[channel] = self.xmpp.loop.create_future()
         await self.mm_client.view_channel(channel)
         await f
 
-    async def correct(self, c: "Contact", text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
         await self.mm_client.update_post(legacy_msg_id, text)
 
     async def search(self, form_values: dict[str, str]):
         pass
 
-    async def retract(self, c: "Contact", legacy_msg_id: Any, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: Any, thread=None):
         await self.mm_client.delete_post(legacy_msg_id)
 
     async def react(
-        self, c: "Contact", legacy_msg_id: Any, emojis: list[str], thread=None
+        self, c: Recipient, legacy_msg_id: Any, emojis: list[str], thread=None
     ):
         mm_reactions = await self.get_mm_reactions(
             legacy_msg_id, await self.mm_client.mm_id
