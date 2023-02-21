@@ -69,6 +69,14 @@ class BaseSession(
 
     http: aiohttp.ClientSession
 
+    MESSAGE_IDS_ARE_THREAD_IDS = False
+    """
+    Set this to True if the legacy service uses message IDs as thread IDs,
+    eg Mattermost, where you can only 'create a thread' by replying to the message,
+    in which case the message ID is also a thread ID (and all messages are potential
+    threads).
+    """
+
     def __init__(self, user: GatewayUser):
         self.log = logging.getLogger(user.bare_jid)
 
@@ -296,16 +304,25 @@ class BaseSession(
             self.__ack(m)
             if legacy_msg_id is not None:
                 self.sent[legacy_msg_id] = m.get_id()
+                if self.MESSAGE_IDS_ARE_THREAD_IDS and (t := m["thread"]):
+                    self.threads[t] = legacy_msg_id
 
     async def __xmpp_to_legacy_thread(self, msg: Message, recipient: RecipientType):
         xmpp_thread = msg["thread"]
-        if xmpp_thread:
-            async with self.__thread_creation_lock:
-                legacy_thread = self.threads.get(xmpp_thread)
-                if legacy_thread is None:
-                    legacy_thread = await recipient.create_thread(xmpp_thread)
-                    self.threads[xmpp_thread] = legacy_thread
-            return legacy_thread
+        if not xmpp_thread:
+            return
+
+        self.log.debug("Legacy threads: %s vs %s", xmpp_thread, self.threads)
+
+        if self.MESSAGE_IDS_ARE_THREAD_IDS:
+            return self.threads.get(xmpp_thread)
+
+        async with self.__thread_creation_lock:
+            legacy_thread = self.threads.get(xmpp_thread)
+            if legacy_thread is None:
+                legacy_thread = await recipient.create_thread(xmpp_thread)
+                self.threads[xmpp_thread] = legacy_thread
+        return legacy_thread
 
     def __ack(self, msg: Message):
         if (
