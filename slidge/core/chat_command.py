@@ -151,8 +151,11 @@ class ChatCommandProvider:
                         assert f.options is not None
                         for o in f.options:
                             msg.reply(f"{o['value']} -- {o['label']}").send()
-                    form_values[f.var] = f.validate(
-                        await self.xmpp.input(msg.get_from(), (f.label or f.var) + "?")
+                    if f.value:
+                        msg.reply(f"Default: {f.value}").send()
+
+                    ans = await self.xmpp.input(
+                        msg.get_from(), (f.label or f.var) + "? (or 'abort')"
                     )
                     if ans.lower() == "abort":
                         return await self._handle_result(
