@@ -21,6 +21,7 @@ Recipient = Union["Contact", "LegacyMUC"]
 
 class Session(BaseSession[str, Recipient]):
     contacts: "Roster"
+    MESSAGE_IDS_ARE_THREAD_IDS = True
 
     def __init__(self, user):
         super().__init__(user)
@@ -166,10 +167,12 @@ class Session(BaseSession[str, Recipient]):
     async def logout(self):
         pass
 
-    async def send_text(self, chat: Recipient, text: str, **k):
+    async def send_text(self, chat: Recipient, text: str, thread=None, **k):
         async with self.send_lock:
             try:
-                msg_id = await self.mm_client.send_message_to_user(chat.legacy_id, text)
+                msg_id = await self.mm_client.send_message_to_user(
+                    chat.legacy_id, text, thread
+                )
             except ContactNotFound:
                 raise XMPPError(
                     "recipient-unavailable", text="Cannot find this mattermost user"
@@ -178,11 +181,13 @@ class Session(BaseSession[str, Recipient]):
             self.messages_waiting_for_echo.add(msg_id)
             return msg_id
 
-    async def send_file(self, chat: Recipient, url: str, http_response, **k):
+    async def send_file(
+        self, chat: Recipient, url: str, http_response, thread=None, **k
+    ):
         # assert isinstance(chat, Contact)
         channel_id = await chat.direct_channel_id()  # type:ignore
         file_id = await self.mm_client.upload_file(channel_id, url, http_response)
-        return await self.mm_client.send_message_with_file(channel_id, file_id)
+        return await self.mm_client.send_message_with_file(channel_id, file_id, thread)
 
     async def active(self, c: Recipient, thread=None):
         pass

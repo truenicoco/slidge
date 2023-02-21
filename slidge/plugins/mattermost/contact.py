@@ -22,6 +22,7 @@ class Contact(LegacyContact[str]):
     session: "Session"
 
     MARKS = False
+    REPLIES = False
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -158,6 +159,7 @@ class Contact(LegacyContact[str]):
                 legacy_msg_id=post_id,
                 when=when,
                 carbon=carbon,
+                thread=post.root_id or post_id,
             )
             return
 
@@ -175,6 +177,7 @@ class Contact(LegacyContact[str]):
                 legacy_msg_id=post_id if last else None,
                 caption=text if last else None,
                 carbon=carbon,
+                thread=post.root_id or post_id,
                 when=when,
             )
 

@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+from typing import Optional
 
 import aiohttp
 import emoji as emoji_lib
@@ -54,7 +55,7 @@ from mattermost_api_reference_client.models.update_post_json_body import (
 from mattermost_api_reference_client.models.upload_file_multipart_data import (
     UploadFileMultipartData,
 )
-from mattermost_api_reference_client.types import File, Unset
+from mattermost_api_reference_client.types import UNSET, File, Unset
 
 
 class MattermostException(Exception):
@@ -161,7 +162,9 @@ class MattermostClient:
             raise RuntimeError
         return r
 
-    async def send_message_to_user(self, user_id: str, text: str) -> str:
+    async def send_message_to_user(
+        self, user_id: str, text: str, thread: Optional[str] = None
+    ) -> str:
         await self.mm_id
         mm = self.http
 
@@ -170,9 +173,21 @@ class MattermostClient:
         direct_channel = await self.get_direct_channel(other.id)
 
         msg = await create_post.asyncio(
-            json_body=CreatePostJsonBody(channel_id=direct_channel.id, message=text),
+            json_body=CreatePostJsonBody(
+                channel_id=direct_channel.id, message=text, root_id=thread or UNSET
+            ),
             client=mm,
         )
+
+        if msg is None:
+            log.debug("Looks like it's a new thread")
+            msg = await create_post.asyncio(
+                json_body=CreatePostJsonBody(
+                    channel_id=direct_channel.id, message=text
+                ),
+                client=mm,
+            )
+
         if msg is None:
             raise RuntimeError
 
@@ -181,13 +196,26 @@ class MattermostClient:
 
         return msg.id
 
-    async def send_message_with_file(self, channel_id: str, file_id: str):
+    async def send_message_with_file(self, channel_id: str, file_id: str, thread=None):
         r = await create_post.asyncio(
             json_body=CreatePostJsonBody(
-                channel_id=channel_id, file_ids=[file_id], message=""
+                channel_id=channel_id,
+                file_ids=[file_id],
+                message="",
+                root_id=thread or UNSET,
             ),
             client=self.http,
         )
+
+        if r is None:
+            log.debug("Looks like it's a new thread")
+            r = await create_post.asyncio(
+                json_body=CreatePostJsonBody(
+                    channel_id=channel_id, file_ids=[file_id], message=""
+                ),
+                client=self.http,
+            )
+
         if r is None or isinstance(r.id, Unset):
             raise RuntimeError(r)
         return r.id
