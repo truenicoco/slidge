@@ -31,7 +31,7 @@ class ChatCommandProvider:
         self._input_futures = dict[str, asyncio.Future[str]]()
         self.xmpp.register_handler(
             CoroutineCallback(
-                "MUCPresenceError",
+                "chat_command_handler",
                 StanzaPath(f"message@to={self.xmpp.boundjid.bare}"),
                 self._handle_message,  # type: ignore
             )
