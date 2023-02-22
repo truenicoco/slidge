@@ -55,12 +55,17 @@ class MUC(LegacyMUC):
             )
 
     async def update_info(self):
+        if self.legacy_id == "prout-1":
+            self.type = MucType.GROUP
         self.avatar = AVATARS[0]
 
     async def fill_participants(self):
         if self.legacy_id == "prout-1":
             for nick in "anon1", "anon2":
                 await self.get_participant(nick)
+            await self.get_participant_by_contact(
+                await self.session.contacts.by_legacy_id("bibi")
+            )
         elif self.legacy_id == "prout2":
             for nick in "anon1", "anon2", "anon3", "anon4":
                 await self.get_participant(nick)

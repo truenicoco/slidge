@@ -79,6 +79,8 @@ class LegacyParticipant(
                 codes.add(100)
             elif self.contact:
                 p["muc"]["jid"] = self.contact.jid
+                if a := self.contact.get_avatar():
+                    p["vcard_temp_update"]["photo"] = a.id
             else:
                 warnings.warn(
                     f"Public group but no Contact or user_full_jid associated to {self.jid}",

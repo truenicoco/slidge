@@ -212,6 +212,11 @@ class LegacyContact(
         # if it's bytes, we don't want to cache it in RAM, so just a bool to know it has been set
         self._avatar = isinstance(a, bytes) or a
 
+    def get_avatar(self):
+        if not self._avatar:
+            return
+        return self.xmpp.pubsub.get_avatar(jid=self.jid.bare)
+
     def set_vcard(
         self,
         /,

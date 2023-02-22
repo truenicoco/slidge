@@ -151,7 +151,16 @@ class XEP_0054(BasePlugin):
         self._vcard_cache[jid.bare] = vcard
 
     def _get_vcard(self, jid, node, ifrom, vcard):
-        return self._vcard_cache.get(jid.bare, None)
+        v = self._vcard_cache.get(jid.bare, None)
+        if v is None:
+            avatar = self.xmpp.pubsub.get_avatar(jid)
+            if avatar is None:
+                return
+            data = avatar.data
+            v = self.xmpp.plugin["xep_0054"].make_vcard()
+            v["PHOTO"]["BINVAL"] = data["data"]
+            v["PHOTO"]["TYPE"] = "image/png"
+        return v
 
     def _del_vcard(self, jid, node, ifrom, vcard):
         if jid.bare in self._vcard_cache:

@@ -307,6 +307,9 @@ class PubSubComponent(BasePlugin):
             raise XMPPError("item-not-found")
         self._reply_with_payload(iq, vcard, "current", VCARD4_NAMESPACE)
 
+    def get_avatar(self, jid: JidStr):
+        return self._avatars.get(JID(jid))
+
     @staticmethod
     def _reply_with_payload(
         iq: Iq,
