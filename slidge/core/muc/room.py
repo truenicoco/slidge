@@ -114,8 +114,8 @@ class LegacyMUC(
         async with self.lock("fill participants"):
             if self.__participants_filled:
                 return
-            await self.fill_participants()
             self.__participants_filled = True
+            await self.fill_participants()
 
     async def __fill_history(self):
         async with self.lock("fill history"):
@@ -410,8 +410,8 @@ class LegacyMUC(
             requested_nickname,
         )
 
-        await self.__fill_participants()
         await self.__fill_history()
+        await self.__fill_participants()
 
         if self._avatar_hash:
             self._send_room_presence(user_full_jid)
@@ -453,11 +453,19 @@ class LegacyMUC(
     async def get_user_participant(self) -> "LegacyParticipantType":
         return self.Participant(self, self.user_nick, is_user=True)
 
+    def __store_participant(self, p: "LegacyParticipantType"):
+        # we don't want to update the participant list before
+        # we call fill_participants() (legacy API call)
+        if self.__participants_filled:
+            self._participants_by_nicknames[p.nickname] = p  # type:ignore
+            if p.contact:
+                self._participants_by_contacts[p.contact] = p
+
     async def get_participant(self, nickname: str) -> "LegacyParticipantType":
         p = self._participants_by_nicknames.get(nickname)
         if p is None:
             p = self.Participant(self, nickname)
-            self._participants_by_nicknames[nickname] = p
+            self.__store_participant(p)
         return p
 
     async def get_participant_by_contact(
@@ -467,8 +475,7 @@ class LegacyMUC(
         if p is None:
             p = self.Participant(self, c.name)
             p.contact = c
-            self._participants_by_contacts[c] = p
-            self._participants_by_nicknames[c.name] = p
+            self.__store_participant(p)
         return p
 
     async def get_participants(self):

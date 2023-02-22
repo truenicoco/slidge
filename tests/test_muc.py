@@ -455,16 +455,6 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
-            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
-                <x xmlns="http://jabber.org/protocol/muc#user">
-                    <item affiliation="member" role="participant"/>
-                </x>
-                <priority>0</priority>
-            </presence>
-            """
-        )
-        self.send(
-            """
             <presence
                 from='room-private@aim.shakespeare.lit/firstwitch'
                 to='romeo@montague.lit/gajim'>

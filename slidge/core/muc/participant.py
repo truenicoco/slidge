@@ -100,24 +100,12 @@ class LegacyParticipant(
     ):
         if full_jid:
             stanza["to"] = full_jid
-            if (
-                not archive_only
-                and isinstance(stanza, Message)
-                and full_jid not in self._sent_presences_to
-            ):
+            if isinstance(stanza, Message) and full_jid not in self._sent_presences_to:
                 self.send_initial_presence(full_jid)
             stanza.send()
         else:
             if isinstance(stanza, Message):
                 self.muc.archive.add(stanza, archive_only)
-            if archive_only:
-                try:
-                    self.muc.remove_participant(self)
-                except KeyError:
-                    # a single participant instance may be used to send several history
-                    # messages, so this only works for the first archive message they send
-                    pass
-                return
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
