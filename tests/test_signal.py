@@ -7,6 +7,7 @@ from aiosignald import exc
 
 import slidge.plugins.signal as plugin
 import slidge.plugins.signal.gateway
+from slidge.plugins.signal import group
 from slidge.plugins.signal.util import get_filename
 from slidge.util.test import SlidgeTest
 from slidge import *
@@ -207,3 +208,8 @@ def test_attachment_filename():
         )
         == "test.bogus"
     )
+
+
+def test_jid_conversion():
+    test = "10SSHGv8382QWrib+lSDoezIGZzw/urxZxJNPIhaG1Y="
+    assert group.local_part_to_group_id(group.group_id_to_local_part(test)) == test

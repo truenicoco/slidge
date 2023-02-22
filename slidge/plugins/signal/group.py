@@ -1,11 +1,12 @@
+import base64
+import binascii
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
-from slixmpp.jid import _unescape_node
 
 from slidge import *
-from slidge.core.contact.roster import ESCAPE_TABLE
 
 from .util import AttachmentSenderMixin
 
@@ -69,22 +70,26 @@ class MUC(LegacyMUC[str, int, Participant]):
 class Bookmarks(LegacyBookmarks[str, MUC]):
     session: "Session"
 
-    def __init__(self, session: "Session"):
-        super().__init__(session)
-
-        # maps case-insensitive JID local parts to case-sensitive signal group IDs
-        self.known_groups = dict[str, str]()
-
     async def jid_local_part_to_legacy_id(self, local_part: str):
         try:
-            return self.known_groups[_unescape_node(local_part.lower())]
-        except KeyError:
-            raise XMPPError("item-not-found", "I don't know this group")
+            group_id = local_part_to_group_id(local_part)
+        except binascii.Error:
+            raise XMPPError(
+                "bad-request", "This is not a valid base32 encoded signal group ID"
+            )
+
+        signal = await self.session.signal
+        try:
+            await signal.get_group(account=self.session.phone, groupID=group_id)
+        except (sigexc.InvalidGroupError, sigexc.UnknownGroupError) as e:
+            raise XMPPError("item-not-found", e.message)
+        except sigexc.SignaldException as e:
+            raise XMPPError("internal-server-error", str(e))
+
+        return group_id
 
     async def legacy_id_to_jid_local_part(self, legacy_id: str):
-        local_part = legacy_id.lower().translate(ESCAPE_TABLE)
-        self.known_groups[local_part] = legacy_id
-        return local_part
+        return group_id_to_local_part(legacy_id)
 
     async def fill(self):
         session = self.session
@@ -92,3 +97,11 @@ class Bookmarks(LegacyBookmarks[str, MUC]):
         self.log.debug("GROUPS: %r", groups)
         for group in groups.groups:
             await self.by_legacy_id(group.id)
+
+
+def local_part_to_group_id(s: str):
+    return base64.b32decode(bytes(s.upper(), "utf-8")).decode()
+
+
+def group_id_to_local_part(s: str):
+    return base64.b32encode(bytes(s, "utf-8")).decode().lower()
