@@ -6,7 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
-from typing import Callable, Collection, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Union
 
 import aiohttp
 import qrcode
@@ -36,6 +36,9 @@ from .disco import Disco
 from .mixins import MessageMixin
 from .pubsub import PubSubComponent
 from .session import BaseSession
+
+if TYPE_CHECKING:
+    from .muc.room import LegacyMUC
 
 
 class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMost):
@@ -308,7 +311,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             stanza.set_to(mto)
         stanza.send()
 
-    async def get_muc_from_iq(self, iq: Iq):
+    async def get_muc_from_stanza(self, iq: Union[Iq, Message]) -> "LegacyMUC":
         ito = iq.get_to()
 
         if ito == self.boundjid.bare:
@@ -327,7 +330,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         return await session.bookmarks.by_jid(ito)
 
     async def __handle_mam(self, iq: Iq):
-        muc = await self.get_muc_from_iq(iq)
+        muc = await self.get_muc_from_stanza(iq)
         await muc.send_mam(iq)
 
     async def __handle_mam_get_form(self, iq: Iq):
@@ -363,7 +366,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         reply.send()
 
     async def __handle_mam_metadata(self, iq: Iq):
-        muc = await self.get_muc_from_iq(iq)
+        muc = await self.get_muc_from_stanza(iq)
         await muc.send_mam_metadata(iq)
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
@@ -448,6 +451,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.add_event_handler("disconnected", self.connect)
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
+        self.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
 
         async def get_session(m, cb):
             if m.get_from().server == self.boundjid.bare:
@@ -502,11 +506,46 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             )
         )
 
+    async def __on_group_chat_error(self, msg: Message):
+        # TODO: fix it in slixmpp!
+        # broken in slixmpp, always return <feature-not-implemented>
+        # condition = msg["error"].get_condition()
+        # if condition not in KICKABLE_ERRORS:
+        #     return
+        error = msg.xml.find("{jabber:component:accept}error")
+        if error is None:
+            return
+        for condition in KICKABLE_ERRORS:
+            if (
+                error.find(f"{{urn:ietf:params:xml:ns:xmpp-stanzas}}{condition}")
+                is not None
+            ):
+                break
+        else:
+            log.debug("Ignoring error")
+            return
+
+        try:
+            muc = await self.get_muc_from_stanza(msg)
+        except XMPPError as e:
+            log.debug("Not removing resource", exc_info=e)
+            return
+        mfrom = msg.get_from()
+        resource = mfrom.resource
+        try:
+            muc.user_resources.remove(resource)
+        except KeyError:
+            log.warning("%s was not in the resources of %s", resource, muc)
+        else:
+            log.info(
+                "Removed %s from the resources of %s because of error", resource, muc
+            )
+
     async def _handle_admin(self, iq: Iq):
         if iq["type"] != "get":
             raise XMPPError("not-authorized")
 
-        muc = await self.get_muc_from_iq(iq)
+        muc = await self.get_muc_from_stanza(iq)
         await muc.handle_admin(iq)
 
     async def _handle_gateway_iq(self, iq: Iq):
@@ -856,6 +895,20 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             fut.set_result(True)
         else:
             fut.set_exception(exception)
+
+
+KICKABLE_ERRORS = [
+    "gone",
+    "internal-server-error",
+    "item-not-found",
+    "jid-malformed",
+    "recipient-unavailable",
+    "redirect",
+    "remote-server-not-found",
+    "remote-server-timeout",
+    "service-unavailable",
+    "malformed error",
+]
 
 
 SLIXMPP_PLUGINS = [

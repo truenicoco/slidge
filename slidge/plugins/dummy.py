@@ -37,6 +37,10 @@ class MUC(LegacyMUC):
     session: "Session"
     msg_ids = defaultdict(int)  # type: ignore
 
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.xmpp.loop.create_task(self.later_error())
+
     async def join(self, p):
         self.user_nick = "SomeNick"
         await super().join(p)
@@ -53,6 +57,14 @@ class MUC(LegacyMUC):
                 when=datetime.now() - timedelta(minutes=i),
                 archive_only=True,
             )
+
+    async def later_error(self):
+        p = await self.get_participant("errorer")
+        p.send_text("ERRORING", full_jid="test@localhost/gajim.EF51E8Y")
+        # resource does not exist
+        # <message type="error" id="3d7fa9d5b1f34dff9eb4f9161a867a01" from="test@localhost/caca" to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
+        # resource is not joined
+        # <message type="error" id="a116ffc9d046457c850fa79d1ca59886" from="test@localhost/gajim.EF51PE" to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
 
     async def update_info(self):
         if self.legacy_id == "prout-1":

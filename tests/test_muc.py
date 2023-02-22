@@ -1462,5 +1462,37 @@ class TestMuc(SlidgeTest):
             """,
         )
 
+    def test_send_to_bad_resource(self):
+        muc = self.get_private_muc("coven")
+        muc.user_resources.add("gajim")
+        self.recv(
+            """
+            <message
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='coven@aim.shakespeare.lit/thirdwitch'
+                type="error">
+                <error type="cancel">
+                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                </error>
+            </message>
+            """
+        )
+        assert not muc.user_resources
+        self.recv(
+            """
+            <message
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='coven@aim.shakespeare.lit/thirdwitch'
+                type="error">
+                <error type="cancel">
+                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                </error>
+            </message>
+            """
+        )
+        assert not muc.user_resources
+
 
 avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
