@@ -452,7 +452,7 @@ class XEP_0030(BasePlugin):
 
         if local or local is None and jid is None:
             items = await self.api['get_items'](jid, node, ifrom, kwargs)
-            return self._wrap(kwargs.get('ifrom', None), jid, items)
+            return self._wrap(ifrom, jid, items)
 
         iq = self.xmpp.Iq()
         # Check dfrom parameter for backwards compatibility
