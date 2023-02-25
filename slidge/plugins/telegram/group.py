@@ -26,10 +26,9 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
     async def legacy_id_to_jid_local_part(legacy_id: int):
         return "group" + str(legacy_id)
 
-    @staticmethod
-    async def jid_local_part_to_legacy_id(local_part: str):
+    async def jid_local_part_to_legacy_id(self, local_part: str):
         try:
-            return int(local_part.replace("group", ""))
+            group_id = int(local_part.replace("group", ""))
         except ValueError:
             raise XMPPError(
                 "bad-request",
@@ -37,6 +36,18 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 "Do not be like edhelas, do not attempt to join groups you had joined "
                 "through spectrum. ",
             )
+        try:
+            info = await self.session.tg.get_chat_info(group_id)
+        except tgapi.BadRequest as e:
+            raise XMPPError(
+                "bad-request",
+                f"Not a valid telegram group ID: {group_id} ({e.message})",
+            )
+        if isinstance(info, (tgapi.User, tgapi.UserFullInfo, tgapi.SecretChat)):
+            raise XMPPError(
+                "bad-request", f"This is not a telegram group, but a {type(info)}"
+            )
+        return group_id
 
     async def fill(self):
         tg = self.session.tg
