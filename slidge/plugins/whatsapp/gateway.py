@@ -9,7 +9,7 @@ from . import config
 
 REGISTRATION_INSTRUCTIONS = (
     "Continue and scan the resulting QR codes on your main device to complete registration. "
-    "More information at https://slidge.readthedocs.io/en/latest/user/plugins/whatsapp.html"
+    "More information at https://slidge.im/user/plugins/whatsapp.html"
 )
 
 WELCOME_MESSAGE = (
