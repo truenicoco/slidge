@@ -5,14 +5,14 @@ from base64 import b64encode
 from pathlib import Path
 from typing import Hashable, Optional, Dict, Any
 
-from slixmpp import JID
+from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
 import slidge.core.muc.room
 import slidge.core.mixins.message
 from slidge import *
 from slidge.core.muc import MucType
-
+from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyContactType, LegacyMessageType
 
@@ -40,7 +40,9 @@ class Session(BaseSession):
     async def paused(self, c: LegacyContactType, thread=None):
         pass
 
-    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None):
+    async def correct(
+        self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None
+    ):
         pass
 
     async def search(self, form_values: Dict[str, str]):
@@ -60,7 +62,7 @@ class Session(BaseSession):
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
         reply_to=None,
-        thread=None
+        thread=None,
     ):
         self.SENT_TEXT.append(locals())
         return "legacy-id"
@@ -81,7 +83,11 @@ class Session(BaseSession):
         pass
 
     async def react(
-        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str], thread=None
+        self,
+        c: LegacyContact,
+        legacy_msg_id: LegacyMessageType,
+        emojis: list[str],
+        thread=None,
     ):
         self.REACTED.append(locals())
 
@@ -118,6 +124,7 @@ class MUC(LegacyMUC):
         super().__init__(*a, **k)
         self.history = []
         self.user_nick = "thirdwitch"
+        self.archive = MessageArchive(10e7)
 
     async def backfill(self, _id=None, _when=None):
         for hour in range(10):
@@ -149,7 +156,6 @@ class MUC(LegacyMUC):
 
         second.affiliation = "admin"
         second.role = "moderator"
-
 
     async def update_info(self):
         if self.jid.local == "room-private":
@@ -1493,6 +1499,36 @@ class TestMuc(SlidgeTest):
             """
         )
         assert not muc.user_resources
+
+    def test_archive_cleanup(self):
+        m = Message()
+        m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
+        m["body"] = "something"
+
+        a = MessageArchive(1)
+        assert len(list(a.get_all())) == 0
+        a.add(m)
+        assert len(list(a.get_all())) == 1
+
+        m = Message()
+        m["delay"]["stamp"] = datetime.datetime.now(
+            tz=datetime.timezone.utc
+        ) - datetime.timedelta(days=2)
+        m["body"] = "something"
+
+        a = MessageArchive(1)
+        assert len(list(a.get_all())) == 0
+        a.add(m)
+        assert len(list(a.get_all())) == 0
+
+        m = Message()
+        m["delay"]["stamp"] = datetime.datetime.now(
+            tz=datetime.timezone.utc
+        ) - datetime.timedelta(days=0.5)
+        m["body"] = "something"
+        a.add(m)
+        a.add(m)
+        assert len(list(a.get_all())) == 2
 
 
 avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

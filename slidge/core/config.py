@@ -166,3 +166,9 @@ FIX_FILENAME_SUFFIX_MIME_TYPE__DOC = (
 
 LOG_FILE: Optional[Path] = None
 LOG_FILE__DOC = "Log to a file instead of stdout/err"
+
+MAM_MAX_DAYS = 7
+MAM_MAX_DAYS__DOC = (
+    "Maximum number of days for group archive retention. "
+    "Since all text content stored in RAM right now, "
+)

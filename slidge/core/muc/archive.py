@@ -1,7 +1,7 @@
 import logging
 from bisect import bisect
 from copy import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Collection, Optional
 
 from slixmpp import Iq, Message
@@ -9,12 +9,14 @@ from slixmpp.plugins.xep_0297.stanza import Forwarded
 from slixmpp.plugins.xep_0444.stanza import NS as ReactionsNameSpace
 
 from ...util.error import XMPPError
+from .. import config
 
 
 class MessageArchive:
-    def __init__(self):
+    def __init__(self, retention_days: Optional[float] = None):
         self._msg_by_ids = dict[str, HistoryMessage]()
         self._msgs = list[HistoryMessage]()
+        self._retention = retention_days
 
     def add(self, msg: Message, archive_only=False):
         """
@@ -44,6 +46,22 @@ class MessageArchive:
             # we assume 'live' messages are in the right order
             self._msgs.append(to_archive)
         self._msg_by_ids[to_archive.id] = to_archive
+        self.__cleanup()
+
+    def __cleanup(self):
+        now = datetime.now(tz=timezone.utc)
+        delta = timedelta(days=self._retention or config.MAM_MAX_DAYS)
+        i = 0
+        for msg in self._msgs:
+            if now - msg.when > delta:
+                i += 1
+                del self._msg_by_ids[msg.id]
+            else:
+                break
+        if i == 0:
+            return
+        self._msgs = self._msgs[i:]
+        log.debug("Removed %s messages from the archive", i)
 
     def get_all(
         self,
