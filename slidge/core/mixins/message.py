@@ -351,7 +351,7 @@ class AttachmentMixin(MessageMaker):
             local_path = file_path
             new_url = await self.__upload(file_path, file_name, content_type)
 
-        if legacy_file_id:
+        if legacy_file_id and new_url:
             self.__legacy_file_ids_to_urls[legacy_file_id] = new_url
 
         return is_temp, local_path, new_url
