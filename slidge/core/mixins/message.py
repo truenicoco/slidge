@@ -219,14 +219,14 @@ class AttachmentMixin(MessageMaker):
         else:
             d = None
         try:
-            new_url = await self.xmpp["xep_0363"].upload_file(
+            new_url = await self.xmpp.plugin["xep_0363"].upload_file(
                 filename=file_path,
                 content_type=content_type,
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
             )
         except (FileUploadError, IqError) as e:
             warnings.warn(f"Something is wrong with the upload service: {e}")
-            return None, None
+            return None
         finally:
             if d is not None:
                 file_path.unlink()
