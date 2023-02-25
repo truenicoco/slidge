@@ -310,7 +310,7 @@ class XEP_0030(BasePlugin):
             infos = [self.get_info(
                 domain, timeout=timeout, **iqkwargs)]
             iq_items = await self.get_items(
-                domain, timeout=timeout)
+                domain, timeout=timeout, **iqkwargs)
             items = iq_items['disco_items']['items']
             infos += [
                 self.get_info(item[0], timeout=timeout, **iqkwargs)
