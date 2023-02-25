@@ -292,6 +292,11 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             pass
         else:
             iq.reply().send()
+            return
+
+        raise XMPPError(
+            "item-not-found", f"This JID does not match anything slidge knows: {ito}"
+        )
 
     mtype = "chat"  # type: ignore
     is_group = False
