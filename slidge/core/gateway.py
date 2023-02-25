@@ -510,6 +510,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 self._handle_gateway_iq,  # type: ignore
             )
         )
+        self.plugin["xep_0030"].add_feature("urn:xmpp:ping")
 
     async def __on_group_chat_error(self, msg: Message):
         # TODO: fix it in slixmpp!

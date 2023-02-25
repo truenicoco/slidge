@@ -268,6 +268,7 @@ class TestMuc(SlidgeTest):
                 <feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
            		<feature var="vcard-temp"/>
+           		<feature var="urn:xmpp:ping"/>
                 <x xmlns="jabber:x:data" type="result">
                     <field var="FORM_TYPE" type="hidden">
                         <value>http://jabber.org/protocol/muc#roominfo</value>
@@ -352,6 +353,7 @@ class TestMuc(SlidgeTest):
         		<feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
            		<feature var="vcard-temp"/>
+           		<feature var="urn:xmpp:ping"/>
                 <x xmlns="jabber:x:data" type="result">
                     <field var="FORM_TYPE" type="hidden">
                         <value>http://jabber.org/protocol/muc#roominfo</value>

@@ -588,6 +588,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="http://jabber.org/protocol/commands" />
                 <feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
+           		<feature var="urn:xmpp:ping"/>
               </query>
             </iq>
             """
