@@ -2,15 +2,22 @@ import logging
 from typing import Literal, Optional
 
 import slixmpp.stanza.rootstanza
+from slixmpp import Iq, Message, Presence
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.exceptions import XMPPError as Base
 from slixmpp.stanza.error import Error
-from slixmpp.stanza.message import Message
 from slixmpp.types import JidStr
 from slixmpp.xmlstream import ET, StanzaBase
+from slixmpp.xmlstream.stanzabase import register_stanza_plugin
 
 # workaround for https://lab.louiz.org/poezio/slixmpp/-/issues/3474
 Error.namespace = "jabber:component:accept"
+
+# workaround for https://lab.louiz.org/poezio/slixmpp/-/issues/3476
+register_stanza_plugin(slixmpp.stanza.rootstanza.RootStanza, Error)
+register_stanza_plugin(Message, Error)
+register_stanza_plugin(Iq, Error)
+register_stanza_plugin(Presence, Error)
 
 
 def exception(self, e):

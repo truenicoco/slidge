@@ -540,22 +540,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.plugin["xep_0030"].add_feature("urn:xmpp:ping")
 
     async def __on_group_chat_error(self, msg: Message):
-        # TODO: fix it in slixmpp!
-        # broken in slixmpp, always return <feature-not-implemented>
-        # condition = msg["error"].get_condition()
-        # if condition not in KICKABLE_ERRORS:
-        #     return
-        error = msg.xml.find("{jabber:component:accept}error")
-        if error is None:
-            return
-        for condition in KICKABLE_ERRORS:
-            if (
-                error.find(f"{{urn:ietf:params:xml:ns:xmpp-stanzas}}{condition}")
-                is not None
-            ):
-                break
-        else:
-            log.debug("Ignoring error")
+        condition = msg["error"].get_condition()
+        if condition not in KICKABLE_ERRORS:
             return
 
         try:

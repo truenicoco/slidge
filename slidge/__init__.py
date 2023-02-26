@@ -36,6 +36,7 @@ def formatwarning(message, category, filename, lineno, line=""):
 warnings.formatwarning = formatwarning
 
 
+# TODO: (later) mv from .__all__ to .PLUGINS on the next release of slixmpp
 slixmpp.plugins.__all__.extend(
     [
         "xep_0234",
