@@ -1,3 +1,5 @@
+import warnings
+
 import slixmpp.plugins
 
 from .core import config as global_config
@@ -25,6 +27,14 @@ from .util import (
 )
 from .util.db import GatewayUser, user_store
 from .util.error import XMPPError
+
+
+def formatwarning(message, category, filename, lineno, line=""):
+    return f"{filename}:{lineno}:{category.__name__}:{message}\n"
+
+
+warnings.formatwarning = formatwarning
+
 
 slixmpp.plugins.__all__.extend(
     [
