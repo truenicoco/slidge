@@ -6,6 +6,7 @@ import logging
 import re
 import tempfile
 from asyncio import Future
+from copy import copy
 from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Union
 
 import aiohttp
@@ -21,6 +22,7 @@ from slixmpp import (
 )
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
+from slixmpp.xmlstream.xmlstream import NotConnectedError
 
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, RosterBackend, user_store
@@ -263,6 +265,31 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             return self.session_cls.from_jid(j)
         except XMPPError:
             pass
+
+    def send_raw(self, data: Union[str, bytes]):
+        # overridden from XMLStream to strip base64-encoded data from the logs
+        # to make them more readable.
+        if log.isEnabledFor(level=logging.DEBUG):
+            if isinstance(data, str):
+                stripped = copy(data)
+            else:
+                stripped = data.decode("utf-8")
+            # there is probably a way to do that in a single RE,
+            # but since it's only for debugging, the perf penalty
+            # does not matter much
+            for el in LOG_STRIP_ELEMENTS:
+                stripped = re.sub(
+                    f"(<{el}.*?>)(.*)(</{el}>)",
+                    "\1[STRIPPED]\3",
+                    stripped,
+                    flags=re.DOTALL | re.IGNORECASE,
+                )
+            log.debug("SEND: %s", stripped)
+        if not self.transport:
+            raise NotConnectedError()
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        self.transport.write(data)
 
     async def __handle_ping(self, iq: Iq):
         ito = iq.get_to()
@@ -953,4 +980,7 @@ SLIXMPP_PLUGINS = [
     "xep_0447",  # Stateless File Sharing
     "xep_0461",  # Message replies
 ]
+
+LOG_STRIP_ELEMENTS = ["data", "binval"]
+
 log = logging.getLogger(__name__)
