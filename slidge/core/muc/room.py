@@ -80,7 +80,7 @@ class LegacyMUC(
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
         self.user = session.user
-        self.log = session.log
+        self.log = logging.getLogger(f"{self.user.bare_jid}:muc:{self.jid}")
 
         self.legacy_id = legacy_id
         self.jid = jid
@@ -108,7 +108,7 @@ class LegacyMUC(
         self.__history_filled = False
 
     def __repr__(self):
-        return f"<MUC '{self.legacy_id}' - {self.jid}>"
+        return f"<MUC '{self.legacy_id}'/'{self.jid}'>"
 
     async def __fill_participants(self):
         async with self.lock("fill participants"):

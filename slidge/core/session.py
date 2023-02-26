@@ -99,6 +99,9 @@ class BaseSession(
         self.threads = BiDict[str, LegacyThreadType]()
         self.__thread_creation_lock = asyncio.Lock()
 
+    def __repr__(self):
+        return f"<Session of {self.user}>"
+
     def shutdown(self):
         for c in self.contacts:
             c.offline()
@@ -293,7 +296,7 @@ class BaseSession(
         elif text:
             legacy_msg_id = await self.send_text(e, text, **kwargs)
         else:
-            log.debug("Ignoring %s", m)
+            log.debug("Ignoring %s", m.get_id())
             return
 
         if isinstance(e, LegacyMUC):
@@ -311,8 +314,6 @@ class BaseSession(
         xmpp_thread = msg["thread"]
         if not xmpp_thread:
             return
-
-        self.log.debug("Legacy threads: %s vs %s", xmpp_thread, self.threads)
 
         if self.MESSAGE_IDS_ARE_THREAD_IDS:
             return self.threads.get(xmpp_thread)
@@ -399,11 +400,7 @@ class BaseSession(
         try:
             return self.xmpp_msg_id_to_legacy_msg_id(xmpp_id)
         except Exception as e:
-            log.debug(
-                "Couldn't convert xmpp msg ID to legacy ID, ignoring: %r, %s",
-                e,
-                e.args,
-            )
+            log.debug("Couldn't convert xmpp msg ID to legacy ID.", exc_info=e)
 
     @ignore_sent_carbons
     async def displayed_from_msg(self, m: Message):
@@ -488,7 +485,10 @@ class BaseSession(
 
         if not legacy_id:
             log.debug("Ignored reaction from user")
-            raise XMPPError("internal-server-error")
+            raise XMPPError(
+                "internal-server-error",
+                "Could not convert the XMPP msg ID to a legacy ID",
+            )
 
         emojis = [
             remove_emoji_variation_selector_16(r["value"]) for r in m["reactions"]
@@ -499,7 +499,6 @@ class BaseSession(
             error_msg = "Maximum 1 emoji/message"
 
         if not error_msg and (subset := await e.available_emojis(legacy_id)):
-            log.debug("%s %s %s", set(emojis), subset, set(emojis).issubset(subset))
             if not set(emojis).issubset(subset):
                 error_msg = (
                     f"You can only react with the following emojis: {''.join(subset)}"
@@ -546,8 +545,6 @@ class BaseSession(
             )
         self.raise_if_not_logged()
         muc = await self.bookmarks.by_jid(p.get_to())
-        log.debug("BOOKMARKS: %r", self.bookmarks.__class__)
-        log.debug("JOIN MUC: %r -- %r -- %r", muc, muc.join, muc.__class__)
         await muc.join(p)
 
     def send_gateway_status(

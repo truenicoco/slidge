@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Generic, Type
 
 from slixmpp import JID
@@ -22,7 +23,6 @@ class LegacyBookmarks(
         self.session = session
         self.xmpp = session.xmpp
         self.user = session.user
-        self.log = session.log
 
         self._mucs_by_legacy_id = dict[LegacyGroupIdType, LegacyMUCType]()
         self._mucs_by_bare_jid = dict[str, LegacyMUCType]()
@@ -32,6 +32,7 @@ class LegacyBookmarks(
         self._user_nick: str = self.session.user.jid.node
 
         super().__init__()
+        self.log = logging.getLogger(f"{self.user.bare_jid}:bookmarks")
 
     @property
     def user_nick(self):
@@ -44,6 +45,9 @@ class LegacyBookmarks(
     def __iter__(self):
         return iter(self._mucs_by_legacy_id.values())
 
+    def __repr__(self):
+        return f"<Bookmarks of {self.user}>"
+
     async def legacy_id_to_jid_local_part(self, legacy_id: LegacyGroupIdType):
         return str(legacy_id).translate(ESCAPE_TABLE)
 
@@ -55,36 +59,34 @@ class LegacyBookmarks(
         async with self.lock(bare):
             muc = self._mucs_by_bare_jid.get(bare)
             if muc is None:
-                self.session.log.debug(
-                    "Attempting to create new MUC instance for JID %s", jid
-                )
+                self.log.debug("Attempting to instantiate a new MUC for JID %s", jid)
                 local_part = jid.node
                 legacy_id = await self.jid_local_part_to_legacy_id(local_part)
                 if self.get_lock(legacy_id):
+                    self.log.debug("Not instantiating %s after all", jid)
                     return await self.by_legacy_id(legacy_id)
-                self.session.log.debug("%r is group %r", local_part, legacy_id)
+                self.log.debug("%r is group %r", local_part, legacy_id)
                 muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
                 if not muc.user_nick:
                     muc.user_nick = self._user_nick
                 await muc.update_info()
-                self.session.log.debug("MUC created: %r", muc)
+                self.log.debug("MUC created: %r", muc)
                 self._mucs_by_legacy_id[legacy_id] = muc
                 self._mucs_by_bare_jid[bare] = muc
             else:
-                self.session.log.debug("Found MUC: %s -- %s", muc, type(muc))
+                self.log.debug("Found an existing MUC instance: %s", muc)
             return muc
 
     async def by_legacy_id(self, legacy_id: LegacyGroupIdType) -> LegacyMUCType:
         async with self.lock(legacy_id):
             muc = self._mucs_by_legacy_id.get(legacy_id)
             if muc is None:
-                self.session.log.debug(
-                    "Create new MUC instance for legacy ID %s", legacy_id
-                )
+                self.log.debug("Create new MUC instance for legacy ID %s", legacy_id)
                 local = await self.legacy_id_to_jid_local_part(legacy_id)
                 bare = f"{local}@{self.xmpp.boundjid}"
                 jid = JID(bare)
                 if self.get_lock(bare):
+                    self.log.debug("Not instantiating %s after all", legacy_id)
                     return await self.by_jid(jid)
                 muc = self._muc_class(
                     self.session,
@@ -94,6 +96,8 @@ class LegacyBookmarks(
                 if not muc.user_nick:
                     muc.user_nick = self._user_nick
                 await muc.update_info()
+            else:
+                self.log.debug("Found an existing MUC instance: %s", muc)
 
             self._mucs_by_legacy_id[legacy_id] = muc
             self._mucs_by_bare_jid[muc.jid.bare] = muc

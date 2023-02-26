@@ -42,7 +42,11 @@ class LegacyRoster(
         self.session = session
         self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
         self._contacts_by_legacy_id: dict[LegacyUserIdType, LegacyContactType] = {}
+        self.log = logging.getLogger(f"{self.session.user.bare_jid}:roster")
         super().__init__()
+
+    def __repr__(self):
+        return f"<Roster of {self.session.user}>"
 
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())

@@ -1,3 +1,4 @@
+import logging
 import string
 import warnings
 from copy import copy
@@ -31,7 +32,6 @@ class LegacyParticipant(
     def __init__(self, muc: "LegacyMUC", nickname: str, is_user=False):
         self.muc = muc
         self.session = session = muc.session
-        self.log = session.log
         self.user = session.user
         self.xmpp = session.xmpp
         self.role = "participant"
@@ -39,24 +39,25 @@ class LegacyParticipant(
         self.is_user = is_user
 
         self.nickname = nickname
-        self.log.debug("NEW PARTICIPANT: %r", nickname)
+        log.debug("Instantiation of: %r", nickname)
 
         j: JID = copy(self.muc.jid)
         try:
             j.resource = nickname
         except InvalidJID:
+            warnings.warn(f"Could not use {nickname} as a nickname")
             j.resource = (
                 "".join(x for x in nickname if x in string.printable)
                 + " [renamed by slidge]"
             )
         self.jid = j
 
-        self.log.debug("NEW PARTICIPANT: %r", self)
         self.contact: Optional["LegacyContact"] = None
         self._sent_presences_to = set[JID]()
+        self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid}")
 
     def __repr__(self):
-        return f"<{self.__class__} {self.nickname} of {self.muc}>"
+        return f"<Participant '{self.nickname}'/'{self.jid}' of '{self.muc}'>"
 
     def _make_presence(
         self,
@@ -83,7 +84,7 @@ class LegacyParticipant(
                     p["vcard_temp_update"]["photo"] = a.id
             else:
                 warnings.warn(
-                    f"Public group but no Contact or user_full_jid associated to {self.jid}",
+                    f"Private group but no 1:1 JID associated to '{self}'",
                 )
 
         p["muc"]["status_codes"] = codes
@@ -222,3 +223,6 @@ class LegacyParticipant(
         if self.contact is not None:
             return self.contact.get_disco_info()
         return super().get_disco_info()
+
+
+log = logging.getLogger(__name__)

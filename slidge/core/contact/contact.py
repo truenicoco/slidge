@@ -99,9 +99,10 @@ class LegacyContact(
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
+        self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid.bare}")
 
     def __repr__(self):
-        return f"<LegacyContact <{self.jid}> ('{self.legacy_id}') of <{self.user}>"
+        return f"<Contact '{self.legacy_id}'/'{self.jid.bare}'>"
 
     def __get_subscription_string(self):
         if self._subscribe_from and self._subscribe_to:

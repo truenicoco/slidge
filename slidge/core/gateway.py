@@ -331,7 +331,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
     def _register_commands(self):
         for cls in Command.subclasses:
             if any(x is NotImplemented for x in [cls.CHAT_COMMAND, cls.NODE, cls.NAME]):
-                log.debug("Skipping %s because it looks abstract", cls)
+                log.debug("Not adding command '%s' because it looks abstract", cls)
                 continue
             c = cls(self)
             self.adhoc.register(c)
@@ -409,7 +409,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         :param context:
         :return:
         """
-        log.debug("CONTEXT: %s", context)
+        log.debug("Context in the exception handler: %s", context)
         exc = context.get("exception")
         if exc is None:
             log.warning("No exception in this context: %s", context)
