@@ -1,8 +1,11 @@
+import asyncio
+import datetime
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import ParticipantNode, Thread
+from maufbapi.types.mqtt.message import PresenceInfo
 
 from slidge import LegacyContact, LegacyRoster, XMPPError
 
@@ -17,6 +20,21 @@ class Contact(LegacyContact[int]):
     REACTIONS_SINGLE_EMOJI = True
     session: "Session"
 
+    AWAY_AFTER = datetime.timedelta(minutes=5)
+    XA_AFTER = datetime.timedelta(hours=12)
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self._online_expire_task: Optional[asyncio.Task] = None
+
+    async def _expire(self, last_seen: datetime.datetime):
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        elapsed = (now - last_seen).seconds
+        await asyncio.sleep(self.AWAY_AFTER.seconds - elapsed)
+        self.away(last_seen=last_seen)
+        await asyncio.sleep((self.XA_AFTER - self.AWAY_AFTER).seconds)
+        self.extended_away(last_seen=last_seen)
+
     async def populate_from_participant(
         self, participant: ParticipantNode, update_avatar=True
     ):
@@ -30,7 +48,14 @@ class Contact(LegacyContact[int]):
             self.avatar = participant.messaging_actor.profile_pic_large.uri
 
     async def get_thread(self, **kwargs):
-        return (await self.session.api.fetch_thread_info(self.legacy_id, **kwargs))[0]
+        threads = await self.session.api.fetch_thread_info(self.legacy_id, **kwargs)
+        if len(threads) != 1:
+            self.log.debug("Could not determine my profile! %s", threads)
+            raise XMPPError(
+                "internal-server-error",
+                f"The messenger API returned {len(threads)} threads for this user.",
+            )
+        return threads[0]
 
     async def send_fb_sticker(self, sticker_id: int, legacy_msg_id: str, **kwargs):
         resp = await self.session.api.fetch_stickers([sticker_id])
@@ -110,6 +135,28 @@ class Contact(LegacyContact[int]):
                     msg_id,
                     media_id,
                 )
+
+    def update_presence(self, presence: PresenceInfo):
+        # presence.status is not about being away or online.
+        # possibly related to the which app is used? (web, android...)
+
+        if (t := self._online_expire_task) and not t.done():
+            t.cancel()
+
+        last_seen = datetime.datetime.fromtimestamp(
+            presence.last_seen, tz=datetime.timezone.utc
+        )
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        how_long = now - last_seen
+        if how_long < self.AWAY_AFTER:
+            self.online(last_seen=last_seen)
+            self._online_expire_task = self.xmpp.loop.create_task(
+                self._expire(last_seen)
+            )
+        elif how_long < self.XA_AFTER:
+            self.away(last_seen=last_seen)
+        else:
+            self.extended_away(last_seen=last_seen)
 
 
 class Roster(LegacyRoster[int, Contact]):

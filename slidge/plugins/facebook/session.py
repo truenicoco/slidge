@@ -63,7 +63,7 @@ class Session(BaseSession[str, Recipient]):
         thread_list = await self.api.fetch_thread_list(
             msg_count=0, thread_count=config.CHATS_TO_FETCH
         )
-        self.mqtt.seq_id = int(thread_list.sync_sequence_id)
+        self.mqtt.seq_id = int(thread_list.sync_sequence_id)  # type:ignore
         self.log.debug("SEQ ID: %s", self.mqtt.seq_id)
         self.log.debug("Thread list: %s", thread_list)
         self.log.debug("Thread list page info: %s", thread_list.page_info)
@@ -77,7 +77,6 @@ class Session(BaseSession[str, Recipient]):
                 self.log.warning("Something went wrong with this thread: %s", t)
                 continue
             await c.add_to_roster()
-            c.online()
 
     async def logout(self):
         pass

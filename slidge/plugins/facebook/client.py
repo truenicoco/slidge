@@ -2,13 +2,17 @@ import asyncio
 import json
 import logging
 import zlib
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
+import paho.mqtt.client as pmc
 from maufbapi import AndroidMQTT as AndroidMQTTOriginal
+from maufbapi.mqtt.otclient import MQTToTClient
 from maufbapi.mqtt.subscription import RealtimeTopic
 from maufbapi.thrift import ThriftObject
 from maufbapi.types import mqtt as mqtt_t
 
+from ... import XMPPError
 from .util import FacebookMessage, is_group_thread
 
 REQUEST_TIMEOUT = 60
@@ -18,12 +22,62 @@ if TYPE_CHECKING:
 
 
 class AndroidMQTT(AndroidMQTTOriginal):
-    def __init__(self, session: "Session", *a, **kw):
+    def __init__(
+        self,
+        session: "Session",
+        state,
+        loop=None,
+        log=None,
+        connect_token_hash=None,
+        proxy_handler=None,
+    ):
+        # overrides the default init to enable presences
         self.session = session
-        super().__init__(*a, **kw)
+        self.seq_id = None
+        self.seq_id_update_callback = None
+        self.connect_token_hash = connect_token_hash
+        self.region_hint_callback = None
+        self.connection_unauthorized_callback = None
+        self.enable_web_presence = True  # this is the modified line
+        self._opened_thread = None
+        self._publish_waiters = {}  # type:ignore
+        self._response_waiters = {}  # type:ignore
+        self._disconnect_error = None
+        self._response_waiter_locks = defaultdict(lambda: asyncio.Lock())  # type:ignore
+        self._event_handlers = defaultdict(lambda: [])  # type:ignore
+        self._event_dispatcher_task = None
+        self._outgoing_events = asyncio.Queue()  # type:ignore
+        self.log = log or logging.getLogger("maufbapi.mqtt")
+        self._loop = loop or asyncio.get_event_loop()
+        self.state = state
+        self._client = MQTToTClient(
+            client_id=self._form_client_id(),
+            clean_session=True,
+            protocol=pmc.MQTTv31,
+            transport="tcp",
+        )
+        self.proxy_handler = proxy_handler
+        self.setup_proxy()
+        self._client.enable_logger()
+        self._client.tls_set()
+        # mqtt.max_inflight_messages_set(20)  # The rest will get queued
+        # mqtt.max_queued_messages_set(0)  # Unlimited messages can be queued
+        # mqtt.message_retry_set(20)  # Retry sending for at least 20 seconds
+        # mqtt.reconnect_delay_set(min_delay=1, max_delay=120)
+        self._client.connect_async("edge-mqtt.facebook.com", 443, keepalive=60)
+        self._client.on_message = self._on_message_handler
+        self._client.on_publish = self._on_publish_handler
+        self._client.on_connect = self._on_connect_handler
+        self._client.on_disconnect = self._on_disconnect_handler
+        self._client.on_socket_open = self._on_socket_open
+        self._client.on_socket_close = self._on_socket_close
+        self._client.on_socket_register_write = self._on_socket_register_write
+        self._client.on_socket_unregister_write = self._on_socket_unregister_write
 
     def register_handlers(self):
-        self.seq_id_update_callback = lambda i: setattr(self, "seq_id", i)
+        self.seq_id_update_callback = lambda i: setattr(  # type:ignore
+            self, "seq_id", i
+        )
         self.add_event_handler(mqtt_t.Message, self.on_fb_message)
         self.add_event_handler(mqtt_t.ExtendedMessage, self.on_fb_extended_message)
         self.add_event_handler(mqtt_t.ReadReceipt, self.on_fb_message_read)
@@ -31,10 +85,10 @@ class AndroidMQTT(AndroidMQTTOriginal):
         self.add_event_handler(mqtt_t.OwnReadReceipt, self.on_fb_user_read)
         self.add_event_handler(mqtt_t.Reaction, self.on_fb_reaction)
         self.add_event_handler(mqtt_t.UnsendMessage, self.on_fb_unsend)
+        self.add_event_handler(mqtt_t.Presence, self.on_fb_presence)
 
         self.add_event_handler(mqtt_t.NameChange, self.on_fb_event)
         self.add_event_handler(mqtt_t.AvatarChange, self.on_fb_event)
-        self.add_event_handler(mqtt_t.Presence, self.on_fb_event)
         self.add_event_handler(mqtt_t.AddMember, self.on_fb_event)
         self.add_event_handler(mqtt_t.RemoveMember, self.on_fb_event)
         self.add_event_handler(mqtt_t.ThreadChange, self.on_fb_event)
@@ -90,7 +144,7 @@ class AndroidMQTT(AndroidMQTTOriginal):
         # by default, AndroidMQTT logs any exceptions here, but we actually
         # want to let it propagate
         for handler in self._event_handlers[type(evt)]:
-            self.log.trace("Dispatching event %s", evt)
+            self.log.trace("Dispatching event %s", evt)  # type:ignore
             await handler(evt)
 
     async def on_fb_extended_message(self, evt: mqtt_t.ExtendedMessage):
@@ -201,6 +255,16 @@ class AndroidMQTT(AndroidMQTTOriginal):
                 f.set_result(None)
         else:
             contact.retract(unsend.message_id)
+
+    async def on_fb_presence(self, presence: mqtt_t.Presence):
+        for info in presence.updates:
+            try:
+                contact = await self.session.contacts.by_legacy_id(info.user_id)
+            except XMPPError:
+                continue
+            if not contact.added_to_roster:
+                await contact.add_to_roster()
+            contact.update_presence(info)
 
     @staticmethod
     async def on_fb_event(evt):
