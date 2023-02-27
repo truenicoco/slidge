@@ -136,7 +136,6 @@ class Session(BaseSession[int, Recipient]):
         m = await channel.fetch_message(legacy_msg_id)
         self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await m.delete()
-        await self.delete_futures[legacy_msg_id]
 
     async def update_reactions(self, message: di.Message):
         if isinstance(message.channel, di.DMChannel):

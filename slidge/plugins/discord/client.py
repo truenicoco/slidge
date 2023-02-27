@@ -64,7 +64,7 @@ class Discord(di.Client):
         assert isinstance(message.channel, (di.DMChannel, di.TextChannel, di.Thread))
 
         async with self.session.send_lock:
-            fut = self.session.send_futures.get(message.id)
+            fut = self.session.send_futures.pop(message.id, None)
 
         if fut is None:
             if isinstance(message.channel, di.DMChannel):
@@ -129,7 +129,7 @@ class Discord(di.Client):
     async def on_carbon_edit(
         self, before: di.Message, after: di.Message, contact: "Contact"
     ):
-        fut = self.session.edit_futures.get(after.id)
+        fut = self.session.edit_futures.pop(after.id, None)
         if fut is None:
             return contact.correct(before.id, after.content, carbon=True)
         fut.set_result(True)
@@ -140,7 +140,7 @@ class Discord(di.Client):
             deleter = await self.get_contact(channel.recipient)
 
             if m.author == self.user:
-                fut = self.session.delete_futures.get(m.id)
+                fut = self.session.delete_futures.pop(m.id, None)
                 if fut is None:
                     return deleter.retract(m.id, carbon=True)
                 return fut.set_result(True)
