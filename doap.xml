@@ -89,7 +89,7 @@
             <xmpp:status>complete</xmpp:status>
             <xmpp:version>1.5</xmpp:version>
             <xmpp:since>0.1.0</xmpp:since>
-            <xmpp:note>To use display http uploads inline</xmpp:note>
+            <xmpp:note>To display http uploads inline</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
     <implements>
@@ -194,6 +194,13 @@
             <xmpp:note>User list and delete are available via adhoc commands, but will be improved to follow this XEP</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
+        <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0153.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:note>Only for room avatars</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0163.html"/>
@@ -260,7 +267,8 @@
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0221.html"/>
-            <xmpp:status>planned</xmpp:status>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:since>0.1.0</xmpp:since>
             <xmpp:note>To embed QR codes in data forms during registration via adhoc command</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
@@ -282,6 +290,7 @@
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0280.html"/>
             <xmpp:note>Compatible with carbons if the server supports it. Even for messages sent from official clients if the component is a privileged entity.</xmpp:note>
+            <xmpp:status>complete</xmpp:status>
         </xmpp:SupportedXep>
     </implements>
     <implements>
@@ -304,6 +313,7 @@
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0313.html"/>
+            <xmpp:status>complete</xmpp:status>
             <xmpp:version>1.0.1</xmpp:version>
             <xmpp:since>0.1.0</xmpp:since>
             <xmpp:note>For MUCs</xmpp:note>
@@ -433,7 +443,7 @@
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0444.html"/>
             <xmpp:status>complete</xmpp:status>
-            <xmpp:version>0.1.0</xmpp:version>
+            <xmpp:version>0.1.1</xmpp:version>
             <xmpp:since>0.1.0</xmpp:since>
         </xmpp:SupportedXep>
     </implements>
