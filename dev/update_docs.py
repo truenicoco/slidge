@@ -41,6 +41,9 @@ try:
 except FileNotFoundError:
     pass
 
+for f in DESTINATION.glob("**/*.html"):
+    f.unlink()
+
 job_html = requests.get(job_url).content.decode()
 
 artifact_url = re.search(f"https://.*{FILE_NAME}", job_html).group(0)
