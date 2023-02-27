@@ -48,7 +48,13 @@ class Discord(di.Client):
         if isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(channel.id)
             if author == self.user:
-                participant = await muc.get_user_participant()
+                async with self.session.send_lock:
+                    fut = self.session.send_futures.pop(message.id, None)
+                if fut is None:
+                    participant = await muc.get_user_participant()
+                else:
+                    fut.set_result(True)
+                    return
             else:
                 participant = await muc.get_participant_by_discord_user(author)
 
