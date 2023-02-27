@@ -222,35 +222,32 @@ class BaseSession(
         """
         # we MUST not use `if m["replace"]["id"]` because it adds the tag if not
         # present. this is a problem for MUC echoed messages
-        if m.xml.find("{urn:xmpp:message-correct:0}replace") is not None:
+        if m.get_plugin("replace", check=True):
             # ignore last message correction (handled by a specific method)
             return
-        if m.xml.find("{urn:xmpp:fasten:0}apply-to") is not None:
+        if m.get_plugin("apply_to", check=True):
             # ignore message retraction (handled by a specific method)
             return
 
         e = await self.__get_entity(m)
         self.log.debug("Entity %r", e)
 
-        if m.xml.find("{jabber:x:oob}x") is not None:
+        if m.get_plugin("oob", check=True) is not None:
             url = m["oob"]["url"]
         else:
             url = None
 
         text = m["body"]
-        if m.xml.find(f"{{{FeatureFallBack.namespace}}}fallback") is not None and (
-            isinstance(e, LegacyMUC) or e.REPLIES  # type: ignore
+        if m.get_plugin("feature_fallback", check=True) and (
+            isinstance(e, LegacyMUC) or e.REPLIES
         ):
             text = m["feature_fallback"].get_stripped_body()
             reply_fallback = m["feature_fallback"].get_fallback_body()
         else:
             reply_fallback = None
 
-        # Testing with `is None` is mandatory since a reply element have no
-        # 'data' but only attributes, so the ElementTree is "false-ish".
-        # Grrrrr this took me some time to figure out.
         reply_to = None
-        if m.xml.find("{urn:xmpp:reply:0}reply") is not None:
+        if m.get_plugin("reply", check=True):
             reply_to_msg_xmpp_id = self.__xmpp_msg_id_to_legacy(m["reply"]["id"])
             reply_to_jid = JID(m["reply"]["to"])
             if m["type"] == "chat":

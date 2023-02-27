@@ -170,17 +170,18 @@ def archivable(msg: Message):
     :param msg:
     :return:
     """
-    if msg["hint"] == "no-store":
+
+    if msg.get_plugin("apply_to", check=True) and msg["hint"] == "no-store":
         return False
 
     if msg["body"]:
         return True
 
-    if msg.xml.find("{urn:xmpp:fasten:0}apply-to") is not None:
+    if msg.get_plugin("apply_to", check=True):
         # retractions
         return True
 
-    if msg.xml.find(f"{{{ReactionsNameSpace}}}reactions") is not None:
+    if msg.get_plugin("reactions", check=True):
         return True
 
     return False
