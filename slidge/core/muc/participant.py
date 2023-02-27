@@ -29,7 +29,13 @@ class LegacyParticipant(
     USE_STANZA_ID = True
     STRIP_SHORT_DELAY = False
 
-    def __init__(self, muc: "LegacyMUC", nickname: str, is_user=False):
+    def __init__(
+        self,
+        muc: "LegacyMUC",
+        nickname: Optional[str] = None,
+        is_user=False,
+        is_system=False,
+    ):
         self.muc = muc
         self.session = session = muc.session
         self.user = session.user
@@ -37,19 +43,29 @@ class LegacyParticipant(
         self.role = "participant"
         self.affiliation = "member"
         self.is_user = is_user
+        self.is_system = is_system
 
         self.nickname = nickname
+
         log.debug("Instantiation of: %r", nickname)
 
         j: JID = copy(self.muc.jid)
-        try:
-            j.resource = nickname
-        except InvalidJID:
-            warnings.warn(f"Could not use {nickname} as a nickname")
-            j.resource = (
-                "".join(x for x in nickname if x in string.printable)
-                + " [renamed by slidge]"
-            )
+
+        if not is_system:
+            if not nickname:
+                warnings.warn(
+                    "Only the system participant is allowed to not have a nickname"
+                )
+                nickname = "unnamed"
+            try:
+                j.resource = nickname
+            except InvalidJID:
+                warnings.warn(f"Could not use {nickname} as a nickname")
+                j.resource = (
+                    "".join(x for x in nickname if x in string.printable)
+                    + " [renamed by slidge]"
+                )
+
         self.jid = j
 
         self.contact: Optional["LegacyContact"] = None
@@ -94,6 +110,17 @@ class LegacyParticipant(
     def DISCO_NAME(self):
         return self.nickname
 
+    def __send_presence_if_needed(
+        self, stanza: Union[Message, Presence], full_jid: JID
+    ):
+        if (
+            not self.is_system
+            and not self.is_user
+            and isinstance(stanza, Message)
+            and full_jid not in self._sent_presences_to
+        ):
+            self.send_initial_presence(full_jid)
+
     def _send(
         self,
         stanza: Union[Message, Presence],
@@ -103,8 +130,7 @@ class LegacyParticipant(
     ):
         if full_jid:
             stanza["to"] = full_jid
-            if isinstance(stanza, Message) and full_jid not in self._sent_presences_to:
-                self.send_initial_presence(full_jid)
+            self.__send_presence_if_needed(stanza, full_jid)
             stanza.send()
         else:
             if isinstance(stanza, Message):
@@ -112,11 +138,7 @@ class LegacyParticipant(
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
-                if (
-                    isinstance(stanza, Message)
-                    and user_full_jid not in self._sent_presences_to
-                ):
-                    self.send_initial_presence(user_full_jid)
+                self.__send_presence_if_needed(stanza, user_full_jid)
                 stanza.send()
 
     def mucadmin_item(self):

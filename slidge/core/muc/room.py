@@ -469,6 +469,9 @@ class LegacyMUC(
             self.__store_participant(p)
         return p
 
+    def get_system_participant(self):
+        return self.Participant(self, is_system=True)
+
     async def get_participant_by_contact(
         self, c: "LegacyContact"
     ) -> "LegacyParticipantType":
