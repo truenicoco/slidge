@@ -51,6 +51,16 @@ class LegacyRoster(
     def __iter__(self):
         return iter(self._contacts_by_legacy_id.values())
 
+    async def __finish_init_contact(
+        self, legacy_id: LegacyUserIdType, jid_username: str
+    ):
+        c = self._contact_cls(self.session, legacy_id, jid_username)
+        await c.update_caps()
+        await c.update_info()
+        self._contacts_by_legacy_id[legacy_id] = c
+        self._contacts_by_bare_jid[c.jid.bare] = c
+        return c
+
     def known_contacts(self):
         return {
             j: c for j, c in self._contacts_by_bare_jid.items() if c.added_to_roster
@@ -67,22 +77,17 @@ class LegacyRoster(
         :param contact_jid:
         :return:
         """
-        bare = contact_jid.bare
-        async with self.lock(bare):
+        username = contact_jid.node
+        async with self.lock(("username", username)):
+            bare = contact_jid.bare
             c = self._contacts_by_bare_jid.get(bare)
             if c is None:
-                jid_username = str(contact_jid.username)
-                legacy_id = await self.jid_username_to_legacy_id(jid_username)
-                if self.get_lock(legacy_id):
-                    log.debug("Already updating the same contact")
-                    return await self.by_legacy_id(legacy_id)
                 log.debug("Contact %s not found", contact_jid)
-                c = self._contact_cls(self.session, legacy_id, jid_username)
-                await c.update_caps()
-                await c.update_info()
-                self._contacts_by_legacy_id[legacy_id] = self._contacts_by_bare_jid[
-                    bare
-                ] = c
+                legacy_id = await self.jid_username_to_legacy_id(username)
+                if self.get_lock(("legacy_id", legacy_id)):
+                    log.debug("Already updating %s", contact_jid)
+                    return await self.by_legacy_id(legacy_id)
+                c = await self.__finish_init_contact(legacy_id, username)
             return c
 
     async def by_legacy_id(self, legacy_id: LegacyUserIdType) -> LegacyContactType:
@@ -96,23 +101,18 @@ class LegacyRoster(
         :param legacy_id:
         :return:
         """
-        async with self.lock(legacy_id):
+        async with self.lock(("legacy_id", legacy_id)):
             c = self._contacts_by_legacy_id.get(legacy_id)
             if c is None:
-                log.debug("Contact %s not found in roster", legacy_id)
-                c = self._contact_cls(
-                    self.session,
-                    legacy_id,
-                    await self.legacy_id_to_jid_username(legacy_id),
-                )
-                if self.get_lock(c.jid.bare):
-                    log.debug("Already updating the same contact")
-                    return await self.by_jid(c.jid)
-                await c.update_caps()
-                await c.update_info()
-                self._contacts_by_bare_jid[c.jid.bare] = self._contacts_by_legacy_id[
-                    legacy_id
-                ] = c
+                log.debug("Contact %s not found", legacy_id)
+                username = await self.legacy_id_to_jid_username(legacy_id)
+                if self.get_lock(("username", username)):
+                    log.debug("Already updating %s", username)
+                    jid = JID()
+                    jid.node = username
+                    jid.domain = self.session.xmpp.boundjid.bare
+                    return await self.by_jid(jid)
+                c = await self.__finish_init_contact(legacy_id, username)
             return c
 
     async def by_stanza(self, s) -> LegacyContact:
