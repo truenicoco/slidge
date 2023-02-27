@@ -80,7 +80,7 @@ class LegacyMUC(
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
         self.user = session.user
-        self.log = logging.getLogger(f"{self.user.bare_jid}:muc:{self.jid}")
+        self.log = logging.getLogger(f"{self.user.bare_jid}:muc:{jid}")
 
         self.legacy_id = legacy_id
         self.jid = jid
