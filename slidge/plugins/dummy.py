@@ -145,6 +145,14 @@ class Roster(LegacyRoster):
             raise XMPPError("item-not-found")
         return jid_username
 
+    async def fill(self):
+        for b, a in zip(BUDDIES, AVATARS):
+            c = await self.by_legacy_id(b.lower())
+            c.name = b.title()
+            c.avatar = a
+            await c.add_to_roster()
+            c.online("I am not a real person, so what?")
+
 
 class Session(BaseSession):
     def __init__(self, user):
@@ -215,15 +223,7 @@ class Session(BaseSession):
 
     async def login(self):
         log.debug("Logging in user: %s", self.user)
-        self.send_gateway_status("Connecting...", show="dnd")
         await asyncio.sleep(1)
-        self.send_gateway_status("Connected")
-        for b, a in zip(BUDDIES, AVATARS):
-            c = await self.contacts.by_legacy_id(b.lower())
-            c.name = b.title()
-            c.avatar = a
-            await c.add_to_roster()
-            c.online("I am not a real person, so what?")
         return "You can talk to your fake friends now"
 
     async def logout(self):
