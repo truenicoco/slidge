@@ -96,7 +96,7 @@ class BaseSession(
 
         self.http = self.xmpp.http  # type: ignore
 
-        self.threads = BiDict[str, LegacyThreadType]()
+        self.threads = BiDict[str, LegacyThreadType]()  # type:ignore
         self.__thread_creation_lock = asyncio.Lock()
 
     def __repr__(self):
