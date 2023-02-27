@@ -105,7 +105,7 @@ class TelegramToXMPPMixin:
                     muc = self.muc
                     if sender_user_id is None:
                         reply_to_fallback = ""
-                        reply_to_author = await muc.participant_system()
+                        reply_to_author = muc.get_system_participant()
                     elif sender_user_id == await self.session.tg.get_my_id():
                         reply_to_author = await muc.get_user_participant()
                         reply_to_fallback = f"{muc.user_nick}:\n"

@@ -286,7 +286,7 @@ class TelegramClient(aiotdlib.Client):
                 if isinstance(sender_id, tgapi.MessageSenderUser):
                     reacter = await muc.participant_by_tg_user_id(sender_id.user_id)
                 else:
-                    reacter = await muc.participant_system()
+                    reacter = muc.get_system_participant()
                 new_reacters.add((reacter, emoji))
 
         self.log.debug("Old reacters: %s", old_reacters)

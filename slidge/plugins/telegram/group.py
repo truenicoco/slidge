@@ -176,9 +176,6 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
             await self.session.contacts.by_legacy_id(user.id)
         )
 
-    async def participant_system(self) -> "Participant":
-        return await self.get_participant("")
-
     async def participant_by_tg_user_id(self, user_id: int) -> "Participant":
         if user_id == await self.session.tg.get_my_id():
             return await self.get_user_participant()
@@ -251,7 +248,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
                 await self.session.tg.api.get_user(sender_id.user_id)
             )
         else:
-            return await self.participant_system()
+            return self.get_system_participant()
 
 
 class Participant(LegacyParticipant, TelegramToXMPPMixin):
