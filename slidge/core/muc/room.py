@@ -97,7 +97,7 @@ class LegacyMUC(
         self.subject_setter = "unknown"
 
         self.archive: MessageArchive = MessageArchive()
-        self.user_nick = self.user.jid.node
+        self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
         self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
@@ -109,6 +109,18 @@ class LegacyMUC(
 
     def __repr__(self):
         return f"<MUC '{self.legacy_id}'/'{self.jid}'>"
+
+    @property
+    def user_nick(self):
+        return self._user_nick
+
+    @user_nick.setter
+    def user_nick(self, nick: str):
+        self._user_nick = nick
+
+    @property
+    def user_nick_non_none(self):
+        return self._user_nick or self.session.user.jid.node
 
     async def __fill_participants(self):
         async with self.lock("fill participants"):
@@ -321,7 +333,7 @@ class LegacyMUC(
 
     def shutdown(self):
         user_jid = copy(self.jid)
-        user_jid.resource = self.user_nick
+        user_jid.resource = self.user_nick_non_none
         for user_full_jid in self.user_full_jids():
             presence = self.xmpp.make_presence(
                 pfrom=user_jid, pto=user_full_jid, ptype="unavailable"
@@ -346,7 +358,7 @@ class LegacyMUC(
     @property
     def user_muc_jid(self):
         user_muc_jid = copy(self.jid)
-        user_muc_jid.resource = self.user_nick
+        user_muc_jid.resource = self.user_nick_non_none
         return user_muc_jid
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
@@ -420,7 +432,7 @@ class LegacyMUC(
         for participant in self._participants_by_nicknames.values():
             participant.send_initial_presence(full_jid=user_full_jid)
 
-        user_nick = self.user_nick
+        user_nick = self.user_nick_non_none
         user_participant = await self.get_user_participant()
         user_participant.send_initial_presence(
             user_full_jid,

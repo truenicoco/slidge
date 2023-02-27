@@ -67,9 +67,9 @@ class LegacyBookmarks(
                     return await self.by_legacy_id(legacy_id)
                 self.log.debug("%r is group %r", local_part, legacy_id)
                 muc = self._muc_class(self.session, legacy_id=legacy_id, jid=JID(bare))
+                await muc.update_info()
                 if not muc.user_nick:
                     muc.user_nick = self._user_nick
-                await muc.update_info()
                 self.log.debug("MUC created: %r", muc)
                 self._mucs_by_legacy_id[legacy_id] = muc
                 self._mucs_by_bare_jid[bare] = muc
@@ -93,9 +93,9 @@ class LegacyBookmarks(
                     legacy_id=legacy_id,
                     jid=jid,
                 )
+                await muc.update_info()
                 if not muc.user_nick:
                     muc.user_nick = self._user_nick
-                await muc.update_info()
             else:
                 self.log.debug("Found an existing MUC instance: %s", muc)
 
