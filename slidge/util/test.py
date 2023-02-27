@@ -157,7 +157,7 @@ class SlidgeTest(SlixTestPlus):
         port = 5222
         upload_service = "upload.test"
         home_dir = Path(tempfile.mkdtemp())
-        user_jid_validator = ".*@shakespeare.lit"
+        user_jid_validator = ".*"
         admins: list[str] = []
         no_roster_push = False
         upload_requester = None

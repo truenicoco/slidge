@@ -1,5 +1,6 @@
 import pytest
 
+from slixmpp import ComponentXMPP
 from slixmpp.test import SlixTest
 
 import slidge.core.adhoc
@@ -17,13 +18,18 @@ class MockSession:
 
 
 @pytest.fixture(autouse=True)
-def mock(monkeypatch):
+def mock(monkeypatch, MockRE):
     monkeypatch.setattr(
         slidge.core.command.base, "is_admin", lambda j: j.username.startswith("admin")
     )
     monkeypatch.setattr(Command, "_get_session", lambda s, j: MockSession(j))
     monkeypatch.setattr(XEP_0050, "new_session", lambda _: "session-id")
-
+    monkeypatch.setattr(
+        ComponentXMPP,
+        "jid_validator",
+        MockRE,
+        raising=False,
+    )
 
 class Command1(Command):
     NAME = "Command number one"

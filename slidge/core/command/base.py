@@ -335,6 +335,11 @@ class Command(ABC):
         :return:session of JID if it exists
         """
         session = self._get_session(jid)
+        if not self.xmpp.jid_validator.match(jid.bare):  # type:ignore
+            raise XMPPError(
+                "bad-request", "Your JID is not allowed to use this gateway."
+            )
+
         if self.ACCESS == CommandAccess.ADMIN_ONLY and not is_admin(jid):
             raise XMPPError("not-authorized")
         elif self.ACCESS == CommandAccess.NON_USER and session is not None:

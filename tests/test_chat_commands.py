@@ -9,26 +9,22 @@ from slidge.core.command import Command, Confirmation
 
 class MockSession:
     def __init__(self, jid):
-        # self.jid = jid
         self.logged = "logged" in jid.username
 
 
 @pytest.fixture(autouse=True)
-def mock(monkeypatch):
-    # monkeypatch.setattr(
-    #     slidge.core.chat_command, "is_admin", lambda j: j.username.startswith("admin")
-    # )
-    # monkeypatch.setattr(
-    #     slidge.core.chat_command, "is_user", lambda j: j.username.endswith("user")
-    # )
+def mock(monkeypatch, MockRE):
     monkeypatch.setattr(Command, "_get_session", lambda s, j: MockSession(j))
-    # monkeypatch.setattr(
-    #     slidge.core.chat_command, "commands", [CommandAdmin, CommandAdminConfirmFail]
-    # )
     monkeypatch.setattr(
         slixmpp.test.ComponentXMPP,
         "get_session_from_stanza",
         lambda self, stanza: MockSession(stanza.get_from()),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        slixmpp.test.ComponentXMPP,
+        "jid_validator",
+        MockRE,
         raising=False,
     )
 
@@ -82,7 +78,7 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        t = self.commands.UNKNOWN.format('non-existing')
+        t = self.commands.UNKNOWN.format("non-existing")
         self.send(
             f"""
             <message xmlns="jabber:component:accept"

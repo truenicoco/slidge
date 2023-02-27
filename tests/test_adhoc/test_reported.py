@@ -1,8 +1,7 @@
 import pytest
 
-# import slixmpp.test
 from slixmpp.test import SlixTest
-# from slixmpp import JID
+from slixmpp import ComponentXMPP
 
 import slidge.core.adhoc
 from slidge.util.xep_0050.adhoc import XEP_0050
@@ -12,22 +11,20 @@ from slidge.core.command.base import FormField
 
 class MockSession:
     def __init__(self, jid):
-        # self.jid = jid
         self.logged = True
 
 @pytest.fixture(autouse=True)
-def mock(monkeypatch):
+def mock(monkeypatch, MockRE):
     monkeypatch.setattr(
         slidge.core.command.base, "is_admin", lambda j: j.username.startswith("admin")
     )
     monkeypatch.setattr(Command, "_get_session", lambda s, j: MockSession(j))
-    # monkeypatch.setattr(slidge.core.adhoc, "commands", [Command1])
-    # monkeypatch.setattr(
-    #     slixmpp.test.ComponentXMPP,
-    #     "get_session_from_stanza",
-    #     lambda self, stanza: None,
-    #     raising=False,
-    # )
+    monkeypatch.setattr(
+        ComponentXMPP,
+        "jid_validator",
+        MockRE,
+        raising=False,
+    )
     monkeypatch.setattr(XEP_0050, "new_session", lambda _: "session-id")
 
 

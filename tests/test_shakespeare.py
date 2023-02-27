@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 import tempfile
 from copy import copy
 from pathlib import Path
@@ -347,6 +348,7 @@ class TestAimShakespeareBase(SlidgeTest):
         assert unregistered[0].jid == "romeo@montague.lit"
 
     def test_jid_validator(self):
+        self.xmpp.jid_validator = re.compile(".*@noteverybody")
         self.recv(
             """
             <iq from='eve@nothingshakespearian' type='get' to='aim.shakespeare.lit' id="0">
@@ -387,6 +389,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """,
             use_values=False,
         )
+        self.xmpp.jid_validator = re.compile(".*")
 
     def test_reactions(self):
         self.recv(
