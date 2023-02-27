@@ -218,6 +218,7 @@ class ChatCommandProvider:
             else:
                 return f(*a, **k)
         except Exception as e:
+            log.debug("Error in %s", f, exc_info=e)
             reply = msg.reply()
             reply["body"] = f"Error: {e}"
             reply.send()

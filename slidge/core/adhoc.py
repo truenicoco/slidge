@@ -84,6 +84,7 @@ class AdhocProvider:
             else:
                 return f(*a, **k)
         except Exception as e:
+            log.debug("Exception in %s", f, exc_info=e)
             raise XMPPError("internal-server-error", text=str(e))
 
     async def __wrap_form_handler(
