@@ -5,8 +5,6 @@ import discord as di
 
 from slidge import *
 
-# from ...util.types import Recipient
-
 if TYPE_CHECKING:
     from .client import Discord
     from .contact import Contact, Roster
