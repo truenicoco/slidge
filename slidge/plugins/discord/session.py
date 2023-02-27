@@ -40,6 +40,8 @@ class Session(BaseSession[int, Recipient]):
         self.xmpp.loop.create_task(self.discord.connect())
 
         await self.ready_future
+        assert self.discord.user is not None
+        self.bookmarks.user_nick = str(self.discord.user.display_name)
         return f"Logged on as {self.discord.user}"
 
     async def send_text(
