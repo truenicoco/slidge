@@ -80,10 +80,7 @@ class TelegramToXMPPMixin:
                     self.chat_id, reply_to
                 )
             except tgapi.NotFound:
-                # apparently in telegram it is possible to "reply-to" messages that have been deleted
-                # TODO: mention in the body that this is reply to a deleted message
-                reply_to = None
-                reply_to_fallback = None
+                reply_to_fallback = "[deleted message]"
                 reply_to_author = None
                 reply_self = False
             else:
