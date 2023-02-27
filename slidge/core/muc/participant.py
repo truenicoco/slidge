@@ -246,5 +246,14 @@ class LegacyParticipant(
             return self.contact.get_disco_info()
         return super().get_disco_info()
 
+    def moderate(self, legacy_msg_id: LegacyMessageType, reason: Optional[str] = None):
+        m = self._make_message()
+        m["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
+        m["apply_to"]["moderated"].enable("retract")
+        m["apply_to"]["moderated"]["by"] = self.jid
+        if reason:
+            m["apply_to"]["moderated"]["reason"] = reason
+        self._send(m)
+
 
 log = logging.getLogger(__name__)

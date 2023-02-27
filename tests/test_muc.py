@@ -1532,5 +1532,23 @@ class TestMuc(SlidgeTest):
         a.add(m)
         assert len(list(a.get_all())) == 2
 
+    def test_moderate(self):
+        muc = self.get_private_muc("room")
+        muc.user_resources.add("gajim")
+        p = muc.get_system_participant()
+        p.moderate("legacy-666", "reason™")
+        self.send(
+            """
+            <message type="groupchat" from='room@aim.shakespeare.lit' to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room@aim.shakespeare.lit"/>
+              <apply-to id="666" xmlns="urn:xmpp:fasten:0">
+                <moderated by='room@aim.shakespeare.lit' xmlns='urn:xmpp:message-moderate:0'>
+                  <retract xmlns='urn:xmpp:message-retract:0' />
+                  <reason>reason™</reason>
+                </moderated>
+              </apply-to>
+            </message>
+            """
+        )
 
 avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

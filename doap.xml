@@ -409,7 +409,9 @@
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0425.html"/>
-            <xmpp:status>planned</xmpp:status>
+            <xmpp:version>0.2.1</xmpp:version>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:note>Cannot be triggered from the XMPP side (yet)</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
     <implements>

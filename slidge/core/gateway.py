@@ -962,6 +962,7 @@ SLIXMPP_PLUGINS = [
     "xep_0363",  # HTTP file upload
     "xep_0385",  # Stateless in-line media sharing
     "xep_0424",  # Message retraction
+    "xep_0425",  # Message moderation
     "xep_0444",  # Message reactions
     "xep_0447",  # Stateless File Sharing
     "xep_0461",  # Message replies
