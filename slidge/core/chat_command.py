@@ -143,6 +143,9 @@ class ChatCommandProvider:
 
         if isinstance(result, Form):
             form_values = {}
+            for t in result.title, result.instructions:
+                if t:
+                    msg.reply(t).send()
             for f in result.fields:
                 if f.type == "fixed":
                     msg.reply(f"{f.label or f.var}: {f.value}").send()
@@ -195,7 +198,7 @@ class ChatCommandProvider:
                 msg.reply("Empty results").send()
                 return
 
-            body = ""
+            body = result.description + "\n"
             for item in result.items:
                 for f in result.fields:
                     if f.type == "jid-single":
