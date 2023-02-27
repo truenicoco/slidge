@@ -305,30 +305,28 @@ class TelegramClient(aiotdlib.Client):
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
             self.log.debug("Ignoring non permanent delete")
             return
+
+        direct = await self.is_private_chat(update.chat_id)
+
+        if direct:
+            contact = await self.session.contacts.by_legacy_id(update.chat_id)
+        else:
+            muc: "MUC" = await self.session.bookmarks.by_legacy_id(update.chat_id)
+            p = muc.get_system_participant()
+
         for legacy_msg_id in update.message_ids:
-            try:
-                future = self.session.delete_futures.pop(legacy_msg_id)
-            except KeyError:
-                if await self.is_private_chat(update.chat_id):
-                    contact = await self.session.contacts.by_legacy_id(update.chat_id)
-                    if legacy_msg_id in self.session.sent:
-                        contact.retract(legacy_msg_id, carbon=True)
-                    else:
-                        contact.retract(legacy_msg_id)
-                else:
-                    return
-                    # FIXME: does not work because we need to fetch the participant,
-                    #        the DeleteMessage payload has not author info,
-                    #        and we cannot get_message() anymore
-                    # We should probably use MUC moderation tools here
-                    # muc = await self.session.bookmarks.by_legacy_id(update.chat_id)
-                    # msg = await self.api.get_message(update.chat_id, legacy_msg_id)
-                    # participant = await muc.participant_by_tg_user_id(
-                    #     msg.sender_id.user_id
-                    # )
-                    # participant.retract(legacy_msg_id)
-            else:
+            future = self.session.delete_futures.pop(legacy_msg_id, None)
+            if future is not None:
                 future.set_result(update)
+                continue
+
+            if direct:
+                if legacy_msg_id in self.session.sent:
+                    contact.retract(legacy_msg_id, carbon=True)
+                else:
+                    contact.retract(legacy_msg_id)
+            else:
+                p.moderate(legacy_msg_id)
 
     async def handle_MessageSendSucceeded(
         self, update: tgapi.UpdateMessageSendSucceeded
