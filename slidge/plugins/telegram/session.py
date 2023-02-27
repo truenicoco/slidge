@@ -13,7 +13,7 @@ from slidge import *
 
 from . import config
 from .client import TelegramClient
-from .contact import Contact, Roster
+from .contact import Contact
 from .group import MUC
 
 
@@ -24,11 +24,8 @@ def catch_chat_not_found(coroutine):
             return await coroutine(self, *a, **k)
         except tgapi.BadRequest as e:
             if e.code == 400:
-                # FIXME: Chat should always be the first arg for a cleaner API...
-                if len(a) == 1:
-                    chat: Recipient = a[0]
-                elif len(a) == 2:
-                    chat = a[1]
+                if a:
+                    chat = a[0]
                 else:
                     chat = k.get("chat", k.get("c"))
                 if chat is None:
@@ -174,7 +171,6 @@ class Session(BaseSession[int, Recipient]):
         )
         await f
 
-    @catch_chat_not_found
     async def search(self, form_values: dict[str, str]):
         phone = form_values["phone"]
         first = form_values.get("first", phone)
@@ -202,8 +198,7 @@ class Session(BaseSession[int, Recipient]):
             items=[{"phone": form_values["phone"], "jid": contact.jid.bare}],
         )
 
-    @catch_chat_not_found
-    async def remove_reactions(self, legacy_msg_id, c: "Contact"):
+    async def remove_reactions(self, c: "Recipient", legacy_msg_id):
         try:
             r = await self.tg.api.set_message_reaction(
                 chat_id=c.legacy_id,
@@ -221,7 +216,7 @@ class Session(BaseSession[int, Recipient]):
         self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
     ):
         if len(emojis) == 0:
-            await self.remove_reactions(legacy_msg_id, c)
+            await self.remove_reactions(c, legacy_msg_id)
             return
 
         # we never have more than 1 emoji, slidge core makes sure of that
