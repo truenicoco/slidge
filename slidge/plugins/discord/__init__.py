@@ -6,7 +6,7 @@ from slixmpp import JID
 
 from slidge import BaseGateway, FormField
 
-from . import config, group
+from . import commands, config, group
 from .contact import Contact
 from .session import Session
 
