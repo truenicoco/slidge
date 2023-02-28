@@ -68,6 +68,8 @@ class LegacyContact(
 
     _ONLY_SEND_PRESENCE_CHANGES = True
 
+    STRIP_SHORT_DELAY = True
+
     def __init__(
         self,
         session: "BaseSession",
