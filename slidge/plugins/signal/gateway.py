@@ -294,8 +294,17 @@ class Gateway(BaseGateway):
     async def validate_two_factor_code(self, user: GatewayUser, code: str):
         signal = await self.signal
         phone = user.registration_form.get("phone")
-        await signal.verify(phone, code)
-        await signal.set_profile(account=phone, name=user.registration_form.get("name"))
+        try:
+            await signal.verify(phone, code)
+            await signal.set_profile(
+                account=phone, name=user.registration_form.get("name")
+            )
+        except sigexc.InternalError as e:
+            raise XMPPError("internal-server-error", e.message)
+        except sigexc.AuthorizationFailedError as e:
+            raise XMPPError("not-authorized", e.message)
+        except sigexc.SignaldException as e:
+            raise XMPPError("internal-server-error", str(e))
 
     async def unregister(self, user: GatewayUser):
         try:
