@@ -51,6 +51,8 @@ class TestPubSubDisco(SlixTest):
 
 
 class MockSession:
+    logged = True
+
     @staticmethod
     async def get_contact_or_group_or_participant(j):
         return
