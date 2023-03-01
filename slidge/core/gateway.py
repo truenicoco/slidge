@@ -493,7 +493,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 log.debug("Ignoring message to component")
                 return
             s = self.get_session_from_stanza(m)
-            await cb(s, m)
+            try:
+                await cb(s, m)
+            except XMPPError:
+                raise
+            except Exception as e:
+                s.log.error("Failed to handle incoming stanza: %s", m, exc_info=e)
+                raise XMPPError("internal-server-error", str(e))
 
         # fmt: off
         async def msg(m): await get_session(m, BaseSession.send_from_msg)
