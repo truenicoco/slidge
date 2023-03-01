@@ -186,34 +186,47 @@ class TelegramClient(aiotdlib.Client):
         new = action.new_content
         if isinstance(new, tgapi.MessagePhoto):
             # Happens when the user send a picture, looks safe to ignore
-            self.log.debug("Ignoring message photo update: %s", new)
+            self.log.debug("Ignoring message photo update")
             return
         if not isinstance(new, tgapi.MessageText):
             self.log.warning("Ignoring message update: %s", new)
             return
+        if new.web_page:
+            self.log.debug("Ignoring update with web_page")
+            return
+
         session = self.session
         corrected_msg_id = action.message_id
         chat_id = action.chat_id
-        try:
-            fut = session.user_correction_futures.pop(action.message_id)
-        except KeyError:
-            if await self.is_private_chat(chat_id):
-                contact = await session.contacts.by_legacy_id(chat_id)
-                if action.message_id in self.session.sent:
-                    contact.correct(corrected_msg_id, new.text.text, carbon=True)
-                else:
-                    contact.correct(corrected_msg_id, new.text.text)
-            else:
-                if action.message_id not in self.session.muc_sent_msg_ids:
-                    muc = await session.bookmarks.by_legacy_id(chat_id)
-                    msg = await self.api.get_message(chat_id, corrected_msg_id)
-                    participant = await muc.participant_by_tg_user(
-                        await self.api.get_user(msg.sender_id.user_id)
-                    )
-                    participant.correct(action.message_id, new.text.text)
-        else:
+
+        fut = session.user_correction_futures.pop(action.message_id, None)
+        if fut is not None:
             self.log.debug("User correction confirmation received")
             fut.set_result(None)
+            return
+
+        msg = await self.api.get_message(chat_id, corrected_msg_id)
+
+        if await self.is_private_chat(chat_id):
+            contact = await session.contacts.by_legacy_id(chat_id)
+            if not isinstance(msg.sender_id, tgapi.MessageSenderUser):
+                self.log.warning("Weird message update: %s", action)
+                return
+            if msg.sender_id.user_id == await self.get_my_id():
+                contact.correct(corrected_msg_id, new.text.text, carbon=True)
+            else:
+                contact.correct(corrected_msg_id, new.text.text)
+            return
+
+        muc = await session.bookmarks.by_legacy_id(chat_id)
+        if action.message_id in self.session.muc_sent_msg_ids:
+            participant = await muc.get_user_participant()
+        else:
+            msg = await self.api.get_message(chat_id, corrected_msg_id)
+            participant = await muc.participant_by_tg_user(
+                await self.api.get_user(msg.sender_id.user_id)
+            )
+        participant.correct(action.message_id, new.text.text)
 
     async def handle_User(self, action: tgapi.UpdateUser):
         u = action.user
