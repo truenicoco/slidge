@@ -66,7 +66,9 @@ class Contact(LegacyContact[int]):
             **kwargs,
         )
 
-    async def update_info(self):
+    async def update_info(self, refresh=False):
+        if self.name and not refresh:
+            return
         t = await self.get_thread(msg_count=0)
 
         participant = self.session.contacts.get_friend_participant(
