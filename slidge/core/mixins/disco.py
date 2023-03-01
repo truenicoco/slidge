@@ -1,4 +1,7 @@
 import functools
+from typing import Optional
+
+from slixmpp.plugins.xep_0004 import Form
 
 from slidge.util.xep_0030.stanza.info import DiscoInfo
 
@@ -14,10 +17,10 @@ class BaseDiscoMixin(Base):
     def features(self):
         return []
 
-    def extended_features(self):
-        return
+    async def extended_features(self) -> Optional[list[Form]]:
+        return None
 
-    def get_disco_info(self):
+    async def get_disco_info(self):
         info = DiscoInfo()
         for feature in self.features():
             info.add_feature(feature)
@@ -27,8 +30,9 @@ class BaseDiscoMixin(Base):
             name=self.DISCO_NAME,
             lang=self.DISCO_LANG,
         )
-        if x := self.extended_features():
-            info.append(x)
+        if forms := await self.extended_features():
+            for form in forms:
+                info.append(form)
         return info
 
 
@@ -68,6 +72,17 @@ class ChatterDiscoMixin(BaseDiscoMixin):
         features.append("urn:ietf:params:xml:ns:vcard-4.0")
         return features
 
+    async def extended_features(self):
+        f = getattr(self, "restricted_emoji_extended_feature", None)
+        if f is None:
+            return
+
+        e = await f()
+        if not e:
+            return
+
+        return [e]
+
     async def update_caps(self):
         jid = self.jid
         xmpp = self.xmpp
@@ -75,6 +90,10 @@ class ChatterDiscoMixin(BaseDiscoMixin):
         add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
         for f in self.features():
             await add_feature(f)
+        extended = await self.extended_features() or []
+        for e in extended:
+            await xmpp["xep_0030"].set_extended_info(jid=jid, data=e)
+
         await xmpp.plugin["xep_0030"].add_identity(
             jid=self.jid,
             category=self.DISCO_CATEGORY,

@@ -124,7 +124,7 @@ class Contact(LegacyContact[int]):
     def update_reactions(self, timestamp: int):
         self.react(timestamp, self.contact_reactions[timestamp])
 
-    async def available_emojis(self, legacy_msg_id):
+    async def available_emojis(self, legacy_msg_id=None):
         return set(emoji_translate.values())
 
     async def update_info(self, user: Optional[SteamUser] = None):

@@ -126,6 +126,11 @@ class MUC(LegacyMUC):
         self.user_nick = "thirdwitch"
         self.archive = MessageArchive(10e7)
 
+    async def available_emojis(self, legacy_msg_id=None):
+        if self.jid.local != "room-private-emoji-restricted":
+            return
+        return {"💘", "❤️", "💜"}
+
     async def backfill(self, _id=None, _when=None):
         for hour in range(10):
             sender = await self.get_participant(f"history-man-{hour}")
@@ -164,6 +169,13 @@ class MUC(LegacyMUC):
             self.type = MucType.GROUP
             return
 
+        if self.jid.local == "room-private-emoji-restricted":
+            self.name = "Private Room"
+            self.subject = "Private Subject"
+            self.type = MucType.GROUP
+            self.REACTIONS_SINGLE_EMOJI = True
+            return
+
         if self.jid.local == "room-public":
             self.name = "Public Room"
             self.subject = "Public Subject"
@@ -190,6 +202,7 @@ class Bookmarks(LegacyBookmarks):
         return muc
 
     async def fill(self):
+        await self.by_legacy_id("room-private-emoji-restricted")
         await self.by_legacy_id("room-private")
         await self.by_legacy_id("room-public")
         await self.by_legacy_id("coven")
@@ -306,6 +319,82 @@ class TestMuc(SlidgeTest):
             """,
         )
 
+    def test_disco_group_emoji_restricted(self):
+        self.recv(
+            f"""
+            <iq type="get" from="romeo@montague.lit/gajim" to="room-private-emoji-restricted@{self.xmpp.boundjid.bare}" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="result"
+                from="room-private-emoji-restricted@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="conference" type="text" name="Private Room" />
+                <feature var="http://jabber.org/protocol/muc" />
+                <feature var="http://jabber.org/protocol/muc#stable_id" />
+                <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
+                <feature var="muc_persistent"/>
+                <feature var="muc_membersonly"/>
+                <feature var="muc_nonanonymous"/>
+                <feature var="muc_hidden"/>
+                <feature var="urn:xmpp:sid:0" />
+                <feature var="urn:xmpp:mam:2"/>
+                <feature var="urn:xmpp:mam:2#extended"/>
+                <feature var="vcard-temp"/>
+                <feature var="urn:xmpp:ping"/>
+                <x xmlns="jabber:x:data" type="result">
+                    <field var="FORM_TYPE" type="hidden">
+                        <value>http://jabber.org/protocol/muc#roominfo</value>
+                    </field>
+                    <field var="muc#maxhistoryfetch">
+                        <value>100</value>
+                    </field>
+                    <field var="muc#roominfo_subjectmod" type="boolean">
+                        <value>0</value>
+                    </field>
+                    <field var="muc#roominfo_subject">
+                     <value>Private Subject</value>
+                    </field>
+                    <field var="muc#roomconfig_persistentroom" type="boolean">
+                        <value>1</value>
+                    </field>
+                    <field var="muc#roomconfig_changesubject" type="boolean">
+                        <value>0</value>
+                    </field>
+                    <field var="muc#roomconfig_membersonly" type="boolean">
+                        <value>1</value>
+                    </field>
+                    <field var="muc#roomconfig_whois" type="boolean">
+                        <value>1</value>
+                    </field>
+                    <field var="muc#roomconfig_publicroom" type="boolean">
+                        <value>0</value>
+                    </field>
+                    <field var="muc#roomconfig_allowpm" type="boolean">
+                        <value>0</value>
+                    </field>
+                </x>
+                <x xmlns='jabber:x:data' type='result'>
+                  <field var='FORM_TYPE' type='hidden'>
+                    <value>urn:xmpp:reactions:0:restrictions</value>
+                  </field>
+                  <field var='max_reactions_per_user'>
+                    <value>1</value>
+                  </field>
+                  <field var='allowlist'>
+                    <value>💘</value>
+                    <value>❤️</value>
+                    <value>💜</value>
+                  </field>
+                </x> 
+              </query>
+            </iq>
+            """,
+        )
+
     def test_disco_items(self):
         session = self.get_romeo_session()
         self.xmpp.loop.run_until_complete(session.bookmarks.fill())
@@ -323,6 +412,7 @@ class TestMuc(SlidgeTest):
                 <item jid="room-private@aim.shakespeare.lit" name="Private Room"/>
                 <item jid="room-public@aim.shakespeare.lit" name="Public Room"/>
                 <item jid="coven@aim.shakespeare.lit" name="The coven"/>
+                <item jid="room-private-emoji-restricted@aim.shakespeare.lit" name="Private Room"/>
             </query>
            </iq>
             """
@@ -1550,5 +1640,6 @@ class TestMuc(SlidgeTest):
             </message>
             """
         )
+
 
 avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

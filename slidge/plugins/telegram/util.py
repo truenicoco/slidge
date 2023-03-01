@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
+
+from slidge.util.error import XMPPError
 
 from . import config
 
@@ -41,12 +44,25 @@ def get_file_name(content: tgapi.MessageContent) -> Optional[str]:
 class AvailableEmojisMixin:
     session: "Session"
     chat_id: int
+    log: logging.Logger
     REACTIONS_SINGLE_EMOJI = True
 
-    async def available_emojis(self, legacy_msg_id):
-        available = await self.session.tg.api.get_message_available_reactions(
-            chat_id=self.chat_id, message_id=legacy_msg_id
-        )
+    async def available_emojis(self, legacy_msg_id=None):
+        if legacy_msg_id is None:
+            try:
+                chat = await self.session.tg.get_chat(self.chat_id)
+            except tgapi.BadRequest as e:
+                self.log.debug(f"Could not get the available emojis: %s", e)
+                return
+            emojis = set(chat.available_reactions)
+            return emojis
+
+        try:
+            available = await self.session.tg.api.get_message_available_reactions(
+                chat_id=self.chat_id, message_id=legacy_msg_id
+            )
+        except tgapi.BadRequest as e:
+            raise XMPPError("bad-request", str(e))
         # TODO: figure out how we can actually determine if the user can use
         #       premium emojis
         # features = await self.session.tg.api.get_premium_features(

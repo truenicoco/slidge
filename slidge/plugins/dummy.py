@@ -98,7 +98,7 @@ class Contact(LegacyContact):
     RETRACTION = True
     CORRECTION = False
 
-    async def available_emojis(self, legacy_msg_id):
+    async def available_emojis(self, legacy_msg_id=None):
         return {"🦅", "🧺"}
 
 

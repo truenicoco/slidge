@@ -289,7 +289,7 @@ class LegacyMUC(
             features.extend(["muc_open", "muc_semianonymous", "muc_public"])
         return features
 
-    def extended_features(self):
+    async def extended_features(self):
         is_group = self.type == MucType.GROUP
 
         form = self.xmpp.plugin["xep_0004"].make_form(ftype="result")
@@ -316,7 +316,12 @@ class LegacyMUC(
         form.add_field("muc#roomconfig_publicroom", "boolean", value=not is_group)
         form.add_field("muc#roomconfig_allowpm", "boolean", value=False)
 
-        return form
+        r = [form]
+
+        if reaction_form := await self.restricted_emoji_extended_feature():
+            r.append(reaction_form)
+
+        return r
 
     def _make_subject_message(self, user_full_jid: JID):
         subject_setter = copy(self.jid)

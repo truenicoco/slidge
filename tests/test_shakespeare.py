@@ -47,7 +47,9 @@ class Session(BaseSession):
     async def paused(self, c: LegacyContactType, thread=None):
         pass
 
-    async def correct(self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None):
+    async def correct(
+        self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None
+    ):
         pass
 
     async def search(self, form_values: Dict[str, str]):
@@ -74,7 +76,7 @@ class Session(BaseSession):
         reply_to=None,
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
-        thread=None
+        thread=None,
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
@@ -99,7 +101,11 @@ class Session(BaseSession):
         pass
 
     async def react(
-        self, c: LegacyContact, legacy_msg_id: LegacyMessageType, emojis: list[str], thread=None
+        self,
+        c: LegacyContact,
+        legacy_msg_id: LegacyMessageType,
+        emojis: list[str],
+        thread=None,
     ):
         if c.jid_username == "juliet":
             for e in emojis:
@@ -643,6 +649,52 @@ class TestAimShakespeareBase(SlidgeTest):
             </iq>
             """,
         )
+
+    def test_disco_restricted_reaction(self):
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        juliet: LegacyContact = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
+        juliet.REACTIONS_SINGLE_EMOJI = True
+        self.xmpp.loop.run_until_complete(juliet.update_caps())
+        self.recv(
+            f"""
+            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}/slidge" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <iq xmlns="jabber:component:accept" type="result"
+                from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+              <identity category="client" type="pc" />
+                <feature var="http://jabber.org/protocol/chatstates" />
+                <feature var="urn:xmpp:receipts" />
+                <feature var="urn:xmpp:message-correct:0" />
+                <feature var="urn:xmpp:chat-markers:0" />
+                <feature var="jabber:x:oob" />
+                <feature var="urn:xmpp:reactions:0" />
+                <feature var="urn:xmpp:message-retract:0" />
+                <feature var="urn:xmpp:reply:0" />
+                <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+                <x xmlns='jabber:x:data' type='result'>
+                  <field var='FORM_TYPE' type='hidden'>
+                    <value>urn:xmpp:reactions:0:restrictions</value>
+                  </field>
+                  <field var='max_reactions_per_user'>
+                    <value>1</value>
+                  </field>
+                </x> 
+              </query>
+            </iq>
+            """,
+        )
+        juliet.REACTIONS_SINGLE_EMOJI = False
+        self.xmpp.loop.run_until_complete(juliet.update_caps())
 
     def test_non_existing_contact(self):
         self.recv(
