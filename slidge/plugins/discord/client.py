@@ -135,21 +135,26 @@ class Discord(di.Client):
         fut.set_result(True)
 
     async def on_message_delete(self, m: di.Message):
+        own = m.author == self.user
+        if own:
+            fut = self.session.delete_futures.pop(m.id, None)
+            if fut is not None:
+                fut.set_result(True)
+                return
+
         channel = m.channel
         if isinstance(channel, di.DMChannel):
             deleter = await self.get_contact(channel.recipient)
-
-            if m.author == self.user:
-                fut = self.session.delete_futures.pop(m.id, None)
-                if fut is None:
-                    return deleter.retract(m.id, carbon=True)
-                return fut.set_result(True)
-
-            deleter.retract(m.id)
+            if own:
+                deleter.retract(m.id, carbon=True)
+                return
         elif isinstance(channel, di.TextChannel):
-            contact = await self.get_contact(m.author)
             muc = await self.session.bookmarks.by_legacy_id(m.channel.id)
-            deleter = await muc.get_participant_by_contact(contact)
+            if own:
+                deleter = await muc.get_user_participant()
+            else:
+                contact = await self.get_contact(m.author)
+                deleter = await muc.get_participant_by_contact(contact)
         else:
             self.log.debug("Ignoring delete in: %s", channel)
             return
