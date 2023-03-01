@@ -52,9 +52,9 @@ class LegacyRoster(
         return iter(self._contacts_by_legacy_id.values())
 
     async def __finish_init_contact(
-        self, legacy_id: LegacyUserIdType, jid_username: str
+        self, legacy_id: LegacyUserIdType, jid_username: str, *args, **kwargs
     ):
-        c = self._contact_cls(self.session, legacy_id, jid_username)
+        c = self._contact_cls(self.session, legacy_id, jid_username, *args, **kwargs)
         await c.update_caps()
         await c.update_info()
         self._contacts_by_legacy_id[legacy_id] = c
@@ -90,7 +90,9 @@ class LegacyRoster(
                 c = await self.__finish_init_contact(legacy_id, username)
             return c
 
-    async def by_legacy_id(self, legacy_id: LegacyUserIdType) -> LegacyContactType:
+    async def by_legacy_id(
+        self, legacy_id: LegacyUserIdType, *args, **kwargs
+    ) -> LegacyContactType:
         """
         Retrieve a contact by their legacy_id
 
@@ -99,6 +101,11 @@ class LegacyRoster(
         legacy user ID.
 
         :param legacy_id:
+        :param args: arbitrary additional positional arguments passed to the contact constructor.
+            Requires subclassing LegacyContact.__init__ to accept those.
+            This is useful for networks where you fetch the contact list and information
+            about these contacts in a single request
+        :param kwargs: arbitrary keyword arguments passed to the contact constructor
         :return:
         """
         async with self.lock(("legacy_id", legacy_id)):
@@ -112,7 +119,9 @@ class LegacyRoster(
                     jid.node = username
                     jid.domain = self.session.xmpp.boundjid.bare
                     return await self.by_jid(jid)
-                c = await self.__finish_init_contact(legacy_id, username)
+                c = await self.__finish_init_contact(
+                    legacy_id, username, *args, **kwargs
+                )
             return c
 
     async def by_stanza(self, s) -> LegacyContact:

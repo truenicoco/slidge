@@ -201,7 +201,7 @@ class Roster(LegacyRoster[str, Contact]):
         await c.fetch_status()
         return c
 
-    async def by_legacy_id(self, legacy_id: str):
+    async def by_legacy_id(self, legacy_id: str, *_a, **_kw):
         c = await super().by_legacy_id(legacy_id)
         await c.fetch_status()
         return c
