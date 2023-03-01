@@ -171,7 +171,7 @@ def archivable(msg: Message):
     :return:
     """
 
-    if msg.get_plugin("apply_to", check=True) and msg["hint"] == "no-store":
+    if msg.get_plugin("hint", check=True) and msg["hint"] == "no-store":
         return False
 
     if msg["body"]:
