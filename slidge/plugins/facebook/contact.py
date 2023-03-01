@@ -162,6 +162,10 @@ class Contact(LegacyContact[int]):
 class Roster(LegacyRoster[int, Contact]):
     session: "Session"
 
+    async def by_legacy_id_if_known(self, legacy_id: int):
+        if legacy_id in self._contacts_by_legacy_id:
+            return self.by_legacy_id(legacy_id)
+
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
             raise ValueError("Thread seems to be a group thread")

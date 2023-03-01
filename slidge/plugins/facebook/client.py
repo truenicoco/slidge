@@ -258,12 +258,11 @@ class AndroidMQTT(AndroidMQTTOriginal):
 
     async def on_fb_presence(self, presence: mqtt_t.Presence):
         for info in presence.updates:
-            try:
-                contact = await self.session.contacts.by_legacy_id(info.user_id)
-            except XMPPError:
+            # if we fetch contact info for all presences we receive, we seem
+            # to hit rate limiting unfortunately
+            contact = await self.session.contacts.by_legacy_id_if_known(info.user_id)
+            if contact is None:
                 continue
-            if not contact.added_to_roster:
-                await contact.add_to_roster()
             contact.update_presence(info)
 
     @staticmethod

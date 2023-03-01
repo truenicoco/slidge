@@ -169,6 +169,10 @@ class Session(BaseSession[str, Recipient]):
                 is_friend = (
                     friend := result.friendship_status
                 ) is not None and friend == FriendshipStatus.ARE_FRIENDS
+                if is_friend:
+                    contact = await self.contacts.by_legacy_id(int(result.id))
+                    if not contact.added_to_roster:
+                        await contact.add_to_roster()
                 items.append(
                     {
                         "name": result.name + " (friend)"
