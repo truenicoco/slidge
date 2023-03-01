@@ -1,6 +1,6 @@
 import pytest
 
-from slidge.core.mixins.base import ReactionRecipientMixin
+from slidge.core.mixins.recipient import ReactionRecipientMixin
 
 
 @pytest.mark.asyncio

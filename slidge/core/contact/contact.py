@@ -10,7 +10,7 @@ from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType
 from ...util.xep_0292.stanza import VCard4
 from .. import config
 from ..mixins import FullCarbonMixin
-from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
+from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 
 if TYPE_CHECKING:
     from ..session import BaseSession

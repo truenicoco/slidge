@@ -22,9 +22,9 @@ from ...util.types import (
     LegacyParticipantType,
 )
 from .. import config
-from ..mixins.base import ReactionRecipientMixin, ThreadRecipientMixin
 from ..mixins.disco import ChatterDiscoMixin
 from ..mixins.lock import NamedLockMixin
+from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 from .archive import MessageArchive
 
 if TYPE_CHECKING:
