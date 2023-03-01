@@ -440,6 +440,13 @@ class BaseSession(
             new_legacy_msg_id = await self.send_text(
                 e, "Correction:" + m["body"], thread=legacy_thread
             )
+        elif (
+            not m["body"].strip()
+            and config.CORRECTION_EMPTY_BODY_AS_RETRACTION
+            and e.RETRACTION
+        ):
+            await self.retract(e, legacy_id, thread=legacy_thread)
+            new_legacy_msg_id = None
         elif e.CORRECTION:
             new_legacy_msg_id = await self.correct(
                 e, m["body"], legacy_id, thread=legacy_thread
