@@ -60,11 +60,12 @@ class LegacyParticipant(
             try:
                 j.resource = nickname
             except InvalidJID:
-                warnings.warn(f"Could not use {nickname} as a nickname")
-                j.resource = (
+                new = (
                     "".join(x for x in nickname if x in string.printable)
-                    + " [renamed by slidge]"
+                    + f"-slidge-{hash(nickname)}"
                 )
+                warnings.warn(f"Could not use {nickname} as a nickname, using {new}")
+                j.resource = new
 
         self.jid = j
 
