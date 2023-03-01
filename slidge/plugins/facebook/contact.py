@@ -23,8 +23,16 @@ class Contact(LegacyContact[int]):
     AWAY_AFTER = datetime.timedelta(minutes=5)
     XA_AFTER = datetime.timedelta(hours=12)
 
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
+    def __init__(
+        self,
+        session: "Session",
+        legacy_id: int,
+        jid_username: str,
+        participant: Optional[ParticipantNode] = None,
+    ):
+        super().__init__(session, legacy_id, jid_username)
+        if participant is not None:
+            self.populate_from_participant(participant)
         self._online_expire_task: Optional[asyncio.Task] = None
 
     async def _expire(self, last_seen: datetime.datetime):
@@ -35,7 +43,7 @@ class Contact(LegacyContact[int]):
         await asyncio.sleep((self.XA_AFTER - self.AWAY_AFTER).seconds)
         self.extended_away(last_seen=last_seen)
 
-    async def populate_from_participant(
+    def populate_from_participant(
         self, participant: ParticipantNode, update_avatar=True
     ):
         if self.legacy_id != int(participant.messaging_actor.id):
@@ -74,10 +82,9 @@ class Contact(LegacyContact[int]):
         participant = self.session.contacts.get_friend_participant(
             t.all_participants.nodes
         )
-        await self.populate_from_participant(participant)
+        self.populate_from_participant(participant)
 
     async def send_fb_message(self, msg: mqtt_t.Message, **kwargs):
-        meta = msg.metadata
         kwargs["legacy_msg_id"] = msg.metadata.id
 
         sticker = msg.sticker
@@ -166,7 +173,7 @@ class Roster(LegacyRoster[int, Contact]):
 
     async def by_legacy_id_if_known(self, legacy_id: int):
         if legacy_id in self._contacts_by_legacy_id:
-            return self.by_legacy_id(legacy_id)
+            return await self.by_legacy_id(legacy_id)
 
     async def by_thread_key(self, t: mqtt_t.ThreadKey):
         if is_group_thread(t):
@@ -180,8 +187,8 @@ class Roster(LegacyRoster[int, Contact]):
             )
 
         participant = self.get_friend_participant(t.all_participants.nodes)
-        contact = await self.by_legacy_id(int(participant.messaging_actor.id))
-        await contact.populate_from_participant(participant)
+        fb_id = int(participant.messaging_actor.id)
+        contact = await self.by_legacy_id(fb_id, participant)
         return contact
 
     def get_friend_participant(self, nodes: list[ParticipantNode]) -> ParticipantNode:
