@@ -636,7 +636,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         try:
             status = await session.login()
         except Exception as e:
-            log.warning(f"Login problem for %s: %r", session.user, e)
+            log.warning(f"Login problem for %s", session.user, exc_info=e)
             log.exception(e)
             session.send_gateway_status(f"Could not login: {e}", show="busy")
             session.send_gateway_message(
