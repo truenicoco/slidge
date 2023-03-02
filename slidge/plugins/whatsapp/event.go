@@ -24,7 +24,7 @@ const (
 	EventPairSuccess
 	EventConnected
 	EventLoggedOut
-	EventContactSync
+	EventContact
 	EventPresence
 	EventMessage
 	EventChatState
@@ -54,9 +54,9 @@ type Contact struct {
 	AvatarURL string
 }
 
-// NewContactSyncEvent returns event data meant for [Session.propagateEvent] for the contact information
+// NewContactEvent returns event data meant for [Session.propagateEvent] for the contact information
 // given. Unknown or invalid contact information will return an [EventUnknown] event with nil data.
-func newContactSyncEvent(c *whatsmeow.Client, jid types.JID, info types.ContactInfo) (EventKind, *EventPayload) {
+func newContactEvent(c *whatsmeow.Client, jid types.JID, info types.ContactInfo) (EventKind, *EventPayload) {
 	var contact = Contact{
 		JID: jid.ToNonAD().String(),
 	}
@@ -77,7 +77,7 @@ func newContactSyncEvent(c *whatsmeow.Client, jid types.JID, info types.ContactI
 		contact.AvatarURL = p.URL
 	}
 
-	return EventContactSync, &EventPayload{Contact: contact}
+	return EventContact, &EventPayload{Contact: contact}
 }
 
 // Precence represents a contact's general state of activity, and is periodically updated as

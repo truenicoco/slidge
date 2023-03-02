@@ -258,7 +258,7 @@ func (s *Session) FetchRoster(refresh bool) error {
 			s.gateway.logger.Warnf("Failed to subscribe to presence for %s", jid)
 		}
 
-		go s.propagateEvent(newContactSyncEvent(s.client, jid, info))
+		go s.propagateEvent(newContactEvent(s.client, jid, info))
 	}
 
 	return nil
@@ -324,7 +324,7 @@ func (s *Session) handleEvent(evt interface{}) {
 				if err != nil {
 					continue
 				}
-				s.propagateEvent(newContactSyncEvent(s.client, jid, types.ContactInfo{FullName: n.GetPushname()}))
+				s.propagateEvent(newContactEvent(s.client, jid, types.ContactInfo{FullName: n.GetPushname()}))
 				if err = s.client.SubscribePresence(jid); err != nil {
 					s.gateway.logger.Warnf("Failed to subscribe to presence for %s", jid)
 				}
@@ -337,7 +337,7 @@ func (s *Session) handleEvent(evt interface{}) {
 	case *events.Presence:
 		s.propagateEvent(newPresenceEvent(evt))
 	case *events.PushName:
-		s.propagateEvent(newContactSyncEvent(s.client, evt.JID, types.ContactInfo{FullName: evt.NewPushName}))
+		s.propagateEvent(newContactEvent(s.client, evt.JID, types.ContactInfo{FullName: evt.NewPushName}))
 	case *events.ChatPresence:
 		s.propagateEvent(newChatStateEvent(evt))
 	case *events.CallTerminate:

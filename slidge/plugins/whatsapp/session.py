@@ -120,7 +120,7 @@ class Session(BaseSession[str, Recipient]):
             self._connected = self.xmpp.loop.create_future()
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
-        elif event == whatsapp.EventContactSync:
+        elif event == whatsapp.EventContact:
             contact = await self.contacts.by_legacy_id(data.Contact.JID)
             contact.name = data.Contact.Name
             if data.Contact.AvatarURL != "":
