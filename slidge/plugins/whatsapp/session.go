@@ -14,6 +14,7 @@ import (
 	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store"
+	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -36,8 +37,9 @@ type HandleEventFunc func(EventKind, *EventPayload)
 // sessions need to be established by logging in, after which incoming events will be forwarded to
 // the adapter event handler, and outgoing events will be forwarded to WhatsApp.
 type Session struct {
-	device       LinkedDevice      // The linked device this session corresponds to.
-	eventHandler HandleEventFunc   // The event handler for the overarching Session.
+	device       LinkedDevice    // The linked device this session corresponds to.
+	eventHandler HandleEventFunc // The event handler for the overarching Session.
+	container    *sqlstore.Container
 	client       *whatsmeow.Client // The concrete client connection to WhatsApp for this session.
 	gateway      *Gateway          // The Gateway this Session is attached to.
 }
@@ -46,19 +48,24 @@ type Session struct {
 // or by initiating a pairing session for a new linked device. Callers are expected to have set an
 // event handler in order to receive any incoming events from the underlying WhatsApp session.
 func (s *Session) Login() error {
-	var err error
+	container, err := sqlstore.New("sqlite3", s.gateway.DBPath, s.gateway.logger)
+	if err != nil {
+		return err
+	}
+
 	var store *store.Device
+	s.container = container
 
 	// Try to fetch existing device from given device JID.
 	if s.device.ID != "" {
-		store, err = s.gateway.container.GetDevice(s.device.JID())
+		store, err = s.container.GetDevice(s.device.JID())
 		if err != nil {
 			return err
 		}
 	}
 
 	if store == nil {
-		store = s.gateway.container.NewDevice()
+		store = s.container.NewDevice()
 	}
 
 	s.client = whatsmeow.NewClient(store, s.gateway.logger)
@@ -358,9 +365,6 @@ func (s *Session) handleEvent(evt interface{}) {
 		}
 		deviceID := s.client.Store.ID.String()
 		s.propagateEvent(EventPairSuccess, &EventPayload{PairDeviceID: deviceID})
-		if err := s.gateway.CleanupSession(LinkedDevice{ID: deviceID}); err != nil {
-			s.gateway.logger.Warnf("Failed to clean up devices after pair: %s", err)
-		}
 	case *events.KeepAliveTimeout:
 		if evt.ErrorCount > keepAliveFailureThreshold {
 			s.gateway.logger.Debugf("Forcing reconnection after keep-alive timeouts...")

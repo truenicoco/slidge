@@ -38,19 +38,6 @@ class Gateway(BaseGateway):
         self.whatsapp.Name = "Slidge on " + str(global_config.JID)
         self.whatsapp.Init()
 
-    async def unregister(self, user: GatewayUser):
-        user_shelf_path = (
-            global_config.HOME_DIR / "whatsapp" / (user.bare_jid + ".shelf")
-        )
-        with open(str(user_shelf_path)) as shelf:
-            try:
-                device = whatsapp.LinkedDevice(ID=shelf["device_id"])
-                self.whatsapp.CleanupSession(device)
-            except KeyError:
-                pass
-            except RuntimeError as err:
-                log.error("Failed to clean up WhatsApp session: %s", err)
-
 
 def handle_log(level, msg: str):
     """

@@ -11,7 +11,6 @@ import (
 	// Third-party libraries.
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow/store"
-	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	walog "go.mau.fi/whatsmeow/util/log"
 )
@@ -79,7 +78,6 @@ type Gateway struct {
 	SkipVerifyTLS bool   // Whether or not our internal HTTP client will skip TLS certificate verification.
 
 	// Internal variables.
-	container  *sqlstore.Container
 	httpClient *http.Client
 	logger     walog.Logger
 }
@@ -90,37 +88,9 @@ func (w *Gateway) NewSession(device LinkedDevice) *Session {
 	return &Session{device: device, gateway: w}
 }
 
-// CleanupSession will remove all invalid and obsolete references to the given device, and should be
-// used when pairing a new device or unregistering from the Gateway.
-func (w *Gateway) CleanupSession(device LinkedDevice) error {
-	devices, err := w.container.GetAllDevices()
-	if err != nil {
-		return err
-	}
-
-	for _, d := range devices {
-		if d.ID == nil {
-			w.logger.Infof("Removing invalid device %s from database", d.ID.String())
-			_ = d.Delete()
-		} else if device.ID != "" {
-			if jid := device.JID(); d.ID.ToNonAD() == jid.ToNonAD() && *d.ID != jid {
-				w.logger.Infof("Removing obsolete device %s from database", d.ID.String())
-				_ = d.Delete()
-			}
-		}
-	}
-
-	return nil
-}
-
 // Init performs initialization procedures for the Gateway, and is expected to be run before any
 // calls to [Gateway.Session].
 func (w *Gateway) Init() error {
-	container, err := sqlstore.New("sqlite3", w.DBPath, w.logger)
-	if err != nil {
-		return err
-	}
-
 	if w.Name != "" {
 		store.SetOSInfo(w.Name, [...]uint32{1, 0, 0})
 	}
@@ -133,7 +103,6 @@ func (w *Gateway) Init() error {
 		},
 	}
 
-	w.container = container
 	return nil
 }
 
