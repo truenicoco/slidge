@@ -298,7 +298,10 @@ class LegacyContact(
                     "for more info."
                 )
                 if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
-                    self._send(self._make_presence(ptype="subscribe"))
+                    presence = self.xmpp.make_presence(
+                        pfrom=self.jid.bare, ptype="subscribe"
+                    )
+                    self._send(presence)
                 return
 
         self.added_to_roster = True
