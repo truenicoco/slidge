@@ -119,7 +119,14 @@ class Websocket:
                     async with session.ws_connect(url, ssl=context) as websocket:
                         self.websocket.set_result(websocket)
                         await self._authenticate_websocket(websocket)
-                        self.ready.set_result(True)
+                        try:
+                            self.ready.set_result(True)
+                        except asyncio.InvalidStateError as e:
+                            log.warning(
+                                "We thought we were connected but we weren't. "
+                                "This is a bug!",
+                                exc_info=e,
+                            )
                         while self._alive:
                             try:
                                 await self._start_loop(websocket, event_handler)
@@ -144,7 +151,12 @@ class Websocket:
         keep_alive = asyncio.create_task(self._do_heartbeats(websocket))
         log.debug("Waiting for messages on websocket")
         while self._alive:
-            message = await websocket.receive_str()
+            try:
+                message = await websocket.receive_str()
+            except Exception as e:
+                log.warning("Error in websocket listener", exc_info=e)
+                self.ready = asyncio.get_event_loop().create_future()
+                break
             d = json.loads(message)
             self._last_msg = time.time()
             if (seq := d.get("seq_reply")) is None:
