@@ -31,13 +31,13 @@ VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 
 class PepItem:
-    def __init__(self, authorized_jid: Optional[JidStr] = None):
-        self.authorized_jid = authorized_jid
+    def __init__(self, authorized_jids: Optional[set[JidStr]] = None):
+        self.authorized_jids = authorized_jids
 
 
 class PepAvatar(PepItem):
-    def __init__(self, authorized_jid: Optional[JidStr] = None):
-        super().__init__(authorized_jid)
+    def __init__(self, authorized_jids: Optional[set[JidStr]] = None):
+        super().__init__(authorized_jids)
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
         self._avatar_data_path: Optional[Path] = None
@@ -111,9 +111,9 @@ class PepAvatar(PepItem):
 
 class PepNick(PepItem):
     def __init__(
-        self, authorized_jid: Optional[JidStr] = None, nick: Optional[str] = None
+        self, authorized_jids: Optional[set[JidStr]] = None, nick: Optional[str] = None
     ):
-        super().__init__(authorized_jid)
+        super().__init__(authorized_jids)
         nickname = UserNick()
         if nick is not None:
             nickname["nick"] = nick
@@ -255,8 +255,8 @@ class PubSubComponent(BasePlugin):
         if item is None:
             raise XMPPError("item-not-found")
 
-        if item.authorized_jid is not None:
-            if stanza.get_from().bare != item.authorized_jid:
+        if item.authorized_jids is not None:
+            if stanza.get_from().bare not in item.authorized_jids:
                 raise XMPPError("item-not-found")
 
         return item
@@ -382,15 +382,17 @@ class PubSubComponent(BasePlugin):
                 pass
             await self._broadcast(AvatarMetadata(), jid, restrict_to)
         else:
-            pep_avatar = PepAvatar()
+            if restrict_to:
+                pep_avatar = PepAvatar({restrict_to})
+            else:
+                pep_avatar = PepAvatar()
             try:
                 await pep_avatar.set_avatar(avatar)
             except UnidentifiedImageError as e:
                 log.warning("Failed to set avatar for %s: %r", self, e)
                 return
 
-            pep_avatar.authorized_jid = restrict_to
-            self._avatars[jid] = pep_avatar
+            _add_or_extend_allowed_jids(jid, self._avatars, pep_avatar)
             if pep_avatar.metadata is None:
                 raise RuntimeError
             await self._broadcast(
@@ -407,10 +409,39 @@ class PubSubComponent(BasePlugin):
         restrict_to: OptJidStr = None,
     ):
         jid = JID(jid)
-        nickname = PepNick(restrict_to, nick)
-        self._nicks[jid] = nickname
-        log.debug("NICK: %s", nickname.nick)
+        if restrict_to:
+            nickname = PepNick({restrict_to}, nick)
+        else:
+            nickname = PepNick(None, nick)
+        _add_or_extend_allowed_jids(jid, self._nicks, nickname)
+        log.debug("New nickname: %s", nickname.nick)
         self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, restrict_to))
+
+
+def _add_or_extend_allowed_jids(
+    jid: JID, store: dict[JID, PepItemType], item: PepItemType
+):
+    already_here = store.get(jid)
+    if already_here is None:
+        store[jid] = item
+        return
+
+    before = already_here.authorized_jids
+    now = item.authorized_jids
+
+    if before is None and now is None:
+        store[jid] = item
+        return
+
+    if (before is None and now is not None) or (now is None and before is not None):
+        log.warning("Restriction status of %s changed changed. This is a bug.", item)
+        store[jid] = item
+        return
+
+    assert isinstance(now, set) and isinstance(before, set)
+    log.debug("Extending JID restrictions of %s from %s with %s", item, before, now)
+    now |= before
+    store[jid] = item
 
 
 log = logging.getLogger(__name__)
