@@ -6,6 +6,7 @@ from slixmpp.test import SlixTest
 
 from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PubSubComponent
+from slidge.core import config
 
 
 class TestPubSubDisco(SlixTest):
@@ -345,3 +346,35 @@ class TestPubSubAvatar(SlixTest):
             </item></items></event></message>
             """
         )
+
+    def test_avatar_http(self):
+        config.HTTP_AVATARS_BASE_URL = "https://something/"
+        img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
+        self.xmpp.loop.run_until_complete(
+            self.pubsub.set_avatar(
+                "stan@pubsub.south.park",
+                img,
+                "kenny@south.park",
+            )
+        )
+        fname = (next(avatar_cache.dir.glob("*.png"))).name
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept"
+                type="headline"
+                from="stan@pubsub.south.park"
+                to="kenny@south.park">
+              <event xmlns="http://jabber.org/protocol/pubsub#event">
+                <items node="urn:xmpp:avatar:metadata">
+                  <item id="e6f9170123620949a6821e25ea2861d22b0dff66">
+                    <metadata xmlns="urn:xmpp:avatar:metadata">
+                      <info id="e6f9170123620949a6821e25ea2861d22b0dff66"
+                          type="image/png"
+                          bytes="547"
+                          height="5" width="5" 
+                          url="https://something/{fname}" />
+            </metadata></item></items></event></message>
+            """,
+            use_values=False,
+        )
+        config.HTTP_AVATARS_BASE_URL = None

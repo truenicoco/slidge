@@ -178,3 +178,10 @@ CORRECTION_EMPTY_BODY_AS_RETRACTION__DOC = (
     "Treat last message correction to empty message as a retraction. "
     "(this is what cheogram do for retraction)"
 )
+
+HTTP_AVATARS_BASE_URL: Optional[str] = None
+HTTP_AVATARS_BASE_URL__DOC = (
+    "If this is set, you also need to serve files in $HOME_DIR/slidge_avatars "
+    "via the HTTP server of your choice, and slidge will include it as a possible "
+    "source for XEP-0084 (User Avatar)."
+)

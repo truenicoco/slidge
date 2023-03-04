@@ -81,30 +81,40 @@ class PepAvatar(PepItem):
 
         hash_ = hashlib.sha1(avatar_bytes).hexdigest()
         self.id = hash_
-        metadata.add_info(
+
+        filename = str(uuid.uuid4())
+        path = (self._cache_dir / filename).with_suffix(".png")
+        path.write_bytes(avatar_bytes)
+
+        meta = dict(
             id=hash_,
             itype="image/png",
             ibytes=len(avatar_bytes),
             height=str(img.height),
             width=str(img.width),
         )
-        self.metadata = metadata
+        if base := config.HTTP_AVATARS_BASE_URL:
+            meta["url"] = base + filename + ".png"
+        metadata.add_info(**meta)
 
-        path = (self._cache_dir / str(uuid.uuid4())).with_suffix(".png")
-        path.write_bytes(avatar_bytes)
+        self.metadata = metadata
         self._avatar_data_path = path
 
     async def set_avatar_from_url(self, url: str):
         avatar = await avatar_cache.get_avatar(url)
         metadata = AvatarMetadata()
         self.id = avatar.hash
-        metadata.add_info(
+        meta = dict(
             id=avatar.hash,
             itype="image/png",
             ibytes=len(avatar.data),
             height=str(avatar.height),
             width=str(avatar.width),
         )
+        if base := config.HTTP_AVATARS_BASE_URL:
+            meta["url"] = base + avatar.filename
+        metadata.add_info(**meta)
+
         self.metadata = metadata
         self._avatar_data_path = avatar.path
 
