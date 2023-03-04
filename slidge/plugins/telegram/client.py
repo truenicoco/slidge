@@ -73,41 +73,14 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
         msg = update.message
-        if not await self.is_private_chat(msg.chat_id):
-            return await self.handle_group_message(msg)
+        if await self.is_private_chat(msg.chat_id):
+            await self.handle_direct_message(msg)
+        else:
+            await self.handle_group_message(msg)
 
-        session = self.session
+    async def handle_direct_message(self, msg: tgapi.Message):
         if msg.is_outgoing:
-            # This means slidge is responsible for this message, so no carbon is needed;
-            # but maybe this does not handle all possible cases gracefully?
-            if msg.sending_state is not None or msg.id in session.sent:
-                return
-            content = msg.content
-            contact = await session.contacts.by_legacy_id(msg.chat_id)
-            if isinstance(content, tgapi.MessageText):
-                contact.send_text(
-                    content.text.text,
-                    legacy_msg_id=msg.id,
-                    when=datetime.fromtimestamp(msg.date),
-                    carbon=True,
-                )
-            elif best_file := get_best_file(content):
-                file = await self.api.download_file(
-                    file_id=best_file.id,
-                    synchronous=True,
-                    priority=1,
-                    offset=0,
-                    limit=0,
-                )
-                has_caption = (caption := content.caption) and (text := caption.text)
-                await contact.send_file(
-                    file_path=file.local.path,
-                    file_name=get_file_name(content),
-                    legacy_msg_id=None if has_caption else msg.id,
-                    carbon=True,
-                )
-                if has_caption:
-                    contact.send_text(text, legacy_msg_id=msg.id, carbon=True)
+            await self.handle_user_direct_message(msg)
             return
 
         sender = msg.sender_id
@@ -116,7 +89,41 @@ class TelegramClient(aiotdlib.Client):
             self.log.warning("Ignoring chat sender in direct message: %s", msg)
             return
 
+        session = self.session
         await (await session.contacts.by_legacy_id(sender.user_id)).send_tg_message(msg)
+
+    async def handle_user_direct_message(self, msg: tgapi.Message):
+        # This means slidge is responsible for this message, so no carbon is needed;
+        # but maybe this does not handle all possible cases gracefully?
+        session = self.session
+        if msg.sending_state is not None or msg.id in session.sent:
+            return
+        content = msg.content
+        contact = await session.contacts.by_legacy_id(msg.chat_id)
+        if isinstance(content, tgapi.MessageText):
+            contact.send_text(
+                content.text.text,
+                legacy_msg_id=msg.id,
+                when=datetime.fromtimestamp(msg.date),
+                carbon=True,
+            )
+        elif best_file := get_best_file(content):
+            file = await self.api.download_file(
+                file_id=best_file.id,
+                synchronous=True,
+                priority=1,
+                offset=0,
+                limit=0,
+            )
+            has_caption = (caption := content.caption) and (text := caption.text)
+            await contact.send_file(
+                file_path=file.local.path,
+                file_name=get_file_name(content),
+                legacy_msg_id=None if has_caption else msg.id,
+                carbon=True,
+            )
+            if has_caption:
+                contact.send_text(text, legacy_msg_id=msg.id, carbon=True)
 
     async def handle_group_message(self, msg: tgapi.Message):
         self.log.debug("MUC message: %s", msg)
@@ -246,39 +253,40 @@ class TelegramClient(aiotdlib.Client):
         if update.interaction_info is None:
             contact.react(update.message_id, [])
             contact.react(update.message_id, [], carbon=True)
-        else:
-            user_reactions = list[str]()
-            contact_reactions = list[str]()
-            # these sanity checks might not be necessary, but in doubt…
-            for reaction in update.interaction_info.reactions:
-                if reaction.total_count == 1:
-                    if len(reaction.recent_sender_ids) != 1:
-                        self.log.warning(
-                            "Weird reactions (wrong count): %s",
-                            update.interaction_info.reactions,
-                        )
-                        continue
-                    sender = reaction.recent_sender_ids[0]
-                    if isinstance(sender, tgapi.MessageSenderUser):
-                        if sender.user_id == me:
-                            user_reactions.append(reaction.reaction)
-                        elif sender.user_id == contact.legacy_id:
-                            contact_reactions.append(reaction.reaction)
-                    else:
-                        self.log.warning(
-                            "Weird reactions (neither me nor them): %s",
-                            update.interaction_info.reactions,
-                        )
-                elif reaction.total_count == 2:
-                    user_reactions.append(reaction.reaction)
-                    contact_reactions.append(reaction.reaction)
+            return
+
+        user_reactions = list[str]()
+        contact_reactions = list[str]()
+        # these sanity checks might not be necessary, but in doubt…
+        for reaction in update.interaction_info.reactions:
+            if reaction.total_count == 1:
+                if len(reaction.recent_sender_ids) != 1:
+                    self.log.warning(
+                        "Weird reactions (wrong count): %s",
+                        update.interaction_info.reactions,
+                    )
+                    continue
+                sender = reaction.recent_sender_ids[0]
+                if isinstance(sender, tgapi.MessageSenderUser):
+                    if sender.user_id == me:
+                        user_reactions.append(reaction.reaction)
+                    elif sender.user_id == contact.legacy_id:
+                        contact_reactions.append(reaction.reaction)
                 else:
                     self.log.warning(
-                        "Weird reactions (empty): %s", update.interaction_info.reactions
+                        "Weird reactions (neither me nor them): %s",
+                        update.interaction_info.reactions,
                     )
+            elif reaction.total_count == 2:
+                user_reactions.append(reaction.reaction)
+                contact_reactions.append(reaction.reaction)
+            else:
+                self.log.warning(
+                    "Weird reactions (empty): %s", update.interaction_info.reactions
+                )
 
-            contact.react(update.message_id, contact_reactions)
-            contact.react(update.message_id, user_reactions, carbon=True)
+        contact.react(update.message_id, contact_reactions)
+        contact.react(update.message_id, user_reactions, carbon=True)
 
     async def react_group(self, update: tgapi.UpdateMessageInteractionInfo):
         muc = await self.bookmarks.by_legacy_id(update.chat_id)
