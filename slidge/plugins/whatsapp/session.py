@@ -10,8 +10,7 @@ from typing import Optional, Union
 from slidge import BaseSession, GatewayUser, LegacyMUC, XMPPError, global_config
 from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
-from . import config
-from .contact import Contact
+from .contact import Contact, Roster
 from .gateway import Gateway
 
 MESSAGE_PAIR_SUCCESS = (
@@ -30,6 +29,7 @@ Recipient = Union[Contact, LegacyMUC]
 
 class Session(BaseSession[str, Recipient]):
     xmpp: Gateway
+    contacts: Roster
 
     def __init__(self, user: GatewayUser):
         super().__init__(user)
