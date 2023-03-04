@@ -44,7 +44,6 @@ class Session(BaseSession[str, Recipient]):
         self.whatsapp = self.xmpp.whatsapp.NewSession(device)
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
-        self._connected: asyncio.Future[str] = self.xmpp.loop.create_future()
 
     def shutdown(self):
         for c in self.contacts:
@@ -61,6 +60,7 @@ class Session(BaseSession[str, Recipient]):
             self.whatsapp.Login()
         except RuntimeError as err:
             raise XMPPError(text=str(err))
+        self._connected: asyncio.Future[str] = self.xmpp.loop.create_future()
         return await self._connected
 
     async def logout(self):
@@ -98,34 +98,15 @@ class Session(BaseSession[str, Recipient]):
             self.send_gateway_message(MESSAGE_PAIR_SUCCESS)
             with open(str(self.user_shelf_path)) as shelf:
                 shelf["device_id"] = data.PairDeviceID
-            try:
-                self.whatsapp.FetchRoster(refresh=True)
-            except RuntimeError as err:
-                self.log.error("Failed refreshing roster on pair: %s", str(err))
         elif event == whatsapp.EventConnected:
-            try:
-                self.whatsapp.FetchRoster(refresh=config.ALWAYS_SYNC_ROSTER)
-            except RuntimeError as err:
-                self.log.error("Failed refreshing roster on connect: %s", str(err))
-            try:
+            if not self._connected.done():
                 self._connected.set_result("Connected")
-            except asyncio.InvalidStateError:
-                # FIXME: login should be made blocking, and/or a "socket disconnected" event
-                #        should be thrown, so we can properly reset the future
-                self.log.debug(
-                    "We thought we were connected but apparently we weren't?"
-                )
         elif event == whatsapp.EventLoggedOut:
             self.logged = False
-            self._connected = self.xmpp.loop.create_future()
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
         elif event == whatsapp.EventContact:
-            contact = await self.contacts.by_legacy_id(data.Contact.JID)
-            contact.name = data.Contact.Name
-            if data.Contact.AvatarURL != "":
-                contact.avatar = data.Contact.AvatarURL
-            await contact.add_to_roster()
+            await self.contacts.add_contact(data.Contact)
         elif event == whatsapp.EventPresence:
             contact = await self.contacts.by_legacy_id(data.Presence.JID)
             contact.update_presence(data.Presence.Away, data.Presence.LastSeen)
