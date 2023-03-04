@@ -8,7 +8,7 @@ from shelve import open
 from typing import Optional, Union
 
 from slidge import BaseSession, GatewayUser, LegacyMUC, XMPPError, global_config
-from slidge.plugins.whatsapp.generated import go, whatsapp
+from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
 from . import config
 from .contact import Contact

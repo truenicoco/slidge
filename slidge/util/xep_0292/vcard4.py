@@ -1,12 +1,16 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from slixmpp import JID, ComponentXMPP, CoroutineCallback, Iq, StanzaPath
+from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.plugins.base import BasePlugin, register_plugin
 from slixmpp.types import JidStr
 
+from ...core.contact.contact import LegacyContact
 from .stanza import NS, VCard4
+
+if TYPE_CHECKING:
+    from ...core.gateway import BaseGateway
 
 
 @dataclass
@@ -16,7 +20,7 @@ class StoredVCard:
 
 
 class VCard4Provider(BasePlugin):
-    xmpp: ComponentXMPP
+    xmpp: "BaseGateway"
 
     name = "xep_0292_provider"
     description = "VCard4 Provider"
@@ -37,7 +41,7 @@ class VCard4Provider(BasePlugin):
 
         self.xmpp.plugin["xep_0030"].add_feature(NS)
 
-    def get_vcard(self, jid: JidStr, requested_by: JidStr) -> Optional[VCard4]:
+    def _get_cached_vcard(self, jid: JidStr, requested_by: JidStr) -> Optional[VCard4]:
         vcard = self._vcards.get(JID(jid).bare)
         if vcard:
             if auth := vcard.authorized_jids:
@@ -47,9 +51,27 @@ class VCard4Provider(BasePlugin):
                 return vcard.content
         return None
 
+    async def get_vcard(self, jid: JidStr, requested_by: JidStr) -> Optional[VCard4]:
+        if vcard := self._get_cached_vcard(jid, requested_by):
+            log.debug("Found a cached vcard")
+            return vcard
+        if not hasattr(self.xmpp, "get_session_from_jid"):
+            return None
+        jid = JID(jid)
+        requested_by = JID(requested_by)
+        session = self.xmpp.get_session_from_jid(requested_by)
+        if session is None:
+            return
+        entity = await session.get_contact_or_group_or_participant(jid)
+        if isinstance(entity, LegacyContact):
+            log.debug("Fetching vcard")
+            await entity.fetch_vcard()
+            return self._get_cached_vcard(jid, requested_by)
+        return None
+
     async def handle_vcard_get(self, iq: Iq):
         r = iq.reply()
-        if vcard := self.get_vcard(iq.get_to().bare, iq.get_from().bare):
+        if vcard := await self.get_vcard(iq.get_to().bare, iq.get_from().bare):
             r.append(vcard)
         else:
             r.enable("vcard")
@@ -71,7 +93,9 @@ class VCard4Provider(BasePlugin):
             return
         if self.xmpp["pubsub"] and authorized_jids:
             for to in authorized_jids:
-                self.xmpp["pubsub"].broadcast_vcard_event(jid, to)
+                self.xmpp.loop.create_task(
+                    self.xmpp["pubsub"].broadcast_vcard_event(jid, to)
+                )
 
 
 register_plugin(VCard4Provider)

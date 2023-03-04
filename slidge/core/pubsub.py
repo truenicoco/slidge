@@ -225,26 +225,24 @@ class PubSubComponent(BasePlugin):
                 await self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
         if VCARD4_NAMESPACE + "+notify" in features:
-            self.broadcast_vcard_event(p.get_to(), to=from_)
+            await self.broadcast_vcard_event(p.get_to(), to=from_)
 
-    def broadcast_vcard_event(self, from_, to):
+    async def broadcast_vcard_event(self, from_, to):
         item = Item()
         item.namespace = VCARD4_NAMESPACE
         item["id"] = "current"
-        vcard: VCard4 = self.xmpp["xep_0292_provider"].get_vcard(from_, to)
+        vcard: VCard4 = await self.xmpp["xep_0292_provider"].get_vcard(from_, to)
         # The vcard content should NOT be in this event according to the spec:
         # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
         # but movim expects it to be here, and I guess
 
         log.debug("Broadcast vcard4 event: %s", vcard)
-        self.xmpp.loop.create_task(
-            self._broadcast(
-                data=vcard,
-                from_=JID(from_).bare,
-                to=to,
-                id="current",
-                node=VCARD4_NAMESPACE,
-            )
+        await self._broadcast(
+            data=vcard,
+            from_=JID(from_).bare,
+            to=to,
+            id="current",
+            node=VCARD4_NAMESPACE,
         )
 
     @staticmethod
@@ -299,7 +297,7 @@ class PubSubComponent(BasePlugin):
         # this is not the proper way that clients should retrieve VCards, but
         # gajim does it this way.
         # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
-        vcard: VCard4 = self.xmpp["xep_0292_provider"].get_vcard(
+        vcard: VCard4 = await self.xmpp["xep_0292_provider"].get_vcard(
             iq.get_to().bare, iq.get_from().bare
         )
         log.debug("VCARD: %s -- %s -- %s", iq.get_to().bare, iq.get_from().bare, vcard)

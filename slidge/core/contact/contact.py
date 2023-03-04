@@ -326,6 +326,15 @@ class LegacyContact(
         """
         pass
 
+    async def fetch_vcard(self):
+        """
+        It the legacy network doesn't like that you fetch too many profiles on startup,
+        it's also possible to fetch it here, which will be called when XMPP clients
+        of the user request the vcard, if it hasn't been fetched before
+        :return:
+        """
+        pass
+
 
 def is_markable(stanza: Union[Message, Presence]):
     if isinstance(stanza, Presence):
