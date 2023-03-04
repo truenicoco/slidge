@@ -299,8 +299,14 @@ class LegacyContact(
                 )
                 if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
                     presence = self.xmpp.make_presence(
-                        pfrom=self.jid.bare, ptype="subscribe"
+                        pfrom=self.jid.bare,
+                        ptype="subscribe",
+                        pstatus=f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
+                        f"slidge is not allowed to manage your roster.",
                     )
+                    presence["nick"] = self.name
+                    # very awkward, slixmpp bug maybe?
+                    presence.append(presence["nick"])
                     self._send(presence)
                 return
 
