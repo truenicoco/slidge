@@ -19,7 +19,7 @@ from slidge.util.types import LegacyMessageType, LegacyThreadType
 
 from ...util import BiDict
 from ...util.types import ChatState, Marker, ProcessingHint
-from ...util.util import fix_suffix
+from ...util.util import fix_suffix, remove_emoji_variation_selector_16
 from ...util.xep_0385.stanza import Sims
 from ...util.xep_0447.stanza import StatelessFileSharing
 from .base import BaseSender
@@ -573,7 +573,11 @@ class ContentMessageMixin(AttachmentMixin):
             hints={"store"}, carbon=kwargs.get("carbon"), thread=thread
         )
         xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
-        self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=emojis)
+        self.xmpp["xep_0444"].set_reactions(
+            msg,
+            to_id=xmpp_id,
+            reactions=[remove_emoji_variation_selector_16(e) for e in emojis],
+        )
         self._send(msg, **kwargs)
 
     def retract(

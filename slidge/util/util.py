@@ -15,8 +15,6 @@ except ImportError as e:
         e,
     )
 
-from .types import FieldType
-
 
 def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
     guessed = magic.from_file(path, mime=True)
@@ -120,3 +118,12 @@ def is_valid_phone_number(phone: Optional[str]):
 
 
 log = logging.getLogger(__name__)
+
+
+def remove_emoji_variation_selector_16(emoji: str):
+    # this is required for compatibility with dino, and maybe other future clients?
+    return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
+
+
+def add_emoji_variation_selector_16(emoji: str):
+    return (bytes(emoji, encoding="utf-8") + b"\xef\xb8\x8f").decode()

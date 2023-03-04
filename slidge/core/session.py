@@ -15,7 +15,7 @@ from ..util.types import (
     PresenceShow,
     RecipientType,
 )
-from ..util.xep_0461.stanza import FeatureFallBack
+from ..util.util import remove_emoji_variation_selector_16
 from . import config
 from .command.base import SearchResult
 from .contact import LegacyRoster
@@ -818,11 +818,6 @@ class BaseSession(
             if nick := jid.resource:
                 return await muc.get_participant(nick)
             return muc
-
-
-def remove_emoji_variation_selector_16(emoji: str):
-    # this is required for compatibility with dino, and maybe other future clients?
-    return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
 
 
 _sessions: dict[GatewayUser, BaseSession] = {}
