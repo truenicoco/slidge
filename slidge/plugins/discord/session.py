@@ -21,7 +21,6 @@ class Session(BaseSession[int, Recipient]):
         from .client import Discord
 
         self.discord = Discord(self)
-        self.ready_future: asyncio.Future[bool] = self.xmpp.loop.create_future()
         self.delete_futures = dict[int, asyncio.Future[bool]]()
         self.edit_futures = dict[int, asyncio.Future[bool]]()
         self.send_futures = dict[int, asyncio.Future[bool]]()
@@ -37,7 +36,7 @@ class Session(BaseSession[int, Recipient]):
         await self.discord.login(token)
         self.xmpp.loop.create_task(self.discord.connect())
 
-        await self.ready_future
+        await self.discord.wait_until_ready()
         assert self.discord.user is not None
         self.bookmarks.user_nick = str(self.discord.user.display_name)
         return f"Logged on as {self.discord.user}"

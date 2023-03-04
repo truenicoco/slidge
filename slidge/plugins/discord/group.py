@@ -58,7 +58,7 @@ class MUC(LegacyMUC[int, int, Participant]):
     type = MucType.GROUP
 
     async def get_discord_channel(self) -> di.TextChannel:
-        await self.session.ready_future
+        await self.session.discord.wait_until_ready()
         return self.session.discord.get_channel(self.legacy_id)  # type: ignore
 
     async def get_user_participant(self):

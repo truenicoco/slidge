@@ -13,12 +13,6 @@ class Discord(di.Client):
         self.session = session
         self.log = session.log
 
-    async def on_ready(self):
-        if (f := self.session.ready_future).done():
-            return
-        f.set_result(True)
-        self.log.debug(f"Logged on as {self.user}")
-
     async def on_message(self, message: di.Message):
         channel = message.channel
         if isinstance(channel, di.VoiceChannel):
