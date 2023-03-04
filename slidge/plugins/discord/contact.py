@@ -29,28 +29,28 @@ class Contact(LegacyContact[int], Mixin):  # type: ignore
 
     async def update_info(self):
         u = self.discord_user
-        self.name = name = u.display_name
+        self.name = u.display_name
         if u.avatar:
             self.avatar = str(u.avatar)
 
         # massive rate limiting if trying to fetch profiles of non friends
-        if not u.is_friend():
-            return
-
-        # TODO: load vcard only on demand because this seems to easily hit rate limiting
-        # try:
-        #     profile = await u.profile(fetch_note=False)
-        # except di.Forbidden:
-        #     self.session.log.debug("Forbidden to fetch the profile of %s", u)
-        # except di.HTTPException as e:
-        #     self.session.log.debug(
-        #         "HTTP exception %s when fetch the profile of %s", e, u
-        #     )
-        # else:
-        #     self.set_vcard(full_name=name, note=profile.bio)
+        if u.is_friend():
+            await self.fetch_vcard()
 
         # TODO: use the relationship here
         # relationship = u.relationship
+
+    async def fetch_vcard(self):
+        try:
+            profile = await self.discord_user.profile(fetch_note=False)
+        except di.Forbidden:
+            self.session.log.debug("Forbidden to fetch the profile of %s", self)
+        except di.HTTPException as e:
+            self.session.log.debug(
+                "HTTP exception %s when fetch the profile of %s", e, self
+            )
+        else:
+            self.set_vcard(full_name=self.name, note=profile.bio)
 
 
 class Roster(LegacyRoster[int, Contact]):
