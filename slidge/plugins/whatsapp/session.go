@@ -231,12 +231,12 @@ func (s *Session) SendReceipt(receipt Receipt) error {
 	return s.client.MarkRead(ids, time.Unix(receipt.Timestamp, 0), jid, types.EmptyJID)
 }
 
-// FetchRoster subscribes to the WhatsApp roster currently stored in the Session's internal state.
+// GetContacts subscribes to the WhatsApp roster currently stored in the Session's internal state.
 // If `refresh` is `true`, FetchRoster will pull application state from the remote service and
 // synchronize any contacts found with the adapter.
-func (s *Session) FetchRoster(refresh bool) error {
+func (s *Session) GetContacts(refresh bool) ([]Contact, error) {
 	if s.client == nil || s.client.Store.ID == nil {
-		return fmt.Errorf("Cannot fetch roster for unauthenticated session")
+		return nil, fmt.Errorf("Cannot fetch roster for unauthenticated session")
 	}
 
 	// Synchronize remote application state with local state if requested.
@@ -248,20 +248,22 @@ func (s *Session) FetchRoster(refresh bool) error {
 	}
 
 	// Synchronize local contact state with overarching gateway for all local contacts.
-	contacts, err := s.client.Store.Contacts.GetAllContacts()
+	data, err := s.client.Store.Contacts.GetAllContacts()
 	if err != nil {
-		return fmt.Errorf("Failed fetching local contacts for %s", s.device.ID)
+		return nil, fmt.Errorf("Failed fetching local contacts for %s", s.device.ID)
 	}
 
-	for jid, info := range contacts {
+	var contacts []Contact
+	for jid, info := range data {
 		if err = s.client.SubscribePresence(jid); err != nil {
 			s.gateway.logger.Warnf("Failed to subscribe to presence for %s", jid)
 		}
 
-		go s.propagateEvent(newContactEvent(s.client, jid, info))
+		_, c := newContactEvent(s.client, jid, info)
+		contacts = append(contacts, c.Contact)
 	}
 
-	return nil
+	return contacts, nil
 }
 
 // SetEventHandler assigns the given handler function for propagating internal events into the Python

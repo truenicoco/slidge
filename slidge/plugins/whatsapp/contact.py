@@ -1,7 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from slidge import LegacyContact, LegacyRoster
 from slidge.plugins.whatsapp.generated import whatsapp
+
+from . import config
+
+if TYPE_CHECKING:
+    from .session import Session
 
 
 class Contact(LegacyContact[str]):
@@ -22,6 +28,27 @@ class Contact(LegacyContact[str]):
 
 
 class Roster(LegacyRoster[str, Contact]):
+    session: "Session"
+
+    async def fill(self):
+        """
+        Retrieve contacts from remove WhatsApp service, subscribing to their presence and adding to
+        local roster.
+        """
+        contacts = self.session.whatsapp.GetContacts(refresh=config.ALWAYS_SYNC_ROSTER)
+        for ptr in contacts:
+            await self.add_contact(whatsapp.Contact(handle=ptr))
+
+    async def add_contact(self, data: whatsapp.Contact):
+        """
+        Adds a WhatsApp contact to local roster, filling all required and optional information.
+        """
+        contact = await self.by_legacy_id(data.JID)
+        contact.name = data.Name
+        if data.AvatarURL != "":
+            contact.avatar = data.AvatarURL
+        await contact.add_to_roster()
+
     async def legacy_id_to_jid_username(self, legacy_id: str) -> str:
         return "+" + legacy_id[: legacy_id.find("@")]
 
