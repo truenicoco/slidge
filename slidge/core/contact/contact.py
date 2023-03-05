@@ -287,31 +287,37 @@ class LegacyContact(
             roster_items={self.jid.bare: item},
         )
         try:
-            await self.xmpp["xep_0356"].set_roster(**kw)
+            await self._set_roster(**kw)
         except PermissionError:
-            try:
-                await self.xmpp["xep_0356_old"].set_roster(**kw)
-            except PermissionError:
-                warnings.warn(
-                    "Slidge does not have privileges to add contacts to the roster."
-                    "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
-                    "for more info."
-                )
-                if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
-                    presence = self.xmpp.make_presence(
-                        pfrom=self.jid.bare,
-                        ptype="subscribe",
-                        pstatus=f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
-                        f"slidge is not allowed to manage your roster.",
-                    )
-                    presence["nick"] = self.name
-                    # very awkward, slixmpp bug maybe?
-                    presence.append(presence["nick"])
-                    self._send(presence)
-                return
+            warnings.warn(
+                "Slidge does not have privileges to add contacts to the roster."
+                "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
+                "for more info."
+            )
+            if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
+                self._send_subscription_request()
+            return
 
         self.added_to_roster = True
         self._send_last_presence()
+
+    async def _set_roster(self, **kw):
+        try:
+            return await self.xmpp["xep_0356"].set_roster(**kw)
+        except PermissionError:
+            return await self.xmpp["xep_0356_old"].set_roster(**kw)
+
+    def _send_subscription_request(self):
+        presence = self.xmpp.make_presence(
+            pfrom=self.jid.bare,
+            ptype="subscribe",
+            pstatus=f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
+            f"slidge is not allowed to manage your roster.",
+        )
+        presence["nick"] = self.name
+        # very awkward, slixmpp bug maybe?
+        presence.append(presence["nick"])
+        self._send(presence)
 
     def unsubscribe(self):
         """
