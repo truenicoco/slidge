@@ -50,8 +50,7 @@ class DeleteUser(AdminCommand):
             handler=self.delete,
         )
 
-    @staticmethod
-    async def delete(form_values: dict[str, str], _session, _ifrom):
+    async def delete(self, form_values: dict[str, str], _session, _ifrom):
         jid: JID = form_values.get("jid")  # type:ignore
         user = user_store.get_by_jid(jid)
         if user is None:
@@ -60,9 +59,15 @@ class DeleteUser(AdminCommand):
         return Confirmation(
             prompt=f"Are you sure you want to unregister '{jid}' from slidge?",
             success=f"User {jid} has been deleted",
-            handler=lambda *_: user_store.remove_by_jid(jid),
+            handler=self.finish,
             handler_args=(jid,),
         )
+
+    async def finish(self, _session, _ifrom, jid: JID):
+        user = user_store.get_by_jid(jid)
+        if user is None:
+            raise XMPPError("bad-request", f"{jid} has no account here!")
+        await self.xmpp.unregister_user(user)
 
 
 class ChangeLoglevel(AdminCommand):
