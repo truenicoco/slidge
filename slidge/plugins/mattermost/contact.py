@@ -1,4 +1,5 @@
 import asyncio
+import html
 import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
@@ -64,7 +65,7 @@ class Contact(LegacyContact[str]):
                 e = emojize(c.emoji)
                 parts = [e, c.text]
             else:
-                parts = [c.text]
+                parts = [html.unescape(c.text)]
             text = " ".join(parts)
         else:
             text = None
