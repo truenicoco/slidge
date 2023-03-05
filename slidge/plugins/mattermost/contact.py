@@ -12,7 +12,7 @@ from mattermost_api_reference_client.types import Unset
 
 from slidge import LegacyContact, LegacyRoster
 
-from .api import emojize
+from .util import emojize
 
 if TYPE_CHECKING:
     from .session import Session

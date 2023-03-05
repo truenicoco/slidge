@@ -5,7 +5,6 @@ import logging
 from typing import Optional
 
 import aiohttp
-import emoji as emoji_lib
 from mattermost_api_reference_client.api.channels import (
     create_direct_channel,
     get_channel_members,
@@ -56,6 +55,8 @@ from mattermost_api_reference_client.models.upload_file_multipart_data import (
     UploadFileMultipartData,
 )
 from mattermost_api_reference_client.types import UNSET, File, Unset
+
+from .util import demojize, emojize
 
 
 class MattermostException(Exception):
@@ -318,20 +319,6 @@ class MattermostClient:
 
     async def get_user_status(self, user_id: str):
         return await get_user_status.asyncio(user_id, client=self.http)
-
-
-def emoji_name_conversion(x: str):
-    return x.replace("_3_", "_three_").replace("thumbsup", "+1")
-
-
-def emojize(x: str):
-    return emoji_lib.emojize(f":{emoji_name_conversion(x)}:", language="alias")
-
-
-def demojize(emoji_char: str):
-    return emoji_name_conversion(
-        emoji_lib.demojize(emoji_char, delimiters=("", ""), language="alias")
-    )
 
 
 log = logging.getLogger(__name__)
