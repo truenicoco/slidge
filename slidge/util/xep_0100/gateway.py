@@ -2,6 +2,7 @@ import logging
 import warnings
 
 from slixmpp import JID, Iq, Message, Presence, register_stanza_plugin
+from slixmpp.exceptions import IqError
 from slixmpp.plugins.base import BasePlugin
 
 from slidge.core import config
@@ -82,19 +83,20 @@ class XEP_0100(BasePlugin):
             }
         }
         try:
+            await self._set_roster(jid, items)
+        except PermissionError:
+            warnings.warn(
+                "Slidge does not have the privilege to manage users' rosters. "
+                "Users should add the slidge component to their rosters manually."
+            )
+            if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
+                self.xmpp.send_presence(ptype="subscribe", pto=jid.bare)
+
+    async def _set_roster(self, jid, items):
+        try:
             await self.xmpp["xep_0356"].set_roster(jid=jid.bare, roster_items=items)
         except PermissionError:
-            try:
-                await self.xmpp["xep_0356_old"].set_roster(
-                    jid=jid.bare, roster_items=items
-                )
-            except PermissionError:
-                warnings.warn(
-                    "Slidge does not have the privilege to manage users' rosters. "
-                    "Users should add the slidge component to their rosters manually."
-                )
-                if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
-                    self.xmpp.send_presence(ptype="subscribe", pto=jid.bare)
+            await self.xmpp["xep_0356_old"].set_roster(jid=jid.bare, roster_items=items)
 
     def on_presence_unsubscribe(self, p: Presence):
         if p.get_to() == self.xmpp.boundjid.bare:

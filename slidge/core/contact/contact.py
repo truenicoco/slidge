@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
 
 from slixmpp import JID, Message, Presence
+from slixmpp.exceptions import IqError
 
 from ...util import SubclassableOnce
 from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType
@@ -297,9 +298,11 @@ class LegacyContact(
             if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
                 self._send_subscription_request()
             return
-
-        self.added_to_roster = True
-        self._send_last_presence()
+        except IqError as e:
+            self.log.warning("Could not add to roster", exc_info=e)
+        else:
+            self.added_to_roster = True
+            self._send_last_presence()
 
     async def _set_roster(self, **kw):
         try:
