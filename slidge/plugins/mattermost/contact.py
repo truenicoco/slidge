@@ -149,7 +149,10 @@ class Contact(LegacyContact[str]):
         assert not isinstance(post.update_at, Unset)
 
         file_metas = post.metadata.files
-        text = post.message
+        if isinstance(m := post.message, str):
+            text = emojize(m)
+        else:
+            text = ""
         post_id = post.id
 
         when = datetime.fromtimestamp(post.update_at / 1000)
