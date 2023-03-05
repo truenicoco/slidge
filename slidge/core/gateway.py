@@ -622,7 +622,17 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             #       while we were offline and trigger unregister from there. Presence probe does not seem
             #       to work in this case, there must be another way. privileged entity could be used
             #       as last resort.
-            await self["xep_0100"].add_component_to_roster(user.jid)
+            try:
+                await self["xep_0100"].add_component_to_roster(user.jid)
+            except IqError as e:
+                # TODO: remove the user when this happens? or at least
+                # this can happen when the user has unsubscribed from the XMPP server
+                log.warning(
+                    "Error with user %s, not logging them automatically",
+                    user,
+                    exc_info=e,
+                )
+                continue
             self.send_presence(
                 pto=user.bare_jid, ptype="probe"
             )  # ensure we get all resources for user
