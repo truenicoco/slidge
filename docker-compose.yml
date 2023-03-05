@@ -241,7 +241,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_USER: movim
       POSTGRES_PASSWORD: BAD
-    image: docker.io/movim/movim:0.21rc5
+    image: docker.io/movim/movim:0.21rc6
     network_mode: service:nginx
     volumes:
       - ./persistent/movim/html:/var/www/html:rw
