@@ -173,6 +173,10 @@ class LegacyContact(
         :param reply_self: Set to true is this is a self quote. If False, it means the
             quoted author is the gateway user.
         """
+        if kwargs.get("carbon"):
+            self.session.sent[
+                legacy_msg_id
+            ] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
         super().send_text(
             body=body,
             legacy_msg_id=legacy_msg_id,
