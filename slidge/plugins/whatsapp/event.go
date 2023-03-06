@@ -29,6 +29,7 @@ const (
 	EventMessage
 	EventChatState
 	EventReceipt
+	EventGroup
 	EventCall
 )
 
@@ -43,15 +44,22 @@ type EventPayload struct {
 	Message      Message
 	ChatState    ChatState
 	Receipt      Receipt
+	Group        Group
 	Call         Call
+}
+
+// A Avatar represents a small image representing a Contact or Group.
+type Avatar struct {
+	ID  string // The unique ID for this avatar, used for persistent caching.
+	URL string // The HTTP URL over which this avatar might be retrieved. Can change for the same ID.
 }
 
 // A Contact represents any entity that be communicated with directly in WhatsApp. This typically
 // represents people, but may represent a business or bot as well, but not a group-chat.
 type Contact struct {
-	JID       string
-	Name      string
-	AvatarURL string
+	JID    string // The WhatsApp JID for this contact.
+	Name   string // The user-set, human-readable name for this contact.
+	Avatar Avatar // The profile picture for this contact.
 }
 
 // NewContactEvent returns event data meant for [Session.propagateEvent] for the contact information
@@ -74,7 +82,7 @@ func newContactEvent(c *whatsmeow.Client, jid types.JID, info types.ContactInfo)
 	}
 
 	if p, _ := c.GetProfilePictureInfo(jid, nil); p != nil {
-		contact.AvatarURL = p.URL
+		contact.Avatar = Avatar{ID: p.ID, URL: p.URL}
 	}
 
 	return EventContact, &EventPayload{Contact: contact}
@@ -117,6 +125,8 @@ type Message struct {
 	Kind        MessageKind  // The concrete message kind being sent or received.
 	ID          string       // The unique message ID, used for referring to a specific Message instance.
 	JID         string       // The JID this message concerns, semantics can change based on IsCarbon.
+	GroupJID    string       // The JID of the group-chat this message was sent in, if any.
+	OriginJID   string       // For reactions and replies in groups, the JID of the original user.
 	Body        string       // The plain-text message body. For attachment messages, this can be a caption.
 	Timestamp   int64        // The Unix timestamp denoting when this message was created.
 	IsCarbon    bool         // Whether or not this message concerns the gateway user themselves.
@@ -144,26 +154,21 @@ func GenerateMessageID() string {
 // NewMessageEvent returns event data meant for [Session.propagateEvent] for the primive message
 // event given. Unknown or invalid messages will return an [EventUnknown] event with nil data.
 func newMessageEvent(client *whatsmeow.Client, evt *events.Message) (EventKind, *EventPayload) {
-	// Ignore incoming messages sent or received over group-chats until proper support is implemented.
-	if evt.Info.IsGroup {
-		return EventUnknown, nil
-	}
-
 	// Set basic data for message, to be potentially amended depending on the concrete version of
 	// the underlying message.
 	var message = Message{
 		Kind:      MessagePlain,
 		ID:        evt.Info.ID,
+		JID:       evt.Info.Sender.ToNonAD().String(),
 		Body:      evt.Message.GetConversation(),
 		Timestamp: evt.Info.Timestamp.Unix(),
 		IsCarbon:  evt.Info.IsFromMe,
 	}
 
-	// Set message JID based on whether a message is originating from ourselves or someone else.
-	if message.IsCarbon {
-		message.JID = evt.Info.MessageSource.Chat.ToNonAD().String()
-	} else {
-		message.JID = evt.Info.MessageSource.Sender.ToNonAD().String()
+	if evt.Info.IsGroup {
+		message.GroupJID = evt.Info.Chat.ToNonAD().String()
+	} else if message.IsCarbon {
+		message.JID = evt.Info.Chat.ToNonAD().String()
 	}
 
 	// Handle handle protocol messages (such as message deletion or editing).
@@ -201,6 +206,7 @@ func newMessageEvent(client *whatsmeow.Client, evt *events.Message) (EventKind, 
 		}
 		if c := e.GetContextInfo(); c != nil {
 			message.ReplyID = c.GetStanzaId()
+			message.OriginJID = c.GetParticipant()
 			if q := c.GetQuotedMessage(); q != nil {
 				message.ReplyBody = q.GetConversation()
 			}
@@ -362,14 +368,18 @@ const (
 // whether the contact is currently composing a message. This is separate to the concept of a
 // Presence, which is the contact's general state across all discussions.
 type ChatState struct {
-	JID  string
-	Kind ChatStateKind
+	Kind     ChatStateKind
+	JID      string
+	GroupJID string
 }
 
 // NewChatStateEvent returns event data meant for [Session.propagateEvent] for the primitive
 // chat-state event given.
 func newChatStateEvent(evt *events.ChatPresence) (EventKind, *EventPayload) {
 	var state = ChatState{JID: evt.MessageSource.Sender.ToNonAD().String()}
+	if evt.MessageSource.IsGroup {
+		state.GroupJID = evt.MessageSource.Chat.ToNonAD().String()
+	}
 	switch evt.State {
 	case types.ChatPresenceComposing:
 		state.Kind = ChatStateComposing
@@ -392,9 +402,10 @@ const (
 // received. Receipts can be delivered for many messages at once, but are generally all delivered
 // under one specific state at a time.
 type Receipt struct {
-	Kind       ReceiptKind
-	MessageIDs []string
+	Kind       ReceiptKind // The distinct kind of receipt presented.
+	MessageIDs []string    // The list of message IDs to mark for receipt.
 	JID        string
+	GroupJID   string
 	Timestamp  int64
 	IsCarbon   bool
 }
@@ -404,6 +415,7 @@ type Receipt struct {
 func newReceiptEvent(evt *events.Receipt) (EventKind, *EventPayload) {
 	var receipt = Receipt{
 		MessageIDs: append([]string{}, evt.MessageIDs...),
+		JID:        evt.MessageSource.Sender.ToNonAD().String(),
 		Timestamp:  evt.Timestamp.Unix(),
 		IsCarbon:   evt.MessageSource.IsFromMe,
 	}
@@ -412,10 +424,10 @@ func newReceiptEvent(evt *events.Receipt) (EventKind, *EventPayload) {
 		return EventUnknown, nil
 	}
 
-	if receipt.IsCarbon {
+	if evt.MessageSource.IsGroup {
+		receipt.GroupJID = evt.MessageSource.Chat.ToNonAD().String()
+	} else if receipt.IsCarbon {
 		receipt.JID = evt.MessageSource.Chat.ToNonAD().String()
-	} else {
-		receipt.JID = evt.MessageSource.Sender.ToNonAD().String()
 	}
 
 	switch evt.Type {
@@ -428,10 +440,77 @@ func newReceiptEvent(evt *events.Receipt) (EventKind, *EventPayload) {
 	return EventReceipt, &EventPayload{Receipt: receipt}
 }
 
+// The affiliation, or set of privilidges, given to a specific participant in a group.
+type GroupAffiliation int
+
+const (
+	GroupAffiliationNone  GroupAffiliation = iota // None, or normal member group affiliation.
+	GroupAffiliationAdmin                         // Can perform some management operations.
+	GroupAffiliationOwner                         // Can manage group fully, including destroying the group.
+)
+
+// A Group represents a named, many-to-many chat space which may be joined or left at will. Groups
+// in WhatsApp are generally invited to out-of-band with respect to overarching adaptor; see the
+// documentation for [Session.GetGroups] for more information.
+type Group struct {
+	JID          string             // The WhatsApp JID for this group.
+	Name         string             // The user-defined, human-readable name for this group.
+	Subject      string             // The longer-form, user-defined description for this group.
+	Self         GroupParticipant   // Information on our own state in the group, separate to other participants.
+	Participants []GroupParticipant // The list of participant contacts for this group, excluding ourselves.
+}
+
+// A GroupParticipant represents a contact who is currently joined in a given group. Participants in
+// WhatsApp can always be derived back to their individual [Contact]; there are no anonymous groups
+// in WhatsApp.
+type GroupParticipant struct {
+	JID         string           // The WhatsApp JID for this participant.
+	Name        string           // The user-defined, human-readable name for this participant. Normally only set for self.
+	Affiliation GroupAffiliation // The set of priviledges given to this specific participant.
+}
+
+// NewGroupEvent returns event data meant for [Session.propagateEvent] for the primive group
+// information given.
+func newGroupEvent(client *whatsmeow.Client, info *types.GroupInfo) (EventKind, *EventPayload) {
+	var participants []GroupParticipant
+	var self = GroupParticipant{
+		JID:  client.Store.ID.ToNonAD().String(),
+		Name: client.Store.PushName,
+	}
+	for _, p := range info.Participants {
+		if p.Error > 0 {
+			continue
+		}
+		var affiliation = GroupAffiliationNone
+		if p.IsSuperAdmin {
+			affiliation = GroupAffiliationOwner
+		} else if p.IsAdmin {
+			affiliation = GroupAffiliationAdmin
+		}
+		if self.JID == p.JID.ToNonAD().String() {
+			self.Affiliation = affiliation
+			continue
+		}
+		participants = append(participants, GroupParticipant{
+			JID:         p.JID.ToNonAD().String(),
+			Affiliation: affiliation,
+		})
+	}
+	return EventGroup, &EventPayload{
+		Group: Group{
+			JID:          info.JID.ToNonAD().String(),
+			Name:         info.GroupName.Name,
+			Subject:      info.Topic,
+			Self:         self,
+			Participants: participants,
+		},
+	}
+}
+
 // CallState represents the state of the call to synchronize with.
 type CallState int
 
-// The calls tates handled by the overarching session event handler.
+// The call states handled by the overarching session event handler.
 const (
 	CallMissed CallState = 1 + iota
 )

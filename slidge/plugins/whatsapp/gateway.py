@@ -22,11 +22,15 @@ class Gateway(BaseGateway):
     COMPONENT_NAME = "WhatsApp (slidge)"
     COMPONENT_TYPE = "whatsapp"
     COMPONENT_AVATAR = "https://www.whatsapp.com/apple-touch-icon.png"
+
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     WELCOME_MESSAGE = WELCOME_MESSAGE
     REGISTRATION_FIELDS = []
+
     ROSTER_GROUP = "WhatsApp"
+
     MARK_ALL_MESSAGES = True
+    GROUPS = True
 
     def __init__(self):
         super().__init__()

@@ -7,11 +7,12 @@ from os.path import basename
 from shelve import open
 from typing import Optional, Union
 
-from slidge import BaseSession, GatewayUser, LegacyMUC, XMPPError, global_config
+from slidge import BaseSession, GatewayUser, XMPPError, global_config
 from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
 from .contact import Contact, Roster
 from .gateway import Gateway
+from .group import MUC, Bookmarks
 
 MESSAGE_PAIR_SUCCESS = (
     "Pairing successful! You might need to repeat this process in the future if the Linked Device is "
@@ -24,12 +25,13 @@ MESSAGE_LOGGED_OUT = (
 )
 
 
-Recipient = Union[Contact, LegacyMUC]
+Recipient = Union[Contact, MUC]
 
 
 class Session(BaseSession[str, Recipient]):
     xmpp: Gateway
     contacts: Roster
+    bookmarks: Bookmarks
 
     def __init__(self, user: GatewayUser):
         super().__init__(user)
@@ -106,39 +108,49 @@ class Session(BaseSession[str, Recipient]):
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
         elif event == whatsapp.EventContact:
-            await self.contacts.add_contact(data.Contact)
+            await self.contacts.add_whatsapp_contact(data.Contact)
         elif event == whatsapp.EventPresence:
             contact = await self.contacts.by_legacy_id(data.Presence.JID)
-            contact.update_presence(data.Presence.Away, data.Presence.LastSeen)
+            await contact.update_presence(data.Presence.Away, data.Presence.LastSeen)
         elif event == whatsapp.EventChatState:
-            contact = await self.contacts.by_legacy_id(data.ChatState.JID)
-            if data.ChatState.Kind == whatsapp.ChatStateComposing:
-                contact.composing()
-            elif data.ChatState.Kind == whatsapp.ChatStatePaused:
-                contact.paused()
+            await self.handle_chat_state(data.ChatState)
         elif event == whatsapp.EventReceipt:
             await self.handle_receipt(data.Receipt)
         elif event == whatsapp.EventCall:
-            contact = await self.contacts.by_legacy_id(data.Call.JID)
-            if data.Call.State == whatsapp.CallMissed:
-                text = "Missed call"
-            text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
-            if data.Call.Timestamp > 0:
-                text = text + f" at {datetime.fromtimestamp(data.Call.Timestamp)}"
-            self.send_gateway_message(text)
+            await self.handle_call(data.Call)
         elif event == whatsapp.EventMessage:
             await self.handle_message(data.Message)
+
+    async def handle_chat_state(self, state: whatsapp.ChatState):
+        contact = await self.get_contact_or_participant(
+            state.JID, state.GroupJID, False
+        )
+        if state.Kind == whatsapp.ChatStateComposing:
+            contact.composing()
+        elif state.Kind == whatsapp.ChatStatePaused:
+            contact.paused()
 
     async def handle_receipt(self, receipt: whatsapp.Receipt):
         """
         Handle incoming delivered/read receipt, as propagated by the WhatsApp adapter.
         """
-        contact = await self.contacts.by_legacy_id(receipt.JID)
+        contact = await self.get_contact_or_participant(
+            receipt.JID, receipt.GroupJID, receipt.IsCarbon
+        )
         for message_id in receipt.MessageIDs:
             if receipt.Kind == whatsapp.ReceiptDelivered:
                 contact.received(message_id)
             elif receipt.Kind == whatsapp.ReceiptRead:
                 contact.displayed(legacy_msg_id=message_id, carbon=receipt.IsCarbon)
+
+    async def handle_call(self, call: whatsapp.Call):
+        contact = await self.contacts.by_legacy_id(call.JID)
+        if call.State == whatsapp.CallMissed:
+            text = "Missed call"
+        text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
+        if call.Timestamp > 0:
+            text = text + f" at {datetime.fromtimestamp(call.Timestamp)}"
+        self.send_gateway_message(text)
 
     async def handle_message(self, message: whatsapp.Message):
         """
@@ -146,9 +158,12 @@ class Session(BaseSession[str, Recipient]):
         types, including plain-text messages, media messages, reactions, etc., and may also include
         other aspects such as references to other messages for the purposes of quoting or correction.
         """
-        contact = await self.contacts.by_legacy_id(message.JID)
-        message_reply_id = message.ReplyID if message.ReplyID != "" else None
-        message_reply_body = message.ReplyBody if message.ReplyBody != "" else None
+        contact = await self.get_contact_or_participant(
+            message.JID, message.GroupJID, message.IsCarbon
+        )
+        message_reply_id = message.ReplyID if message.ReplyID else None
+        message_reply_body = message.ReplyBody if message.ReplyBody else None
+        message_reply_to = message.OriginJID if message.OriginJID else None
         message_timestamp = (
             datetime.fromtimestamp(message.Timestamp) if message.Timestamp > 0 else None
         )
@@ -159,15 +174,13 @@ class Session(BaseSession[str, Recipient]):
                 when=message_timestamp,
                 reply_to_msg_id=message_reply_id,
                 reply_to_fallback_text=message_reply_body,
+                reply_to=message_reply_to,
                 carbon=message.IsCarbon,
             )
         elif message.Kind == whatsapp.MessageAttachment:
             for ptr in message.Attachments:
                 attachment = whatsapp.Attachment(handle=ptr)
-                attachment_caption = (
-                    attachment.Caption if attachment.Caption != "" else None
-                )
-
+                attachment_caption = attachment.Caption if attachment.Caption else None
                 await contact.send_file(
                     file_name=attachment.Filename,
                     content_type=attachment.MIME,
@@ -181,16 +194,19 @@ class Session(BaseSession[str, Recipient]):
         elif message.Kind == whatsapp.MessageRevoke:
             contact.retract(legacy_msg_id=message.ID, carbon=message.IsCarbon)
         elif message.Kind == whatsapp.MessageReaction:
+            emojis = [message.Body] if message.Body else []
             contact.react(
-                legacy_msg_id=message.ID, emojis=[message.Body], carbon=message.IsCarbon
+                legacy_msg_id=message.ID, emojis=emojis, carbon=message.IsCarbon
             )
 
     async def send_text(
         self,
         chat: Recipient,
         text: str,
+        *,
         reply_to_msg_id: Optional[str] = None,
         reply_to_fallback_text: Optional[str] = None,
+        reply_to=None,
         **_,
     ):
         """
@@ -198,9 +214,13 @@ class Session(BaseSession[str, Recipient]):
         """
         message_id = whatsapp.GenerateMessageID()
         message = whatsapp.Message(ID=message_id, JID=chat.legacy_id, Body=text)
-        if reply_to_msg_id is not None:
+        if reply_to_msg_id:
             message.ReplyID = reply_to_msg_id
-        if reply_to_fallback_text is not None:
+        if reply_to:
+            message.OriginJID = (
+                reply_to.contact.legacy_id if chat.is_group else chat.legacy_id
+            )
+        if reply_to_fallback_text:
             message.ReplyBody = strip_quote_prefix(reply_to_fallback_text)
             message.Body = message.Body.lstrip()
         try:
@@ -228,7 +248,7 @@ class Session(BaseSession[str, Recipient]):
             Kind=whatsapp.MessageAttachment,
             ID=message_id,
             JID=chat.legacy_id,
-            ReplyID=reply_to_msg_id if reply_to_msg_id is not None else "",
+            ReplyID=reply_to_msg_id if reply_to_msg_id else "",
             Attachments=whatsapp.Slice_whatsapp_Attachment([message_attachment]),
         )
         try:
@@ -277,7 +297,9 @@ class Session(BaseSession[str, Recipient]):
         client.
         """
         receipt = whatsapp.Receipt(
-            MessageIDs=go.Slice_string([legacy_msg_id]), JID=c.legacy_id
+            MessageIDs=go.Slice_string([legacy_msg_id]),
+            JID=c.get_message_sender(legacy_msg_id) if c.is_group else c.legacy_id,  # type: ignore
+            GroupJID=c.legacy_id if c.is_group else "",
         )
         try:
             self.whatsapp.SendReceipt(receipt)
@@ -292,12 +314,17 @@ class Session(BaseSession[str, Recipient]):
         Slidge core makes sure that the emojis parameter is always empty or a
         *single* emoji.
         """
+        is_carbon = self._is_carbon(c, legacy_msg_id)
+        message_sender_id = (
+            c.get_message_sender(legacy_msg_id) if not is_carbon and c.is_group else ""  # type: ignore
+        )
         message = whatsapp.Message(
             Kind=whatsapp.MessageReaction,
             ID=legacy_msg_id,
             JID=c.legacy_id,
+            OriginJID=message_sender_id,
             Body=emojis[0] if emojis else "",
-            IsCarbon=legacy_msg_id in self.sent,
+            IsCarbon=is_carbon,
         )
         try:
             self.whatsapp.SendMessage(message)
@@ -321,6 +348,28 @@ class Session(BaseSession[str, Recipient]):
 
     async def search(self, form_values: dict[str, str]):
         self.send_gateway_message("Searching on WhatsApp has not been implemented yet.")
+
+    async def get_contact_or_participant(
+        self, legacy_contact_id: str, legacy_group_jid: str, is_carbon: bool
+    ):
+        """
+        Return either a Contact or a Participant instance for the given contact and group JIDs.
+        """
+        if legacy_group_jid:
+            muc = await self.bookmarks.by_legacy_id(legacy_group_jid)
+            if is_carbon:
+                return await muc.get_user_participant()
+            else:
+                contact = await self.contacts.by_legacy_id(legacy_contact_id)
+                return await muc.get_participant_by_contact(contact)
+        else:
+            return await self.contacts.by_legacy_id(legacy_contact_id)
+
+    def _is_carbon(self, c: Recipient, legacy_msg_id: str):
+        if c.is_group:
+            return legacy_msg_id in self.muc_sent_msg_ids
+        else:
+            return legacy_msg_id in self.sent
 
 
 def make_sync(func, loop):
