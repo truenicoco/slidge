@@ -32,14 +32,14 @@ class Roster(LegacyRoster[str, Contact]):
 
     async def fill(self):
         """
-        Retrieve contacts from remove WhatsApp service, subscribing to their presence and adding to
+        Retrieve contacts from remote WhatsApp service, subscribing to their presence and adding to
         local roster.
         """
         contacts = self.session.whatsapp.GetContacts(refresh=config.ALWAYS_SYNC_ROSTER)
         for ptr in contacts:
-            await self.add_contact(whatsapp.Contact(handle=ptr))
+            await self.add_whatsapp_contact(whatsapp.Contact(handle=ptr))
 
-    async def add_contact(self, data: whatsapp.Contact):
+    async def add_whatsapp_contact(self, data: whatsapp.Contact):
         """
         Adds a WhatsApp contact to local roster, filling all required and optional information.
         """
@@ -50,7 +50,11 @@ class Roster(LegacyRoster[str, Contact]):
         await contact.add_to_roster()
 
     async def legacy_id_to_jid_username(self, legacy_id: str) -> str:
-        return "+" + legacy_id[: legacy_id.find("@")]
+        return await super().legacy_id_to_jid_username(
+            "+" + legacy_id[: legacy_id.find("@")]
+        )
 
     async def jid_username_to_legacy_id(self, jid_username: str) -> str:
-        return jid_username.removeprefix("+") + "@" + whatsapp.DefaultUserServer
+        return await super().jid_username_to_legacy_id(
+            jid_username.removeprefix("+") + "@" + whatsapp.DefaultUserServer
+        )

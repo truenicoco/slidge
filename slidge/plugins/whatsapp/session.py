@@ -7,11 +7,12 @@ from os.path import basename
 from shelve import open
 from typing import Optional, Union
 
-from slidge import BaseSession, GatewayUser, LegacyMUC, XMPPError, global_config
+from slidge import BaseSession, GatewayUser, XMPPError, global_config
 from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
 from .contact import Contact, Roster
 from .gateway import Gateway
+from .group import Bookmarks, MUC
 
 MESSAGE_PAIR_SUCCESS = (
     "Pairing successful! You might need to repeat this process in the future if the Linked Device is "
@@ -24,12 +25,13 @@ MESSAGE_LOGGED_OUT = (
 )
 
 
-Recipient = Union[Contact, LegacyMUC]
+Recipient = Union[Contact, MUC]
 
 
 class Session(BaseSession[str, Recipient]):
     xmpp: Gateway
     contacts: Roster
+    bookmarks: Bookmarks
 
     def __init__(self, user: GatewayUser):
         super().__init__(user)
@@ -106,28 +108,28 @@ class Session(BaseSession[str, Recipient]):
             self.send_gateway_message(MESSAGE_LOGGED_OUT)
             self.send_gateway_status("Logged out", show="away")
         elif event == whatsapp.EventContact:
-            await self.contacts.add_contact(data.Contact)
+            await self.contacts.add_whatsapp_contact(data.Contact)
         elif event == whatsapp.EventPresence:
             contact = await self.contacts.by_legacy_id(data.Presence.JID)
             contact.update_presence(data.Presence.Away, data.Presence.LastSeen)
         elif event == whatsapp.EventChatState:
-            contact = await self.contacts.by_legacy_id(data.ChatState.JID)
-            if data.ChatState.Kind == whatsapp.ChatStateComposing:
-                contact.composing()
-            elif data.ChatState.Kind == whatsapp.ChatStatePaused:
-                contact.paused()
+            await self.handle_chat_state(data.ChatState)
         elif event == whatsapp.EventReceipt:
             await self.handle_receipt(data.Receipt)
         elif event == whatsapp.EventCall:
-            contact = await self.contacts.by_legacy_id(data.Call.JID)
-            if data.Call.State == whatsapp.CallMissed:
-                text = "Missed call"
-            text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
-            if data.Call.Timestamp > 0:
-                text = text + f" at {datetime.fromtimestamp(data.Call.Timestamp)}"
-            self.send_gateway_message(text)
+            await self.handle_call(data.Call)
         elif event == whatsapp.EventMessage:
             await self.handle_message(data.Message)
+
+    async def handle_chat_state(self, state: whatsapp.ChatState):
+        contact = await self.contacts.by_legacy_id(state.JID)
+        if state.Group != "":
+            muc = await self.bookmarks.by_legacy_id(state.Group)
+            contact = await muc.get_participant_by_contact(contact)
+        if state.Kind == whatsapp.ChatStateComposing:
+            contact.composing()
+        elif state.Kind == whatsapp.ChatStatePaused:
+            contact.paused()
 
     async def handle_receipt(self, receipt: whatsapp.Receipt):
         """
@@ -139,6 +141,15 @@ class Session(BaseSession[str, Recipient]):
                 contact.received(message_id)
             elif receipt.Kind == whatsapp.ReceiptRead:
                 contact.displayed(legacy_msg_id=message_id, carbon=receipt.IsCarbon)
+
+    async def handle_call(self, call: whatsapp.Call):
+        contact = await self.contacts.by_legacy_id(call.JID)
+        if call.State == whatsapp.CallMissed:
+            text = "Missed call"
+        text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
+        if call.Timestamp > 0:
+            text = text + f" at {datetime.fromtimestamp(call.Timestamp)}"
+        self.send_gateway_message(text)
 
     async def handle_message(self, message: whatsapp.Message):
         """

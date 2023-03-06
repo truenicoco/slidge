@@ -22,6 +22,9 @@ const (
 	// The default host part for user JIDs on WhatsApp.
 	DefaultUserServer = types.DefaultUserServer
 
+	// The default host part for group JIDs on WhatsApp.
+	DefaultGroupServer = types.GroupServer
+
 	// The number of times keep-alive checks can fail before attempting to re-connect the session.
 	keepAliveFailureThreshold = 3
 )
@@ -241,21 +244,21 @@ func (s *Session) SendReceipt(receipt Receipt) error {
 // synchronize any contacts found with the adapter.
 func (s *Session) GetContacts(refresh bool) ([]Contact, error) {
 	if s.client == nil || s.client.Store.ID == nil {
-		return nil, fmt.Errorf("Cannot fetch roster for unauthenticated session")
+		return nil, fmt.Errorf("Cannot get contacts for unauthenticated session")
 	}
 
 	// Synchronize remote application state with local state if requested.
 	if refresh {
 		err := s.client.FetchAppState(appstate.WAPatchCriticalUnblockLow, false, false)
 		if err != nil {
-			s.gateway.logger.Warnf("Could not fetch app state from server: %s", err)
+			s.gateway.logger.Warnf("Could not get app state from server: %s", err)
 		}
 	}
 
 	// Synchronize local contact state with overarching gateway for all local contacts.
 	data, err := s.client.Store.Contacts.GetAllContacts()
 	if err != nil {
-		return nil, fmt.Errorf("Failed fetching local contacts for %s", s.device.ID)
+		return nil, fmt.Errorf("Failed getting local contacts: %s", err)
 	}
 
 	var contacts []Contact
@@ -269,6 +272,27 @@ func (s *Session) GetContacts(refresh bool) ([]Contact, error) {
 	}
 
 	return contacts, nil
+}
+
+// GetGroups returns a list of all group-chats currently joined in WhatsApp, along with additional
+// information on present participants.
+func (s *Session) GetGroups() ([]Group, error) {
+	if s.client == nil || s.client.Store.ID == nil {
+		return nil, fmt.Errorf("Cannot get groups for unauthenticated session")
+	}
+
+	data, err := s.client.GetJoinedGroups()
+	if err != nil {
+		return nil, fmt.Errorf("Failed getting groups: %s", err)
+	}
+
+	var groups []Group
+	for _, info := range data {
+		_, g := newGroupEvent(s.client, info)
+		groups = append(groups, g.Group)
+	}
+
+	return groups, nil
 }
 
 // SetEventHandler assigns the given handler function for propagating internal events into the Python
@@ -345,6 +369,8 @@ func (s *Session) handleEvent(evt interface{}) {
 		s.propagateEvent(newPresenceEvent(evt))
 	case *events.PushName:
 		s.propagateEvent(newContactEvent(s.client, evt.JID, types.ContactInfo{FullName: evt.NewPushName}))
+	//case *events.JoinedGroup: TODO
+	//case *events.GroupInfo: TODO
 	case *events.ChatPresence:
 		s.propagateEvent(newChatStateEvent(evt))
 	case *events.CallTerminate:

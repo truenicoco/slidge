@@ -29,6 +29,7 @@ const (
 	EventMessage
 	EventChatState
 	EventReceipt
+	EventGroup
 	EventCall
 )
 
@@ -43,6 +44,7 @@ type EventPayload struct {
 	Message      Message
 	ChatState    ChatState
 	Receipt      Receipt
+	Group        Group
 	Call         Call
 }
 
@@ -362,14 +364,18 @@ const (
 // whether the contact is currently composing a message. This is separate to the concept of a
 // Presence, which is the contact's general state across all discussions.
 type ChatState struct {
-	JID  string
-	Kind ChatStateKind
+	JID   string
+	Group string
+	Kind  ChatStateKind
 }
 
 // NewChatStateEvent returns event data meant for [Session.propagateEvent] for the primitive
 // chat-state event given.
 func newChatStateEvent(evt *events.ChatPresence) (EventKind, *EventPayload) {
 	var state = ChatState{JID: evt.MessageSource.Sender.ToNonAD().String()}
+	if evt.MessageSource.IsGroup {
+		state.Group = evt.MessageSource.Chat.ToNonAD().String()
+	}
 	switch evt.State {
 	case types.ChatPresenceComposing:
 		state.Kind = ChatStateComposing
@@ -428,10 +434,73 @@ func newReceiptEvent(evt *events.Receipt) (EventKind, *EventPayload) {
 	return EventReceipt, &EventPayload{Receipt: receipt}
 }
 
+// The affiliation, or set of privilidges, given to a specific participant in a group.
+type GroupAffiliation int
+
+const (
+	GroupAffiliationNone GroupAffiliation = iota
+	GroupAffiliationAdmin
+	GroupAffiliationOwner
+)
+
+// TODO
+type Group struct {
+	JID          string
+	Name         string
+	Subject      string
+	Self         GroupSelf
+	Participants []GroupParticipant
+}
+
+// TODO
+type GroupSelf struct {
+	JID  string
+	Name string
+}
+
+// TODO
+type GroupParticipant struct {
+	JID         string
+	Affiliation GroupAffiliation
+}
+
+// TODO
+func newGroupEvent(client *whatsmeow.Client, info *types.GroupInfo) (EventKind, *EventPayload) {
+	var participants []GroupParticipant
+	var self = GroupSelf{
+		JID:  client.Store.ID.ToNonAD().String(),
+		Name: client.Store.PushName,
+	}
+	for _, p := range info.Participants {
+		if p.Error > 0 || self.JID == p.JID.ToNonAD().String() {
+			continue
+		}
+		var affiliation = GroupAffiliationNone
+		if p.IsSuperAdmin {
+			affiliation = GroupAffiliationOwner
+		} else if p.IsAdmin {
+			affiliation = GroupAffiliationAdmin
+		}
+		participants = append(participants, GroupParticipant{
+			JID:         p.JID.ToNonAD().String(),
+			Affiliation: affiliation,
+		})
+	}
+	return EventGroup, &EventPayload{
+		Group: Group{
+			JID:          info.JID.ToNonAD().String(),
+			Name:         info.GroupName.Name,
+			Subject:      info.Topic,
+			Self:         self,
+			Participants: participants,
+		},
+	}
+}
+
 // CallState represents the state of the call to synchronize with.
 type CallState int
 
-// The calls tates handled by the overarching session event handler.
+// The call states handled by the overarching session event handler.
 const (
 	CallMissed CallState = 1 + iota
 )
