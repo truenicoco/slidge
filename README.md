@@ -29,7 +29,7 @@ instant messaging features:
 | Mattermost | ✅            | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       | ❌         |
 | Facebook   | ✅            | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ❌         |
 | Skype      | ~           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       | ❌         |
-| WhatsApp   | ✅            | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ❌         |
+| WhatsApp   | ✅            | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ~         |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence
