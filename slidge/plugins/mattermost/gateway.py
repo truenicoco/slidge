@@ -4,7 +4,7 @@ from slixmpp import JID
 
 from slidge import *
 
-from .util import get_client_from_registration_form
+from .api import get_client_from_registration_form
 
 
 class Gateway(BaseGateway):

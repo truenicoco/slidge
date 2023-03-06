@@ -7,8 +7,7 @@ from mattermost_api_reference_client.models.user import User
 
 from slidge import *
 
-from .api import ContactNotFound
-from .util import get_client_from_registration_form
+from .api import ContactNotFound, get_client_from_registration_form
 from .websocket import MattermostEvent, Websocket
 
 if TYPE_CHECKING:
