@@ -126,6 +126,7 @@ func (s *Session) SendMessage(message Message) error {
 	}
 
 	var payload *proto.Message
+	var extra whatsmeow.SendRequestExtra
 
 	switch message.Kind {
 	case MessageAttachment:
@@ -155,6 +156,9 @@ func (s *Session) SendMessage(message Message) error {
 		if payload, err = uploadAttachment(s.client, message.Attachments[0]); err != nil {
 			return fmt.Errorf("Failed uploading attachment: %s", err)
 		}
+
+		extra.ID = message.ID
+
 	case MessageRevoke:
 		// Don't send message, but revoke existing message by ID.
 		payload = s.client.BuildRevoke(s.device.JID().ToNonAD(), types.EmptyJID, message.ID)
@@ -187,9 +191,10 @@ func (s *Session) SendMessage(message Message) error {
 		} else {
 			payload = &proto.Message{Conversation: &message.Body}
 		}
+		extra.ID = message.ID
 	}
 
-	_, err = s.client.SendMessage(context.Background(), jid, payload)
+	_, err = s.client.SendMessage(context.Background(), jid, payload, extra)
 	return err
 }
 
