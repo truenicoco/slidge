@@ -197,9 +197,7 @@ class Session(BaseSession[str, Recipient]):
         Send outgoing plain-text message to given WhatsApp contact.
         """
         message_id = whatsapp.GenerateMessageID()
-        self.log.debug("Generated message ID: %s", message_id)
         message = whatsapp.Message(ID=message_id, JID=chat.legacy_id, Body=text)
-        self.log.debug("Whatsapp message: %s", message)
         if reply_to_msg_id is not None:
             message.ReplyID = reply_to_msg_id
         if reply_to_fallback_text is not None:
