@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING
 
 from slidge.core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
-
 from slidge.plugins.whatsapp.generated import whatsapp
+
+from ... import XMPPError
 
 if TYPE_CHECKING:
     from .contact import Contact
@@ -68,6 +69,12 @@ class Bookmarks(LegacyBookmarks[str, MUC]):
         )
 
     async def jid_local_part_to_legacy_id(self, local_part: str):
+        if not local_part.startswith("#"):
+            raise XMPPError(
+                "item-not-found", "In slidge-whatsapp, group IDs start with a #"
+            )
+        # ideally, check that the group ID is valid in here and raise an appropriate XMPPError
+        # if it's not the case.
         return await super().jid_local_part_to_legacy_id(
             local_part.removeprefix("#") + "@" + whatsapp.DefaultGroupServer
         )
