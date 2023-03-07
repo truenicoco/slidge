@@ -12,7 +12,7 @@ from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
 from .contact import Contact, Roster
 from .gateway import Gateway
-from .group import Bookmarks, MUC
+from .group import MUC, Bookmarks
 
 MESSAGE_PAIR_SUCCESS = (
     "Pairing successful! You might need to repeat this process in the future if the Linked Device is "
@@ -125,7 +125,7 @@ class Session(BaseSession[str, Recipient]):
         contact = await self.contacts.by_legacy_id(state.JID)
         if state.Group != "":
             muc = await self.bookmarks.by_legacy_id(state.Group)
-            contact = await muc.get_participant_by_contact(contact)
+            contact = await muc.get_participant_by_contact(contact)  # type:ignore
         if state.Kind == whatsapp.ChatStateComposing:
             contact.composing()
         elif state.Kind == whatsapp.ChatStatePaused:
