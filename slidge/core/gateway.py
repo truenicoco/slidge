@@ -560,7 +560,9 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         try:
             muc.user_resources.remove(resource)
         except KeyError:
-            log.warning("%s was not in the resources of %s", resource, muc)
+            # this actually happens quite frequently on for both beagle and monal
+            # (not sure why?), but is of no consequence
+            log.debug("%s was not in the resources of %s", resource, muc)
         else:
             log.info(
                 "Removed %s from the resources of %s because of error", resource, muc
