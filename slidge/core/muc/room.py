@@ -20,6 +20,7 @@ from ...util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
+    LegacyUserIdType,
 )
 from .. import config
 from ..mixins.disco import ChatterDiscoMixin
@@ -498,6 +499,12 @@ class LegacyMUC(
             p.contact = c
             self.__store_participant(p)
         return p
+
+    async def get_participant_by_legacy_contact_id(
+        self, legacy_id: LegacyUserIdType, *args, **kwargs
+    ):
+        c = await self.session.contacts.by_legacy_id(legacy_id, *args, **kwargs)
+        return await self.get_participant_by_contact(c)
 
     async def get_participants(self):
         await self.__fill_participants()

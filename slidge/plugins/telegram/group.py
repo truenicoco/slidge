@@ -172,9 +172,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
     async def participant_by_tg_user(self, user: tgapi.User) -> "Participant":
         if user.id == await self.session.tg.get_my_id():
             return await self.get_user_participant()
-        return await self.get_participant_by_contact(
-            await self.session.contacts.by_legacy_id(user.id)
-        )
+        return await self.get_participant_by_legacy_contact_id(user.id)
 
     async def participant_by_tg_user_id(self, user_id: int) -> "Participant":
         if user_id == await self.session.tg.get_my_id():

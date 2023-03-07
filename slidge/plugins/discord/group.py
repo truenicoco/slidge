@@ -71,8 +71,7 @@ class MUC(LegacyMUC[int, int, Participant]):
         for m in chan.members[:max_]:
             if m.id == self.session.discord.user.id:  # type:ignore
                 continue
-            co = await self.session.contacts.by_discord_user(m)
-            await self.get_participant_by_contact(co)
+            await self.get_participant_by_discord_user(m)
 
     async def update_info(self):
         while not (chan := await self.get_discord_channel()):
@@ -124,13 +123,11 @@ class MUC(LegacyMUC[int, int, Participant]):
                     p = await self.get_participant(author.name)
             await p.send_message(msg, archive_only=True)
 
-    async def get_participant_by_discord_user(self, user: di.User):
+    async def get_participant_by_discord_user(self, user: Union[di.User, di.Member]):
         if user.id == self.session.discord.user.id:  # type:ignore
             return self.get_user_participant()
         try:
-            return await self.get_participant_by_contact(
-                await self.session.contacts.by_discord_user(user)
-            )
+            return await self.get_participant_by_legacy_contact_id(user.id)
         except XMPPError:
             return await self.get_participant(user.display_name)
 

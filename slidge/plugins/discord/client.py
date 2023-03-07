@@ -94,7 +94,7 @@ class Discord(di.Client):
 
         if isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(channel.id)
-            part = await muc.get_participant_by_contact(contact)
+            part = await muc.get_participant_by_legacy_contact_id(contact)
             return part.composing()
 
     async def on_message_edit(self, before: di.Message, after: di.Message):
@@ -147,8 +147,7 @@ class Discord(di.Client):
             if own:
                 deleter = await muc.get_user_participant()
             else:
-                contact = await self.get_contact(m.author)
-                deleter = await muc.get_participant_by_contact(contact)
+                deleter = await muc.get_participant_by_legacy_contact_id(m.author)
         else:
             self.log.debug("Ignoring delete in: %s", channel)
             return
@@ -186,9 +185,7 @@ class Discord(di.Client):
                 participant = await muc.get_user_participant()
             else:
                 self.log.debug("NOT ME: %s %s", user, type(user))
-                participant = await muc.get_participant_by_contact(
-                    await self.session.contacts.by_legacy_id(user.id)
-                )
+                participant = await muc.get_participant_by_legacy_contact_id(user.id)
 
             await participant.update_reactions(message)
 
