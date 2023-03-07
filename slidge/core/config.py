@@ -178,3 +178,9 @@ CORRECTION_EMPTY_BODY_AS_RETRACTION__DOC = (
     "Treat last message correction to empty message as a retraction. "
     "(this is what cheogram do for retraction)"
 )
+
+ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH = 200
+ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH__DOC = (
+    "Some legacy network provide ridiculously long filenames, strip above this limit, "
+    "preserving suffix."
+)

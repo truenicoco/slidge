@@ -318,6 +318,18 @@ class AttachmentMixin(MessageMaker):
         if file_url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             return False, None, file_url
 
+        if file_name and len(file_name) > config.ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH:
+            log.debug("Trimming long filename: %s", file_name)
+            if "." in file_name:
+                base, suffix = file_name.split(".")
+                suffix = "." + suffix
+            else:
+                base = file_name
+                suffix = "."
+            file_name = (
+                base[: config.ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH] + "." + suffix
+            )
+
         if file_path is None:
             file_name = str(uuid4()) if file_name is None else file_name
             temp_dir = Path(tempfile.mkdtemp())
