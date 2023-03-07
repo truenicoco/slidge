@@ -59,7 +59,15 @@ class MUC(LegacyMUC[int, int, Participant]):
 
     async def get_discord_channel(self) -> di.TextChannel:
         await self.session.discord.wait_until_ready()
-        return self.session.discord.get_channel(self.legacy_id)  # type: ignore
+        while not (chan := self.session.discord.get_channel(self.legacy_id)):
+            await asyncio.sleep(0.1)
+
+        assert isinstance(chan, di.TextChannel)
+
+        while not chan.guild.name and not chan.name:
+            await asyncio.sleep(0.1)
+
+        return chan
 
     async def get_user_participant(self):
         p = await super().get_user_participant()
@@ -74,11 +82,7 @@ class MUC(LegacyMUC[int, int, Participant]):
             await self.get_participant_by_discord_user(m)
 
     async def update_info(self):
-        while not (chan := await self.get_discord_channel()):
-            await asyncio.sleep(0.1)
-
-        while not chan.guild.name and not chan.name:
-            await asyncio.sleep(0.1)
+        chan = await self.get_discord_channel()
 
         if chan.category:
             self.name = (
