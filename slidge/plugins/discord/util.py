@@ -30,9 +30,17 @@ class Mixin:
             if r.is_custom_emoji():
                 continue
             assert isinstance(r.emoji, str)
-            async for u in r.users():
-                if u.id == user.id:
-                    legacy_reactions.append(r.emoji)
+            try:
+                async for u in r.users():
+                    if u.id == user.id:
+                        legacy_reactions.append(r.emoji)
+            except di.NotFound:
+                # the message has now been deleted
+                # seems to happen quite a lot. I guess
+                # there are moderation bot that are triggered
+                # by reactions from users
+                # oh, discord…
+                return
         self.react(m.id, legacy_reactions)
 
     async def get_reply_to_kwargs(self, message: di.Message):
