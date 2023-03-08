@@ -123,7 +123,12 @@ class Roster(LegacyRoster[str, Contact]):
         profiles = await (await session.signal).list_contacts(account=session.phone)
         for profile in profiles.profiles:
             # contacts are added automatically if their profile could be resolved
-            await self.by_json_address(profile.address)
+            try:
+                await self.by_json_address(profile.address)
+            except XMPPError as e:
+                self.log.warning(
+                    "Something is wrong the signald contact: %s", profile, exc_info=e
+                )
 
 
 log = logging.getLogger(__name__)
