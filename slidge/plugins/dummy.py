@@ -47,7 +47,7 @@ class MUC(LegacyMUC):
 
     async def backfill(self, oldest_message_id=None, oldest_date=None):
         part = await self.get_participant("someone")
-        await asyncio.sleep(5)
+        # await asyncio.sleep(5)
         for i in range(10, 0, -1):
             log.debug("HISTORY")
             ui = uuid.uuid4()
@@ -94,12 +94,19 @@ class Participant(LegacyParticipant):
 
 
 class Contact(LegacyContact):
-    REACTIONS_SINGLE_EMOJI = True
+    REACTIONS_SINGLE_EMOJI = False
     RETRACTION = True
     CORRECTION = False
 
     async def available_emojis(self, legacy_msg_id=None):
         return {"🦅", "🧺"}
+
+    async def update_info(self):
+        self.name = self.legacy_id.title()
+        self.avatar = AVATARS[BUDDIES.index(self.legacy_id)]
+        await self.add_to_roster()
+        await asyncio.sleep(1)
+        self.online("I am not a real person, so what?")
 
 
 class Gateway(BaseGateway):
@@ -148,10 +155,7 @@ class Roster(LegacyRoster):
     async def fill(self):
         for b, a in zip(BUDDIES, AVATARS):
             c = await self.by_legacy_id(b.lower())
-            c.name = b.title()
-            c.avatar = a
             await c.add_to_roster()
-            c.online("I am not a real person, so what?")
 
 
 class Session(BaseSession):
