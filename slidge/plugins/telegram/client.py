@@ -169,9 +169,12 @@ class TelegramClient(aiotdlib.Client):
             contact = await self.contacts.by_legacy_id(update.chat_id)
             contact.displayed(update.last_read_outbox_message_id)
         else:
+            # telegram does not have individual read markers for groups,
+            # this means "at least someone has read"
+            # mapping to the room itself is not great, but is what seems more natural
             muc = await self.bookmarks.by_legacy_id(update.chat_id)
-            for p in await muc.get_participants():
-                p.displayed(update.last_read_outbox_message_id)
+            p = muc.get_system_participant()
+            p.displayed(update.last_read_outbox_message_id)
 
     async def handle_ChatAction(self, action: tgapi.UpdateChatAction):
         sender = action.sender_id
