@@ -55,10 +55,14 @@ class LegacyRoster(
         self, legacy_id: LegacyUserIdType, jid_username: str, *args, **kwargs
     ):
         c = self._contact_cls(self.session, legacy_id, jid_username, *args, **kwargs)
-        await c.update_caps()
-        await c.update_info()
-        self._contacts_by_legacy_id[legacy_id] = c
-        self._contacts_by_bare_jid[c.jid.bare] = c
+        async with self.lock(("finish", c)):
+            if legacy_id in self._contacts_by_legacy_id:
+                self.log.debug("Already updated %s", c)
+                return c
+            await c.update_caps()
+            await c.update_info()
+            self._contacts_by_legacy_id[legacy_id] = c
+            self._contacts_by_bare_jid[c.jid.bare] = c
         return c
 
     def known_contacts(self):
