@@ -122,6 +122,12 @@ class LegacyContact(
             stanza["from"] = self.user.jid
             self._privileged_send(stanza)
         else:
+            if (
+                isinstance(stanza, Presence)
+                and not self.added_to_roster
+                and stanza["type"] != "subscribe"
+            ):
+                return
             if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
                 self._sent_order.append(stanza["id"])
             stanza["to"] = self.user.jid

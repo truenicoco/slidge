@@ -437,6 +437,7 @@ class TestAimShakespeareBase(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
+        juliet.added_to_roster = True
         now = datetime.datetime.now(datetime.timezone.utc)
         juliet.away(last_seen=now)
         sent = self.next_sent()
@@ -893,6 +894,7 @@ class TestContact(SlidgeTest):
 
     def test_caps(self):
         juliet = self.get_juliet()
+        juliet.added_to_roster = True
         juliet.online()
         self.send(
             """

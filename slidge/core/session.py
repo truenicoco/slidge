@@ -104,8 +104,6 @@ class BaseSession(
 
     def shutdown(self):
         for c in self.contacts:
-            if not c.added_to_roster:
-                continue
             c.offline()
         for m in self.bookmarks:
             m.shutdown()
