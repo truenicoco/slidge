@@ -57,7 +57,7 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
                     e.message,
                 )
             else:
-                if profile.profile_name or profile.name or profile.contact_name:
+                if profile.name or profile.address.number:
                     return profile
             attempts += 1
             await asyncio.sleep(sleep * attempts**exp)
@@ -73,9 +73,13 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
                 return
 
         if config.PREFER_PROFILE_NAME:
-            nick = profile.profile_name or profile.contact_name
+            nick = (
+                profile.profile_name or profile.contact_name or profile.address.number
+            )
         else:
-            nick = profile.contact_name or profile.profile_name
+            nick = (
+                profile.contact_name or profile.profile_name or profile.address.number
+            )
         if nick is not None:
             nick = nick.replace("\u0000", " ")
             self.name = nick
