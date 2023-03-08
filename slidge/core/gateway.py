@@ -359,7 +359,9 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         session = self.get_session_from_user(user)
         session.raise_if_not_logged()
 
-        return await session.bookmarks.by_jid(ito)
+        muc = await session.bookmarks.by_jid(ito)
+
+        return muc
 
     async def __handle_mam(self, iq: Iq):
         muc = await self.get_muc_from_stanza(iq)
@@ -544,6 +546,39 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             )
         )
         self.plugin["xep_0030"].add_feature("urn:xmpp:ping")
+
+        self.register_handler(
+            CoroutineCallback(
+                "VCardTemp",
+                StanzaPath("iq/vcard_temp"),
+                self.__handle_get_vcard_temp,  # type:ignore
+            )
+        )
+
+    async def __handle_get_vcard_temp(self, iq: Iq):
+        if iq["type"] != "get":
+            raise XMPPError("not-authorized")
+
+        muc = await self.get_muc_from_stanza(iq)
+        to = iq.get_to()
+
+        if nick := to.resource:
+            participant = await muc.get_participant(nick, raise_if_not_found=False)
+            if not (contact := participant.contact):
+                raise XMPPError("item-not-found", "This participant has no contact")
+            avatar = contact.get_avatar()
+            if avatar is None:
+                raise XMPPError("item-not-found", "This participant has no avatar")
+            data = avatar.data
+            v = self.xmpp.plugin["xep_0054"].make_vcard()
+            v["PHOTO"]["BINVAL"] = data.get_value()
+            v["PHOTO"]["TYPE"] = "image/png"
+            reply = iq.reply()
+            reply.append(v)
+            reply.send()
+            return
+
+        return await muc.send_avatar(iq)
 
     async def __on_group_chat_error(self, msg: Message):
         condition = msg["error"].get_condition()

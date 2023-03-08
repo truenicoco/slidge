@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import tempfile
 import uuid
 from base64 import b64encode
 from pathlib import Path
@@ -15,6 +16,7 @@ from slidge.core.muc import MucType
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyContactType, LegacyMessageType
+from slidge.core.cache import avatar_cache
 
 
 class Gateway(BaseGateway):
@@ -92,7 +94,7 @@ class Session(BaseSession):
         self.REACTED.append(locals())
 
 
-jids = {123: "juliet", 111: "firstwitch", 222: "secondwitch"}
+jids = {123: "juliet", 111: "firstwitch", 222: "secondwitch", 333: "not-in-roster"}
 legacy = {v: k for k, v in jids.items()}
 
 
@@ -1640,6 +1642,46 @@ class TestMuc(SlidgeTest):
             </message>
             """
         )
+
+    def test_participant_avatar(self):
+        self.test_join_group()
+        v = b64encode(avatar_path.read_bytes()).decode()
+        with tempfile.TemporaryDirectory() as d:
+            avatar_cache.dir = Path(d)
+            session = self.get_romeo_session()
+            self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+            muc = self.get_private_muc()
+            # self.xmpp.loop.run_until_complete(muc.fill_participants())
+            muc._LegacyMUC__participants_filled = True
+            contact = self.xmpp.loop.run_until_complete(
+                session.contacts.by_legacy_id(333)
+            )
+            contact.avatar = avatar_path
+            self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
+            self.recv(
+                f"""
+                <iq from="romeo@montague.lit/gajim"
+                    to="{muc.jid}/not-in-roster"
+                    type="get" xml:lang="en">
+                  <vCard xmlns="vcard-temp" />
+                </iq>
+                """
+            )
+            self.send(
+                f"""
+               <iq xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/not-in-roster" to="romeo@montague.lit/gajim" type="result" xml:lang="en" id="1">
+                
+                                 
+                <vCard xmlns="vcard-temp">
+                    <PHOTO>
+                        <BINVAL>{v}</BINVAL>
+                        <TYPE>image/png</TYPE>
+                    </PHOTO>
+                </vCard>
+               </iq>
+                """,
+                use_values=False
+            )
 
 
 avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

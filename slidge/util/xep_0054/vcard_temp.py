@@ -43,11 +43,6 @@ class XEP_0054(BasePlugin):
 
         self._vcard_cache = {}
 
-        self.xmpp.register_handler(
-                CoroutineCallback('VCardTemp',
-                    StanzaPath('iq/vcard_temp'),
-                    self._handle_get_vcard))
-
     def plugin_end(self):
         self.xmpp.remove_handler('VCardTemp')
         self.xmpp['xep_0030'].del_feature(feature='vcard-temp')
@@ -128,31 +123,13 @@ class XEP_0054(BasePlugin):
         iq.append(vcard)
         await iq.send(**iqkwargs)
 
-    async def _handle_get_vcard(self, iq: Iq):
-        if iq['type'] == 'result':
-            await self.api['set_vcard'](jid=iq['from'], args=iq['vcard_temp'])
-            return
-        elif iq['type'] == 'get' and self.xmpp.is_component:
-            vcard = await self.api['get_vcard'](iq['to'].bare, ifrom=iq['from'])
-            if vcard is None:
-                raise XMPPError("item-not-found")
-            elif isinstance(vcard, Iq):
-                await vcard.send()
-            else:
-                iq = iq.reply()
-                iq.append(vcard)
-                iq.send()
-        elif iq['type'] == 'set':
-            raise XMPPError('service-unavailable')
-
-    # =================================================================
-
     def _set_vcard(self, jid, node, ifrom, vcard):
         self._vcard_cache[jid.bare] = vcard
 
-    def _get_vcard(self, jid, node, ifrom, vcard):
-        v = self._vcard_cache.get(jid.bare, None)
-        if v is None:
+    def _get_vcard(self, jid: JID, node, ifrom, vcard):
+        log.debug("Requested vcard of %s", jid)
+        if jid.resource:
+            # muc participants
             avatar = self.xmpp.pubsub.get_avatar(jid)
             if avatar is None:
                 return
@@ -160,7 +137,10 @@ class XEP_0054(BasePlugin):
             v = self.xmpp.plugin["xep_0054"].make_vcard()
             v["PHOTO"]["BINVAL"] = data["data"]
             v["PHOTO"]["TYPE"] = "image/png"
-        return v
+            return v
+        else:
+            # muc room
+            return self._vcard_cache.get(jid.bare, None)
 
     def _del_vcard(self, jid, node, ifrom, vcard):
         if jid.bare in self._vcard_cache:

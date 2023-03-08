@@ -101,8 +101,11 @@ class LegacyMUC(
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
         self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
+
         self._avatar: Optional[AvatarType] = None
+        self._avatar_bytes: Optional[bytes] = None
         self._avatar_hash: Optional[str] = None
+        self._avatar_type: Optional[str] = None
 
         self.__participants_filled = False
         self.__history_filled = False
@@ -191,14 +194,25 @@ class LegacyMUC(
             with io.BytesIO() as f:
                 img.save(f, format="PNG")
                 b = f.getvalue()
-
-        vcard = self.xmpp.plugin["xep_0054"].make_vcard()
-        vcard["PHOTO"]["BINVAL"] = b
-        vcard["PHOTO"]["TYPE"] = "image/" + img.format.lower()
-        await self.xmpp.plugin["xep_0054"].api["set_vcard"](self.jid, None, None, vcard)
         self._avatar = a
+        self._avatar_bytes = b
+        self._avatar_type = "image/" + img.format.lower()
         self._avatar_hash = hashlib.sha1(b).hexdigest()
         self._send_room_presence()
+
+    def __get_vcard(self):
+        if not self._avatar_bytes:
+            raise XMPPError("item-not-found")
+        vcard = self.xmpp.plugin["xep_0054"].make_vcard()
+        vcard["PHOTO"]["BINVAL"] = self._avatar_bytes
+        vcard["PHOTO"]["TYPE"] = self._avatar_type
+        return vcard
+
+    async def send_avatar(self, iq: Iq):
+        vcard = self.__get_vcard()
+        r = iq.reply()
+        r.append(vcard)
+        r.send()
 
     @property
     def name(self):
@@ -479,9 +493,13 @@ class LegacyMUC(
             if p.contact:
                 self._participants_by_contacts[p.contact] = p
 
-    async def get_participant(self, nickname: str) -> "LegacyParticipantType":
+    async def get_participant(
+        self, nickname: str, raise_if_not_found=False
+    ) -> "LegacyParticipantType":
         p = self._participants_by_nicknames.get(nickname)
         if p is None:
+            if raise_if_not_found:
+                raise XMPPError("item-not-found")
             p = self.Participant(self, nickname)
             self.__store_participant(p)
         return p
