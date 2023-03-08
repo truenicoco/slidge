@@ -1,10 +1,16 @@
 import asyncio
 import functools
+import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib
+from aiotdlib import PendingRequest
 from aiotdlib import api as tgapi
+from aiotdlib.api import BaseObject
+from aiotdlib.client import RequestResult
+
+from slidge import XMPPError
 
 from . import config
 from .util import get_best_file, get_file_name
@@ -60,6 +66,20 @@ class TelegramClient(aiotdlib.Client):
         self._auth_get_last_name = functools.partial(input_, "Enter last name:")
 
         self.add_event_handler(self.dispatch_update, tgapi.API.Types.ANY)
+
+    async def request(
+        self,
+        query: BaseObject,
+        *,
+        request_id: Optional[str] = None,
+        request_timeout=60,
+    ) -> Optional[RequestResult]:
+        try:
+            return await super().request(
+                query, request_id=request_id, request_timeout=request_timeout
+            )
+        except asyncio.TimeoutError:
+            raise XMPPError("remote-server-timeout", "Telegram did not respond in time")
 
     async def dispatch_update(self, _self, update: tgapi.Update):
         try:
