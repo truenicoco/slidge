@@ -74,9 +74,7 @@ class Contact(AvailableEmojisMixin, LegacyContact[int], TelegramToXMPPMixin):
 
     async def update_info(self, user: Optional[tgapi.User] = None):
         if user is None:
-            user = await self.session.tg.api.get_user(
-                self.legacy_id, request_timeout=60
-            )
+            user = await self.session.tg.get_user(self.legacy_id)
         if username := user.username:
             name = username
         else:

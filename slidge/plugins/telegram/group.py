@@ -180,7 +180,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
         if user_id == await self.session.tg.get_my_id():
             return await self.get_user_participant()
         return await self.participant_by_tg_user(
-            await self.session.tg.api.get_user(user_id)
+            await self.session.tg.get_user(user_id)
         )
 
     async def get_tg_chat(self):
@@ -245,7 +245,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
     async def participant_by_sender_id(self, sender_id: tgapi.MessageSender):
         if isinstance(sender_id, tgapi.MessageSenderUser):
             return await self.participant_by_tg_user(
-                await self.session.tg.api.get_user(sender_id.user_id)
+                await self.session.tg.get_user(sender_id.user_id)
             )
         else:
             return self.get_system_participant()

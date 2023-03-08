@@ -167,9 +167,7 @@ class TelegramClient(aiotdlib.Client):
             ] = await self.contacts.by_legacy_id(chat_id)
         else:
             muc: MUC = await self.bookmarks.by_legacy_id(chat_id)
-            composer = await muc.participant_by_tg_user(
-                await self.api.get_user(user_id)
-            )
+            composer = await muc.participant_by_tg_user(await self.get_user(user_id))
 
         composer.composing()
 
@@ -231,7 +229,7 @@ class TelegramClient(aiotdlib.Client):
         else:
             msg = await self.api.get_message(chat_id, corrected_msg_id)
             participant = await muc.participant_by_tg_user(
-                await self.api.get_user(msg.sender_id.user_id)
+                await self.get_user(msg.sender_id.user_id)
             )
         participant.correct(action.message_id, new.text.text)
 
