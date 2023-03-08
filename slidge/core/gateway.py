@@ -22,8 +22,10 @@ from slixmpp import (
 )
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
+from slixmpp.xmlstream import StanzaBase
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
+from .. import LegacyContact
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, RosterBackend, user_store
 from ..util.error import XMPPError
@@ -554,6 +556,50 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 self.__handle_get_vcard_temp,  # type:ignore
             )
         )
+
+        self.del_filter("out", self.plugin["xep_0115"]._filter_add_caps)
+        self.add_filter("out", self._filter_add_caps)  # type:ignore
+
+    async def _filter_add_caps(self, stanza: StanzaBase):
+        # we rolled our own "add caps on presences" filter because
+        # there is too much magic happening in slixmpp
+        # anyway, we probably want to roll our own "dynamic disco"/caps
+        # module in the long run, so it's a step in this direction
+        if not isinstance(stanza, Presence):
+            return stanza
+
+        if stanza["type"] not in ("available", "chat", "away", "dnd", "xa"):
+            return stanza
+
+        pfrom = stanza.get_from()
+
+        caps = self.plugin["xep_0115"]
+
+        if pfrom != self.xmpp.boundjid.bare:
+            try:
+                session = self.get_session_from_jid(stanza.get_to())
+            except XMPPError:
+                log.warning("not adding caps 1")
+                return stanza
+
+            if not session.logged:
+                log.warning("not adding caps 2")
+                return stanza
+
+            entity = await session.get_contact_or_group_or_participant(pfrom)
+            if not isinstance(entity, LegacyContact):
+                return stanza
+            ver = await entity.get_caps_ver()
+        else:
+            ver = await caps.get_verstring(pfrom)
+
+        log.debug("Ver: %s", ver)
+
+        if ver:
+            stanza["caps"]["node"] = caps.caps_node
+            stanza["caps"]["hash"] = caps.hash
+            stanza["caps"]["ver"] = ver
+        return stanza
 
     async def __handle_get_vcard_temp(self, iq: Iq):
         if iq["type"] != "get":

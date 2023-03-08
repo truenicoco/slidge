@@ -59,7 +59,6 @@ class LegacyRoster(
             if legacy_id in self._contacts_by_legacy_id:
                 self.log.debug("Already updated %s", c)
                 return c
-            await c.update_caps()
             await c.update_info()
             self._contacts_by_legacy_id[legacy_id] = c
             self._contacts_by_bare_jid[c.jid.bare] = c

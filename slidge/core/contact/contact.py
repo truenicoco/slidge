@@ -83,6 +83,7 @@ class LegacyContact(
         :param jid_username: User part of this contact's 'puppet' JID.
             NB: case-insensitive, and some special characters are not allowed
         """
+        super().__init__()
         self.session = session
         self.user = session.user
         self.legacy_id = legacy_id

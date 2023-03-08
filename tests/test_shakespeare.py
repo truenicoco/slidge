@@ -659,7 +659,6 @@ class TestAimShakespeareBase(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.REACTIONS_SINGLE_EMOJI = True
-        self.xmpp.loop.run_until_complete(juliet.update_caps())
         self.recv(
             f"""
             <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}/slidge" id="123">
@@ -695,7 +694,6 @@ class TestAimShakespeareBase(SlidgeTest):
             """,
         )
         juliet.REACTIONS_SINGLE_EMOJI = False
-        self.xmpp.loop.run_until_complete(juliet.update_caps())
 
     def test_non_existing_contact(self):
         self.recv(
@@ -903,6 +901,25 @@ class TestContact(SlidgeTest):
                    node="http://slixmpp.com/ver/1.8.3"
                    hash="sha-1"
                    ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
+                <priority>0</priority>
+            </presence>
+            """
+        )
+
+    def test_caps_extended(self):
+        juliet = self.get_juliet()
+        juliet.REACTIONS_SINGLE_EMOJI = True
+        juliet.CORRECTION = False
+        juliet.reset_caps_cache()
+        juliet.added_to_roster = True
+        juliet.online()
+        self.send(
+            """
+            <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
+                <c xmlns="http://jabber.org/protocol/caps"
+                   node="http://slixmpp.com/ver/1.8.3"
+                   hash="sha-1"
+                   ver="g+W+C4Is6LMMAXwPpjeg2QE1p90="/>
                 <priority>0</priority>
             </presence>
             """

@@ -1,4 +1,3 @@
-import functools
 from typing import Optional
 
 from slixmpp.plugins.xep_0004 import Form
@@ -13,6 +12,9 @@ class BaseDiscoMixin(Base):
     DISCO_CATEGORY: str = NotImplemented
     DISCO_NAME: str = NotImplemented
     DISCO_LANG = None
+
+    def __init__(self):
+        self.__caps_cache: Optional[str] = None
 
     def features(self):
         return []
@@ -34,6 +36,18 @@ class BaseDiscoMixin(Base):
             for form in forms:
                 info.append(form)
         return info
+
+    async def get_caps_ver(self):
+        if self.__caps_cache:
+            return self.__caps_cache
+        info = await self.get_disco_info()
+        caps = self.xmpp.plugin["xep_0115"]
+        ver = caps.generate_verstring(info, caps.hash)
+        self.__caps_cache = ver
+        return ver
+
+    def reset_caps_cache(self):
+        self.__caps_cache = None
 
 
 class ChatterDiscoMixin(BaseDiscoMixin):
@@ -82,23 +96,3 @@ class ChatterDiscoMixin(BaseDiscoMixin):
             return
 
         return [e]
-
-    async def update_caps(self):
-        jid = self.jid
-        xmpp = self.xmpp
-
-        add_feature = functools.partial(xmpp["xep_0030"].add_feature, jid=jid)
-        for f in self.features():
-            await add_feature(f)
-        extended = await self.extended_features() or []
-        for e in extended:
-            await xmpp["xep_0030"].set_extended_info(jid=jid, data=e)
-
-        await xmpp.plugin["xep_0030"].add_identity(
-            jid=self.jid,
-            category=self.DISCO_CATEGORY,
-            itype=self.DISCO_TYPE,
-            name=self.DISCO_NAME,
-            lang=self.DISCO_LANG,
-        )
-        await xmpp["xep_0115"].update_caps(jid=jid)

@@ -32,10 +32,8 @@ class Disco:
     async def get_info(
         self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
     ):
-        base = self.xmpp.plugin["xep_0030"].static.get_info(jid, node, ifrom, data)
-
         if ifrom == self.xmpp.boundjid.bare or jid in (self.xmpp.boundjid.bare, None):
-            return base
+            return self.xmpp.plugin["xep_0030"].static.get_info(jid, node, ifrom, data)
 
         if ifrom is None:
             raise XMPPError("subscription-required")
@@ -44,6 +42,10 @@ class Disco:
         if user is None:
             raise XMPPError("registration-required")
         session = self.xmpp.get_session_from_user(user)
+
+        if not session.logged:
+            raise XMPPError("recipient-unavailable", "You are not logged (yet?)")
+
         log.debug("Looking for entity: %s", jid)
 
         assert jid is not None

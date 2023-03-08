@@ -36,6 +36,7 @@ class LegacyParticipant(
         is_user=False,
         is_system=False,
     ):
+        super().__init__()
         self.muc = muc
         self.session = session = muc.session
         self.user = session.user
