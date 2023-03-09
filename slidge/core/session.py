@@ -816,7 +816,12 @@ class BaseSession(
             except XMPPError:
                 return
             if nick := jid.resource:
-                return await muc.get_participant(nick)
+                try:
+                    return await muc.get_participant(
+                        nick, raise_if_not_found=True, fill_first=True
+                    )
+                except XMPPError:
+                    return None
             return muc
 
 
