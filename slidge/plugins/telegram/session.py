@@ -22,25 +22,15 @@ def catch_chat_not_found(coroutine):
     async def wrapped(self: "Session", *a, **k):
         try:
             return await coroutine(self, *a, **k)
-        except tgapi.BadRequest as e:
-            if e.code == 400:
+        except XMPPError as e:
+            if e.condition == "bad-request":
                 if a:
                     chat = a[0]
                 else:
                     chat = k.get("chat", k.get("c"))
                 if chat is None:
                     raise RuntimeError(a, k)
-                try:
-                    await self.tg.api.create_private_chat(chat.legacy_id, False)
-                except tgapi.BadRequest as e2:
-                    if e.code == 400:
-                        raise XMPPError(condition="item-not-found", text=e2.message)
-                    else:
-                        raise XMPPError(
-                            condition="internal-server-error", text=e2.message
-                        )
-            else:
-                raise XMPPError(condition="internal-server-error", text=e.message)
+                await self.tg.api.create_private_chat(chat.legacy_id, False)
             return await coroutine(self, *a, **k)
 
     return wrapped

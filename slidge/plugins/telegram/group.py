@@ -1,4 +1,3 @@
-import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,13 +35,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 "Do not be like edhelas, do not attempt to join groups you had joined "
                 "through spectrum. ",
             )
-        try:
-            info = await self.session.tg.get_chat_info(group_id)
-        except tgapi.BadRequest as e:
-            raise XMPPError(
-                "bad-request",
-                f"Not a valid telegram group ID: {group_id} ({e.message})",
-            )
+        info = await self.session.tg.get_chat_info(group_id)
         if isinstance(info, (tgapi.User, tgapi.UserFullInfo, tgapi.SecretChat)):
             raise XMPPError(
                 "bad-request", f"This is not a telegram group, but a {type(info)}"
@@ -101,7 +94,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
             try:
                 msg = await self.session.tg.api.get_chat_pinned_message(self.legacy_id)
                 self.log.debug("Pinned message: %s", type(msg.content))
-            except tgapi.NotFound:
+            except XMPPError:
                 self.log.debug("Pinned message not found?")
                 return
         content = msg.content

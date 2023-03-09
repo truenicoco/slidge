@@ -51,18 +51,15 @@ class AvailableEmojisMixin:
         if legacy_msg_id is None:
             try:
                 chat = await self.session.tg.get_chat(self.chat_id)
-            except tgapi.BadRequest as e:
+            except XMPPError as e:
                 self.log.debug(f"Could not get the available emojis: %s", e)
                 return
             emojis = set(chat.available_reactions)
             return emojis
 
-        try:
-            available = await self.session.tg.api.get_message_available_reactions(
-                chat_id=self.chat_id, message_id=legacy_msg_id
-            )
-        except tgapi.BadRequest as e:
-            raise XMPPError("bad-request", str(e))
+        available = await self.session.tg.api.get_message_available_reactions(
+            chat_id=self.chat_id, message_id=legacy_msg_id
+        )
         # TODO: figure out how we can actually determine if the user can use
         #       premium emojis
         # features = await self.session.tg.api.get_premium_features(
@@ -96,7 +93,7 @@ class TelegramToXMPPMixin:
         # it's quite ugly, but seems to work...
         try:
             reply_to_msg = await self.session.tg.api.get_message(self.chat_id, reply_to)
-        except tgapi.NotFound:
+        except XMPPError:
             kwargs["reply_to_msg_id"] = reply_to
             kwargs["reply_to_fallback"] = "[deleted message]"
             kwargs["reply_to_author"] = None
@@ -225,9 +222,9 @@ class TelegramToXMPPMixin:
             )
         try:
             best_file_downloaded: tgapi.File = await self.session.tg.request(query)
-        except (tgapi.BadRequest, asyncio.TimeoutError) as e:
+        except XMPPError as e:
             return self.send_text(
-                f"/me tried to send an attachment but something went wrong: {e}",
+                f"/me tried to send an attachment but something went wrong: {e.text}",
                 **kwargs,
             )
         await self.send_file(

@@ -1,11 +1,9 @@
 import asyncio
 import functools
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib
-from aiotdlib import PendingRequest
 from aiotdlib import api as tgapi
 from aiotdlib.api import BaseObject
 from aiotdlib.client import RequestResult
@@ -74,12 +72,24 @@ class TelegramClient(aiotdlib.Client):
         request_id: Optional[str] = None,
         request_timeout=60,
     ) -> Optional[RequestResult]:
+        if not self._Client__is_authorized:
+            # during login, aiotdlib relies on basic exceptions for flow control
+            return await super().request(
+                query, request_id=request_id, request_timeout=request_timeout
+            )
+        # after login, we can safely (hopefully) map all these errors to XMPPErrors
         try:
             return await super().request(
                 query, request_id=request_id, request_timeout=request_timeout
             )
         except asyncio.TimeoutError:
             raise XMPPError("remote-server-timeout", "Telegram did not respond in time")
+        except tgapi.BadRequest as e:
+            raise XMPPError("bad-request", e.message)
+        except tgapi.Unauthorized as e:
+            raise XMPPError("not-authorized", e.message)
+        except tgapi.NotFound as e:
+            raise XMPPError("item-not-found", e.message)
 
     async def dispatch_update(self, _self, update: tgapi.Update):
         try:
