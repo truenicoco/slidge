@@ -23,13 +23,13 @@ instant messaging features:
 |            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | Groups[⁹] |
 |------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|-----------|
 | Signal     | N/A          | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ~         |
-| Telegram   | ✅           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ~         |
-| Discord    | ❌           | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       | ~         |
-| Steam      | ✅           | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      | ❌         |
-| Mattermost | ✅           | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       | ❌         |
-| Facebook   | ✅           | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ❌         |
-| Skype      | ✅           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       | ❌         |
-| WhatsApp   | ✅           | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ❌         |
+| Telegram   | ✅            | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ~         |
+| Discord    | ❌            | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       | ~         |
+| Steam      | ✅            | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      | ❌         |
+| Mattermost | ✅            | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       | ❌         |
+| Facebook   | ✅            | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ❌         |
+| Skype      | ~           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       | ❌         |
+| WhatsApp   | ✅            | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ❌         |
 
 
 [¹]: https://xmpp.org/rfcs/rfc6121.html#presence

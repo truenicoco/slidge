@@ -12,7 +12,7 @@ from maufbapi.mqtt.subscription import RealtimeTopic
 from maufbapi.thrift import ThriftObject
 from maufbapi.types import mqtt as mqtt_t
 
-from ... import XMPPError
+from . import config
 from .util import FacebookMessage, is_group_thread
 
 REQUEST_TIMEOUT = 60
@@ -38,7 +38,10 @@ class AndroidMQTT(AndroidMQTTOriginal):
         self.connect_token_hash = connect_token_hash
         self.region_hint_callback = None
         self.connection_unauthorized_callback = None
-        self.enable_web_presence = True  # this is the modified line
+        # this may be what got my (nicoco) account locked out, so it's off
+        # by default. maybe this should be disabled and re-enabled periodically
+        # to better mimick the official client.
+        self.enable_web_presence = config.ENABLE_PRESENCES
         self._opened_thread = None
         self._publish_waiters = {}  # type:ignore
         self._response_waiters = {}  # type:ignore
