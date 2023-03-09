@@ -194,44 +194,19 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
             return []
 
         messages = [chat.last_message]
-        i = 0
-        last_message_id = m.id
-        while True:
-            try:
-                fetched = (
-                    await tg.api.get_chat_history(
-                        chat_id=self.legacy_id,
-                        from_message_id=last_message_id,
-                        offset=0,
-                        limit=10,
-                        only_local=False,
-                    )
-                ).messages
-            except asyncio.TimeoutError:
-                self.log.warning(
-                    "Timeout while trying to fetch chat history for %s. "
-                    "We could only fetch %s message",
-                    self,
-                    len(messages),
-                )
-                break
-            if len(fetched) == 0:
-                break
-            messages.extend(fetched)
-            i += len(fetched)
-            if i > n:
-                break
-
-            last_message_id = fetched[-1].id
-
-        messages = messages[::-1]
-        if before is not None:
-            try:
-                i = [m.id for m in messages].index(before)
-            except ValueError:
-                self.log.warning("Did not find oldest message in archive")
-            else:
-                messages = messages[:i]
+        try:
+            async for m in tg.iter_chat_history(
+                self.legacy_id,
+                limit=n,
+                from_message_id=before or 0,  # 0="None" for tdlib in this context
+            ):
+                messages.append(m)
+        except XMPPError as e:
+            self.log.warning(
+                "Problem fetching history: %s, we could only fetch %s message(s).",
+                e.text,
+                len(messages),
+            )
 
         return messages
 
