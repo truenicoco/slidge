@@ -72,7 +72,7 @@ def test_get_parser(monkeypatch):
     assert args.some_bool
 
 
-def test_bool(monkeypatch, tmp_path):
+def test_bool(tmpdir, tmp_path):
     class Config:
         SOME_BOOL = False
         SOME_BOOL__DOC = "a bool"
@@ -82,11 +82,45 @@ def test_bool(monkeypatch, tmp_path):
     configurator.set_conf([])
     assert not Config.SOME_BOOL
 
-    configurator.set_conf(["--some-bool", "true"])
+    configurator.set_conf(["--some-bool"])
     assert Config.SOME_BOOL
 
     configurator.set_conf(["--some-bool=true"])
     assert Config.SOME_BOOL
+
+    configurator.set_conf(["--some-bool=false"])
+    assert not Config.SOME_BOOL
+
+    # for the plugin-specific conf files, we use the rest
+    configurator.parser.add_argument("-c", is_config_file=True)
+
+    class Config2:
+        SOME_OTHER_BOOL = False
+        SOME_OTHER_BOOL__DOC = "a bool"
+
+    configurator2 = ConfigModule(Config2)
+    conf_file = tmpdir / "conf.conf"
+
+    # false
+    conf_file.write_text("some-other-bool=false", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert rest
+    configurator2.set_conf(rest)
+    assert not Config2.SOME_OTHER_BOOL
+
+    # true
+    conf_file.write_text("some-other-bool=true", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert rest
+    configurator2.set_conf(rest)
+    assert Config2.SOME_OTHER_BOOL
+
+    # true
+    conf_file.write_text("", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert not rest
+    configurator2.set_conf(rest)
+    assert not Config2.SOME_OTHER_BOOL
 
 
 def test_slidge_conf():

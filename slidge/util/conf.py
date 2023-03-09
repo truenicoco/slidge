@@ -132,7 +132,16 @@ class ConfigModule:
                         _argv_to_option_name(real_name)
                     )
                     if opt and opt.type is bool:
-                        a = real_name
+                        if opt.default:
+                            if _value in _TRUEISH or not _value:
+                                continue
+                            else:
+                                a = real_name
+                        else:
+                            if _value in _TRUEISH:
+                                a = real_name
+                            else:
+                                continue
                 else:
                     upper = _argv_to_option_name(a)
                     opt = options_long.get(upper)
@@ -179,6 +188,9 @@ def _is_optional(t):
 
 def _argv_to_option_name(arg: str):
     return arg.upper().removeprefix("--").replace("-", "_")
+
+
+_TRUEISH = {"true", "True", "1", "on", "enabled"}
 
 
 log = logging.getLogger(__name__)
