@@ -170,7 +170,8 @@ class LegacyParticipant(
         """
         Called when the user joins a MUC, as a mechanism
         to indicate to the joining XMPP client the list of "participants".
-        (done internally by slidge)
+
+        Can be called this to trigger a "participant has joined the group" event.
 
         :param full_jid: Set this to only send to a specific user XMPP resource.
         :param status: a presence message, eg "having a bug, watching the game"

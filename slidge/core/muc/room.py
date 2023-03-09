@@ -482,8 +482,15 @@ class LegacyMUC(
         self._make_subject_message(user_full_jid).send()
         self.user_resources.add(client_resource)
 
-    async def get_user_participant(self) -> "LegacyParticipantType":
-        return self.Participant(self, self.user_nick, is_user=True)
+    async def get_user_participant(self, **kwargs) -> "LegacyParticipantType":
+        """
+        Get the participant representing the gateway user
+
+        :param kwargs: additional parameters for the :class:`.Participant`
+            construction (optional)
+        :return:
+        """
+        return await self.get_participant(self.user_nick, is_user=True, **kwargs)
 
     def __store_participant(self, p: "LegacyParticipantType"):
         # we don't want to update the participant list before
@@ -494,34 +501,82 @@ class LegacyMUC(
                 self._participants_by_contacts[p.contact] = p
 
     async def get_participant(
-        self, nickname: str, raise_if_not_found=False
+        self, nickname: str, raise_if_not_found=False, fill_first=False, **kwargs
     ) -> "LegacyParticipantType":
+        """
+        Get a participant by their nickname.
+
+        In non-anonymous groups, you probably want to use
+        :meth:`.LegacyMUC.get_participant_by_contact` instead.
+
+        :param nickname: Nickname of the participant (used as resource part in the MUC)
+        :param raise_if_not_found: Raise XMPPError("item-not-found") if they are not
+            in the participant list (internal use by slidge, plugins should not
+            need that)
+        :param fill_first: Ensure :meth:`.LegacyMUC.fill_participants()` has been called first
+             (internal use by slidge, plugins should not need that)
+        :param kwargs: additional parameters for the :class:`.Participant`
+            construction (optional)
+        :return:
+        """
+        if fill_first:
+            await self.__fill_participants()
         p = self._participants_by_nicknames.get(nickname)
         if p is None:
             if raise_if_not_found:
                 raise XMPPError("item-not-found")
-            p = self.Participant(self, nickname)
+            p = self.Participant(self, nickname, **kwargs)
             self.__store_participant(p)
         return p
 
     def get_system_participant(self):
+        """
+        Get a pseudo-participant, representing the room itself
+
+        Can be useful for events that cannot be mapped to a participant,
+        e.g. anonymous moderation events, or announces from the legacy
+        service
+        :return:
+        """
         return self.Participant(self, is_system=True)
 
     async def get_participant_by_contact(
-        self, c: "LegacyContact"
+        self, c: "LegacyContact", **kwargs
     ) -> "LegacyParticipantType":
+        """
+        Get a non-anonymous participant.
+
+        This is what should be used in non-anonymous groups ideally, to ensure
+        that the Contact jid is associated to this participant
+
+        :param c: The :class:`.LegacyContact` instance corresponding to this contact
+        :param kwargs: additional parameters for the :class:`.Participant`
+            construction (optional)
+        :return:
+        """
         p = self._participants_by_contacts.get(c)
         if p is None:
-            p = self.Participant(self, c.name)
+            p = self.Participant(self, c.name, **kwargs)
             p.contact = c
             self.__store_participant(p)
         return p
 
     async def get_participants(self):
+        """
+        Get all known participants of the group, ensure :meth:`.LegacyMUC.fill_participants`
+        has been awaited once before. Plugins should not use that, internal
+        slidge use only.
+        :return:
+        """
         await self.__fill_participants()
         return self._participants_by_nicknames.values()
 
     def remove_participant(self, p: "LegacyParticipantType"):
+        """
+        This ho
+        :param p:
+        :return:
+        """
         if p.contact is not None:
             del self._participants_by_contacts[p.contact]
         del self._participants_by_nicknames[p.nickname]  # type:ignore
@@ -529,9 +584,8 @@ class LegacyMUC(
 
     async def fill_participants(self):
         """
-        In here, call self.get_participant() or self.get_participant_by_contact()
-        to make an initial list of participant.
-        This should not include the participant of the user, only other participants.
+        In here, call self.get_participant(), self.get_participant_by_contact(),
+        of self.get_user_participant() to make an initial list of participants.
         """
         pass
 
@@ -544,7 +598,7 @@ class LegacyMUC(
         since: Optional[datetime] = None,
     ):
         """
-        Old-style history join
+        Old-style history join (internal slidge use)
 
         :param full_jid:
         :param maxchars:
