@@ -163,6 +163,7 @@ class MUC(LegacyMUC):
 
         second.affiliation = "admin"
         second.role = "moderator"
+        await self.get_user_participant()
 
     async def update_info(self):
         if self.jid.local == "room-private":

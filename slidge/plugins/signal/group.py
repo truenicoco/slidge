@@ -48,6 +48,7 @@ class MUC(LegacyMUC[str, int, Participant]):
         group = await self.get_signal_group()
         for m in group.members:
             if m.uuid == await self.session.user_uuid:
+                await self.get_user_participant()
                 continue
             contact = await self.session.contacts.by_uuid(m.uuid)
             await self.get_participant_by_contact(contact)

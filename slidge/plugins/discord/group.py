@@ -70,6 +70,7 @@ class MUC(LegacyMUC[int, int, Participant]):
         chan = await self.get_discord_channel()
         for m in chan.members[:max_]:
             if m.id == self.session.discord.user.id:  # type:ignore
+                await self.get_user_participant()
                 continue
             co = await self.session.contacts.by_discord_user(m)
             await self.get_participant_by_contact(co)

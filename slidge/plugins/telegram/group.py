@@ -149,11 +149,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
             if not isinstance(sender, tgapi.MessageSenderUser):
                 self.log.debug("Ignoring non-user sender")  # Does this happen?
                 continue
-            if sender.user_id == await self.session.tg.get_my_id():
-                continue
-            await self.participant_by_tg_user(
-                await self.session.tg.get_user(sender.user_id)
-            )
+            await self.participant_by_sender_id(sender)
 
     async def send_text(self, text: str) -> int:
         result = await self.session.tg.send_text(self.legacy_id, text)

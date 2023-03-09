@@ -157,9 +157,6 @@ class LegacyMUC(
             if not participant.affiliation == affiliation:
                 continue
             reply["mucadmin_query"].append(participant.mucadmin_item())
-        if affiliation == "member":
-            participant = await self.get_user_participant()
-            reply["mucadmin_query"].append(participant.mucadmin_item())
         reply.send()
 
     @property
@@ -449,6 +446,10 @@ class LegacyMUC(
             self._send_room_presence(user_full_jid)
 
         for participant in self._participants_by_nicknames.values():
+            if participant.is_user:  # type:ignore
+                continue
+            if participant.is_system:  # type:ignore
+                continue
             participant.send_initial_presence(full_jid=user_full_jid)
 
         user_nick = self.user_nick_non_none
