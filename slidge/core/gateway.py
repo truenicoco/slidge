@@ -582,6 +582,9 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 log.debug("not adding caps 1")
                 return stanza
 
+            if session is None:
+                return stanza
+
             if not session.logged:
                 log.debug("not adding caps 2")
                 return stanza
