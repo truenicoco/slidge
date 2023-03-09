@@ -579,11 +579,11 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             try:
                 session = self.get_session_from_jid(stanza.get_to())
             except XMPPError:
-                log.warning("not adding caps 1")
+                log.debug("not adding caps 1")
                 return stanza
 
             if not session.logged:
-                log.warning("not adding caps 2")
+                log.debug("not adding caps 2")
                 return stanza
 
             entity = await session.get_contact_or_group_or_participant(pfrom)
