@@ -111,7 +111,7 @@ class LegacyMUC(
         self.__history_filled = False
 
     def __repr__(self):
-        return f"<MUC '{self.legacy_id}'/'{self.jid}'>"
+        return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
 
     @property
     def user_nick(self):
