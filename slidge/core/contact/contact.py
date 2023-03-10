@@ -65,6 +65,7 @@ class LegacyContact(
     """
 
     mtype = "chat"
+    _can_send_carbon = True
     is_group = False
 
     _ONLY_SEND_PRESENCE_CHANGES = True

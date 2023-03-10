@@ -27,6 +27,7 @@ from .base import BaseSender
 
 class MessageMaker(BaseSender):
     mtype: MessageTypes = NotImplemented
+    _can_send_carbon: bool = NotImplemented
     STRIP_SHORT_DELAY = False
     USE_STANZA_ID = False
 
@@ -46,7 +47,7 @@ class MessageMaker(BaseSender):
         mfrom = kwargs.pop("mfrom", self.jid)
         mto = kwargs.pop("mto", None)
         thread = kwargs.pop("thread", None)
-        if carbon:
+        if carbon and self._can_send_carbon:
             # the msg needs to have jabber:client as xmlns, so
             # we don't want to associate with the XML stream
             msg_cls = Message

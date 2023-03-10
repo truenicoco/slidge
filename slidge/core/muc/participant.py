@@ -26,6 +26,7 @@ class LegacyParticipant(
     metaclass=SubclassableOnce,
 ):
     mtype: MessageTypes = "groupchat"
+    _can_send_carbon = False
     USE_STANZA_ID = True
     STRIP_SHORT_DELAY = False
 

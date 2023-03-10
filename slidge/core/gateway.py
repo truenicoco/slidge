@@ -158,6 +158,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
     jid: JID  # type: ignore
 
+    _can_send_carbon = False
+
     def __init__(self):
         self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
         super().__init__(
