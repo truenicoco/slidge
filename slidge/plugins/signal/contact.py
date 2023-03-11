@@ -84,7 +84,8 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
             nick = nick.replace("\u0000", " ")
             self.name = nick
         if profile.avatar is not None:
-            self.avatar = Path(profile.avatar)
+            path = Path(profile.avatar)
+            await self.set_avatar(path, path.name)
 
         address = await (await self.session.signal).resolve_address(
             account=self.session.phone,

@@ -87,7 +87,7 @@ class Contact(LegacyContact[str]):
             self.name = last
 
         if contact.avatar is not None:
-            self.avatar = contact.avatar
+            await self.avatar(contact.avatar)
 
         self.set_vcard(
             given=first,

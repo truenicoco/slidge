@@ -30,8 +30,8 @@ class Contact(LegacyContact[int], Mixin):  # type: ignore
     async def update_info(self):
         u = self.discord_user
         self.name = u.display_name
-        if u.avatar:
-            self.avatar = str(u.avatar)
+        if a := u.avatar:
+            await self.set_avatar(a.url, a.key)
 
         # massive rate limiting if trying to fetch profiles of non friends
         if u.is_friend():

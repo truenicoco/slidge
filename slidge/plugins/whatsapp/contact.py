@@ -46,7 +46,7 @@ class Roster(LegacyRoster[str, Contact]):
         contact = await self.by_legacy_id(data.JID)
         contact.name = data.Name
         if data.AvatarURL != "":
-            contact.avatar = data.AvatarURL
+            await contact.set_avatar(data.AvatarURL)
         await contact.add_to_roster()
 
     async def legacy_id_to_jid_username(self, legacy_id: str) -> str:

@@ -220,11 +220,40 @@ class LegacyContact(
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
-        self.xmpp.loop.create_task(
-            self.xmpp.pubsub.set_avatar(
-                jid=self.jid.bare, avatar=a, restrict_to=self.user.jid.bare
-            )
+        """
+        Set the avatar. self.set_avatar() should be preferred because you can provide
+        a unique ID for the avatar, to help caching.
+        """
+        self.xmpp.loop.create_task(self.set_avatar(a))
+
+    async def set_avatar(
+        self,
+        a: Optional[AvatarType],
+        avatar_unique_id: Optional[Union[int, str]] = None,
+        blocking=False,
+    ):
+        """
+        Set the avatar for this contact
+
+        :param a: Any avatar format supported by slidge
+        :param avatar_unique_id: If possible, provide a unique ID to cache the avatar.
+            If it is not provided, the SHA-1 of the avatar will be used,
+            unless it is an HTTP url. In this case, the url will be used,
+            along with etag or last modified HTTP headers, to avoid fetching
+            uselessly. Beware of legacy plugin where URLs are not stable.
+        :param blocking: if True, will await setting the avatar, if False, launch in a task
+        :return:
+        """
+        awaitable = self.xmpp.pubsub.set_avatar(
+            jid=self.jid.bare,
+            avatar=a,
+            unique_id=avatar_unique_id,
+            restrict_to=self.user.jid.bare,
         )
+        if blocking:
+            await awaitable
+        else:
+            self.xmpp.loop.create_task(awaitable)
         # if it's bytes, we don't want to cache it in RAM, so just a bool to know it has been set
         self._avatar = isinstance(a, bytes) or a
 

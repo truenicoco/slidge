@@ -102,7 +102,7 @@ def configure():
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
 
-    avatar_cache.set_dir(h / "slidge_avatars")
+    avatar_cache.set_dir(h / "slidge_avatars_v2")
 
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 

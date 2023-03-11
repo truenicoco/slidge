@@ -134,7 +134,7 @@ class Contact(LegacyContact[int]):
                 raise XMPPError("item-not-found")
         self.name = user.name
         try:
-            self.avatar = user.get_avatar_url()
+            await self.set_avatar(user.get_avatar_url())
         except TypeError:
             self.session.log.debug("Could not update the avatar of %s", user)
         self.update_status(user.state)

@@ -41,13 +41,17 @@ class AvatarCache:
     def set_dir(self, path: Path):
         self.dir = path
         self.dir.mkdir(exist_ok=True)
-        self._shelf = shelve.open(str(path / "slidge_url_avatars.shelf"))  # type: ignore
+        self._shelf = shelve.open(str(path / "slidge_avatar_cache.shelf"))  # type: ignore
 
     def close(self):
         self._shelf.sync()
         self._shelf.close()
 
-    async def get_avatar(self, url: str):
+    async def get_avatar_from_url_alone(self, url: str):
+        """
+        Used when no avatar unique ID is passed. Store and use http headers
+        to avoid fetching ut
+        """
         cached = self._shelf.get(url)
         headers = {}
         if cached and (self.dir / cached.filename).exists():
@@ -64,18 +68,24 @@ class AvatarCache:
                     log.debug("Using avatar cache")
                     return cached
                 log.debug("Download avatar")
-                return await self._convert_and_store(
+                return self.convert_and_store(
                     Image.open(io.BytesIO(await response.read())), url, response.headers
                 )
 
-    async def _convert_and_store(
-        self, img: Image.Image, url: str, response_headers: CIMultiDictProxy[str]
+    def get(self, unique_id: str):
+        return self._shelf.get(unique_id)
+
+    def convert_and_store(
+        self,
+        img: Image.Image,
+        unique_id: str,
+        response_headers: Optional[CIMultiDictProxy[str]] = None,
     ):
         if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
             img.thumbnail((size, size))
             log.debug("Resampled image to %s", img.size)
 
-        filename = str(uuid.uuid1())
+        filename = str(uuid.uuid1()) + ".png"
         file_path = self.dir / filename
 
         with io.BytesIO() as f:
@@ -92,11 +102,12 @@ class AvatarCache:
             hash=hash_,
             height=img.height,
             width=img.width,
-            etag=response_headers.get("etag"),
-            last_modified=response_headers.get("last-modified"),
             root=self.dir,
         )
-        self._shelf[url] = avatar
+        if response_headers:
+            avatar.etag = response_headers.get("etag")
+            avatar.last_modified = response_headers.get("last-modified")
+        self._shelf[unique_id] = avatar
         self._shelf.sync()
         return avatar
 
