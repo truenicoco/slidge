@@ -2,6 +2,7 @@ import tempfile
 from base64 import b64encode
 from pathlib import Path
 
+import pytest
 from slixmpp.test import SlixTest
 
 from slidge.core.cache import avatar_cache
@@ -101,6 +102,7 @@ class TestPubSubNickname(SlixTest):
         )
 
 
+@pytest.mark.usefixtures("avatar")
 class TestPubSubAvatar(SlixTest):
     def setUp(self):
         self.stream_start(
@@ -114,33 +116,33 @@ class TestPubSubAvatar(SlixTest):
         avatar_cache.dir = Path(self.temp_dir.name)
 
     def advertise_avatar(self):
-        img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
+        # img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
         self.xmpp.loop.run_until_complete(
             self.pubsub.set_avatar(
                 "stan@pubsub.south.park",
-                img,
+                self.avatar_path,
                 "kenny@south.park",
             )
         )
         self.send(
-            """
+            f"""
             <message xmlns="jabber:component:accept"
                 type="headline"
                 from="stan@pubsub.south.park"
                 to="kenny@south.park">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="urn:xmpp:avatar:metadata">
-                  <item id="e6f9170123620949a6821e25ea2861d22b0dff66">
+                  <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
-                      <info id="e6f9170123620949a6821e25ea2861d22b0dff66"
+                      <info id="{self.avatar_sha1}"
                           type="image/png"
-                          bytes="547"
+                          bytes="{len(self.avatar_bytes)}"
                           height="5" width="5" />
             </metadata></item></items></event></message>
             """,
             use_values=False,
         )
-        v = b64encode(img.open("rb").read()).decode()
+        v = b64encode(self.avatar_bytes).decode()
         return v
 
     def test_advertise_avatar(self):
@@ -149,14 +151,14 @@ class TestPubSubAvatar(SlixTest):
     def test_single_avatar_retrieval(self):
         v = self.advertise_avatar()
         self.recv(
-            """
+            f"""
             <iq type='get'
                 from='kenny@south.park'
                 to='stan@pubsub.south.park'
                 id='retrieve1'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
-                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66'/>
+                  <item id='{self.avatar_sha1}'/>
                 </items>
               </pubsub>
             </iq>
@@ -171,7 +173,7 @@ class TestPubSubAvatar(SlixTest):
                 id='retrieve1'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
-                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66'>
+                  <item id='{self.avatar_sha1}'>
                     <data xmlns='urn:xmpp:avatar:data'>
                       {v}
                     </data>
@@ -206,7 +208,7 @@ class TestPubSubAvatar(SlixTest):
                 id='retrieve1'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
-                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66'>
+                  <item id='{self.avatar_sha1}'>
                     <data xmlns='urn:xmpp:avatar:data'>
                       {v}
                     </data>
@@ -251,14 +253,14 @@ class TestPubSubAvatar(SlixTest):
     def test_single_metadata_retrieval(self):
         self.advertise_avatar()
         self.recv(
-            """
+            f"""
             <iq type='get'
                 from='kenny@south.park'
                 to='stan@pubsub.south.park'
                 id='retrieve4'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:metadata'>
-                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66'/>
+                  <item id='{self.avatar_sha1}'/>
                 </items>
               </pubsub>
             </iq>
@@ -273,11 +275,11 @@ class TestPubSubAvatar(SlixTest):
                 id='retrieve4'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node="urn:xmpp:avatar:metadata">
-                  <item id="e6f9170123620949a6821e25ea2861d22b0dff66">
+                  <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
-                      <info id="e6f9170123620949a6821e25ea2861d22b0dff66"
+                      <info id="{self.avatar_sha1}"
                           type="image/png"
-                          bytes="547"
+                          bytes="{len(self.avatar_bytes)}"
                           height="5" width="5" />
                     </metadata>
                   </item>
@@ -310,11 +312,11 @@ class TestPubSubAvatar(SlixTest):
                 id='retrieve4'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node="urn:xmpp:avatar:metadata">
-                  <item id="e6f9170123620949a6821e25ea2861d22b0dff66">
+                  <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
-                      <info id="e6f9170123620949a6821e25ea2861d22b0dff66"
+                      <info id="{self.avatar_sha1}"
                           type="image/png"
-                          bytes="547"
+                          bytes="{len(self.avatar_bytes)}"
                           height="5" width="5" />
                     </metadata>
                   </item>

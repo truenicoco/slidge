@@ -85,7 +85,7 @@ class Contact(AvailableEmojisMixin, LegacyContact[int], TelegramToXMPPMixin):
 
         if photo := user.profile_photo:
             if (local := photo.small.local) and (path := local.path):
-                self.avatar = Path(path)
+                await self.set_avatar(Path(path), photo.id)
             else:
                 try:
                     response = await self.session.tg.api.download_file(
@@ -99,7 +99,7 @@ class Contact(AvailableEmojisMixin, LegacyContact[int], TelegramToXMPPMixin):
                     self.session.log.warning("Could not download avatar of %s", self)
                     self.session.log.exception(e)
                 else:
-                    self.avatar = Path(response.local.path)
+                    await self.set_avatar(Path(response.local.path), photo.id)
 
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives

@@ -24,6 +24,7 @@ import configargparse
 from slidge import BaseGateway
 from slidge.core import config
 from slidge.core.cache import avatar_cache
+from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
 
@@ -102,7 +103,7 @@ def configure():
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
 
-    avatar_cache.set_dir(h / "slidge_avatars")
+    avatar_cache.set_dir(h / "slidge_avatars_v2")
 
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 
@@ -134,6 +135,8 @@ def main():
     else:
         if unknown_argv:
             raise RuntimeError("Some arguments have not been recognized", unknown_argv)
+
+    migrate()
 
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
     gateway.connect()

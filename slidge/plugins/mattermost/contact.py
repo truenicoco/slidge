@@ -128,7 +128,9 @@ class Contact(LegacyContact[str]):
         )
 
         if self._last_mm_picture_update != user.last_picture_update:
-            self.avatar = await self.session.mm_client.get_profile_image(user.id)
+            await self.set_avatar(
+                await self.session.mm_client.get_profile_image(user.id)
+            )
 
         self._last_mm_picture_update = user.last_picture_update
 

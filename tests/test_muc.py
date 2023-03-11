@@ -6,6 +6,7 @@ from base64 import b64encode
 from pathlib import Path
 from typing import Hashable, Optional, Dict, Any
 
+import pytest
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
@@ -211,6 +212,7 @@ class Bookmarks(LegacyBookmarks):
         await self.by_legacy_id("coven")
 
 
+@pytest.mark.usefixtures("avatar")
 class TestMuc(SlidgeTest):
     plugin = globals()
 
@@ -1494,7 +1496,7 @@ class TestMuc(SlidgeTest):
         )
 
     def test_room_avatar(self):
-        v = b64encode(avatar_path.read_bytes()).decode()
+        v = b64encode(self.avatar_path.read_bytes()).decode()
         self.xmpp.loop.run_until_complete(self.get_romeo_session().bookmarks.fill())
         self.recv(
             """
@@ -1557,7 +1559,7 @@ class TestMuc(SlidgeTest):
                 from='coven@aim.shakespeare.lit'
                 to='romeo@montague.lit/gajim'>
                 <x xmlns='vcard-temp:x:update'>
-                    <photo>{hashlib.sha1(avatar_path.read_bytes()).hexdigest()}</photo>
+                    <photo>{self.avatar_original_sha1}</photo>
                   </x>
             </presence>
             """,
@@ -1646,7 +1648,7 @@ class TestMuc(SlidgeTest):
 
     def test_participant_avatar(self):
         self.test_join_group()
-        v = b64encode(avatar_path.read_bytes()).decode()
+        v = b64encode(self.avatar_bytes).decode()
         with tempfile.TemporaryDirectory() as d:
             avatar_cache.dir = Path(d)
             session = self.get_romeo_session()
@@ -1657,7 +1659,7 @@ class TestMuc(SlidgeTest):
             contact = self.xmpp.loop.run_until_complete(
                 session.contacts.by_legacy_id(333)
             )
-            contact.avatar = avatar_path
+            contact.avatar = self.avatar_path
             self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
             self.recv(
                 f"""
@@ -1681,8 +1683,5 @@ class TestMuc(SlidgeTest):
                 </vCard>
                </iq>
                 """,
-                use_values=False
+                use_values=False,
             )
-
-
-avatar_path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

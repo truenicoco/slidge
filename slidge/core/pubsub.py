@@ -2,11 +2,11 @@ import asyncio
 import hashlib
 import io
 import logging
-import uuid
 from copy import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
+import aiohttp
 from PIL import Image, UnidentifiedImageError
 from slixmpp import JID, CoroutineCallback, Iq, Presence, StanzaPath
 from slixmpp.plugins.base import BasePlugin, register_plugin
@@ -20,8 +20,7 @@ from ..util.db import user_store
 from ..util.error import XMPPError
 from ..util.types import AvatarType, PepItemType
 from ..util.xep_0292.stanza import VCard4
-from . import config
-from .cache import avatar_cache
+from .cache import CachedAvatar, avatar_cache
 from .contact import LegacyContact
 
 if TYPE_CHECKING:
@@ -51,62 +50,66 @@ class PepAvatar(PepItem):
         data.set_value(self._avatar_data_path.read_bytes())
         return data
 
-    async def set_avatar(self, avatar: AvatarType):
+    @staticmethod
+    def _sha(b: bytes):
+        return hashlib.sha1(b).hexdigest()
+
+    def _get_weak_unique_id(self, avatar: AvatarType):
         if isinstance(avatar, str):
-            return await self.set_avatar_from_url(avatar)
+            return avatar  # url
         elif isinstance(avatar, bytes):
-            img = Image.open(io.BytesIO(avatar))
+            return self._sha(avatar)
         elif isinstance(avatar, Path):
-            img = Image.open(avatar)
+            return self._sha(avatar.read_bytes())
+
+    @staticmethod
+    async def _get_image(avatar: AvatarType):
+        if isinstance(avatar, str):
+            async with aiohttp.ClientSession() as session:
+                async with session.get(avatar) as response:
+                    return Image.open(io.BytesIO(await response.read()))
+        elif isinstance(avatar, bytes):
+            return Image.open(io.BytesIO(avatar))
+        elif isinstance(avatar, Path):
+            return Image.open(avatar)
         else:
             raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
 
+    async def set_avatar(
+        self, avatar: AvatarType, unique_id: Optional[Union[int, str]] = None
+    ):
+        if not unique_id:
+            if isinstance(avatar, str):
+                await self._set_avatar_from_url_alone(avatar)
+                return
+            unique_id = self._get_weak_unique_id(avatar)
+
+        await self._set_avatar_from_unique_id(avatar, str(unique_id))
+
+    async def _set_avatar_from_unique_id(self, avatar: AvatarType, unique_id: str):
+        cached_avatar = avatar_cache.get(unique_id)
+        if not cached_avatar:
+            img = await self._get_image(avatar)
+            cached_avatar = avatar_cache.convert_and_store(img, unique_id)
+
+        await self._set_avatar_from_cache(cached_avatar)
+
+    async def _set_avatar_from_url_alone(self, url: str):
+        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url)
+        await self._set_avatar_from_cache(cached_avatar)
+
+    async def _set_avatar_from_cache(self, cached_avatar: CachedAvatar):
         metadata = AvatarMetadata()
-
-        resampled = False
-        if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
-            img.thumbnail((size, size))
-            log.debug("Resampled image to %s", img.size)
-            resampled = True
-
-        if not resampled and img.format == "PNG" and isinstance(avatar, bytes):
-            avatar_bytes = avatar
-        elif not resampled and img.format == "PNG" and isinstance(avatar, Path):
-            with avatar.open("rb") as f:
-                avatar_bytes = f.read()
-        else:
-            with io.BytesIO() as f:
-                img.save(f, format="PNG")
-                avatar_bytes = f.getvalue()
-
-        hash_ = hashlib.sha1(avatar_bytes).hexdigest()
-        self.id = hash_
+        self.id = cached_avatar.hash
         metadata.add_info(
-            id=hash_,
+            id=cached_avatar.hash,
             itype="image/png",
-            ibytes=len(avatar_bytes),
-            height=str(img.height),
-            width=str(img.width),
+            ibytes=len(cached_avatar.data),
+            height=str(cached_avatar.height),
+            width=str(cached_avatar.width),
         )
         self.metadata = metadata
-
-        path = (self._cache_dir / str(uuid.uuid4())).with_suffix(".png")
-        path.write_bytes(avatar_bytes)
-        self._avatar_data_path = path
-
-    async def set_avatar_from_url(self, url: str):
-        avatar = await avatar_cache.get_avatar(url)
-        metadata = AvatarMetadata()
-        self.id = avatar.hash
-        metadata.add_info(
-            id=avatar.hash,
-            itype="image/png",
-            ibytes=len(avatar.data),
-            height=str(avatar.height),
-            width=str(avatar.width),
-        )
-        self.metadata = metadata
-        self._avatar_data_path = avatar.path
+        self._avatar_data_path = cached_avatar.path
 
 
 class PepNick(PepItem):
@@ -375,6 +378,7 @@ class PubSubComponent(BasePlugin):
         jid: JidStr,
         avatar: Optional[AvatarType] = None,
         restrict_to: OptJidStr = None,
+        unique_id=None,
     ):
         jid = JID(jid)
         if avatar is None:
@@ -389,7 +393,7 @@ class PubSubComponent(BasePlugin):
             else:
                 pep_avatar = PepAvatar()
             try:
-                await pep_avatar.set_avatar(avatar)
+                await pep_avatar.set_avatar(avatar, unique_id)
             except UnidentifiedImageError as e:
                 log.warning("Failed to set avatar for %s: %r", self, e)
                 return

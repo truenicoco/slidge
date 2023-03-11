@@ -53,7 +53,8 @@ class Contact(LegacyContact[int]):
             )
         self.name = participant.messaging_actor.name
         if self.avatar is None or update_avatar:
-            self.avatar = participant.messaging_actor.profile_pic_large.uri
+            pic = participant.messaging_actor.profile_pic_large
+            self.xmpp.loop.create_task(self.set_avatar(pic.uri))
 
     async def get_thread(self, **kwargs):
         threads = await self.session.api.fetch_thread_info(self.legacy_id, **kwargs)
