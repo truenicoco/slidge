@@ -657,6 +657,7 @@ class BaseSession(
             by XMPP clients
         :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
             1:1 chat, :class:`LegacyParticipant` instance for groups.
+            If `None`, should be interpreted as a self-reply if reply_to_msg_id is not None.
         :param thread:
 
         :return: An ID of some sort that can be used later to ack and mark the message
