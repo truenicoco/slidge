@@ -491,7 +491,9 @@ class LegacyMUC(
             construction (optional)
         :return:
         """
-        return await self.get_participant(self.user_nick, is_user=True, **kwargs)
+        p = await self.get_participant(self.user_nick, is_user=True, **kwargs)
+        self.__store_participant(p)
+        return p
 
     def __store_participant(self, p: "LegacyParticipantType"):
         # we don't want to update the participant list when we're filling history
