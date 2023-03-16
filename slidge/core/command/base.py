@@ -245,6 +245,12 @@ class FormField:
             if value not in self.__acceptable_options():
                 raise XMPPError("not-acceptable", f"Not a valid option: '{value}'")
 
+        elif self.type == "boolean":
+            try:
+                return bool(int(value))
+            except ValueError:
+                return False
+
         return value
 
     def get_xml(self):
