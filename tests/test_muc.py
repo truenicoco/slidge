@@ -558,6 +558,16 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
+           <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
+            <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member" role="participant"/>
+            </x>
+            <priority>0</priority>
+           </presence>
+            """
+        )
+        self.send(
+            """
             <presence
                 from='room-private@aim.shakespeare.lit/firstwitch'
                 to='romeo@montague.lit/gajim'>
@@ -807,7 +817,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
-        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
+        participant._LegacyParticipant__presence_sent = True
         participant.send_text("the body", legacy_msg_id="legacy-XXX")
         self.send(
             f"""
@@ -833,7 +843,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
-        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
+        participant._LegacyParticipant__presence_sent = True
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -868,7 +878,7 @@ class TestMuc(SlidgeTest):
         second_witch = self.xmpp.loop.run_until_complete(
             muc.get_participant("secondwitch")
         )
-        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
+        participant._LegacyParticipant__presence_sent = True
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -900,7 +910,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
-        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
+        participant._LegacyParticipant__presence_sent = True
         second_witch = self.xmpp.loop.run_until_complete(
             muc.get_participant("secondwitch")
         )
@@ -974,7 +984,7 @@ class TestMuc(SlidgeTest):
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
-        participant._sent_presences_to.add(JID("romeo@montague.lit/gajim"))
+        participant._LegacyParticipant__presence_sent = True
         participant.react(legacy_msg_id="legacy-XXX", emojis="👋")
         self.send(
             f"""

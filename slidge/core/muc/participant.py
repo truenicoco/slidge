@@ -72,7 +72,11 @@ class LegacyParticipant(
         self.jid = j
 
         self.contact: Optional["LegacyContact"] = None
-        self._sent_presences_to = set[JID]()
+        # we track if we already sent a presence for this participant.
+        # if we didn't, we send it before the first message.
+        # this way, event in plugins that don't map "user has joined" events,
+        # we send a "join"-presence from the participant before the first message
+        self.__presence_sent = False
         self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid}")
 
     def __repr__(self):
@@ -114,14 +118,12 @@ class LegacyParticipant(
         return self.nickname
 
     def __send_presence_if_needed(
-        self, stanza: Union[Message, Presence], full_jid: JID
+        self, stanza: Union[Message, Presence], full_jid: JID, archive_only: bool
     ):
-        if (
-            not self.is_system
-            and not self.is_user
-            and isinstance(stanza, Message)
-            and full_jid not in self._sent_presences_to
-        ):
+        if archive_only or self.is_system or self.is_user or self.__presence_sent:
+            return
+        if isinstance(stanza, Message):
+            self.__presence_sent = True
             self.send_initial_presence(full_jid)
 
     def _send(
@@ -133,7 +135,7 @@ class LegacyParticipant(
     ):
         if full_jid:
             stanza["to"] = full_jid
-            self.__send_presence_if_needed(stanza, full_jid)
+            self.__send_presence_if_needed(stanza, full_jid, archive_only)
             stanza.send()
         else:
             if isinstance(stanza, Message):
@@ -141,7 +143,7 @@ class LegacyParticipant(
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
-                self.__send_presence_if_needed(stanza, user_full_jid)
+                self.__send_presence_if_needed(stanza, user_full_jid, archive_only)
                 stanza.send()
 
     def mucadmin_item(self):
@@ -193,7 +195,6 @@ class LegacyParticipant(
         if presence_id:
             p["id"] = presence_id
         self._send(p, full_jid)
-        self._sent_presences_to.add(full_jid)
 
     def leave(self):
         """

@@ -494,12 +494,12 @@ class LegacyMUC(
         return await self.get_participant(self.user_nick, is_user=True, **kwargs)
 
     def __store_participant(self, p: "LegacyParticipantType"):
-        # we don't want to update the participant list before
-        # we call fill_participants() (legacy API call)
-        if self.__participants_filled:
-            self._participants_by_nicknames[p.nickname] = p  # type:ignore
-            if p.contact:
-                self._participants_by_contacts[p.contact] = p
+        # we don't want to update the participant list when we're filling history
+        if self.get_lock("fill history"):
+            return
+        self._participants_by_nicknames[p.nickname] = p  # type:ignore
+        if p.contact:
+            self._participants_by_contacts[p.contact] = p
 
     async def get_participant(
         self, nickname: str, raise_if_not_found=False, fill_first=False, **kwargs
