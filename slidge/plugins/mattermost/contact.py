@@ -153,7 +153,7 @@ class Contact(LegacyContact[str]):
 
         file_metas = post.metadata.files
         if isinstance(m := post.message, str):
-            text = emojize(m)
+            text = emojize(m, add_delimiters=False)
         else:
             text = ""
         post_id = post.id

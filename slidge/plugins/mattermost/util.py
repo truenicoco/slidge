@@ -5,8 +5,10 @@ def _emoji_name_conversion(x: str):
     return x.replace("_3_", "_three_").replace("thumbsup", "+1")
 
 
-def emojize(x: str):
-    return emoji_lib.emojize(f":{_emoji_name_conversion(x)}:", language="alias")
+def emojize(x: str, add_delimiters=True):
+    if add_delimiters:
+        x = f":{x}:"
+    return emoji_lib.emojize(f"{_emoji_name_conversion(x)}", language="alias")
 
 
 def demojize(emoji_char: str):
