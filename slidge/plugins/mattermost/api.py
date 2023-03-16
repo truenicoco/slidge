@@ -80,11 +80,14 @@ class MattermostClient:
         me = await get_user.asyncio("me", client=self.http)
         if me is None:
             raise RuntimeError("Could not login")
-        self.me.set_result(me)
-        my_id = me.id
-        if isinstance(my_id, Unset):
-            raise RuntimeError("Could not login")
-        self.mm_id.set_result(my_id)
+        try:
+            self.me.set_result(me)
+            my_id = me.id
+            if isinstance(my_id, Unset):
+                raise RuntimeError("Could not login")
+            self.mm_id.set_result(my_id)
+        except asyncio.InvalidStateError:
+            pass
         log.debug("Me: %s", me)
 
     async def get_known_users(self) -> list[str]:

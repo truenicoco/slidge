@@ -96,6 +96,7 @@ class Websocket:
         self._futures: dict[int, asyncio.Future[dict]] = {}
         self._seq_cursor = 0
         self.ready = asyncio.get_event_loop().create_future()
+        self.disconnected = asyncio.get_event_loop().create_future()
 
     async def connect(self, event_handler):
         """
@@ -112,6 +113,7 @@ class Websocket:
 
         url = self.url
         self._alive = True
+        self.disconnected = asyncio.get_event_loop().create_future()
 
         while True:
             try:
@@ -140,6 +142,7 @@ class Websocket:
                 log.exception(e)
                 self.websocket = asyncio.get_event_loop().create_future()
                 await asyncio.sleep(self.keep_alive_delay)
+                self.disconnected.set_result(True)
 
     async def _start_loop(self, websocket, event_handler):
         """
@@ -156,6 +159,8 @@ class Websocket:
             except Exception as e:
                 log.warning("Error in websocket listener", exc_info=e)
                 self.ready = asyncio.get_event_loop().create_future()
+                self._alive = False
+                self.disconnected.set_result(e)
                 break
             d = json.loads(message)
             self._last_msg = time.time()

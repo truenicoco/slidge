@@ -28,19 +28,30 @@ class Session(BaseSession[str, Recipient]):
         self.send_lock = asyncio.Lock()
         f = self.user.registration_form
         self.mm_client = get_client_from_registration_form(f)
+        self.__init_ws()
+        self.view_futures = dict[str, asyncio.Future[None]]()
+
+    def __init_ws(self):
+        f = self.user.registration_form
         self.ws = Websocket(
             re.sub("^http", "ws", f["url"] or "")
             + (f["basepath"] or "")
             + (f["basepath_ws"] or ""),
             f["token"],
         )
-        self.view_futures = dict[str, asyncio.Future[None]]()
 
     async def login(self):
         await self.mm_client.login()
         self.xmpp.loop.create_task(self.ws.connect(self.on_mm_event))
+        self.xmpp.loop.create_task(self.wait_for_ws_disco())
         self.xmpp.loop.create_task(self.contacts.update_statuses())
         return f"Connected as '{(await self.mm_client.me).username}'"
+
+    async def wait_for_ws_disco(self):
+        exc = await self.ws.disconnected
+        self.send_gateway_message(f"You've been disconnected: {exc}")
+        self.__init_ws()
+        self.logged = False
 
     async def on_mm_event(self, event: MattermostEvent):
         self.log.debug("Event: %s", event)
