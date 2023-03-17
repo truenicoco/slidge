@@ -72,8 +72,8 @@ class TelegramClient(aiotdlib.Client):
         request_id: Optional[str] = None,
         request_timeout=60,
     ) -> Optional[RequestResult]:
-        if not self._Client__is_authorized:
-            # during login, aiotdlib relies on basic exceptions for flow control
+        if not self.session.logged:
+            # during login, aiotdlib relies on its own exceptions for flow control
             return await super().request(
                 query, request_id=request_id, request_timeout=request_timeout
             )
