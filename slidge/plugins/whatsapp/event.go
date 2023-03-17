@@ -340,9 +340,20 @@ func uploadAttachment(client *whatsmeow.Client, attach Attachment) (*proto.Messa
 	return message, nil
 }
 
+// KnownExtensions represents MIME type to file-extension mappings for basic, known media types.
+var knownExtensions = map[string]string{
+	"image/jpeg": ".jpg",
+	"audio/ogg":  ".oga",
+	"video/mp4":  ".mp4",
+}
+
 // ExtensionByType returns the file extension for the given MIME type, or a generic extension if the
 // MIME type is unknown.
 func extensionByType(typ string) string {
+	// Handle common, known MIME types first.
+	if ext := knownExtensions[typ]; ext != "" {
+		return ext
+	}
 	if ext, _ := mime.ExtensionsByType(typ); len(ext) > 0 {
 		return ext[0]
 	}
