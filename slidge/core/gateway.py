@@ -191,7 +191,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             },
         )
         self.loop.set_exception_handler(self.__exception_handler)
-        self.http = aiohttp.ClientSession()
+        self.http: aiohttp.ClientSession = aiohttp.ClientSession()
         self.has_crashed = False
 
         self.jid_validator = re.compile(config.USER_JID_VALIDATOR)
@@ -225,9 +225,9 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 jid=self.boundjid,
             )
 
-        self.adhoc = AdhocProvider(self)
-        self.chat_commands = ChatCommandProvider(self)
-        # why does mypy needs this type annotation? no idea
+        # why does mypy need these type annotations? no idea
+        self.adhoc: AdhocProvider = AdhocProvider(self)
+        self.chat_commands: ChatCommandProvider = ChatCommandProvider(self)
         self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
         self._register_commands()
 
@@ -332,7 +332,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             "item-not-found", f"This JID does not match anything slidge knows: {ito}"
         )
 
-    mtype = "chat"  # type: ignore
+    mtype: MessageTypes = "chat"
     is_group = False
 
     def _register_commands(self):
