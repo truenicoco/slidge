@@ -5,7 +5,6 @@ import asyncio
 import logging
 import re
 import tempfile
-from asyncio import Future
 from copy import copy
 from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Union
 
@@ -41,6 +40,7 @@ from ..pubsub import PubSubComponent
 from ..session import BaseSession
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
+from .mam import Mam
 from .ping import Ping
 
 if TYPE_CHECKING:
@@ -236,28 +236,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         self.use_origin_id = False
         self.__ping_handler = Ping(self)
-
-        self.register_handler(
-            CoroutineCallback(
-                "MAM_query",
-                StanzaPath("iq@type=set/mam"),
-                self.__handle_mam,  # type:ignore
-            )
-        )
-        self.register_handler(
-            CoroutineCallback(
-                "MAM_get_from",
-                StanzaPath("iq@type=get/mam"),
-                self.__handle_mam_get_form,  # type:ignore
-            )
-        )
-        self.register_handler(
-            CoroutineCallback(
-                "MAM_get_meta",
-                StanzaPath("iq@type=get/mam_metadata"),
-                self.__handle_mam_metadata,  # type:ignore
-            )
-        )
+        self.__mam_handler = Mam(self)
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
@@ -326,46 +305,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         muc = await session.bookmarks.by_jid(ito)
 
         return muc
-
-    async def __handle_mam(self, iq: Iq):
-        muc = await self.get_muc_from_stanza(iq)
-        await muc.send_mam(iq)
-
-    async def __handle_mam_get_form(self, iq: Iq):
-        ito = iq.get_to()
-
-        if ito == self.boundjid.bare:
-            raise XMPPError(
-                text="No MAM on the component itself, use a JID with a resource"
-            )
-
-        ifrom = iq.get_from()
-        user = user_store.get_by_jid(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.get_session_from_user(user)
-
-        await session.bookmarks.by_jid(ito)
-
-        reply = iq.reply()
-        form = self.plugin["xep_0004"].make_form()
-        form.add_field(ftype="hidden", var="FORM_TYPE", value="urn:xmpp:mam:2")
-        form.add_field(ftype="jid-single", var="with")
-        form.add_field(ftype="text-single", var="start")
-        form.add_field(ftype="text-single", var="end")
-        form.add_field(ftype="text-single", var="before-id")
-        form.add_field(ftype="text-single", var="after-id")
-        form.add_field(ftype="boolean", var="include-groupchat")
-        field = form.add_field(ftype="list-multi", var="ids")
-        field["validate"]["datatype"] = "xs:string"
-        field["validate"]["open"] = True
-        reply["mam"].append(form)
-        reply.send()
-
-    async def __handle_mam_metadata(self, iq: Iq):
-        muc = await self.get_muc_from_stanza(iq)
-        await muc.send_mam_metadata(iq)
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
