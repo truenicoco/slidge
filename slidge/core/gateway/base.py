@@ -21,7 +21,6 @@ from slixmpp import (
 )
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
-from slixmpp.xmlstream import StanzaBase
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
 from ...util import ABCSubclassableOnceAtMost
@@ -34,10 +33,10 @@ from ..command.adhoc import AdhocProvider
 from ..command.base import Command, FormField
 from ..command.chat_command import ChatCommandProvider
 from ..command.register import RegistrationType
-from ..contact import LegacyContact
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
+from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
@@ -148,7 +147,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
     MARK_ALL_MESSAGES = False
     """
     Set this to True for legacy networks that expects read marks for *all* messages and not just
-    the latest one that was read (as most XMPP clients will only send a reak mark for the latest msg).
+    the latest one that was read (as most XMPP clients will only send a read mark for the latest msg).
     """
 
     REGISTRATION_2FA_TITLE = "Enter your 2FA code"
@@ -239,6 +238,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__ping_handler = Ping(self)
         self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
+        self.__caps_handler = Caps(self)
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
@@ -446,53 +446,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 self.__handle_get_vcard_temp,  # type:ignore
             )
         )
-
-        self.del_filter("out", self.plugin["xep_0115"]._filter_add_caps)
-        self.add_filter("out", self._filter_add_caps)  # type:ignore
-
-    async def _filter_add_caps(self, stanza: StanzaBase):
-        # we rolled our own "add caps on presences" filter because
-        # there is too much magic happening in slixmpp
-        # anyway, we probably want to roll our own "dynamic disco"/caps
-        # module in the long run, so it's a step in this direction
-        if not isinstance(stanza, Presence):
-            return stanza
-
-        if stanza["type"] not in ("available", "chat", "away", "dnd", "xa"):
-            return stanza
-
-        pfrom = stanza.get_from()
-
-        caps = self.plugin["xep_0115"]
-
-        if pfrom != self.xmpp.boundjid.bare:
-            try:
-                session = self.get_session_from_jid(stanza.get_to())
-            except XMPPError:
-                log.debug("not adding caps 1")
-                return stanza
-
-            if session is None:
-                return stanza
-
-            if not session.logged:
-                log.debug("not adding caps 2")
-                return stanza
-
-            entity = await session.get_contact_or_group_or_participant(pfrom)
-            if not isinstance(entity, LegacyContact):
-                return stanza
-            ver = await entity.get_caps_ver()
-        else:
-            ver = await caps.get_verstring(pfrom)
-
-        log.debug("Ver: %s", ver)
-
-        if ver:
-            stanza["caps"]["node"] = caps.caps_node
-            stanza["caps"]["hash"] = caps.hash
-            stanza["caps"]["ver"] = ver
-        return stanza
 
     async def __handle_get_vcard_temp(self, iq: Iq):
         if iq["type"] != "get":
