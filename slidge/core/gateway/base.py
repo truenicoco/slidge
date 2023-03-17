@@ -189,8 +189,10 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.loop.set_exception_handler(self.__exception_handler)
         self.http: aiohttp.ClientSession = aiohttp.ClientSession()
         self.has_crashed = False
+        self.use_origin_id = False
 
         self.jid_validator = re.compile(config.USER_JID_VALIDATOR)
+        self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
         self.session_cls: BaseSession = BaseSession.get_unique_subclass()
         self.session_cls.xmpp = self
@@ -204,11 +206,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         self.register_plugins()
         self.__register_slixmpp_api()
-        self.__register_handlers()
+        self.__register_slixmpp_events()
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
         self.vcard: VCard4Provider = self["xep_0292_provider"]
+        self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
+
         if self.GROUPS:
             self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")
@@ -221,14 +225,10 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             )
 
         # why does mypy need these type annotations? no idea
-        self.adhoc: AdhocProvider = AdhocProvider(self)
-        self.chat_commands: ChatCommandProvider = ChatCommandProvider(self)
-        self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
-        self._register_commands()
+        self.__adhoc_handler: AdhocProvider = AdhocProvider(self)
+        self.__chat_commands_handler: ChatCommandProvider = ChatCommandProvider(self)
+        self.__disco_handler = Disco(self)
 
-        self.disco = Disco(self)
-
-        self.use_origin_id = False
         self.__ping_handler = Ping(self)
         self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
@@ -236,73 +236,23 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__vcard_temp_handler = VCardTemp(self)
         self.__muc_admin_handler = MucAdmin(self)
 
-        self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
+        self.__register_commands()
 
-    def get_session_from_jid(self, j: JID):
-        try:
-            return self.session_cls.from_jid(j)
-        except XMPPError:
-            pass
-
-    def send_raw(self, data: Union[str, bytes]):
-        # overridden from XMLStream to strip base64-encoded data from the logs
-        # to make them more readable.
-        if log.isEnabledFor(level=logging.DEBUG):
-            if isinstance(data, str):
-                stripped = copy(data)
-            else:
-                stripped = data.decode("utf-8")
-            # there is probably a way to do that in a single RE,
-            # but since it's only for debugging, the perf penalty
-            # does not matter much
-            for el in LOG_STRIP_ELEMENTS:
-                stripped = re.sub(
-                    f"(<{el}.*?>)(.*)(</{el}>)",
-                    "\1[STRIPPED]\3",
-                    stripped,
-                    flags=re.DOTALL | re.IGNORECASE,
-                )
-            log.debug("SEND: %s", stripped)
-        if not self.transport:
-            raise NotConnectedError()
-        if isinstance(data, str):
-            data = data.encode("utf-8")
-        self.transport.write(data)
-
-    def _register_commands(self):
+    def __register_commands(self):
         for cls in Command.subclasses:
             if any(x is NotImplemented for x in [cls.CHAT_COMMAND, cls.NODE, cls.NAME]):
                 log.debug("Not adding command '%s' because it looks abstract", cls)
                 continue
             c = cls(self)
-            self.adhoc.register(c)
-            self.chat_commands.register(c)
+            self.__adhoc_handler.register(c)
+            self.__chat_commands_handler.register(c)
 
-    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
-        stanza.set_from(self.boundjid.bare)
-        if mto := send_kwargs.get("mto"):
-            stanza.set_to(mto)
-        stanza.send()
-
-    async def get_muc_from_stanza(self, iq: Union[Iq, Message]) -> "LegacyMUC":
-        ito = iq.get_to()
-
-        if ito == self.boundjid.bare:
+    def __raise_if_not_allowed_jid(self, jid: JID):
+        if not self.jid_validator.match(jid.bare):
             raise XMPPError(
-                text="No MAM on the component itself, use a JID with a resource"
+                condition="not-allowed",
+                text="Your account is not allowed to use this gateway.",
             )
-
-        ifrom = iq.get_from()
-        user = user_store.get_by_jid(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.get_session_from_user(user)
-        session.raise_if_not_logged()
-
-        muc = await session.bookmarks.by_jid(ito)
-
-        return muc
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -324,43 +274,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             self.has_crashed = True
             loop.stop()
 
-    def _raise_if_not_allowed_jid(self, jid: JID):
-        if not self.jid_validator.match(jid.bare):
-            raise XMPPError(
-                condition="not-allowed",
-                text="Your account is not allowed to use this gateway.",
-            )
-
-    def exception(self, exception: Exception):
-        """
-        Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
-
-        Stop the event loop and exit on unhandled exception.
-
-        The default :class:`slixmpp.basexmpp.BaseXMPP` behaviour is just to
-        log the exception, but we want to avoid undefined behaviour.
-
-        :param exception: An unhandled :class:`Exception` object.
-        """
-        if isinstance(exception, IqError):
-            iq = exception.iq
-            log.error("%s: %s", iq["error"]["condition"], iq["error"]["text"])
-            log.warning("You should catch IqError exceptions")
-        elif isinstance(exception, IqTimeout):
-            iq = exception.iq
-            log.error("Request timed out: %s", iq)
-            log.warning("You should catch IqTimeout exceptions")
-        elif isinstance(exception, SyntaxError):
-            # Hide stream parsing errors that occur when the
-            # stream is disconnected (they've been handled, we
-            # don't need to make a mess in the logs).
-            pass
-        else:
-            if exception:
-                log.exception(exception)
-            self.loop.stop()
-            exit(1)
-
     def __register_slixmpp_api(self):
         self["xep_0077"].api.register(
             user_store.get,
@@ -378,7 +291,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         self.roster.set_backend(RosterBackend)
 
-    def __register_handlers(self):
+    def __register_slixmpp_events(self):
         self.add_event_handler("session_start", self.__on_session_start)
         self.add_event_handler("disconnected", self.connect)
         self.add_event_handler("user_register", self._on_user_register)
@@ -482,11 +395,11 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 pto=user.bare_jid, ptype="probe"
             )  # ensure we get all resources for user
             session = self.session_cls.from_user(user)
-            self.loop.create_task(self._login_wrap(session))
+            self.loop.create_task(self.__login_wrap(session))
 
         log.info("Slidge has successfully started")
 
-    async def _login_wrap(self, session: "BaseSession"):
+    async def __login_wrap(self, session: "BaseSession"):
         session.send_gateway_status("Logging in…", show="dnd")
         try:
             status = await session.login()
@@ -516,15 +429,139 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         else:
             session.send_gateway_status(status, show="chat")
 
+    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
+        stanza.set_from(self.boundjid.bare)
+        if mto := send_kwargs.get("mto"):
+            stanza.set_to(mto)
+        stanza.send()
+
+    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
+        """
+        SliXMPP internal API stuff
+        """
+        log.debug("User validate: %s", ifrom.bare)
+        form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
+        self.__raise_if_not_allowed_jid(ifrom)
+        await self.user_prevalidate(ifrom, form_dict)
+        log.info("New user: %s", ifrom.bare)
+        user_store.add(ifrom, form_dict)
+
+    async def _user_modify(
+        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
+    ):
+        """
+        SliXMPP internal API stuff
+        """
+        user = user_store.get_by_jid(ifrom)
+        log.debug("Modify user: %s", user)
+        await self.user_prevalidate(ifrom, form_dict)
+        user_store.add(ifrom, form_dict)
+
+    async def _on_user_register(self, iq: Iq):
+        session = self.get_session_from_stanza(iq)
+        for jid in config.ADMINS:
+            self.send_message(
+                mto=jid,
+                mbody=f"{iq.get_from()} has registered",
+                mtype="headline",
+                mfrom=self.boundjid.bare,
+            )
+        session.send_gateway_message(self.WELCOME_MESSAGE)
+        await self.__login_wrap(session)
+
+    async def _on_user_unregister(self, iq: Iq):
+        await self.session_cls.kill_by_jid(iq.get_from())
+
+    def send_raw(self, data: Union[str, bytes]):
+        # overridden from XMLStream to strip base64-encoded data from the logs
+        # to make them more readable.
+        if log.isEnabledFor(level=logging.DEBUG):
+            if isinstance(data, str):
+                stripped = copy(data)
+            else:
+                stripped = data.decode("utf-8")
+            # there is probably a way to do that in a single RE,
+            # but since it's only for debugging, the perf penalty
+            # does not matter much
+            for el in LOG_STRIP_ELEMENTS:
+                stripped = re.sub(
+                    f"(<{el}.*?>)(.*)(</{el}>)",
+                    "\1[STRIPPED]\3",
+                    stripped,
+                    flags=re.DOTALL | re.IGNORECASE,
+                )
+            log.debug("SEND: %s", stripped)
+        if not self.transport:
+            raise NotConnectedError()
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        self.transport.write(data)
+
+    def get_session_from_jid(self, j: JID):
+        try:
+            return self.session_cls.from_jid(j)
+        except XMPPError:
+            pass
+
+    async def get_muc_from_stanza(self, iq: Union[Iq, Message]) -> "LegacyMUC":
+        ito = iq.get_to()
+
+        if ito == self.boundjid.bare:
+            raise XMPPError(
+                text="No MAM on the component itself, use a JID with a resource"
+            )
+
+        ifrom = iq.get_from()
+        user = user_store.get_by_jid(ifrom)
+        if user is None:
+            raise XMPPError("registration-required")
+
+        session = self.get_session_from_user(user)
+        session.raise_if_not_logged()
+
+        muc = await session.bookmarks.by_jid(ito)
+
+        return muc
+
+    def exception(self, exception: Exception):
+        """
+        Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
+
+        Stop the event loop and exit on unhandled exception.
+
+        The default :class:`slixmpp.basexmpp.BaseXMPP` behaviour is just to
+        log the exception, but we want to avoid undefined behaviour.
+
+        :param exception: An unhandled :class:`Exception` object.
+        """
+        if isinstance(exception, IqError):
+            iq = exception.iq
+            log.error("%s: %s", iq["error"]["condition"], iq["error"]["text"])
+            log.warning("You should catch IqError exceptions")
+        elif isinstance(exception, IqTimeout):
+            iq = exception.iq
+            log.error("Request timed out: %s", iq)
+            log.warning("You should catch IqTimeout exceptions")
+        elif isinstance(exception, SyntaxError):
+            # Hide stream parsing errors that occur when the
+            # stream is disconnected (they've been handled, we
+            # don't need to make a mess in the logs).
+            pass
+        else:
+            if exception:
+                log.exception(exception)
+            self.loop.stop()
+            exit(1)
+
     def re_login(self, session: "BaseSession"):
         async def w():
             await session.logout()
-            await self._login_wrap(session)
+            await self.__login_wrap(session)
 
         self.loop.create_task(w())
 
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
-        self._raise_if_not_allowed_jid(iq.get_from())
+        self.__raise_if_not_allowed_jid(iq.get_from())
         reg = iq["register"]
         user = user_store.get_by_stanza(iq)
         log.debug("User found: %s", user)
@@ -583,43 +620,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         await self.validate(ifrom, form_dict)
 
-    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        """
-        SliXMPP internal API stuff
-        """
-        log.debug("User validate: %s", ifrom.bare)
-        form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
-        self._raise_if_not_allowed_jid(ifrom)
-        await self.user_prevalidate(ifrom, form_dict)
-        log.info("New user: %s", ifrom.bare)
-        user_store.add(ifrom, form_dict)
-
-    async def _user_modify(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
-    ):
-        """
-        SliXMPP internal API stuff
-        """
-        user = user_store.get_by_jid(ifrom)
-        log.debug("Modify user: %s", user)
-        await self.user_prevalidate(ifrom, form_dict)
-        user_store.add(ifrom, form_dict)
-
-    async def _on_user_register(self, iq: Iq):
-        session = self.get_session_from_stanza(iq)
-        for jid in config.ADMINS:
-            self.send_message(
-                mto=jid,
-                mbody=f"{iq.get_from()} has registered",
-                mtype="headline",
-                mfrom=self.boundjid.bare,
-            )
-        session.send_gateway_message(self.WELCOME_MESSAGE)
-        await self._login_wrap(session)
-
-    async def _on_user_unregister(self, iq: Iq):
-        await self.session_cls.kill_by_jid(iq.get_from())
-
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
@@ -667,7 +667,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         :param mtype: Message type
         :return: The user's reply
         """
-        return await self.chat_commands.input(jid, text, mtype, **msg_kwargs)
+        return await self.__chat_commands_handler.input(jid, text, mtype, **msg_kwargs)
 
     async def send_qr(self, text: str, **msg_kwargs):
         """
@@ -681,19 +681,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         with tempfile.NamedTemporaryFile(suffix=".png") as f:
             qr.save(f.name)
             await self.send_file(f.name, **msg_kwargs)
-
-    def shutdown(self):
-        """
-        Called by the slidge entrypoint on normal exit.
-
-        Sends offline presences from all contacts of all user sessions and from
-        the gateway component itself.
-        No need to call this manually, :func:`slidge.__main__.main` should take care of it.
-        """
-        log.debug("Shutting down")
-        for user in user_store.get_all():
-            self.session_cls.from_jid(user.jid).shutdown()
-            self.send_presence(ptype="unavailable", pto=user.jid)
 
     async def validate_two_factor_code(self, user: GatewayUser, code: str):
         """
@@ -736,6 +723,19 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             fut.set_result(True)
         else:
             fut.set_exception(exception)
+
+    def shutdown(self):
+        """
+        Called by the slidge entrypoint on normal exit.
+
+        Sends offline presences from all contacts of all user sessions and from
+        the gateway component itself.
+        No need to call this manually, :func:`slidge.__main__.main` should take care of it.
+        """
+        log.debug("Shutting down")
+        for user in user_store.get_all():
+            self.session_cls.from_jid(user.jid).shutdown()
+            self.send_presence(ptype="unavailable", pto=user.jid)
 
 
 KICKABLE_ERRORS = [
