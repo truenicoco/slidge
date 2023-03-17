@@ -10,15 +10,7 @@ from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Unio
 
 import aiohttp
 import qrcode
-from slixmpp import (
-    JID,
-    ComponentXMPP,
-    CoroutineCallback,
-    Iq,
-    Message,
-    Presence,
-    StanzaPath,
-)
+from slixmpp import JID, ComponentXMPP, Iq, Message, Presence
 from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
@@ -40,6 +32,7 @@ from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
+from .muc_admin import MucAdmin
 from .ping import Ping
 from .search import Search
 from .vcard_temp import VCardTemp
@@ -241,6 +234,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
         self.__vcard_temp_handler = VCardTemp(self)
+        self.__muc_admin_handler = MucAdmin(self)
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
@@ -433,14 +427,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.add_event_handler("groupchat_join", groupchat_join)
         self.add_event_handler("groupchat_message", msg)
 
-        self.register_handler(
-            CoroutineCallback(
-                f"muc#admin",
-                StanzaPath(f"iq/mucadmin_query"),
-                self._handle_admin,  # type: ignore
-            )
-        )
-
     async def __on_group_chat_error(self, msg: Message):
         condition = msg["error"].get_condition()
         if condition not in KICKABLE_ERRORS:
@@ -463,13 +449,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             log.info(
                 "Removed %s from the resources of %s because of error", resource, muc
             )
-
-    async def _handle_admin(self, iq: Iq):
-        if iq["type"] != "get":
-            raise XMPPError("not-authorized")
-
-        muc = await self.get_muc_from_stanza(iq)
-        await muc.handle_admin(iq)
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)

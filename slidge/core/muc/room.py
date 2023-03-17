@@ -149,20 +149,6 @@ class LegacyMUC(
                 await self.backfill()
             self.__history_filled = True
 
-    async def handle_admin(self, iq: Iq):
-        affiliation = iq["mucadmin_query"]["item"]["affiliation"]
-
-        if not affiliation:
-            raise XMPPError("bad-request")
-
-        reply = iq.reply()
-        reply.enable("mucadmin_query")
-        for participant in await self.get_participants():
-            if not participant.affiliation == affiliation:
-                continue
-            reply["mucadmin_query"].append(participant.mucadmin_item())
-        reply.send()
-
     @property
     def avatar(self):
         return self._avatar
