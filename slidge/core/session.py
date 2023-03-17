@@ -15,7 +15,6 @@ from ..util.types import (
     PresenceShow,
     RecipientType,
 )
-from ..util.xep_0461.stanza import FeatureFallBack
 from . import config
 from .command.base import SearchResult
 from .contact import LegacyRoster
@@ -323,17 +322,7 @@ class BaseSession(
         return legacy_thread
 
     def __ack(self, msg: Message):
-        if (
-            msg["request_receipt"]
-            and msg["type"] in self.xmpp.plugin["xep_0184"].ack_types
-            and not msg["receipt"]
-        ):
-            ack = self.xmpp.Message()
-            ack["type"] = msg["type"]
-            ack["to"] = msg["from"].bare
-            ack["from"] = msg["to"]
-            ack["receipt"] = msg["id"]
-            ack.send()
+        self.xmpp.delivery_receipt.ack(msg)
 
     async def __get_entity(self, m: Message) -> RecipientType:
         self.raise_if_not_logged()

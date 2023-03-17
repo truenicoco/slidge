@@ -132,6 +132,7 @@ class ChatCommandProvider:
             raise
 
         result = await self.__wrap_handler(msg, command.run, session, mfrom, *rest)
+        self.xmpp.delivery_receipt.ack(msg)
         return await self._handle_result(result, msg, session)
 
     async def _handle_result(self, result: CommandResponseType, msg: Message, session):

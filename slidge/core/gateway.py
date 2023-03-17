@@ -36,6 +36,7 @@ from .adhoc import AdhocProvider
 from .chat_command import ChatCommandProvider
 from .command.base import Command, FormField
 from .command.register import RegistrationType
+from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mixins import MessageMixin
 from .pubsub import PubSubComponent
@@ -226,6 +227,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         self.adhoc = AdhocProvider(self)
         self.chat_commands = ChatCommandProvider(self)
+        # why does mypy needs this type annotation? no idea
+        self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
         self._register_commands()
 
         self.disco = Disco(self)
