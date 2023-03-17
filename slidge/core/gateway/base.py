@@ -41,6 +41,7 @@ from ..pubsub import PubSubComponent
 from ..session import BaseSession
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
+from .ping import Ping
 
 if TYPE_CHECKING:
     from ..muc.room import LegacyMUC
@@ -234,15 +235,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.disco = Disco(self)
 
         self.use_origin_id = False
+        self.__ping_handler = Ping(self)
 
-        self.remove_handler("Ping")
-        self.register_handler(
-            CoroutineCallback(
-                "Ping",
-                StanzaPath("iq@type=get/ping"),
-                self.__handle_ping,  # type:ignore
-            )
-        )
         self.register_handler(
             CoroutineCallback(
                 "MAM_query",
@@ -297,40 +291,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         if isinstance(data, str):
             data = data.encode("utf-8")
         self.transport.write(data)
-
-    async def __handle_ping(self, iq: Iq):
-        ito = iq.get_to()
-
-        if ito == self.boundjid.bare:
-            iq.reply().send()
-
-        ifrom = iq.get_from()
-        user = user_store.get_by_jid(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.get_session_from_user(user)
-        session.raise_if_not_logged()
-
-        try:
-            muc = await session.bookmarks.by_jid(ito)
-        except XMPPError:
-            pass
-        else:
-            muc.handle_ping(iq)
-            return
-
-        try:
-            await session.contacts.by_jid(ito)
-        except XMPPError:
-            pass
-        else:
-            iq.reply().send()
-            return
-
-        raise XMPPError(
-            "item-not-found", f"This JID does not match anything slidge knows: {ito}"
-        )
 
     mtype: MessageTypes = "chat"
     is_group = False
@@ -552,7 +512,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 self._handle_gateway_iq,  # type: ignore
             )
         )
-        self.plugin["xep_0030"].add_feature("urn:xmpp:ping")
 
         self.register_handler(
             CoroutineCallback(

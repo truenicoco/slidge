@@ -363,12 +363,6 @@ class LegacyMUC(
             presence["muc"]["status_codes"] = {110, 332}
             presence.send()
 
-    def handle_ping(self, iq: Iq):
-        if iq.get_from().resource in self.user_resources:
-            iq.reply().send()
-        else:
-            raise XMPPError("not-acceptable", etype="cancel", by=self.jid)
-
     def user_full_jids(self):
         for r in self.user_resources:
             j = copy(self.user.jid)
