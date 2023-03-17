@@ -36,6 +36,7 @@ from .muc_admin import MucAdmin
 from .ping import Ping
 from .registration import Registration
 from .search import Search
+from .session_dispatcher import SessionDispatcher
 from .vcard_temp import VCardTemp
 
 if TYPE_CHECKING:
@@ -237,6 +238,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__vcard_temp_handler = VCardTemp(self)
         self.__muc_admin_handler = MucAdmin(self)
         self.__registration = Registration(self)
+        self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()
 
@@ -275,48 +277,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
         self.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
-
-        async def get_session(m, cb):
-            if m.get_from().server == self.boundjid.bare:
-                log.debug("Ignoring echo")
-                return
-            if m.get_to() == self.boundjid.bare:
-                log.debug("Ignoring message to component")
-                return
-            s = self.get_session_from_stanza(m)
-            try:
-                await cb(s, m)
-            except XMPPError:
-                raise
-            except Exception as e:
-                s.log.error("Failed to handle incoming stanza: %s", m, exc_info=e)
-                raise XMPPError("internal-server-error", str(e))
-
-        # fmt: off
-        async def msg(m): await get_session(m, BaseSession.send_from_msg)
-        async def disp(m): await get_session(m, BaseSession.displayed_from_msg)
-        async def active(m): await get_session(m, BaseSession.active_from_msg)
-        async def inactive(m): await get_session(m, BaseSession.inactive_from_msg)
-        async def composing(m): await get_session(m, BaseSession.composing_from_msg)
-        async def paused(m): await get_session(m, BaseSession.paused_from_msg)
-        async def correct(m): await get_session(m, BaseSession.correct_from_msg)
-        async def react(m): await get_session(m, BaseSession.react_from_msg)
-        async def retract(m): await get_session(m, BaseSession.retract_from_msg)
-        async def groupchat_join(p): await get_session(p, BaseSession.join_groupchat)
-        # fmt: on
-
-        self.add_event_handler("legacy_message", msg)
-        self.add_event_handler("marker_displayed", disp)
-        self.add_event_handler("chatstate_active", active)
-        self.add_event_handler("chatstate_inactive", inactive)
-        self.add_event_handler("chatstate_composing", composing)
-        self.add_event_handler("chatstate_paused", paused)
-        self.add_event_handler("message_correction", correct)
-        self.add_event_handler("reactions", react)
-        self.add_event_handler("message_retract", retract)
-
-        self.add_event_handler("groupchat_join", groupchat_join)
-        self.add_event_handler("groupchat_message", msg)
 
     async def __on_group_chat_error(self, msg: Message):
         condition = msg["error"].get_condition()
