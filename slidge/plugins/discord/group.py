@@ -53,7 +53,7 @@ class Participant(LegacyParticipant, Mixin):  # type: ignore
         return self.contact.discord_user
 
 
-class MUC(LegacyMUC[int, int, Participant]):
+class MUC(LegacyMUC[int, int, Participant, int]):
     session: Session
     type = MucType.GROUP
 
@@ -126,13 +126,15 @@ class MUC(LegacyMUC[int, int, Participant]):
             await p.send_message(msg, archive_only=True)
 
     async def get_participant_by_discord_user(self, user: di.User):
-        if user.id == self.session.discord.user.id:  # type:ignore
-            return self.get_user_participant()
         try:
-            return await self.get_participant_by_contact(
-                await self.session.contacts.by_discord_user(user)
+            return await self.get_participant_by_legacy_id(user.id)
+        except XMPPError as e:
+            self.log.warning(
+                "Could not get participant with contact for %s, "
+                "falling back to a 'contact-less' participant.",
+                user,
+                exc_info=e,
             )
-        except XMPPError:
             return await self.get_participant(user.display_name)
 
     async def create_thread(self, xmpp_id: str) -> int:

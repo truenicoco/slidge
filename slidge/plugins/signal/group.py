@@ -26,7 +26,7 @@ class Participant(AttachmentSenderMixin, LegacyParticipant):
         super().send_text(body, legacy_msg_id, **k)
 
 
-class MUC(LegacyMUC[str, int, Participant]):
+class MUC(LegacyMUC[str, int, Participant, str]):
     REACTIONS_SINGLE_EMOJI = True
 
     session: "Session"

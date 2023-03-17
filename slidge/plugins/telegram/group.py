@@ -51,7 +51,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 await self.by_legacy_id(chat.id)
 
 
-class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
+class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
     # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
@@ -159,18 +159,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant"]):
         return msg_id
 
     async def participant_by_tg_user(self, user: tgapi.User) -> "Participant":
-        if user.id == await self.session.tg.get_my_id():
-            return await self.get_user_participant()
-        return await self.get_participant_by_contact(
-            await self.session.contacts.by_legacy_id(user.id)
-        )
-
-    async def participant_by_tg_user_id(self, user_id: int) -> "Participant":
-        if user_id == await self.session.tg.get_my_id():
-            return await self.get_user_participant()
-        return await self.participant_by_tg_user(
-            await self.session.tg.get_user(user_id)
-        )
+        return await self.get_participant_by_legacy_id(user.id)
 
     async def get_tg_chat(self):
         return await self.session.tg.get_chat(self.legacy_id)

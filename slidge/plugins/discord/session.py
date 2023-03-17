@@ -38,6 +38,7 @@ class Session(BaseSession[int, Recipient]):
 
         await self.discord.wait_until_ready()
         assert self.discord.user is not None
+        self.contacts.user_legacy_id = self.discord.user.id
         self.bookmarks.user_nick = str(self.discord.user.display_name)
         return f"Logged on as {self.discord.user}"
 

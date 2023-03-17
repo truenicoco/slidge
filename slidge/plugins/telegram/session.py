@@ -55,7 +55,9 @@ class Session(BaseSession[int, Recipient]):
 
     async def login(self):
         await self.tg.start()
-        me = await self.tg.get_user(await self.tg.get_my_id())
+        my_id = await self.tg.get_my_id()
+        self.contacts.user_legacy_id = my_id
+        me = await self.tg.get_user(my_id)
         my_name = (me.first_name + " " + me.last_name).strip()
         self.bookmarks.user_nick = my_name
         return f"Connected as {my_name}"

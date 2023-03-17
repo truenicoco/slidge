@@ -20,8 +20,10 @@ from ...util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
+    LegacyUserIdType,
 )
 from .. import config
+from ..contact.roster import ContactIsUser
 from ..mixins.disco import ChatterDiscoMixin
 from ..mixins.lock import NamedLockMixin
 from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
@@ -42,7 +44,9 @@ ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
 
 class LegacyMUC(
-    Generic[LegacyGroupIdType, LegacyMessageType, LegacyParticipantType],
+    Generic[
+        LegacyGroupIdType, LegacyMessageType, LegacyParticipantType, LegacyUserIdType
+    ],
     NamedLockMixin,
     ChatterDiscoMixin,
     ReactionRecipientMixin,
@@ -563,6 +567,15 @@ class LegacyMUC(
             p.contact = c
             self.__store_participant(p)
         return p
+
+    async def get_participant_by_legacy_id(
+        self, legacy_id: LegacyUserIdType, **kwargs
+    ) -> "LegacyParticipantType":
+        try:
+            c = await self.session.contacts.by_legacy_id(legacy_id)
+        except ContactIsUser:
+            return await self.get_user_participant(**kwargs)
+        return await self.get_participant_by_contact(c, **kwargs)
 
     async def get_participants(self):
         """

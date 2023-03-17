@@ -123,7 +123,7 @@ class TelegramToXMPPMixin:
                 reply_to_author = await muc.get_user_participant()
                 reply_to_fallback = f"{muc.user_nick}:\n"
             else:
-                reply_to_author = await muc.participant_by_tg_user_id(sender_user_id)
+                reply_to_author = await muc.get_participant_by_legacy_id(sender_user_id)
                 reply_to_fallback = f"{reply_to_author.contact.name}:\n"
         else:
             reply_to_fallback = ""
@@ -187,7 +187,7 @@ class TelegramToXMPPMixin:
         elif isinstance(content, tgapi.MessageChatAddMembers):
             muc = self.muc
             for user_id in content.member_user_ids:
-                participant = await muc.participant_by_tg_user_id(user_id)
+                participant = await muc.get_participant_by_legacy_id(user_id)
                 participant.online()
         elif isinstance(content, tgapi.MessagePinMessage):
             if await self.session.tg.is_private_chat(msg.chat_id):

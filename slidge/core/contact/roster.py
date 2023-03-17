@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Generic, Type
+from typing import TYPE_CHECKING, Generic, Optional, Type
 
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
@@ -11,6 +11,10 @@ from .contact import LegacyContact
 
 if TYPE_CHECKING:
     from ..session import BaseSession
+
+
+class ContactIsUser(Exception):
+    pass
 
 
 class LegacyRoster(
@@ -43,6 +47,7 @@ class LegacyRoster(
         self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
         self._contacts_by_legacy_id: dict[LegacyUserIdType, LegacyContactType] = {}
         self.log = logging.getLogger(f"{self.session.user.bare_jid}:roster")
+        self.user_legacy_id: Optional[LegacyUserIdType] = None
         super().__init__()
 
     def __repr__(self):
@@ -111,6 +116,8 @@ class LegacyRoster(
         :param kwargs: arbitrary keyword arguments passed to the contact constructor
         :return:
         """
+        if legacy_id == self.user_legacy_id:
+            raise ContactIsUser
         async with self.lock(("legacy_id", legacy_id)):
             c = self._contacts_by_legacy_id.get(legacy_id)
             if c is None:
