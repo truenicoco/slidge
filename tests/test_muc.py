@@ -690,6 +690,39 @@ class TestMuc(SlidgeTest):
             use_values=False,
         )
 
+    def test_resource_not_joined(self):
+        self.recv(
+            """
+            <message from='romeo@montague.lit/gajim' type='groupchat'
+                to='room-private@aim.shakespeare.lit'>
+                <body>am I here?</body>
+            </message>
+            """
+        )
+        self.send(
+            """
+           <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit" type="error" to="romeo@montague.lit/gajim">              
+            <error type="modify">
+                <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not connected to this chat</text>
+            </error>
+           </message>
+            """
+        )
+        self.send(
+            """
+           <presence xmlns="jabber:component:accept" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/thirdwitch">
+            <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="none" role="none"/>
+                <status code="333"/>
+                <status code="110"/>
+            </x>
+            <priority>0</priority>
+           </presence>
+            """
+        )
+        assert self.next_sent() is None
+
     def test_self_ping_connected(self):
         muc = self.get_private_muc()
         muc.user_resources.add("gajim")

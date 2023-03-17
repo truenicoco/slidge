@@ -339,7 +339,9 @@ class BaseSession(
         self.raise_if_not_logged()
         if m.get_type() == "groupchat":
             muc = await self.bookmarks.by_jid(m.get_to())
-            if m.get_from().resource not in muc.user_resources:
+            r = m.get_from().resource
+            if r not in muc.user_resources:
+                self.xmpp.loop.create_task(muc.kick_resource(r))
                 raise XMPPError("not-acceptable", "You are not connected to this chat")
             return muc
         else:

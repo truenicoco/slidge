@@ -714,6 +714,22 @@ class LegacyMUC(
         await self.__fill_history()
         await self.archive.send_metadata(iq)
 
+    async def kick_resource(self, r: str):
+        """
+        Kick a XMPP client of the user. (slidge internal use)
+
+        :param r: The resource to kick
+        """
+        pto = self.user.jid
+        pto.resource = r
+        p = self.xmpp.make_presence(
+            pfrom=(await self.get_user_participant()).jid, pto=pto
+        )
+        p["muc"]["affiliation"] = "none"
+        p["muc"]["role"] = "none"
+        p["muc"]["status_codes"] = {110, 333}
+        p.send()
+
 
 def set_origin_id(msg: Message, origin_id: str):
     sub = ET.Element("{urn:xmpp:sid:0}origin-id")
