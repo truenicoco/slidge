@@ -37,7 +37,7 @@ ENV PYTHONUNBUFFERED=1
 # libmagic1: to guess mime type from files
 # media-types: to determine file name suffix based on file type
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    libidn11 libmagic1 media-types
+    libidn11 libmagic1 media-types shared-mime-info
 
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge
