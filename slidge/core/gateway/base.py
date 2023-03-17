@@ -159,7 +159,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
     GROUPS = False
 
     jid: JID  # type: ignore
-
+    mtype: MessageTypes = "chat"
+    is_group = False
     _can_send_carbon = False
 
     def __init__(self):
@@ -210,7 +211,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.register_plugins()
         self.__register_slixmpp_api()
         self.__register_handlers()
-        self._input_futures: dict[str, Future] = {}
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
@@ -291,9 +291,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         if isinstance(data, str):
             data = data.encode("utf-8")
         self.transport.write(data)
-
-    mtype: MessageTypes = "chat"
-    is_group = False
 
     def _register_commands(self):
         for cls in Command.subclasses:
