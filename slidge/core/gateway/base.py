@@ -34,6 +34,7 @@ from .disco import Disco
 from .mam import Mam
 from .muc_admin import MucAdmin
 from .ping import Ping
+from .registration import Registration
 from .search import Search
 from .vcard_temp import VCardTemp
 
@@ -205,8 +206,8 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         ] = self.session_cls.from_user
 
         self.register_plugins()
-        self.__register_slixmpp_api()
         self.__register_slixmpp_events()
+        self.roster.set_backend(RosterBackend)
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
@@ -235,6 +236,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__caps_handler = Caps(self)
         self.__vcard_temp_handler = VCardTemp(self)
         self.__muc_admin_handler = MucAdmin(self)
+        self.__registration = Registration(self)
 
         self.__register_commands()
 
@@ -246,13 +248,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             c = cls(self)
             self.__adhoc_handler.register(c)
             self.__chat_commands_handler.register(c)
-
-    def __raise_if_not_allowed_jid(self, jid: JID):
-        if not self.jid_validator.match(jid.bare):
-            raise XMPPError(
-                condition="not-allowed",
-                text="Your account is not allowed to use this gateway.",
-            )
 
     def __exception_handler(self, loop: asyncio.AbstractEventLoop, context):
         """
@@ -273,23 +268,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             log.exception("Crash in task", exc_info=exc)
             self.has_crashed = True
             loop.stop()
-
-    def __register_slixmpp_api(self):
-        self["xep_0077"].api.register(
-            user_store.get,
-            "user_get",
-        )
-        self["xep_0077"].api.register(
-            user_store.remove,
-            "user_remove",
-        )
-        self["xep_0077"].api.register(
-            self.make_registration_form, "make_registration_form"
-        )
-        self["xep_0077"].api.register(self._user_validate, "user_validate")
-        self["xep_0077"].api.register(self._user_modify, "user_modify")
-
-        self.roster.set_backend(RosterBackend)
 
     def __register_slixmpp_events(self):
         self.add_event_handler("session_start", self.__on_session_start)
@@ -435,28 +413,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             stanza.set_to(mto)
         stanza.send()
 
-    async def _user_validate(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        """
-        SliXMPP internal API stuff
-        """
-        log.debug("User validate: %s", ifrom.bare)
-        form_dict = {f.var: iq.get(f.var) for f in self.REGISTRATION_FIELDS}
-        self.__raise_if_not_allowed_jid(ifrom)
-        await self.user_prevalidate(ifrom, form_dict)
-        log.info("New user: %s", ifrom.bare)
-        user_store.add(ifrom, form_dict)
-
-    async def _user_modify(
-        self, _gateway_jid, _node, ifrom: JID, form_dict: dict[str, Optional[str]]
-    ):
-        """
-        SliXMPP internal API stuff
-        """
-        user = user_store.get_by_jid(ifrom)
-        log.debug("Modify user: %s", user)
-        await self.user_prevalidate(ifrom, form_dict)
-        user_store.add(ifrom, form_dict)
-
     async def _on_user_register(self, iq: Iq):
         session = self.get_session_from_stanza(iq)
         for jid in config.ADMINS:
@@ -471,6 +427,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
     async def _on_user_unregister(self, iq: Iq):
         await self.session_cls.kill_by_jid(iq.get_from())
+
+    def raise_if_not_allowed_jid(self, jid: JID):
+        if not self.jid_validator.match(jid.bare):
+            raise XMPPError(
+                condition="not-allowed",
+                text="Your account is not allowed to use this gateway.",
+            )
 
     def send_raw(self, data: Union[str, bytes]):
         # overridden from XMLStream to strip base64-encoded data from the logs
@@ -561,7 +524,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.loop.create_task(w())
 
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
-        self.__raise_if_not_allowed_jid(iq.get_from())
+        self.raise_if_not_allowed_jid(iq.get_from())
         reg = iq["register"]
         user = user_store.get_by_stanza(iq)
         log.debug("User found: %s", user)
