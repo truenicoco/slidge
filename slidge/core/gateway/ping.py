@@ -24,7 +24,6 @@ class Ping:
         )
         xmpp.plugin["xep_0030"].add_feature("urn:xmpp:ping")
 
-
     async def __handle_ping(self, iq: Iq):
         ito = iq.get_to()
 

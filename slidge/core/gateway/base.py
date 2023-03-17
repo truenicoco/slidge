@@ -42,6 +42,7 @@ from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
 from .ping import Ping
+from .search import Search
 
 if TYPE_CHECKING:
     from ..muc.room import LegacyMUC
@@ -237,6 +238,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.use_origin_id = False
         self.__ping_handler = Ping(self)
         self.__mam_handler = Mam(self)
+        self.__search_handler = Search(self)
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
@@ -378,9 +380,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self["xep_0077"].api.register(self._user_validate, "user_validate")
         self["xep_0077"].api.register(self._user_modify, "user_modify")
 
-        self["xep_0055"].api.register(self.search_get_form, "search_get_form")
-        self["xep_0055"].api.register(self._search_query, "search_query")
-
         self.roster.set_backend(RosterBackend)
 
     def __register_handlers(self):
@@ -437,15 +436,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 f"muc#admin",
                 StanzaPath(f"iq/mucadmin_query"),
                 self._handle_admin,  # type: ignore
-            )
-        )
-
-        self.plugin["xep_0030"].add_feature("jabber:iq:gateway")
-        self.register_handler(
-            CoroutineCallback(
-                f"iq:gateway",
-                StanzaPath(f"iq/gateway"),
-                self._handle_gateway_iq,  # type: ignore
             )
         )
 
@@ -558,38 +548,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         muc = await self.get_muc_from_stanza(iq)
         await muc.handle_admin(iq)
-
-    async def _handle_gateway_iq(self, iq: Iq):
-        user = user_store.get_by_jid(iq.get_from())
-        if user is None:
-            raise XMPPError("not-authorized", "Register to the gateway first")
-
-        if len(self.SEARCH_FIELDS) > 1:
-            raise XMPPError(
-                "feature-not-implemented", "Use jabber search for this gateway"
-            )
-
-        field = self.SEARCH_FIELDS[0]
-
-        reply = iq.reply()
-        if iq["type"] == "get":
-            reply["gateway"]["desc"] = self.SEARCH_TITLE
-            reply["gateway"]["prompt"] = field.label
-        elif iq["type"] == "set":
-            prompt = iq["gateway"]["prompt"]
-            session = self.session_cls.from_user(user)
-            result = await session.search({field.var: prompt})
-            if result is None or not result.items:
-                raise XMPPError(
-                    "item-not-found", "No contact was found with the info you provided."
-                )
-            if len(result.items) > 1:
-                raise XMPPError(
-                    "bad-request", "Your search yielded more than one result."
-                )
-            reply["gateway"]["jid"] = result.items[0]["jid"]
-
-        reply.send()
 
     async def __on_session_start(self, event):
         log.debug("Gateway session start: %s", event)
@@ -760,45 +718,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
     async def _on_user_unregister(self, iq: Iq):
         await self.session_cls.kill_by_jid(iq.get_from())
-
-    async def search_get_form(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        """
-        Prepare the search form using :attr:`.BaseSession.SEARCH_FIELDS`
-        """
-        user = user_store.get_by_jid(ifrom)
-        if user is None:
-            raise XMPPError(text="Search is only allowed for registered users")
-
-        reply = iq.reply()
-        form = reply["search"]["form"]
-        form["title"] = self.SEARCH_TITLE
-        form["instructions"] = self.SEARCH_INSTRUCTIONS
-        for field in self.SEARCH_FIELDS:
-            form.append(field.get_xml())
-        return reply
-
-    async def _search_query(self, _gateway_jid, _node, ifrom: JID, iq: Iq):
-        """
-        Handles a search request
-        """
-        user = user_store.get_by_jid(ifrom)
-        if user is None:
-            raise XMPPError(text="Search is only allowed for registered users")
-
-        result = await self.get_session_from_stanza(iq).search(
-            iq["search"]["form"].get_values()
-        )
-
-        if not result:
-            raise XMPPError("item-not-found", text="Nothing was found")
-
-        reply = iq.reply()
-        form = reply["search"]["form"]
-        for field in result.fields:
-            form.add_reported(field.var, label=field.label, type=field.type)
-        for item in result.items:
-            form.add_item(item)
-        return reply
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
