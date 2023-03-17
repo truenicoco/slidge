@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from ..core.muc.bookmarks import LegacyBookmarks
     from ..core.muc.participant import LegacyParticipant
     from ..core.muc.room import LegacyMUC
-    from ..core.pubsub import PepItem
+    from ..core.pubsub.pubsub import PepItem
     from ..core.session import BaseSession
 
 

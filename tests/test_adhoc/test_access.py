@@ -3,10 +3,10 @@ import pytest
 from slixmpp import ComponentXMPP
 from slixmpp.test import SlixTest
 
-import slidge.core.adhoc
+import slidge.core.command.adhoc
 import slidge.core.command.base
 from slidge.util.xep_0050.adhoc import XEP_0050
-from slidge.core.adhoc import AdhocProvider
+from slidge.core.command.adhoc import AdhocProvider
 from slidge.core.command import Command, CommandAccess
 
 

@@ -3,9 +3,9 @@ import pytest
 from slixmpp.test import SlixTest
 from slixmpp import ComponentXMPP
 
-import slidge.core.adhoc
+import slidge.core.command.adhoc
 from slidge.util.xep_0050.adhoc import XEP_0050
-from slidge.core.adhoc import AdhocProvider
+from slidge.core.command.adhoc import AdhocProvider
 from slidge.core.command import Command, TableResult
 from slidge.core.command.base import FormField
 

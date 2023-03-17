@@ -25,25 +25,25 @@ from slixmpp.types import MessageTypes
 from slixmpp.xmlstream import StanzaBase
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
-from .. import LegacyContact
-from ..util import ABCSubclassableOnceAtMost
-from ..util.db import GatewayUser, RosterBackend, user_store
-from ..util.error import XMPPError
-from ..util.types import AvatarType
-from ..util.xep_0292.vcard4 import VCard4Provider
-from . import config
-from .adhoc import AdhocProvider
-from .chat_command import ChatCommandProvider
-from .command.base import Command, FormField
-from .command.register import RegistrationType
+from ...util import ABCSubclassableOnceAtMost
+from ...util.db import GatewayUser, RosterBackend, user_store
+from ...util.error import XMPPError
+from ...util.types import AvatarType
+from ...util.xep_0292.vcard4 import VCard4Provider
+from .. import config
+from ..command.adhoc import AdhocProvider
+from ..command.base import Command, FormField
+from ..command.chat_command import ChatCommandProvider
+from ..command.register import RegistrationType
+from ..contact import LegacyContact
+from ..mixins import MessageMixin
+from ..pubsub import PubSubComponent
+from ..session import BaseSession
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
-from .mixins import MessageMixin
-from .pubsub import PubSubComponent
-from .session import BaseSession
 
 if TYPE_CHECKING:
-    from .muc.room import LegacyMUC
+    from ..muc.room import LegacyMUC
 
 
 class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMost):

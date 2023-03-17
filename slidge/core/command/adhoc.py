@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 from slixmpp import JID, Iq
 from slixmpp.plugins.xep_0004 import Form as SlixForm
 
-from ..util.error import XMPPError
-from ..util.xep_0030.stanza.items import DiscoItems
-from .command import Command, CommandResponseType, Confirmation, Form, TableResult
+from ...util.error import XMPPError
+from ...util.xep_0030.stanza.items import DiscoItems
+from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:
-    from .gateway import BaseGateway
-    from .session import BaseSession
+    from ..gateway.base import BaseGateway
+    from ..session import BaseSession
 
 
 class AdhocProvider:

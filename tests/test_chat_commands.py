@@ -2,7 +2,7 @@ import pytest
 
 import slixmpp.test
 
-import slidge.core.chat_command
+import slidge.core.command.chat_command
 from slidge.util.test import SlixTestPlus
 from slidge.core.command import Command, Confirmation
 
@@ -63,7 +63,7 @@ class TestChatCommands(SlixTestPlus):
             jid="slidge.whatever.ass",
             server="whatever.ass",
         )
-        self.commands = slidge.core.chat_command.ChatCommandProvider(self.xmpp)
+        self.commands = slidge.core.command.chat_command.ChatCommandProvider(self.xmpp)
         self.commands.register(CommandAdmin(self.xmpp))
         self.commands.register(CommandAdminConfirmFail(self.xmpp))
 

@@ -14,11 +14,11 @@ from urllib.parse import quote as url_quote
 from slixmpp import JID, CoroutineCallback, Message, StanzaPath
 from slixmpp.types import MessageTypes
 
-from ..util.error import XMPPError
-from .command import Command, CommandResponseType, Confirmation, Form, TableResult
+from ...util.error import XMPPError
+from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:
-    from .gateway import BaseGateway
+    from ..gateway import BaseGateway
 
 
 class ChatCommandProvider:

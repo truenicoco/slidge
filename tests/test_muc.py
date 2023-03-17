@@ -1,5 +1,4 @@
 import datetime
-import hashlib
 import tempfile
 import uuid
 from base64 import b64encode
