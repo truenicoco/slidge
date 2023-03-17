@@ -42,6 +42,7 @@ from .disco import Disco
 from .mam import Mam
 from .ping import Ping
 from .search import Search
+from .vcard_temp import VCardTemp
 
 if TYPE_CHECKING:
     from ..muc.room import LegacyMUC
@@ -239,6 +240,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
+        self.__vcard_temp_handler = VCardTemp(self)
 
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
@@ -438,39 +440,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
                 self._handle_admin,  # type: ignore
             )
         )
-
-        self.register_handler(
-            CoroutineCallback(
-                "VCardTemp",
-                StanzaPath("iq/vcard_temp"),
-                self.__handle_get_vcard_temp,  # type:ignore
-            )
-        )
-
-    async def __handle_get_vcard_temp(self, iq: Iq):
-        if iq["type"] != "get":
-            raise XMPPError("not-authorized")
-
-        muc = await self.get_muc_from_stanza(iq)
-        to = iq.get_to()
-
-        if nick := to.resource:
-            participant = await muc.get_participant(nick, raise_if_not_found=False)
-            if not (contact := participant.contact):
-                raise XMPPError("item-not-found", "This participant has no contact")
-            avatar = contact.get_avatar()
-            if avatar is None:
-                raise XMPPError("item-not-found", "This participant has no avatar")
-            data = avatar.data
-            v = self.xmpp.plugin["xep_0054"].make_vcard()
-            v["PHOTO"]["BINVAL"] = data.get_value()
-            v["PHOTO"]["TYPE"] = "image/png"
-            reply = iq.reply()
-            reply.append(v)
-            reply.send()
-            return
-
-        return await muc.send_avatar(iq)
 
     async def __on_group_chat_error(self, msg: Message):
         condition = msg["error"].get_condition()
