@@ -62,6 +62,9 @@ class Disco:
         if ifrom is None:
             raise XMPPError("bad-request")
 
+        if jid != self.xmpp.boundjid.bare:
+            return DiscoItems()
+
         user = user_store.get_by_jid(ifrom)
         if user is None:
             raise XMPPError("registration-required")

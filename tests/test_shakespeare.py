@@ -137,6 +137,10 @@ class Bookmarks(LegacyBookmarks):
         else:
             return local_part
 
+    async def fill(self):
+        await self.by_legacy_id("room1")
+        await self.by_legacy_id("room2")
+
 
 class TestAimShakespeareBase(SlidgeTest):
     plugin = globals()
@@ -647,6 +651,27 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="urn:xmpp:reply:0" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
               </query>
+            </iq>
+            """,
+        )
+
+    def test_disco_items_registered_existing_contact(self):
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        self.recv(
+            f"""
+            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}" id="123">
+                <query xmlns='http://jabber.org/protocol/disco#items' node="http://jabber.org/protocol/commands"/>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+           <iq xmlns="jabber:component:accept" type="result" from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim" id="123">
+               	<query xmlns="http://jabber.org/protocol/disco#items"/>
             </iq>
             """,
         )
