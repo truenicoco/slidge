@@ -94,7 +94,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             try:
                 msg = await self.session.tg.api.get_chat_pinned_message(self.legacy_id)
                 self.log.debug("Pinned message: %s", type(msg.content))
-            except XMPPError:
+            except (XMPPError, tgapi.NotFound):
+                # tgapi.NotFound should not be raised here, but apparently is sometimes.
+                # possibly race condition on startup :/
+                # maybe we have to catch elsewhere too…
                 self.log.debug("Pinned message not found?")
                 return
         content = msg.content
