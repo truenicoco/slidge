@@ -205,7 +205,6 @@ class BaseSession(
             return
         for c in session.contacts:
             c.unsubscribe()
-        await session.logout()
         await cls.xmpp.unregister(user)
         del _sessions[user]
         del user

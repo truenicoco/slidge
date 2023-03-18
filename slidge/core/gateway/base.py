@@ -568,6 +568,9 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         Optionally override this if you need to clean additional
         stuff after a user has been removed from the permanent user_store.
 
+        You may need to manually logout the legacy session in here, ``Session.logout()``
+        will *not* be called automatically.
+
         :param user:
         """
         pass
