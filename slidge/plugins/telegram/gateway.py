@@ -165,6 +165,12 @@ class Gateway(BaseGateway):
         phone = registration_form.get("phone")
         if not is_valid_phone_number(phone):
             raise ValueError("Not a valid phone number")
+        for u in user_store.get_all():
+            if u.registration_form.get("phone") == phone:
+                raise XMPPError(
+                    "not-allowed",
+                    text="Someone is already using this phone number on this server.",
+                )
         tg_client = CredentialsValidation(registration_form)  # type: ignore
         auth_task = self.loop.create_task(tg_client.start())
         self._pending_registrations[user_jid.bare] = auth_task, tg_client
