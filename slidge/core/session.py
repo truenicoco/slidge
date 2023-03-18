@@ -87,7 +87,8 @@ class BaseSession(
         self.ignore_messages = set[str]()
 
         self.contacts: LegacyRoster = LegacyRoster.get_self_or_unique_subclass()(self)
-        self.logged = False
+        self._logged = False
+        self.__reset_ready()
 
         self.bookmarks: LegacyBookmarks = LegacyBookmarks.get_self_or_unique_subclass()(
             self
@@ -97,6 +98,24 @@ class BaseSession(
 
         self.threads = BiDict[str, LegacyThreadType]()  # type:ignore
         self.__thread_creation_lock = asyncio.Lock()
+
+    def __reset_ready(self):
+        self.ready = self.xmpp.loop.create_future()
+
+    @property
+    def logged(self):
+        return self._logged
+
+    @logged.setter
+    def logged(self, v: bool):
+        self._logged = v
+        if self.ready.done():
+            if v:
+                return
+            self.__reset_ready()
+        else:
+            if v:
+                self.ready.set_result(True)
 
     def __repr__(self):
         return f"<Session of {self.user}>"

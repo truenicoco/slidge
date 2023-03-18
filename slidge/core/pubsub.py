@@ -188,8 +188,7 @@ class PubSubComponent(BasePlugin):
             if session is None:
                 return
 
-            if not session.logged:
-                return
+            await session.ready
 
             try:
                 contact = await session.contacts.by_jid(to)
@@ -340,8 +339,7 @@ class PubSubComponent(BasePlugin):
             session = self.xmpp.get_session_from_jid(to)
             if session is None:
                 return
-            if not session.logged:
-                return
+            await session.ready
             entity = await session.get_contact_or_group_or_participant(from_)
             if isinstance(entity, LegacyContact) and not entity.added_to_roster:
                 return

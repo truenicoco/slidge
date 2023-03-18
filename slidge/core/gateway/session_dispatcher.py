@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Callable, Union
 
@@ -49,6 +50,12 @@ class SessionDispatcher:
             log.debug("Ignoring message to component")
             return
         s = xmpp.get_session_from_stanza(m)
+        try:
+            await asyncio.wait_for(s.ready, 10)
+        except asyncio.TimeoutError:
+            raise XMPPError(
+                "remote-server-timeout", "Legacy session is not logged, retry later"
+            )
         try:
             await cb(s, m)
         except XMPPError:

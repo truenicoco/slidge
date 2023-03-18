@@ -1,3 +1,4 @@
+import asyncio
 import tempfile
 from base64 import b64encode
 from pathlib import Path
@@ -53,6 +54,8 @@ class TestPubSubDisco(SlixTest):
 
 class MockSession:
     logged = True
+    ready = asyncio.Future()
+    ready.set_result(True)
 
     @staticmethod
     async def get_contact_or_group_or_participant(j):

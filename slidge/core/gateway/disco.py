@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -43,8 +44,13 @@ class Disco:
             raise XMPPError("registration-required")
         session = self.xmpp.get_session_from_user(user)
 
-        if not session.logged:
-            raise XMPPError("recipient-unavailable", "You are not logged (yet?)")
+        try:
+            await asyncio.wait_for(session.ready, 10)
+        except asyncio.TimeoutError:
+            raise XMPPError(
+                "recipient-unavailable",
+                "Timeout while waiting for legacy session to be ready, retry later",
+            )
 
         log.debug("Looking for entity: %s", jid)
 

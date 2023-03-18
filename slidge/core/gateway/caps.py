@@ -42,9 +42,7 @@ class Caps:
             if session is None:
                 return stanza
 
-            if not session.logged:
-                log.debug("not adding caps 2")
-                return stanza
+            await session.ready
 
             entity = await session.get_contact_or_group_or_participant(pfrom)
             if not isinstance(entity, LegacyContact):
