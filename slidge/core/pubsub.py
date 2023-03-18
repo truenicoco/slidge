@@ -421,6 +421,17 @@ class PubSubComponent(BasePlugin):
         log.debug("New nickname: %s", nickname.nick)
         self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, restrict_to))
 
+    async def broadcast_all(self, from_: JID, to: JID):
+        """
+        Force push avatar and nick for a stored JID.
+        """
+        a = self._avatars.get(from_)
+        if a:
+            await self._broadcast(a.metadata, from_, to)
+        n = self._nicks.get(from_)
+        if n:
+            await self._broadcast(n.nick, from_, to)
+
 
 def _add_or_extend_allowed_jids(
     jid: JID, store: dict[JID, PepItemType], item: PepItemType

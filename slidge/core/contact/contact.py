@@ -343,6 +343,11 @@ class LegacyContact(
             self.log.warning("Could not add to roster", exc_info=e)
         else:
             self.added_to_roster = True
+            # we only broadcast pubsub events for contacts added to the roster
+            # so if something was set before, we need to push it now
+            self.xmpp.loop.create_task(
+                self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user.jid)
+            )
             self._send_last_presence()
 
     async def _set_roster(self, **kw):
