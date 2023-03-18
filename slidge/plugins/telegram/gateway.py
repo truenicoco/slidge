@@ -184,8 +184,7 @@ class Gateway(BaseGateway):
 
     async def unregister(self, user: GatewayUser):
         session = self.session_cls.from_user(user)
-        # FIXME: this effectively removes user data from disk, but crashes slidge.
-        await session.tg.start()
+        session.logged = False
         await session.tg.api.log_out()
 
 
