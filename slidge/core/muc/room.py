@@ -144,7 +144,9 @@ class LegacyMUC(
             log.info("Fetching history for %s", self)
             oldest = self.archive.get_oldest_message()
             if oldest:
-                await self.backfill(oldest.id, oldest.when)
+                await self.backfill(
+                    self.session.xmpp_msg_id_to_legacy_msg_id(oldest.id), oldest.when
+                )
             else:
                 await self.backfill()
             self.__history_filled = True
