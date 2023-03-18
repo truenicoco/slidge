@@ -360,8 +360,8 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 [package.source]
 type = "git"
 url = "https://github.com/dolfies/discord.py-self.git"
-reference = "6887e34"
-resolved_reference = "6887e34fcd3854ad2a3b145fae34cb6c2aa66fb8"
+reference = "5cfd544"
+resolved_reference = "5cfd544a674d801880ea3c26c22ccfe7e026aa5d"
 
 [[package]]
 name = "docutils"
@@ -1437,7 +1437,7 @@ telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "7f682a6f27fc5396b2cca599564c185122c4d049a871457650706c7bdb43a9c0"
+content-hash = "90374ec0e94ad544f7577b885368ae5a733d0599d5a816086ea3f6bb14a1f56b"
 
 [metadata.files]
 aiodns = [
