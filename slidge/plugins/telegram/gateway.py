@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import shutil
 import typing
 from datetime import datetime
 
@@ -191,7 +192,9 @@ class Gateway(BaseGateway):
     async def unregister(self, user: GatewayUser):
         session = self.session_cls.from_user(user)
         session.logged = False
+        workdir = session.tg.settings.files_directory.absolute()
         await session.tg.api.log_out()
+        shutil.rmtree(workdir)
 
 
 def fmt_timestamp(t: int):
