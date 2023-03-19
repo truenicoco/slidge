@@ -41,14 +41,14 @@ try:
 except FileNotFoundError:
     pass
 
-for f in DESTINATION.glob("**/*.html"):
-    f.unlink()
-
 job_html = requests.get(job_url).content.decode()
 
 artifact_url = re.search(f"https://.*{FILE_NAME}", job_html).group(0)
 
 artifact_bytes = requests.get(artifact_url).content
+
+for f in DESTINATION.glob("**/*.html"):
+    f.unlink()
 
 with tarfile.open(fileobj=io.BytesIO(artifact_bytes), mode="r:gz") as tar:
     tar.extractall(DESTINATION)
