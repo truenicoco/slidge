@@ -188,8 +188,7 @@ class PubSubComponent(BasePlugin):
             if session is None:
                 return
 
-            await session.ready
-
+            await session.contacts.ready
             try:
                 contact = await session.contacts.by_jid(to)
             except XMPPError as e:

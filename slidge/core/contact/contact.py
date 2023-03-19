@@ -332,7 +332,7 @@ class LegacyContact(
             await self._set_roster(**kw)
         except PermissionError:
             warnings.warn(
-                "Slidge does not have privileges to add contacts to the roster."
+                "Slidge does not have privileges to add contacts to the roster. "
                 "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
                 "for more info."
             )
@@ -345,10 +345,11 @@ class LegacyContact(
             self.added_to_roster = True
             # we only broadcast pubsub events for contacts added to the roster
             # so if something was set before, we need to push it now
-            self.xmpp.loop.create_task(
-                self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user.jid)
-            )
+            self.xmpp.loop.create_task(self.__broadcast_pubsub_items())
             self._send_last_presence()
+
+    async def __broadcast_pubsub_items(self):
+        await self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user.jid)
 
     async def _set_roster(self, **kw):
         try:
@@ -367,6 +368,11 @@ class LegacyContact(
         # very awkward, slixmpp bug maybe?
         presence.append(presence["nick"])
         self._send(presence)
+
+    async def on_added_to_roster_no_privilege(self):
+        self.added_to_roster = True
+        self._send_last_presence()
+        await self.__broadcast_pubsub_items()
 
     def unsubscribe(self):
         """

@@ -355,6 +355,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         session.logged = True
         session.send_gateway_status("Syncing contacts…", show="dnd")
         await session.contacts.fill()
+        session.contacts.ready.set_result(True)
         if self.GROUPS:
             session.send_gateway_status("Syncing groups…", show="dnd")
             await session.bookmarks.fill()
