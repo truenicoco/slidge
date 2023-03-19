@@ -165,7 +165,7 @@ class PubSubComponent(BasePlugin):
                 self._get_vcard,  # type:ignore
             )
         )
-        self.xmpp.add_event_handler("got_online", self._on_got_online)
+        self.xmpp.add_event_handler("presence_available", self._on_presence_available)
 
         disco = self.xmpp.plugin["xep_0030"]
         disco.add_identity("pubsub", "pep", self.component_name)
@@ -174,7 +174,7 @@ class PubSubComponent(BasePlugin):
         disco.add_feature("http://jabber.org/protocol/pubsub#retrieve-items")
         disco.add_feature("http://jabber.org/protocol/pubsub#persistent-items")
 
-    async def _on_got_online(self, p: Presence):
+    async def _on_presence_available(self, p: Presence):
         from_ = p.get_from()
         ver_string = p["caps"]["ver"]
         info = None
