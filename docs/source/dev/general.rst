@@ -25,6 +25,19 @@ of XEPs, especially when it comes to components.
 You can launch it with the ``-p`` option to use a clean profile and not mess up
 your normal user settings and such.
 
+Poetry
+------
+
+To install outside of a container, use `poetry <https://python-poetry.org/>`_.
+
+Starting from poetry >= 1.4.0, these extra configuration steps are required, cf
+https://github.com/python-poetry/poetry/pull/7358
+
+.. code-block::
+
+   poetry config installer.modern-installation false
+   poetry config experimental.new-installer true
+
 Contributing
 ------------
 
