@@ -43,6 +43,9 @@ class Roster(LegacyRoster[str, Contact]):
         """
         Adds a WhatsApp contact to local roster, filling all required and optional information.
         """
+        if data.JID == self.user_legacy_id:
+            # with the current implementation, we don't allow that
+            return
         contact = await self.by_legacy_id(data.JID)
         contact.name = data.Name
         if data.Avatar.URL:

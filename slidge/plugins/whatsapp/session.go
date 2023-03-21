@@ -372,7 +372,7 @@ func (s *Session) handleEvent(evt interface{}) {
 	switch evt := evt.(type) {
 	case *events.AppStateSyncComplete:
 		if len(s.client.Store.PushName) > 0 && evt.Name == appstate.WAPatchCriticalBlock {
-			s.propagateEvent(EventConnected, &EventPayload{ConnectedJID: s.device.JID().String()})
+			s.propagateEvent(EventConnected, &EventPayload{ConnectedJID: s.device.JID().ToNonAD().String()})
 			if err := s.client.SendPresence(types.PresenceAvailable); err != nil {
 				s.gateway.logger.Warnf("Failed to send available presence: %s", err)
 			}
@@ -381,7 +381,7 @@ func (s *Session) handleEvent(evt interface{}) {
 		if len(s.client.Store.PushName) == 0 {
 			return
 		}
-		s.propagateEvent(EventConnected, &EventPayload{ConnectedJID: s.device.JID().String()})
+		s.propagateEvent(EventConnected, &EventPayload{ConnectedJID: s.device.JID().ToNonAD().String()})
 		if err := s.client.SendPresence(types.PresenceAvailable); err != nil {
 			s.gateway.logger.Warnf("Failed to send available presence: %s", err)
 		}
