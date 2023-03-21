@@ -35,6 +35,8 @@ class MUC(LegacyMUC[str, str, Participant, str]):
     REACTIONS_SINGLE_EMOJI = True
     type = MucType.GROUP
 
+    _ALL_INFO_FILLED_ON_STARTUP = True
+
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.sent = dict[str, str]()
@@ -73,22 +75,17 @@ class MUC(LegacyMUC[str, str, Participant, str]):
         if info.Subject.SetByJID:
             contact = await self.session.contacts.by_legacy_id(info.Subject.SetByJID)
             self.subject_setter = contact.name
-        num_participants = self.n_participants or 0
         for ptr in info.Participants:
             data = whatsapp.GroupParticipant(handle=ptr)
             participant = await self.get_participant_by_legacy_id(data.JID)
             if data.Action == whatsapp.GroupParticipantActionRemove:
                 await self.remove_participant(participant)
-                num_participants -= 1
             else:
                 participant.affiliation = "member"
                 if data.Affiliation == whatsapp.GroupAffiliationAdmin:
                     participant.affiliation = "admin"
                 elif data.Affiliation == whatsapp.GroupAffiliationOwner:
                     participant.affiliation = "owner"
-            if data.Action == whatsapp.GroupParticipantActionAdd:
-                num_participants += 1
-        self.n_participants = num_participants
 
 
 class Bookmarks(LegacyBookmarks[str, MUC]):
