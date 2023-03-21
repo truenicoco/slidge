@@ -177,11 +177,20 @@ class MarkerMixin(MessageMaker):
 
     def received(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
-        Send a "received" message marker (:xep:`0333`) from this contact to the user
+        Send a "received" message marker (:xep:`0333`) from this contact to the user.
+        For LegacyContacts, also send a delivery receipt marker (:xep:`0184`)
 
         :param legacy_msg_id: The message this marker refers to
         """
         carbon = kwargs.get("carbon")
+        if self.mtype == "chat":
+            self._send(
+                self.xmpp.delivery_receipt.make_ack(
+                    self._legacy_to_xmpp(legacy_msg_id),
+                    mfrom=self.jid,
+                    mto=self.user.jid,
+                )
+            )
         self._send(
             self._make_marker(legacy_msg_id, "received", carbon=carbon), **kwargs
         )

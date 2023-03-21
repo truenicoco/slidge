@@ -339,7 +339,8 @@ class BaseSession(
         return legacy_thread
 
     def __ack(self, msg: Message):
-        self.xmpp.delivery_receipt.ack(msg)
+        if not self.xmpp.PROPER_RECEIPTS:
+            self.xmpp.delivery_receipt.ack(msg)
 
     async def __get_entity(self, m: Message) -> RecipientType:
         self.raise_if_not_logged()

@@ -258,6 +258,7 @@ class TestAimShakespeareBase(SlidgeTest):
         assert m == m2
 
     def test_delivery_receipt(self):
+        self.xmpp.PROPER_RECEIPTS = True
         self.recv(
             """
             <message type='chat'
@@ -270,6 +271,13 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.next_sent()  # auto reply in our test plugin
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        juliet = self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
+        juliet.received("123")
         self.send(
             """
             <message xmlns="jabber:component:accept"
@@ -280,17 +288,16 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        self.recv(
+        self.send(
             """
-            <message type='chat'
-                     to='juliet@aim.shakespeare.lit/slidge'
-                     from='romeo@montague.lit/prout'
-                     id="123">
-                <body>Art thou not Romeo, and a Montague?</body>
+            <message xmlns="jabber:component:accept"
+                    type="chat"
+                    to="romeo@montague.lit"
+                    from="juliet@aim.shakespeare.lit/slidge">
+   	            <received xmlns="urn:xmpp:chat-markers:0" id="123"/>
             </message>
             """
         )
-        self.next_sent()  # auto reply in our test plugin
         assert self.next_sent() is None
 
     def test_romeo_composing(self):

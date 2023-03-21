@@ -152,6 +152,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
     )
     REGISTRATION_QR_INSTRUCTIONS = "Flash this code or follow this link"
 
+    PROPER_RECEIPTS = False
+    """
+    Set this to True if the legacy service provides a real equivalent of message delivery receipts
+    (:xep:`0184`), meaning that there is an event thrown when the actual device of a contact receives
+    a message. Make sure to call Contact.received() adequately if this is set to True.
+    """
+
     GROUPS = False
 
     jid: JID  # type: ignore

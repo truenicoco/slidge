@@ -33,6 +33,7 @@ class Link(Command):
     )
     CHAT_COMMAND = NODE = "link"
     ACCESS = CommandAccess.NON_USER
+    PROPER_RECEIPTS = True
 
     xmpp: "Gateway"
 

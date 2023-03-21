@@ -31,6 +31,7 @@ class Gateway(BaseGateway):
 
     MARK_ALL_MESSAGES = True
     GROUPS = True
+    PROPER_RECEIPTS = True
 
     def __init__(self):
         super().__init__()
