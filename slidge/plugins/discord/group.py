@@ -126,6 +126,12 @@ class MUC(LegacyMUC[int, int, Participant, int]):
             await p.send_message(msg, archive_only=True)
 
     async def get_participant_by_discord_user(self, user: di.User):
+        if user.bot:
+            # no "contact" is possible for bots?
+            # FIXME: avatars for contact-less participants
+            p = await self.get_participant(user.display_name)
+            p.DISCO_CATEGORY = "bot"
+            return p
         try:
             return await self.get_participant_by_legacy_id(user.id)
         except XMPPError as e:
