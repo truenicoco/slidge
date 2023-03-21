@@ -41,9 +41,14 @@ class MUC(LegacyMUC[str, str, Participant, str]):
 
     async def join(self, *a, **kw):
         await super().join(*a, **kw)
-        avatar = self.session.whatsapp.GetAvatar(self.legacy_id, "")
-        if avatar.URL:
-            self.avatar = avatar.URL
+        try:
+            avatar = self.session.whatsapp.GetAvatar(self.legacy_id, "")
+        except RuntimeError:
+            # no avatar
+            pass
+        else:
+            if avatar.URL:
+                self.avatar = avatar.URL
 
     def get_message_sender(self, legacy_msg_id: str):
         sender_legacy_id = self.sent.get(legacy_msg_id)
