@@ -317,7 +317,15 @@ class TestAimShakespeareBase(SlidgeTest):
             </message>
             """
         )
-        self.send(None)
+        self.send(
+            """
+            <message type="error" from="juliet@montague.lit" to="eve@aim.shakespeare.lit">
+                <error type="auth">
+                <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not registered to this gateway
+            </text></error></message>
+            """
+        )
 
     def test_juliet_sends_text(self):
         session = BaseSession.get_self_or_unique_subclass().from_jid(

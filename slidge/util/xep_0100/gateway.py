@@ -2,10 +2,10 @@ import logging
 import warnings
 
 from slixmpp import JID, Iq, Message, Presence, register_stanza_plugin
-from slixmpp.exceptions import IqError
 from slixmpp.plugins.base import BasePlugin
 
 from slidge.core import config
+from slidge.util.error import XMPPError
 
 from . import stanza
 
@@ -114,6 +114,8 @@ class XEP_0100(BasePlugin):
             return
 
         if self.needs_registration and await self.get_user(msg) is None:
-            return
+            raise XMPPError(
+                "registration-required", text="You are not registered to this gateway"
+            )
 
         self.xmpp.event("legacy_message", msg)
