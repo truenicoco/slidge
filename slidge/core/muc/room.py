@@ -77,6 +77,12 @@ class LegacyMUC(
     This is just a flag on archive responses that most clients ignore anyway.
     """
 
+    _ALL_INFO_FILLED_ON_STARTUP = False
+    """
+    Set this to true if the fill_participants() / fill_participants() design does not
+    fit the legacy API, ie, no lazy loading of the participant list and history.
+    """
+
     def __init__(self, session: "BaseSession", legacy_id: LegacyGroupIdType, jid: JID):
         super().__init__()
         from .participant import LegacyParticipant
@@ -305,7 +311,11 @@ class LegacyMUC(
         form.add_field("muc#maxhistoryfetch", value=str(self.max_history_fetch))
         form.add_field("muc#roominfo_subjectmod", "boolean", value=False)
 
-        if (n := self.n_participants) is not None:
+        if self._ALL_INFO_FILLED_ON_STARTUP or self.__participants_filled:
+            n: Optional[int] = len(await self.get_participants())
+        else:
+            n = self.n_participants
+        if n is not None:
             form.add_field("muc#roominfo_occupants", value=str(n))
 
         if d := self.description:
