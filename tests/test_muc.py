@@ -542,6 +542,7 @@ class TestMuc(SlidgeTest):
     def test_join_group(self):
         muc = self.get_private_muc("room-private")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
+        muc.session.contacts.ready.set_result(True)
         participant = self.xmpp.loop.run_until_complete(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
@@ -690,6 +691,8 @@ class TestMuc(SlidgeTest):
         )
 
     def test_resource_not_joined(self):
+        session = self.get_romeo_session()
+        session.contacts.ready.set_result(True)
         self.recv(
             """
             <message from='romeo@montague.lit/gajim' type='groupchat'
@@ -1482,6 +1485,7 @@ class TestMuc(SlidgeTest):
     def test_get_members(self):
         muc = self.get_private_muc()
         muc.user_resources.add("gajim")
+        muc.session.contacts.ready.set_result(True)
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>

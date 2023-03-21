@@ -553,6 +553,7 @@ class LegacyMUC(
             construction (optional)
         :return:
         """
+        await self.session.contacts.ready
         p = self._participants_by_contacts.get(c)
         if p is None:
             p = self.Participant(self, c.name, **kwargs)
