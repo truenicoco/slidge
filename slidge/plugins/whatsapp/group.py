@@ -73,8 +73,9 @@ class MUC(LegacyMUC[str, str, Participant, str]):
             set_at = datetime.fromtimestamp(info.Subject.SetAt, tz=timezone.utc)
             self.subject_date = set_at
         if info.Subject.SetByJID:
-            contact = await self.session.contacts.by_legacy_id(info.Subject.SetByJID)
-            self.subject_setter = contact.name
+            participant = await self.get_participant_by_legacy_id(info.Subject.SetByJID)
+            if name := participant.nickname:
+                self.subject_setter = name
         for ptr in info.Participants:
             data = whatsapp.GroupParticipant(handle=ptr)
             participant = await self.get_participant_by_legacy_id(data.JID)
