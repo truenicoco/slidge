@@ -126,8 +126,8 @@ class MUC(LegacyMUC[int, int, Participant, int]):
             await p.send_message(msg, archive_only=True)
 
     async def get_participant_by_discord_user(self, user: di.User):
-        if user.bot:
-            # no "contact" is possible for bots?
+        if user.discriminator == "0000":
+            # a webhook, eg Github#0000
             # FIXME: avatars for contact-less participants
             p = await self.get_participant(user.display_name)
             p.DISCO_CATEGORY = "bot"

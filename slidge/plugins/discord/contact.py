@@ -29,6 +29,8 @@ class Contact(LegacyContact[int], Mixin):  # type: ignore
 
     async def update_info(self):
         u = self.discord_user
+        if u.bot or u.system:
+            self.DISCO_CATEGORY = "bot"
         self.name = u.display_name
         if a := u.avatar:
             await self.set_avatar(a.url, a.key)
