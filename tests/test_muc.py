@@ -31,6 +31,9 @@ class Session(BaseSession):
     def __init__(self, user):
         super().__init__(user)
 
+    async def wait_for_ready(self, timeout=10):
+        return
+
     @staticmethod
     def xmpp_msg_id_to_legacy_msg_id(i: str) -> str:
         return "legacy-" + i

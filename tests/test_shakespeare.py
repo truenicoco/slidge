@@ -62,6 +62,9 @@ class Session(BaseSession):
     def __init__(self, user):
         super().__init__(user)
 
+    async def wait_for_ready(self, timeout=10):
+        return
+
     async def login(self):
         pass
 

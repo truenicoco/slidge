@@ -33,6 +33,9 @@ class LegacyBookmarks(
 
         super().__init__()
         self.log = logging.getLogger(f"{self.user.bare_jid}:bookmarks")
+        self.ready = self.session.xmpp.loop.create_future()
+        if not self.xmpp.GROUPS:
+            self.ready.set_result(True)
 
     @property
     def user_nick(self):

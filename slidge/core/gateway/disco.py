@@ -9,6 +9,7 @@ from ...util.error import XMPPError
 from ...util.xep_0030.stanza.items import DiscoItems
 
 if TYPE_CHECKING:
+    from ..session import BaseSession
     from .base import BaseGateway
 
 
@@ -43,14 +44,7 @@ class Disco:
         if user is None:
             raise XMPPError("registration-required")
         session = self.xmpp.get_session_from_user(user)
-
-        try:
-            await asyncio.wait_for(session.ready, 10)
-        except asyncio.TimeoutError:
-            raise XMPPError(
-                "recipient-unavailable",
-                "Timeout while waiting for legacy session to be ready, retry later",
-            )
+        await session.wait_for_ready()
 
         log.debug("Looking for entity: %s", jid)
 
@@ -76,6 +70,7 @@ class Disco:
             raise XMPPError("registration-required")
 
         session = self.xmpp.get_session_from_user(user)
+        await session.wait_for_ready()
 
         d = DiscoItems()
         for muc in session.bookmarks:

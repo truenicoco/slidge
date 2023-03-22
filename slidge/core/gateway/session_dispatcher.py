@@ -54,12 +54,7 @@ class SessionDispatcher:
             log.debug("Ignoring message to component")
             return
         s = xmpp.get_session_from_stanza(m)
-        try:
-            await asyncio.wait_for(s.ready, 10)
-        except asyncio.TimeoutError:
-            raise XMPPError(
-                "remote-server-timeout", "Legacy session is not logged, retry later"
-            )
+        await s.wait_for_ready()
         try:
             await cb(s, m)
         except XMPPError:

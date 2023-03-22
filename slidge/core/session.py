@@ -876,6 +876,25 @@ class BaseSession(
                     return None
             return muc
 
+    async def wait_for_ready(self, timeout: Optional[Union[int, float]] = 10):
+        """
+        Wait until session, contacts and bookmarks are ready
+
+        (slidge internal use)
+
+        :param timeout:
+        :return:
+        """
+        try:
+            await asyncio.wait_for(self.ready, timeout)
+            await asyncio.wait_for(self.contacts.ready, timeout)
+            await asyncio.wait_for(self.bookmarks.ready, timeout)
+        except asyncio.TimeoutError:
+            raise XMPPError(
+                "recipient-unavailable",
+                "Legacy session is not fully initialized, retry later",
+            )
+
 
 def remove_emoji_variation_selector_16(emoji: str):
     # this is required for compatibility with dino, and maybe other future clients?
