@@ -33,3 +33,5 @@ dev/confs/slidge-tg.ini
 /debian/slidge.postinst.debhelper
 /debian/slidge.prerm.debhelper
 /debian/slidge.substvars
+/build/
+/docs/source/dev/api/slidge/
