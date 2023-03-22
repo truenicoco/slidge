@@ -11,7 +11,7 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0082 import format_datetime
 
 from slidge import *
-from slidge.core.mixins.message import AttachmentMixin
+from slidge.core.mixins.attachment import AttachmentMixin
 
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyMessageType, LegacyContactType

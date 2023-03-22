@@ -10,7 +10,7 @@ from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
 import slidge.core.muc.room
-import slidge.core.mixins.message
+import slidge.core.mixins.message_maker
 from slidge import *
 from slidge.core.muc import MucType
 from slidge.core.muc.archive import MessageArchive
@@ -223,11 +223,11 @@ class TestMuc(SlidgeTest):
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        slidge.core.muc.room.uuid4 = slidge.core.mixins.message.uuid4 = lambda: "uuid"
+        slidge.core.muc.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = lambda: "uuid"
         self.get_romeo_session().logged = True
 
     def tearDown(self):
-        slidge.core.muc.room.uuid4 = slidge.core.mixins.message.uuid4 = uuid.uuid4
+        slidge.core.muc.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
 
     @staticmethod
     def get_romeo_session() -> Session:
