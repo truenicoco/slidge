@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Hashable, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Literal, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
     from ..core.contact import LegacyContact, LegacyRoster
@@ -7,8 +8,9 @@ if TYPE_CHECKING:
     from ..core.muc.bookmarks import LegacyBookmarks
     from ..core.muc.participant import LegacyParticipant
     from ..core.muc.room import LegacyMUC
-    from ..core.pubsub.pubsub import PepItem
+    from ..core.pubsub import PepItem
     from ..core.session import BaseSession
+    from .db import GatewayUser
 
 
 LegacyGroupIdType = TypeVar("LegacyGroupIdType", bound=Hashable)
@@ -44,3 +46,10 @@ FieldType = Literal[
     "list-multi",
     "text-private",
 ]
+
+
+@dataclass
+class MessageReference(Generic[LegacyMessageType]):
+    legacy_id: LegacyMessageType
+    author: Optional[Union["GatewayUser", "LegacyParticipant", "LegacyContact"]] = None
+    body: Optional[str] = None

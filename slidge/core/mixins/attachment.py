@@ -6,15 +6,15 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Collection, Optional, Union
+from typing import IO, Optional, Union
 from uuid import uuid4
 
-from slixmpp import JID, Message
+from slixmpp import Message
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
 
 from ...util import BiDict
-from ...util.types import LegacyMessageType, LegacyThreadType
+from ...util.types import LegacyMessageType, LegacyThreadType, MessageReference
 from ...util.util import fix_suffix
 from ...util.xep_0385.stanza import Sims
 from ...util.xep_0447.stanza import StatelessFileSharing
@@ -262,9 +262,7 @@ class AttachmentMixin(MessageMaker):
         file_url: Optional[str] = None,
         file_name: Optional[str] = None,
         content_type: Optional[str] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to_jid: Optional[JID] = None,
+        reply_to: Optional[MessageReference] = None,
         when: Optional[datetime] = None,
         caption: Optional[str] = None,
         legacy_file_id: Optional[Union[str, int]] = None,
@@ -282,9 +280,7 @@ class AttachmentMixin(MessageMaker):
         :param content_type: MIME type, inferred from filename if not given
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_to_jid: JID of the quoted message author
+        :param reply_to: Quote another message (:xep:`0461`)
         :param when: when the file was sent, for a "delay" tag (:xep:`0203`)
         :param caption: an optional text that is linked to the file
         :param legacy_file_id: A unique identifier for the file on the legacy network.
@@ -295,9 +291,7 @@ class AttachmentMixin(MessageMaker):
         mto = kwargs.pop("mto", None)
         msg = self._make_message(
             when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=reply_to_jid,
+            reply_to=reply_to,
             carbon=carbon,
             mto=mto,
             thread=thread,

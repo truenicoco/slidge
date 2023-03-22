@@ -5,7 +5,13 @@ from typing import Iterable, Optional
 
 from slixmpp import JID, Message
 
-from ...util.types import ChatState, LegacyMessageType, LegacyThreadType, Marker
+from ...util.types import (
+    ChatState,
+    LegacyMessageType,
+    LegacyThreadType,
+    Marker,
+    MessageReference,
+)
 from .attachment import AttachmentMixin
 from .message_maker import MessageMaker
 
@@ -110,9 +116,7 @@ class ContentMessageMixin(AttachmentMixin):
         legacy_msg_id: Optional[LegacyMessageType] = None,
         *,
         when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to_jid: Optional[JID] = None,
+        reply_to: Optional[MessageReference] = None,
         thread: Optional[LegacyThreadType] = None,
         **kwargs,
     ):
@@ -123,18 +127,14 @@ class ContentMessageMixin(AttachmentMixin):
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
         :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_to_jid: JID of the quoted message author
+        :param reply_to: Quote another message (:xep:`0461`)
         :param thread:
         """
         msg = self._make_message(
             mbody=body,
             legacy_msg_id=legacy_msg_id,
             when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=reply_to_jid,
+            reply_to=reply_to,
             hints=kwargs.get("hints") or {"markable", "store"},
             carbon=kwargs.get("carbon"),
             thread=thread,

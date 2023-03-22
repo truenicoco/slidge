@@ -7,7 +7,12 @@ from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
 
 from ...util import SubclassableOnce
-from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType
+from ...util.types import (
+    AvatarType,
+    LegacyMessageType,
+    LegacyUserIdType,
+    MessageReference,
+)
 from ...util.xep_0292.stanza import VCard4
 from .. import config
 from ..mixins import FullCarbonMixin
@@ -165,9 +170,7 @@ class LegacyContact(
         legacy_msg_id: Optional[LegacyMessageType] = None,
         *,
         when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_self=False,
+        reply_to: Optional[MessageReference] = None,
         **kwargs,
     ):
         """
@@ -176,10 +179,7 @@ class LegacyContact(
         :param body:
         :param legacy_msg_id:
         :param when:
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_self: Set to true is this is a self quote. If False, it means the
-            quoted author is the gateway user.
+        :param reply_to: Quote another message (:xep:`0461`)
         """
         if kwargs.get("carbon"):
             self.session.sent[
@@ -189,9 +189,7 @@ class LegacyContact(
             body=body,
             legacy_msg_id=legacy_msg_id,
             when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=self.jid if reply_self else self.user.jid,
+            reply_to=reply_to,
             **kwargs,
         )
 
