@@ -10,6 +10,7 @@ from typing import Optional, Union
 from slidge import BaseSession, GatewayUser, global_config
 from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
 
+from ...core.contact.roster import ContactIsUser
 from .contact import Contact, Roster
 from .gateway import Gateway
 from .group import MUC, Bookmarks
@@ -26,6 +27,17 @@ MESSAGE_LOGGED_OUT = (
 
 
 Recipient = Union[Contact, MUC]
+
+
+def ignore_contact_is_user(func):
+    @wraps(func)
+    async def wrapped(self, *a, **k):
+        try:
+            return await func(self, *a, **k)
+        except ContactIsUser as e:
+            self.log.debug("A wild ContactIsUser has been raised!", exc_info=e)
+
+    return wrapped
 
 
 class Session(BaseSession[str, Recipient]):
@@ -78,6 +90,7 @@ class Session(BaseSession[str, Recipient]):
         """
         self.whatsapp.Disconnect()
 
+    @ignore_contact_is_user
     async def handle_event(self, event, ptr):
         """
         Handle incoming event, as propagated by the WhatsApp adapter. Typically, events carry all
