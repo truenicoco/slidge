@@ -54,6 +54,7 @@ class Session(BaseSession[str, Recipient]):
         )
         self.me = await self.api.get_self()
         self.my_id = int(self.me.id)  # bug in maufbapi? tulir said: "ask meta"
+        self.contacts.user_legacy_id = self.my_id
         await self.add_friends()
         self.mqtt.register_handlers()
         self.xmpp.loop.create_task(self.mqtt.listen(self.mqtt.seq_id))

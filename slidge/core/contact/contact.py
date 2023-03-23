@@ -1,13 +1,13 @@
 import logging
 import warnings
-from datetime import date, datetime
+from datetime import date
 from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
 
 from ...util import SubclassableOnce
-from ...util.types import AvatarType, LegacyMessageType, LegacyUserIdType
+from ...util.types import AvatarType, LegacyUserIdType
 from ...util.xep_0292.stanza import VCard4
 from .. import config
 from ..mixins import FullCarbonMixin
@@ -158,42 +158,6 @@ class LegacyContact(
         res = self._sent_order[:i]
         self._sent_order = self._sent_order[i:]
         return res
-
-    def send_text(
-        self,
-        body: str,
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        *,
-        when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_self=False,
-        **kwargs,
-    ):
-        """
-        The contact sends a message to the user.
-
-        :param body:
-        :param legacy_msg_id:
-        :param when:
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_self: Set to true is this is a self quote. If False, it means the
-            quoted author is the gateway user.
-        """
-        if kwargs.get("carbon"):
-            self.session.sent[
-                legacy_msg_id
-            ] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
-        super().send_text(
-            body=body,
-            legacy_msg_id=legacy_msg_id,
-            when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=self.jid if reply_self else self.user.jid,
-            **kwargs,
-        )
 
     @property
     def name(self):

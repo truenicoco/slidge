@@ -22,28 +22,9 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 await self.by_legacy_id(channel.id)
 
 
-class Participant(LegacyParticipant, Mixin):  # type: ignore
+class Participant(Mixin, LegacyParticipant):
     session: Session
     contact: Contact
-
-    async def get_reply_to_kwargs(self, message: di.Message):
-        quoted_msg, reply_kwargs = await super().get_reply_to_kwargs(message)
-        if not quoted_msg:
-            return None, reply_kwargs
-
-        muc = self.muc
-        if quoted_msg.author == self.session.discord.user:
-            reply_to_author = await muc.get_user_participant()
-        else:
-            try:
-                contact = await self.session.contacts.by_discord_user(quoted_msg.author)
-            except XMPPError:
-                reply_to_author = await muc.get_participant(str(quoted_msg.author))
-            else:
-                reply_to_author = await muc.get_participant_by_contact(contact)
-        reply_kwargs["reply_to_author"] = reply_to_author
-
-        return quoted_msg, reply_kwargs
 
     @property
     def discord_user(self) -> Union[di.User, di.ClientUser]:  # type:ignore
@@ -125,7 +106,7 @@ class MUC(LegacyMUC[int, int, Participant, int]):
                     p = await self.get_participant(author.name)
             await p.send_message(msg, archive_only=True)
 
-    async def get_participant_by_discord_user(self, user: di.User):
+    async def get_participant_by_discord_user(self, user: Union[di.User, di.Member]):
         if user.discriminator == "0000":
             # a webhook, eg Github#0000
             # FIXME: avatars for contact-less participants

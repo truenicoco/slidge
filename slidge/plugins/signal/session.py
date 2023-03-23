@@ -16,7 +16,7 @@ from slidge.util.util import is_valid_phone_number
 if TYPE_CHECKING:
     from .contact import Contact, Roster
     from .gateway import Gateway
-    from .group import Bookmarks, MUC, Participant
+    from .group import Bookmarks, Participant, MUC
 
 from . import config
 
@@ -239,45 +239,7 @@ class Session(BaseSession[int, Recipient]):
             entity = await muc.get_participant_by_contact(contact)
         else:
             entity = contact
-
-        reply_self = False
-        if (quote := data.quote) is None:
-            reply_to_msg_id = None
-            reply_to_fallback_text = None
-            reply_to_author = None
-        else:
-            reply_to_msg_id = quote.id
-            reply_to_fallback_text = quote.text
-            reply_self = quote.author.uuid == contact.signal_address.uuid
-
-            if data.groupV2:
-                reply_to_author = await muc.get_participant(muc.user_nick)
-            else:
-                reply_to_author = None
-
-        kwargs = dict(
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_author=reply_to_author,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_self=reply_self,
-            when=datetime.fromtimestamp(data.timestamp / 1000),
-        )
-
-        msg_id = data.timestamp
-        text = data.body
-        await entity.send_attachments(
-            data.attachments, legacy_msg_id=None if text else msg_id, **kwargs
-        )
-        if text:
-            entity.send_text(body=text, legacy_msg_id=msg_id, **kwargs)
-        if (reaction := data.reaction) is not None:
-            self.log.debug("Reaction: %s", reaction)
-            if reaction.remove:
-                entity.react(reaction.targetSentTimestamp)
-            else:
-                entity.react(reaction.targetSentTimestamp, reaction.emoji)
-        if (delete := data.remoteDelete) is not None:
-            entity.retract(delete.target_sent_timestamp)
+        await entity.send_signal_msg(data)
 
     async def on_signal_typing(
         self, contact: "Contact", typing_message: sigapi.TypingMessagev1

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from slixmpp.stanza import Message
 from slixmpp.xmlstream import ElementBase, register_stanza_plugin
 
@@ -39,9 +41,11 @@ class FeatureFallBack(ElementBase):
         else:
             return ""
 
-    def add_quoted_fallback(self, fallback: str):
+    def add_quoted_fallback(self, fallback: str, nickname: Optional[str] = None):
         msg = self.parent()
         quoted = "\n".join("> " + x.strip() for x in fallback.split("\n")) + "\n"
+        if nickname:
+            quoted = "> " + nickname + ":\n" + quoted
         msg["body"] = quoted + msg["body"]
         msg["feature_fallback"]["for"] = NS
         msg["feature_fallback"]["fallback_body"]["start"] = 0

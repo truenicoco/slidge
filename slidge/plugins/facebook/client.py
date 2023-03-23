@@ -12,6 +12,8 @@ from maufbapi.mqtt.subscription import RealtimeTopic
 from maufbapi.thrift import ThriftObject
 from maufbapi.types import mqtt as mqtt_t
 
+from slidge.util.types import MessageReference
+
 from . import config
 from .util import FacebookMessage, is_group_thread
 
@@ -157,10 +159,15 @@ class AndroidMQTT(AndroidMQTTOriginal):
 
         if reply_to_fb_msg := evt.reply_to_message:
             log.debug("Reply-to")
-            kwargs["reply_to_msg_id"] = reply_to_fb_msg.metadata.id
-            kwargs["reply_to_fallback_text"] = reply_to_fb_msg.text
-            kwargs["reply_self"] = (
-                reply_to_fb_msg.metadata.sender == msg.metadata.sender
+            author_fb_id = reply_to_fb_msg.metadata.sender
+            if author_fb_id == self.session.my_id:
+                author = self.session.user  # type: ignore
+            else:
+                author = await self.session.contacts.by_legacy_id(author_fb_id)  # type: ignore
+            kwargs["reply_to"] = MessageReference(
+                legacy_id=reply_to_fb_msg.metadata.id,
+                body=reply_to_fb_msg.text,
+                author=author,
             )
         await self.on_fb_message(msg, **kwargs)
 

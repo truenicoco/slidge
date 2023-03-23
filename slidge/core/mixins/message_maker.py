@@ -1,13 +1,19 @@
+import warnings
+from copy import copy
 from datetime import datetime, timezone
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 from uuid import uuid4
 
-from slixmpp import JID, Message
+from slixmpp import Message
 from slixmpp.types import MessageTypes
 
-from ...util.types import ChatState, LegacyMessageType, ProcessingHint
+from ...util.db import GatewayUser
+from ...util.types import ChatState, LegacyMessageType, MessageReference, ProcessingHint
 from .. import config
 from .base import BaseSender
+
+if TYPE_CHECKING:
+    pass
 
 
 class MessageMaker(BaseSender):
@@ -22,9 +28,7 @@ class MessageMaker(BaseSender):
         hints: Iterable[ProcessingHint] = (),
         legacy_msg_id: Optional[LegacyMessageType] = None,
         when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to_jid: Optional[JID] = None,
+        reply_to: Optional[MessageReference] = None,
         carbon=False,
         **kwargs,
     ):
@@ -51,7 +55,8 @@ class MessageMaker(BaseSender):
             msg.enable(hint)
         self._set_msg_id(msg, legacy_msg_id)
         self._add_delay(msg, when)
-        self._add_reply_to(msg, reply_to_msg_id, reply_to_fallback_text, reply_to_jid)
+        if reply_to:
+            self._add_reply_to(msg, reply_to)
         return msg
 
     def _set_msg_id(
@@ -83,17 +88,38 @@ class MessageMaker(BaseSender):
             msg["delay"].set_stamp(when)
             msg["delay"].set_from(self.xmpp.boundjid.bare)
 
-    def _add_reply_to(
-        self,
-        msg: Message,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to_author: Optional[JID] = None,
-    ):
-        if reply_to_msg_id is not None:
-            xmpp_id = self._legacy_to_xmpp(reply_to_msg_id)
-            msg["reply"]["id"] = xmpp_id
-            if reply_to_author:
-                msg["reply"]["to"] = reply_to_author
-            if reply_to_fallback_text:
-                msg["feature_fallback"].add_quoted_fallback(reply_to_fallback_text)
+    def _add_reply_to(self, msg: Message, reply_to: MessageReference):
+        xmpp_id = self._legacy_to_xmpp(reply_to.legacy_id)
+        msg["reply"]["id"] = xmpp_id
+
+        muc = getattr(self, "muc", None)
+
+        if entity := reply_to.author:
+            if isinstance(entity, GatewayUser):
+                if muc:
+                    jid = copy(muc.jid)
+                    jid.resource = fallback_nick = muc.user_nick
+                    msg["reply"]["to"] = jid
+                else:
+                    msg["reply"]["to"] = entity.jid
+                    # TODO: here we should use preferably use the PEP nick of the user
+                    # (but it doesn't matter much)
+                    fallback_nick = entity.jid.local
+            else:
+                if muc:
+                    if not hasattr(entity, "muc"):
+                        # TODO: accept a Contact here and use muc.get_participant_by_legacy_id()
+                        # a bit of work because right now this is a sync function
+                        warnings.warn(
+                            "The author of a message reference in a MUC must be a Participant instance, "
+                            "not a Contact"
+                        )
+                    fallback_nick = entity.jid.resource
+                else:
+                    fallback_nick = entity.name
+                msg["reply"]["to"] = entity.jid
+        else:
+            fallback_nick = None
+
+        if fallback := reply_to.body:
+            msg["feature_fallback"].add_quoted_fallback(fallback, fallback_nick)

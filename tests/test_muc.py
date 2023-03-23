@@ -15,7 +15,7 @@ from slidge import *
 from slidge.core.muc import MucType
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
-from slidge.util.types import LegacyContactType, LegacyMessageType
+from slidge.util.types import LegacyContactType, LegacyMessageType, MessageReference
 from slidge.core.cache import avatar_cache
 
 
@@ -223,7 +223,9 @@ class TestMuc(SlidgeTest):
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        slidge.core.muc.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = lambda: "uuid"
+        slidge.core.muc.room.uuid4 = (
+            slidge.core.mixins.message_maker.uuid4
+        ) = lambda: "uuid"
         self.get_romeo_session().logged = True
 
     def tearDown(self):
@@ -880,8 +882,7 @@ class TestMuc(SlidgeTest):
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
-            reply_to_msg_id="legacy-REPLY-TO",
-            reply_self=True,
+            reply_to=MessageReference(legacy_id="legacy-REPLY-TO", author=participant),
         )
         self.send(
             f"""
@@ -893,6 +894,37 @@ class TestMuc(SlidgeTest):
                     <active xmlns="http://jabber.org/protocol/chatstates"/>
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
                     <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/firstwitch"/>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="XXX"
+                         by="room-private@aim.shakespeare.lit"/>
+                </message>
+                """,
+            use_values=False,
+        )
+
+    def test_msg_reply_to_user(self):
+        Session.SENT_TEXT = []
+        muc = self.get_private_muc()
+        muc.user_resources.add("gajim")
+        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
+            muc.get_participant("firstwitch")
+        )
+        participant._LegacyParticipant__presence_sent = True
+        participant.send_text(
+            "the body",
+            legacy_msg_id="legacy-XXX",
+            reply_to=MessageReference(legacy_id="legacy-REPLY-TO", author=muc.session.user),
+        )
+        self.send(
+            f"""
+                <message from='{muc.jid}/firstwitch'
+                         id='XXX'
+                         to='romeo@montague.lit/gajim'
+                         type='groupchat'>
+                    <body>the body</body>
+                    <active xmlns="http://jabber.org/protocol/chatstates"/>
+                    <markable xmlns="urn:xmpp:chat-markers:0"/>
+                    <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/{muc.user_nick}"/>
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
@@ -915,8 +947,10 @@ class TestMuc(SlidgeTest):
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
-            reply_to_msg_id="legacy-REPLY-TO",
-            reply_to_author=second_witch,
+            reply_to=MessageReference(
+                author=second_witch,
+                legacy_id="legacy-REPLY-TO",
+            ),
         )
         self.send(
             f"""
@@ -950,9 +984,9 @@ class TestMuc(SlidgeTest):
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
-            reply_to_msg_id="legacy-REPLY-TO",
-            reply_to_author=second_witch,
-            reply_to_fallback_text="Blabla",
+            reply_to=MessageReference(
+                legacy_id="legacy-REPLY-TO", author=second_witch, body="Blabla"
+            ),
         )
         self.send(
             f"""
@@ -960,14 +994,14 @@ class TestMuc(SlidgeTest):
                          id='XXX'
                          to='romeo@montague.lit/gajim'
                          type='groupchat'>
-                    <body>&gt; Blabla\nthe body</body>
+                    <body>&gt; secondwitch:\n&gt; Blabla\nthe body</body>
                     <markable xmlns="urn:xmpp:chat-markers:0"/>
                     <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/secondwitch"/>
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
                     <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
-                  		<body start="0" end="9"/>
+                  		<body start="0" end="24"/>
                    	</fallback>
                    	<active xmlns="http://jabber.org/protocol/chatstates"/>
                 </message>

@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import discord as di
 
@@ -162,13 +162,20 @@ class Session(BaseSession[int, Recipient]):
 
 async def get_recipient(
     chat: Recipient, thread: Optional[int]
-) -> Union[di.User, di.TextChannel, di.Thread]:
+) -> Union[di.DMChannel, di.TextChannel, di.Thread]:
     if chat.is_group:
-        channel = await chat.get_discord_channel()  # type:ignore
+        chat = cast("MUC", chat)
+        channel = await chat.get_discord_channel()
         if thread:
             discord_thread = channel.get_thread(thread)
             if discord_thread is not None:
                 return discord_thread
         return channel
     else:
-        return chat.discord_user  # type:ignore
+        chat = cast("Contact", chat)
+        dm = chat.discord_user.dm_channel
+        if dm is None:
+            raise XMPPError(
+                "recipient-unavailable", "Could not find the associated DM channel"
+            )
+        return dm

@@ -1,27 +1,20 @@
-from typing import Any, Union
+from typing import TYPE_CHECKING, Union
 
 import discord as di
 
-from .session import Session
+from slidge.core.mixins.message import ContentMessageMixin
+from slidge.util.types import MessageReference
+
+if TYPE_CHECKING:
+    from .group import MUC
 
 
-class Mixin:
-    legacy_id: int  # type: ignore
-    name: str  # type: ignore
-    avatar: str  # type: ignore
-    session: Session  # type: ignore
+class Mixin(ContentMessageMixin):
+    legacy_id: int  # type:ignore
+    avatar: str
     discord_user: Union[di.User, di.ClientUser]
 
     MARKS = False
-
-    def react(self, mid: int, e: list[str]):
-        raise NotImplementedError
-
-    def send_text(self, *a, **k):
-        raise NotImplementedError
-
-    def send_file(self, *a, **k):
-        raise NotImplementedError
 
     async def update_reactions(self, m: di.Message):
         legacy_reactions = []
@@ -43,14 +36,15 @@ class Mixin:
                 return
         self.react(m.id, legacy_reactions)
 
-    async def get_reply_to_kwargs(self, message: di.Message):
-        quoted_msg_id = message.reference.message_id if message.reference else None
+    async def _reply_to(self, message: di.Message):
+        if not (ref := message.reference):
+            return
 
-        reply_kwargs = dict[str, Any]()
-        if not quoted_msg_id:
-            return None, reply_kwargs
+        quoted_msg_id = ref.message_id
+        if quoted_msg_id is None:
+            return
 
-        reply_kwargs["reply_to_msg_id"] = quoted_msg_id
+        reply_to = MessageReference(quoted_msg_id)
 
         try:
             if message.type == di.MessageType.thread_starter_message:
@@ -60,21 +54,25 @@ class Mixin:
             else:
                 quoted_msg = await message.channel.fetch_message(quoted_msg_id)
         except di.errors.NotFound:
-            reply_kwargs = {
-                "reply_to_fallback_text": "[quoted message could not be fetched]"
-            }
-            quoted_msg = None
-        else:
-            assert quoted_msg is not None
-            reply_kwargs["reply_to_fallback_text"] = quoted_msg.content
-            reply_kwargs["reply_self"] = quoted_msg.author == message.author
+            reply_to.body = "[quoted message could not be fetched]"
+            return reply_to
 
-        return quoted_msg, reply_kwargs
+        reply_to.body = quoted_msg.content
+        author = quoted_msg.author
+        if author == self.discord_user:
+            reply_to.author = self.session.user
+            return reply_to
+
+        muc: "MUC" = getattr(self, "muc", None)  # type: ignore
+        if muc:
+            reply_to.author = await muc.get_participant_by_discord_user(author)
+        else:
+            reply_to.author = self  # type: ignore
+
+        return reply_to
 
     async def send_message(self, message: di.Message, archive_only=False):
-        _, reply_kwargs = await self.get_reply_to_kwargs(message)
-
-        self.session.log.debug("REPLY TO KWARGS %s", reply_kwargs)
+        reply_to = await self._reply_to(message)
 
         mtype = message.type
         if mtype == di.MessageType.thread_created:
@@ -101,7 +99,7 @@ class Mixin:
                 legacy_msg_id=msg_id,
                 when=message.created_at,
                 thread=thread,
-                **reply_kwargs,
+                reply_to=reply_to,
                 archive_only=archive_only,
             )
 
@@ -115,7 +113,7 @@ class Mixin:
                 legacy_msg_id=msg_id if last else None,
                 caption=text if last else None,
                 thread=thread,
-                **reply_kwargs if last else {},
+                reply_to=reply_to,
                 archive_only=archive_only,
                 when=message.created_at,
             )

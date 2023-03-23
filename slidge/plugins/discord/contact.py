@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Contact(LegacyContact[int], Mixin):  # type: ignore
+class Contact(Mixin, LegacyContact[int]):  # type: ignore
     session: "Session"
 
     @property

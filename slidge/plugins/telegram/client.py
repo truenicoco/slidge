@@ -109,9 +109,7 @@ class TelegramClient(aiotdlib.Client):
             await self.handle_group_message(msg)
 
     async def handle_direct_message(self, msg: tgapi.Message):
-        if msg.is_outgoing:
-            await self.handle_user_direct_message(msg)
-            return
+        carbon = msg.is_outgoing
 
         sender = msg.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
@@ -120,40 +118,9 @@ class TelegramClient(aiotdlib.Client):
             return
 
         session = self.session
-        await (await session.contacts.by_legacy_id(sender.user_id)).send_tg_message(msg)
-
-    async def handle_user_direct_message(self, msg: tgapi.Message):
-        # This means slidge is responsible for this message, so no carbon is needed;
-        # but maybe this does not handle all possible cases gracefully?
-        session = self.session
-        if msg.sending_state is not None or msg.id in session.sent:
-            return
-        content = msg.content
-        contact = await session.contacts.by_legacy_id(msg.chat_id)
-        if isinstance(content, tgapi.MessageText):
-            contact.send_text(
-                content.text.text,
-                legacy_msg_id=msg.id,
-                when=datetime.fromtimestamp(msg.date),
-                carbon=True,
-            )
-        elif best_file := get_best_file(content):
-            file = await self.api.download_file(
-                file_id=best_file.id,
-                synchronous=True,
-                priority=1,
-                offset=0,
-                limit=0,
-            )
-            has_caption = (caption := content.caption) and (text := caption.text)
-            await contact.send_file(
-                file_path=file.local.path,
-                file_name=get_file_name(content),
-                legacy_msg_id=None if has_caption else msg.id,
-                carbon=True,
-            )
-            if has_caption:
-                contact.send_text(text, legacy_msg_id=msg.id, carbon=True)
+        await (await session.contacts.by_legacy_id(msg.chat_id)).send_tg_message(
+            msg, carbon=carbon
+        )
 
     async def handle_group_message(self, msg: tgapi.Message):
         self.log.debug("MUC message: %s", msg)

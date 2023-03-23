@@ -206,48 +206,6 @@ class LegacyParticipant(
         p = self._make_presence(ptype="unavailable")
         self._send(p)
 
-    def send_text(
-        self,
-        body: str,
-        legacy_msg_id: Optional[LegacyMessageType] = None,
-        *,
-        when: Optional[datetime] = None,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_self=False,
-        reply_to_author: Optional["LegacyParticipant"] = None,
-        **kwargs,
-    ):
-        """
-        The participant sends a message in their corresponding group chat.
-
-        :param body:
-        :param legacy_msg_id:
-        :param when:
-        :param reply_to_msg_id: Quote another message (:xep:`0461`)
-        :param reply_to_fallback_text: Fallback text for clients not supporting :xep:`0461`
-        :param reply_self: Set to true is this is a self quote
-        :param reply_to_author: The participant that was quoted
-        :param archive_only: Do not send this message to user, but store it in the archive.
-            Meant to be used on room instance creation, to populate its message history.
-        """
-        if reply_self:
-            reply_to_jid = self.jid
-        elif reply_to_author:
-            reply_to_jid = reply_to_author.jid
-        else:
-            reply_to_jid = None
-        super().send_text(
-            body=body,
-            legacy_msg_id=legacy_msg_id,
-            when=when,
-            reply_to_msg_id=reply_to_msg_id,
-            reply_to_fallback_text=reply_to_fallback_text,
-            reply_to_jid=reply_to_jid,
-            hints={"markable"},
-            **kwargs,
-        )
-
     def get_disco_info(self):
         if self.contact is not None:
             return self.contact.get_disco_info()

@@ -19,7 +19,7 @@ async def noop():
     return
 
 
-class Contact(AvailableEmojisMixin, LegacyContact[int], TelegramToXMPPMixin):
+class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
     CLIENT_TYPE = "phone"
     session: "Session"
 

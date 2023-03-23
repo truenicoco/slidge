@@ -8,11 +8,12 @@ from shelve import open
 from typing import Optional, Union
 
 from slidge import BaseSession, GatewayUser, global_config
-from slidge.plugins.whatsapp.generated import go, whatsapp  # type:ignore
+from slidge.core.contact.roster import ContactIsUser
+from slidge.util.types import MessageReference
 
-from ...core.contact.roster import ContactIsUser
 from .contact import Contact, Roster
 from .gateway import Gateway
+from .generated import go, whatsapp  # type:ignore
 from .group import MUC, Bookmarks
 
 MESSAGE_PAIR_SUCCESS = (
@@ -156,6 +157,21 @@ class Session(BaseSession[str, Recipient]):
             text = text + f" at {call_at}"
         self.send_gateway_message(text)
 
+    async def _get_reply_to(self, message: whatsapp.Message):
+        if not message.ReplyID:
+            return
+        reply_to = MessageReference(
+            legacy_id=message.ReplyID,
+            body=message.ReplyBody,
+        )
+        if message.OriginJID == self.contacts.user_legacy_id:
+            reply_to.author = self.user
+        else:
+            reply_to.author = await self.get_contact_or_participant(
+                message.OriginJID, message.GroupJID
+            )
+        return reply_to
+
     async def handle_message(self, message: whatsapp.Message):
         """
         Handle incoming message, as propagated by the WhatsApp adapter. Messages can be one of many
@@ -163,13 +179,7 @@ class Session(BaseSession[str, Recipient]):
         other aspects such as references to other messages for the purposes of quoting or correction.
         """
         contact = await self.get_contact_or_participant(message.JID, message.GroupJID)
-        message_reply_id = message.ReplyID if message.ReplyID else None
-        message_reply_body = message.ReplyBody if message.ReplyBody else None
-        message_reply_to = None  # MUCs only
-        message_reply_self = message.OriginJID == message.JID  # 1:1 only
-        if message.GroupJID and message.OriginJID:
-            muc = await self.bookmarks.by_legacy_id(message.GroupJID)
-            message_reply_to = await muc.get_participant_by_legacy_id(message.OriginJID)
+        reply_to = await self._get_reply_to(message)
         message_timestamp = (
             datetime.fromtimestamp(message.Timestamp, tz=timezone.utc)
             if message.Timestamp > 0
@@ -180,10 +190,7 @@ class Session(BaseSession[str, Recipient]):
                 body=message.Body,
                 legacy_msg_id=message.ID,
                 when=message_timestamp,
-                reply_to_msg_id=message_reply_id,
-                reply_to_fallback_text=message_reply_body,
-                reply_to_author=message_reply_to,  # only used in mucs
-                reply_self=message_reply_self,  # only used in 1:1
+                reply_to=reply_to,
                 carbon=message.IsCarbon,
             )
         elif message.Kind == whatsapp.MessageAttachment:
@@ -196,7 +203,7 @@ class Session(BaseSession[str, Recipient]):
                     content_type=attachment.MIME,
                     data=bytes(attachment.Data),
                     legacy_msg_id=message.ID,
-                    reply_to_msg_id=message_reply_id,
+                    reply_to=reply_to,
                     when=message_timestamp,
                     caption=attachment_caption,
                     carbon=message.IsCarbon,
