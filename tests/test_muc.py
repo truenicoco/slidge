@@ -756,12 +756,7 @@ class TestMuc(SlidgeTest):
     #     this test is broken because of slixtest magic, but the behavior is actually good
     #     in real conditions
     #     """
-    #     session = BaseSession.get_self_or_unique_subclass().from_jid(
-    #         JID("romeo@montague.lit")
-    #     )
-    #     muc = self.xmpp.loop.run_until_complete(
-    #         session.bookmarks.by_jid(JID("room-private@aim.shakespeare.lit"))
-    #     )
+    #     muc = self.get_private_muc()
     #     muc.user_resources.add("gajim")
     #     self.recv(
     #         """
@@ -778,7 +773,7 @@ class TestMuc(SlidgeTest):
     #                  from='room-private@aim.shakespeare.lit/SlideUser'>
     #             <body>body</body>
     #             <origin-id xmlns="urn:xmpp:sid:0" id="origin" />
-    #             <stanza-id xmlns="urn:xmpp:sid:0" id="muc-id" by="room-private@aim.shakespeare.lit" />
+    #             <stanza-id xmlns="urn:xmpp:sid:0" id="id" by="room-private@aim.shakespeare.lit" />
     #         </message>
     #         """,
     #     )
@@ -1484,6 +1479,80 @@ class TestMuc(SlidgeTest):
                 </iq>
                 """
             )
+
+    def test_mam_from_user_carbon(self):
+        muc = self.get_private_muc()
+        muc.user_resources.add("gajim")
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        user_participant: Participant = self.xmpp.loop.run_until_complete(muc.get_user_participant())
+        user_participant.send_text("blabla", "legacy-666", when=now)
+        now_fmt = now.isoformat().replace("+00:00", "Z")
+        self.send(
+            f"""
+           <message id="666" xmlns="jabber:component:accept" type="groupchat" from="room-private@aim.shakespeare.lit/thirdwitch" to="romeo@montague.lit/gajim">
+            <body>blabla</body>
+            <active xmlns="http://jabber.org/protocol/chatstates"/>
+            <markable xmlns="urn:xmpp:chat-markers:0"/>
+            <stanza-id id="666" xmlns="urn:xmpp:sid:0" by="room-private@aim.shakespeare.lit"/>
+            <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" from="aim.shakespeare.lit"/>
+           </message>
+            """,
+            use_values=False  # necessary because the third has origin-id
+        )
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
+                    <x xmlns='jabber:x:data' type='submit'>
+                        <field var='FORM_TYPE' type='hidden'><value>urn:xmpp:mam:2</value></field>
+                      </x>
+                  <set xmlns='http://jabber.org/protocol/rsm'>
+                     <max>1</max>
+                     <before />
+                  </set>
+                  <flip-page/>
+              </query>
+            </iq>
+            """
+        )
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit" type="normal">
+            <result xmlns="urn:xmpp:mam:2" queryid="query-id" id="666">
+                <forwarded xmlns="urn:xmpp:forward:0">
+                    <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}"/>
+                    <message xmlns="jabber:client" type="groupchat" from="room-private@aim.shakespeare.lit/thirdwitch" id="666">
+                        <body>blabla</body>
+                        <stanza-id xmlns="urn:xmpp:sid:0" id="666" by="room-private@aim.shakespeare.lit"/>
+                    </message>
+                </forwarded>
+            </result>
+            </message>
+            """
+        )
+
+    def test_mam_echo(self):
+        muc = self.get_private_muc()
+        muc.user_resources.add("gajim")
+        self.recv(
+            """
+            <message from="romeo@montague.lit/gajim"
+                     to="room-private@aim.shakespeare.lit"
+                     type="groupchat">
+                <body>HOY</body>
+            </message>
+            """
+        )
+        self.send(
+            """
+            <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/thirdwitch" to="romeo@montague.lit/gajim" type="groupchat">
+             <body>HOY</body>
+             <stanza-id xmlns="urn:xmpp:sid:0" id="id" by="room-private@aim.shakespeare.lit"/>
+            </message>
+            """
+        )
+        archived = muc.archive._msgs[-1]
+        assert archived.id == "id"
 
     def test_get_members(self):
         muc = self.get_private_muc()

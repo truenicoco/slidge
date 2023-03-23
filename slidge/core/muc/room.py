@@ -378,17 +378,13 @@ class LegacyMUC(
             legacy_id
         ) or self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
 
-    async def echo(self, m: Message, legacy_msg_id: Optional[LegacyMessageType] = None):
-        self.log.debug("Echoing %s -- %s", m, legacy_msg_id)
+    async def echo(
+        self, msg: Message, legacy_msg_id: Optional[LegacyMessageType] = None
+    ):
+        origin_id = msg.get_origin_id()
 
-        origin_id = m.get_origin_id()
-        self.log.debug(f"Origin: %r ", origin_id)
-
-        m.set_from(self.user_muc_jid)
-        self.archive.add(m)
-
-        msg = copy(m)
-        msg.set_id(m.get_id())
+        msg.set_from(self.user_muc_jid)
+        msg.set_id(msg.get_id())
         if origin_id:
             # because of slixmpp internal magic, we need to do this to ensure the origin_id
             # is present
@@ -400,6 +396,8 @@ class LegacyMUC(
         else:
             msg["stanza_id"]["id"] = str(uuid4())
         msg["stanza_id"]["by"] = self.jid
+
+        self.archive.add(msg)
 
         for user_full_jid in self.user_full_jids():
             self.log.debug("Echoing to %s", user_full_jid)
