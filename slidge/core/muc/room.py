@@ -394,7 +394,9 @@ class LegacyMUC(
             # is present
             set_origin_id(msg, origin_id)
         if legacy_msg_id:
-            msg["stanza_id"]["id"] = str(legacy_msg_id)
+            msg["stanza_id"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
+                legacy_msg_id
+            )
         else:
             msg["stanza_id"]["id"] = str(uuid4())
         msg["stanza_id"]["by"] = self.jid

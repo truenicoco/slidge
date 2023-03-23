@@ -806,7 +806,7 @@ class TestMuc(SlidgeTest):
                          type='groupchat'>
                     <body>BODY</body>
                     <stanza-id xmlns="urn:xmpp:sid:0"
-                         id="legacy-id"
+                         id="id"
                          by="room-private@aim.shakespeare.lit"/>
                     <origin-id xmlns="urn:xmpp:sid:0"
                          id="xmpp-id"/>
