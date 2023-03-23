@@ -362,11 +362,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         session.logged = True
         session.send_gateway_status("Syncing contacts…", show="dnd")
         await session.contacts.fill()
-        session.contacts.ready.set_result(True)
+        if not (r := session.contacts.ready).done():
+            r.set_result(True)
         if self.GROUPS:
             session.send_gateway_status("Syncing groups…", show="dnd")
             await session.bookmarks.fill()
-            session.bookmarks.ready.set_result(True)
+            if not (r := session.bookmarks.ready).done():
+                r.set_result(True)
         for c in session.contacts:
             # we need to receive presences directed at the contacts, in
             # order to send pubsub events for their +notify features
