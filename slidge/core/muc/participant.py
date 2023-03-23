@@ -140,6 +140,8 @@ class LegacyParticipant(
         else:
             if isinstance(stanza, Message):
                 self.muc.archive.add(stanza, archive_only)
+            if archive_only:
+                return
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
