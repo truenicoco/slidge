@@ -161,135 +161,154 @@ class Session(BaseSession[int, Recipient]):
 
         :param msg:
         """
-        if (sync_msg := msg.sync_message) is not None:
-            if sync_msg.contacts is not None and msg.sync_message.contactsComplete:
-                log.debug("Received a sync contact updates")
-                await self.contacts.fill()
 
-            if (sent := sync_msg.sent) is None:
-                # Probably a 'message read' marker
-                log.debug("No sent message in this sync message")
-                return
-            sent_msg = sent.message
-            if sent_msg.group:
-                # group V1 not supported
-                return
-            elif g := sent_msg.groupV2:
-                muc = await self.bookmarks.by_legacy_id(g.id)
-                sender = await muc.get_user_participant()
-                cb_kwargs = {}
-            else:
-                sender = await self.contacts.by_json_address(sent.destination)
-                cb_kwargs = {"carbon": True}
-
-            await sender.send_attachments(
-                sent_msg.attachments, sent_msg.timestamp, **cb_kwargs
-            )
-
-            if (body := sent_msg.body) is not None:
-                sender.send_text(
-                    body=body,
-                    when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
-                    legacy_id=sent_msg.timestamp,
-                    **cb_kwargs,
-                )
-            if (reaction := sent_msg.reaction) is not None:
-                try:
-                    sender.react(
-                        reaction.targetSentTimestamp,
-                        () if reaction.remove else reaction.emoji,
-                        carbon=True,
-                    )
-                except ValueError as e:
-                    sender.send_text(
-                        f"/me tried to react with an invalid emoji: {e}", **cb_kwargs
-                    )
-            if (delete := sent_msg.remoteDelete) is not None:
-                sender.retract(delete.target_sent_timestamp, **cb_kwargs)
+        if sync_msg := msg.sync_message:
+            await self.on_signal_sync_message(sync_msg)
 
         contact = await self.contacts.by_json_address(msg.source)
 
-        if msg.call_message is not None:
-            contact.send_text(
-                "/me tried to call you but this is not supported by this slidge-signal"
+        if call := msg.call_message:
+            self.on_signal_call_message(contact, call)
+
+        if data := msg.data_message:
+            await self.on_signal_data_message(contact, data)
+
+        if receipt := msg.receipt_message:
+            await self.on_signal_receipt(contact, receipt)
+
+    async def on_signal_sync_message(self, sync_msg: sigapi.JsonSyncMessagev1):
+        if sync_msg.contacts is not None and sync_msg.contactsComplete:
+            log.debug("Received a sync contact updates")
+            await self.contacts.fill()
+
+        if (sent := sync_msg.sent) is None:
+            # Probably a 'message read' marker
+            log.debug("No sent message in this sync message")
+            return
+        sent_msg = sent.message
+        if sent_msg.group:
+            # group V1 not supported
+            return
+        elif g := sent_msg.groupV2:
+            muc = await self.bookmarks.by_legacy_id(g.id)
+            sender = await muc.get_user_participant()
+            cb_kwargs = {}
+        else:
+            sender = await self.contacts.by_json_address(sent.destination)
+            cb_kwargs = {"carbon": True}
+
+        await sender.send_attachments(
+            sent_msg.attachments, sent_msg.timestamp, **cb_kwargs
+        )
+
+        if (body := sent_msg.body) is not None:
+            sender.send_text(
+                body=body,
+                when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
+                legacy_id=sent_msg.timestamp,
+                **cb_kwargs,
             )
+        if (reaction := sent_msg.reaction) is not None:
+            try:
+                sender.react(
+                    reaction.targetSentTimestamp,
+                    () if reaction.remove else reaction.emoji,
+                    carbon=True,
+                )
+            except ValueError as e:
+                sender.send_text(
+                    f"/me tried to react with an invalid emoji: {e}", **cb_kwargs
+                )
+        if (delete := sent_msg.remoteDelete) is not None:
+            sender.retract(delete.target_sent_timestamp, **cb_kwargs)
+
+    @staticmethod
+    def on_signal_call_message(contact: "Contact", _call_message: sigapi.CallMessagev1):
+        contact.send_text(
+            "/me tried to call you but this is not supported by this slidge-signal"
+        )
+
+    async def on_signal_data_message(
+        self, contact: "Contact", data: sigapi.JsonDataMessagev1
+    ):
+        if data.group:
             return
 
-        if (data := msg.data_message) is not None:
-            if data.group:
-                return
+        if data.groupV2:
+            muc = await self.bookmarks.by_legacy_id(data.groupV2.id)
+            entity = await muc.get_participant_by_contact(contact)
+        else:
+            entity = contact
+
+        reply_self = False
+        if (quote := data.quote) is None:
+            reply_to_msg_id = None
+            reply_to_fallback_text = None
+            reply_to_author = None
+        else:
+            reply_to_msg_id = quote.id
+            reply_to_fallback_text = quote.text
+            reply_self = quote.author.uuid == contact.signal_address.uuid
 
             if data.groupV2:
-                muc = await self.bookmarks.by_legacy_id(data.groupV2.id)
-                entity = await muc.get_participant_by_contact(contact)
+                reply_to_author = await muc.get_participant(muc.user_nick)
             else:
-                entity = contact
-
-            reply_self = False
-            if (quote := data.quote) is None:
-                reply_to_msg_id = None
-                reply_to_fallback_text = None
                 reply_to_author = None
+
+        kwargs = dict(
+            reply_to_msg_id=reply_to_msg_id,
+            reply_to_author=reply_to_author,
+            reply_to_fallback_text=reply_to_fallback_text,
+            reply_self=reply_self,
+            when=datetime.fromtimestamp(data.timestamp / 1000),
+        )
+
+        msg_id = data.timestamp
+        text = data.body
+        await entity.send_attachments(
+            data.attachments, legacy_msg_id=None if text else msg_id, **kwargs
+        )
+        if text:
+            entity.send_text(body=text, legacy_msg_id=msg_id, **kwargs)
+        if (reaction := data.reaction) is not None:
+            self.log.debug("Reaction: %s", reaction)
+            if reaction.remove:
+                entity.react(reaction.targetSentTimestamp)
             else:
-                reply_to_msg_id = quote.id
-                reply_to_fallback_text = quote.text
-                reply_self = quote.author.uuid == msg.source.uuid
+                entity.react(reaction.targetSentTimestamp, reaction.emoji)
+        if (delete := data.remoteDelete) is not None:
+            entity.retract(delete.target_sent_timestamp)
 
-                if data.groupV2:
-                    reply_to_author = await muc.get_participant(muc.user_nick)
-                else:
-                    reply_to_author = None
+    async def on_signal_typing(
+        self, contact: "Contact", typing_message: sigapi.TypingMessagev1
+    ):
+        if g := typing_message.group_id:
+            muc = await self.bookmarks.by_legacy_id(g)
+            entity = await muc.get_participant_by_contact(contact)
+        else:
+            entity = contact
 
-            kwargs = dict(
-                reply_to_msg_id=reply_to_msg_id,
-                reply_to_author=reply_to_author,
-                reply_to_fallback_text=reply_to_fallback_text,
-                reply_self=reply_self,
-                when=datetime.fromtimestamp(msg.data_message.timestamp / 1000),
-            )
+        action = typing_message.action
+        if action == "STARTED":
+            entity.active()
+            entity.composing()
+        elif action == "STOPPED":
+            entity.paused()
 
-            msg_id = data.timestamp
-            text = data.body
-            await entity.send_attachments(
-                data.attachments, legacy_msg_id=None if text else msg_id, **kwargs
-            )
-            if text:
-                entity.send_text(body=text, legacy_msg_id=msg_id, **kwargs)
-            if (reaction := data.reaction) is not None:
-                self.log.debug("Reaction: %s", reaction)
-                if reaction.remove:
-                    entity.react(reaction.targetSentTimestamp)
-                else:
-                    entity.react(reaction.targetSentTimestamp, reaction.emoji)
-            if (delete := data.remoteDelete) is not None:
-                entity.retract(delete.target_sent_timestamp)
-
-        if (typing_message := msg.typing_message) is not None:
-            if g := typing_message.group_id:
-                muc = await self.bookmarks.by_legacy_id(g)
-                entity = await muc.get_participant_by_contact(contact)
-            else:
-                entity = contact
-
-            action = typing_message.action
-            if action == "STARTED":
-                entity.active()
-                entity.composing()
-            elif action == "STOPPED":
-                entity.paused()
-
-        if (receipt_message := msg.receipt_message) is not None:
-            type_ = receipt_message.type
-            if type_ == "DELIVERY":
-                for t in msg.receipt_message.timestamps:
-                    entity = await self.__get_entity_by_sent_msg_id(contact, t)
-                    entity.received(t)
-            elif type_ == "READ":
-                # no need to mark all messages read, just the last one, see
-                # "8.1. Optimizations" in XEP-0333
-                t = max(msg.receipt_message.timestamps)
+    async def on_signal_receipt(
+        self, contact: "Contact", receipt_message: sigapi.ReceiptMessagev1
+    ):
+        type_ = receipt_message.type
+        if type_ == "DELIVERY":
+            for t in receipt_message.timestamps:
                 entity = await self.__get_entity_by_sent_msg_id(contact, t)
-                entity.displayed(t)
+                entity.received(t)
+        elif type_ == "READ":
+            # no need to mark all messages read, just the last one, see
+            # "8.1. Optimizations" in XEP-0333
+            t = max(receipt_message.timestamps)
+            entity = await self.__get_entity_by_sent_msg_id(contact, t)
+            entity.displayed(t)
 
     async def __get_entity_by_sent_msg_id(self, contact: "Contact", t: int):
         self.log.debug("Looking for %s in %s", t, self.sent_in_muc)
