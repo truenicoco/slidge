@@ -57,7 +57,12 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
                     e.message,
                 )
             else:
-                if profile.name or profile.address.number:
+                if (
+                    profile.name
+                    or profile.profile_name  # in theory .name would be enough but
+                    or profile.contact_name  # I think this is a signald bug...
+                    or profile.address.number
+                ):
                     return profile
             attempts += 1
             await asyncio.sleep(sleep * attempts**exp)
