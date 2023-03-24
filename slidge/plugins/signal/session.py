@@ -72,7 +72,9 @@ class Session(BaseSession[int, Recipient]):
         try:
             return int(i)
         except ValueError:
-            raise NotImplementedError
+            raise XMPPError(
+                "item-not-found", f"This is not a valid signal message timestamp: {i}"
+            )
 
     @handle_unregistered_recipient
     async def paused(self, c: Recipient, thread=None):
