@@ -18,10 +18,16 @@ from .message_maker import MessageMaker
 
 
 class ChatStateMixin(MessageMaker):
+    def __init__(self):
+        super().__init__()
+        self.__last_chat_state: Optional[ChatState] = None
+
     def _chat_state(self, state: ChatState, **kwargs):
-        msg = self._make_message(
-            state=state, hints={"no-store"}, carbon=kwargs.get("carbon")
-        )
+        carbon = kwargs.get("carbon", False)
+        if carbon or state == self.__last_chat_state:
+            return
+        self.__last_chat_state = state
+        msg = self._make_message(state=state, hints={"no-store"})
         self._send(msg, **kwargs)
 
     def active(self, **kwargs):
@@ -32,25 +38,31 @@ class ChatStateMixin(MessageMaker):
 
     def composing(self, **kwargs):
         """
-        Send a "composing" (ie "typing notification") chat state (:xep:`0085`) from this contact to the user.
+        Send a "composing" (ie "typing notification") chat state (:xep:`0085`)
+        from this contact to the user.
         """
         self._chat_state("composing", **kwargs)
 
     def paused(self, **kwargs):
         """
-        Send a "paused" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
+        Send a "paused" (ie "typing paused notification") chat state
+        (:xep:`0085`) from this contact to the user.
         """
         self._chat_state("paused", **kwargs)
 
     def inactive(self, **kwargs):
         """
-        Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
+        Send an "inactive" (ie "contact has not interacted with the chat session
+        interface for an intermediate period of time") chat state (:xep:`0085`)
+        from this contact to the user.
         """
         self._chat_state("inactive", **kwargs)
 
     def gone(self, **kwargs):
         """
-        Send an "inactive" (ie "typing paused notification") chat state (:xep:`0085`) from this contact to the user.
+        Send a "gone" (ie "contact has not interacted with the chat session interface,
+        system, or device for a relatively long period of time") chat state
+        (:xep:`0085`) from this contact to the user.
         """
         self._chat_state("gone", **kwargs)
 

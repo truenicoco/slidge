@@ -14,6 +14,7 @@ class BaseDiscoMixin(Base):
     DISCO_LANG = None
 
     def __init__(self):
+        super().__init__()
         self.__caps_cache: Optional[str] = None
 
     def features(self):
