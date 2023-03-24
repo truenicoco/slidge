@@ -50,7 +50,7 @@ class AttachmentSenderMixin(ContentMessageMixin):
                 **kwargs,
             )
 
-    async def send_signal_msg(self, data: sigapi.JsonDataMessagev1):
+    async def send_signal_msg(self, data: sigapi.JsonDataMessagev1, carbon=False):
         msg_id = data.timestamp
         text = data.body
         when = datetime.fromtimestamp(data.timestamp / 1000)
@@ -60,18 +60,23 @@ class AttachmentSenderMixin(ContentMessageMixin):
             legacy_msg_id=None if text else msg_id,
             when=when,
             reply_to=reply_to,
+            carbon=carbon,
         )
         if text:
             self.send_text(
-                body=text, legacy_msg_id=msg_id, when=when, reply_to=reply_to
+                body=text,
+                legacy_msg_id=msg_id,
+                when=when,
+                reply_to=reply_to,
+                carbon=carbon,
             )
         if (reaction := data.reaction) is not None:
             if reaction.remove:
-                self.react(reaction.targetSentTimestamp)
+                self.react(reaction.targetSentTimestamp, carbon=carbon)
             else:
-                self.react(reaction.targetSentTimestamp, reaction.emoji)
+                self.react(reaction.targetSentTimestamp, reaction.emoji, carbon=carbon)
         if (delete := data.remoteDelete) is not None:
-            self.retract(delete.target_sent_timestamp)
+            self.retract(delete.target_sent_timestamp, carbon=carbon)
 
 
 def get_filename(attachment: sigapi.JsonAttachmentv1):

@@ -191,36 +191,11 @@ class Session(BaseSession[int, Recipient]):
             return
         elif g := sent_msg.groupV2:
             muc = await self.bookmarks.by_legacy_id(g.id)
-            sender = await muc.get_user_participant()
-            cb_kwargs = {}
+            contact = await muc.get_user_participant()
         else:
-            sender = await self.contacts.by_json_address(sent.destination)
-            cb_kwargs = {"carbon": True}
+            contact = await self.contacts.by_json_address(sent.destination)
 
-        await sender.send_attachments(
-            sent_msg.attachments, sent_msg.timestamp, **cb_kwargs
-        )
-
-        if (body := sent_msg.body) is not None:
-            sender.send_text(
-                body=body,
-                when=datetime.fromtimestamp(sent_msg.timestamp / 1000),
-                legacy_id=sent_msg.timestamp,
-                **cb_kwargs,
-            )
-        if (reaction := sent_msg.reaction) is not None:
-            try:
-                sender.react(
-                    reaction.targetSentTimestamp,
-                    () if reaction.remove else reaction.emoji,
-                    carbon=True,
-                )
-            except ValueError as e:
-                sender.send_text(
-                    f"/me tried to react with an invalid emoji: {e}", **cb_kwargs
-                )
-        if (delete := sent_msg.remoteDelete) is not None:
-            sender.retract(delete.target_sent_timestamp, **cb_kwargs)
+        await self.on_signal_data_message(contact, sent_msg, carbon=True)
 
     @staticmethod
     def on_signal_call_message(contact: "Contact", _call_message: sigapi.CallMessagev1):
@@ -229,17 +204,20 @@ class Session(BaseSession[int, Recipient]):
         )
 
     async def on_signal_data_message(
-        self, contact: "Contact", data: sigapi.JsonDataMessagev1
+        self,
+        contact: Union["Contact", "Participant"],
+        data: sigapi.JsonDataMessagev1,
+        carbon=False,
     ):
         if data.group:
             return
 
-        if data.groupV2:
+        if data.groupV2 and not carbon:
             muc = await self.bookmarks.by_legacy_id(data.groupV2.id)
             entity = await muc.get_participant_by_contact(contact)
         else:
             entity = contact
-        await entity.send_signal_msg(data)
+        await entity.send_signal_msg(data, carbon)
 
     async def on_signal_typing(
         self, contact: "Contact", typing_message: sigapi.TypingMessagev1
