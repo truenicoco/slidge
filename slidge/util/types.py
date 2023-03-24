@@ -50,6 +50,16 @@ FieldType = Literal[
 
 @dataclass
 class MessageReference(Generic[LegacyMessageType]):
+    """
+    A "message reply", ie a "quoted message" (:xep:`0461`)
+
+    At the very minimum, the legacy message ID attribute must be set, but to
+    ensure that the quote is displayed in all XMPP clients, the author must also
+    be set.
+    The body is used as a fallback for XMPP clients that do not support :xep:`0461`
+    of that failed to find the referenced message.
+    """
+
     legacy_id: LegacyMessageType
     author: Optional[Union["GatewayUser", "LegacyParticipant", "LegacyContact"]] = None
     body: Optional[str] = None
