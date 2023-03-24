@@ -74,7 +74,9 @@ class AttachmentSenderMixin(ContentMessageMixin):
             if reaction.remove:
                 self.react(reaction.targetSentTimestamp, carbon=carbon)
             else:
-                self.react(reaction.targetSentTimestamp, reaction.emoji, carbon=carbon)
+                self.react(
+                    reaction.targetSentTimestamp, [reaction.emoji], carbon=carbon
+                )
         if (delete := data.remoteDelete) is not None:
             self.retract(delete.target_sent_timestamp, carbon=carbon)
 
