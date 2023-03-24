@@ -405,8 +405,13 @@ class BaseSession(
 
         try:
             return self.xmpp_msg_id_to_legacy_msg_id(xmpp_id)
+        except XMPPError:
+            raise
         except Exception as e:
             log.debug("Couldn't convert xmpp msg ID to legacy ID.", exc_info=e)
+            raise XMPPError(
+                "internal-server-error", "Couldn't convert xmpp msg ID to legacy ID."
+            )
 
     @ignore_sent_carbons
     async def displayed_from_msg(self, m: Message):
@@ -427,12 +432,11 @@ class BaseSession(
         else:
             to_mark = [displayed_msg_id]
         for xmpp_id in to_mark:
-            if legacy := self.__xmpp_msg_id_to_legacy(xmpp_id):
-                await self.displayed(e, legacy, legacy_thread)
-                if isinstance(e, LegacyMUC):
-                    await e.echo(m, None)
-            else:
-                log.debug("Ignored displayed marker for msg: %r", xmpp_id)
+            await self.displayed(
+                e, self.__xmpp_msg_id_to_legacy(xmpp_id), legacy_thread
+            )
+            if isinstance(e, LegacyMUC):
+                await e.echo(m, None)
 
     @ignore_sent_carbons
     async def correct_from_msg(self, m: Message):
