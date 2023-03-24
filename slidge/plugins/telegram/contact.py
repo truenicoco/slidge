@@ -36,11 +36,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         self.away(last_seen=datetime.fromtimestamp(timestamp))
 
     def update_status(self, status: tgapi.UserStatus):
-        if isinstance(status, tgapi.UserStatusEmpty):
-            self.inactive()
-            self.offline()
-        elif isinstance(status, tgapi.UserStatusLastMonth):
-            self.inactive()
+        if isinstance(status, tgapi.UserStatusLastMonth):
             self.extended_away(
                 "Offline since last month"
                 if global_config.LAST_SEEN_FALLBACK
@@ -48,25 +44,21 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
                 last_seen=datetime.now() - timedelta(days=31),
             )
         elif isinstance(status, tgapi.UserStatusLastWeek):
-            self.inactive()
             self.extended_away(
                 "Offline since last week" if global_config.LAST_SEEN_FALLBACK else None,
                 last_seen=datetime.now() - timedelta(days=7),
             )
         elif isinstance(status, tgapi.UserStatusOffline):
-            self.inactive()
             if self._online_expire_task.done():
                 # we've never seen the contact online, so we use the was_online timestamp
                 self.away(last_seen=datetime.fromtimestamp(status.was_online))
         elif isinstance(status, tgapi.UserStatusOnline):
             self.online()
-            self.active()
             self._online_expire_task.cancel()
             self._online_expire_task = self.xmpp.loop.create_task(
                 self._expire_online(status.expires)
             )
         elif isinstance(status, tgapi.UserStatusRecently):
-            self.inactive()
             self.away(
                 "Last seen recently" if global_config.LAST_SEEN_FALLBACK else None,
                 last_seen=datetime.now(),
