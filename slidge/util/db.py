@@ -35,7 +35,7 @@ class EncryptedShelf(shelve.DbfilenameShelf):
             value = self.cache[key]
         except KeyError:
             f = BytesIO(self.dict[key.encode(self.keyencoding)])
-            value = Unpickler(f, key=self.secret_key).load()
+            value = Unpickler(f, key=self.secret_key).load()  # type:ignore
             if self.writeback:
                 self.cache[key] = value
         return value
@@ -44,7 +44,7 @@ class EncryptedShelf(shelve.DbfilenameShelf):
         if self.writeback:
             self.cache[key] = value
         f = BytesIO()
-        p = Pickler(f, self._protocol, key=self.secret_key)
+        p = Pickler(f, self._protocol, key=self.secret_key)  # type:ignore
         p.dump(value)
         self.dict[key.encode(self.keyencoding)] = f.getvalue()
 
