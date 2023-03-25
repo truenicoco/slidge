@@ -133,6 +133,8 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_direct_message(self, msg: tgapi.Message):
         carbon = msg.is_outgoing
+        if carbon and msg.sending_state is not None:
+            return
 
         sender = msg.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
