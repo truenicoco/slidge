@@ -1,6 +1,15 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Hashable, Literal, Optional, TypeVar, Union
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Generic,
+    Hashable,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 if TYPE_CHECKING:
     from ..core.contact import LegacyContact, LegacyRoster
@@ -63,3 +72,35 @@ class MessageReference(Generic[LegacyMessageType]):
     legacy_id: LegacyMessageType
     author: Optional[Union["GatewayUser", "LegacyParticipant", "LegacyContact"]] = None
     body: Optional[str] = None
+
+
+@dataclass
+class LegacyAttachment:
+    """
+    A file attachment to a message
+
+    At the minimum, one of the ``path``, ``steam``, ``data`` or ``url`` attribute
+    has to be set
+
+    To be used with :meth:`.LegacyContact.send_files` or
+    :meth:`.LegacyParticipant.send_files`
+    """
+
+    path: Optional[Union[Path, str]] = None
+    name: Optional[Union[str]] = None
+    stream: Optional[IO[bytes]] = None
+    data: Optional[bytes] = None
+    content_type: Optional[str] = None
+    legacy_file_id: Optional[Union[str, int]] = None
+    url: Optional[str] = None
+    caption: Optional[str] = None
+    """
+    A caption for this specific image. For a global caption for a list of attachments,
+    use the ``body`` parameter of :meth:`.AttachmentMixin.send_files`
+    """
+
+    def __post_init__(self):
+        if not any(
+            x is not None for x in (self.path, self.stream, self.data, self.url)
+        ):
+            raise TypeError("There is not data in this attachment", self)

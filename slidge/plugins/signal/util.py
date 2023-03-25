@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 import aiosignald.generated as sigapi
 
 from slidge.core.mixins.message import ContentMessageMixin
-from slidge.util.types import MessageReference
+from slidge.util.types import LegacyAttachment, MessageReference
 
 if TYPE_CHECKING:
     from .group import MUC
@@ -31,45 +31,15 @@ class AttachmentSenderMixin(ContentMessageMixin):
 
         return reply_to
 
-    async def send_attachments(
-        self,
-        attachments: list[sigapi.JsonAttachmentv1],
-        legacy_msg_id: Optional[int],
-        **kwargs,
-    ):
-        last_attachment_i = len(attachments) - 1
-        for i, attachment in enumerate(attachments):
-            filename = get_filename(attachment)
-            await self.send_file(
-                file_name=filename,
-                file_path=attachment.storedFilename,
-                content_type=attachment.contentType,
-                legacy_msg_id=legacy_msg_id if i == last_attachment_i else None,
-                caption=attachment.caption,
-                legacy_file_id=attachment.key,
-                **kwargs,
-            )
-
     async def send_signal_msg(self, data: sigapi.JsonDataMessagev1, carbon=False):
-        msg_id = data.timestamp
-        text = data.body
-        when = datetime.fromtimestamp(data.timestamp / 1000)
-        reply_to = await self.__get_reference(data.quote)
-        await self.send_attachments(
-            data.attachments,
-            legacy_msg_id=None if text else msg_id,
-            when=when,
-            reply_to=reply_to,
+        await self.send_files(
+            attachments=[Attachment.from_json(a) for a in data.attachments],
+            legacy_msg_id=data.timestamp,
+            when=datetime.fromtimestamp(data.timestamp / 1000),
+            reply_to=await self.__get_reference(data.quote),
             carbon=carbon,
+            body=data.body,
         )
-        if text:
-            self.send_text(
-                body=text,
-                legacy_msg_id=msg_id,
-                when=when,
-                reply_to=reply_to,
-                carbon=carbon,
-            )
         if (reaction := data.reaction) is not None:
             if reaction.remove:
                 self.react(reaction.targetSentTimestamp, carbon=carbon)
@@ -79,6 +49,17 @@ class AttachmentSenderMixin(ContentMessageMixin):
                 )
         if (delete := data.remoteDelete) is not None:
             self.retract(delete.target_sent_timestamp, carbon=carbon)
+
+
+class Attachment(LegacyAttachment):
+    @staticmethod
+    def from_json(json: sigapi.JsonAttachmentv1):
+        return Attachment(
+            name=get_filename(json),
+            path=json.storedFilename,
+            content_type=json.contentType,
+            legacy_file_id=json.key,
+        )
 
 
 def get_filename(attachment: sigapi.JsonAttachmentv1):

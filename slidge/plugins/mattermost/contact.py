@@ -2,9 +2,10 @@ import asyncio
 import html
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from mattermost_api_reference_client.models import (
+    FileInfo,
     Post,
     UpdateUserCustomStatusJsonBody,
     User,
@@ -13,6 +14,7 @@ from mattermost_api_reference_client.types import Unset
 
 from slidge import LegacyContact, LegacyRoster
 
+from ...util.types import LegacyAttachment
 from .util import emojize
 
 if TYPE_CHECKING:
@@ -152,6 +154,8 @@ class Contact(LegacyContact[str]):
         assert not isinstance(post.update_at, Unset)
 
         file_metas = post.metadata.files
+        if not (isinstance(file_metas, list)):
+            file_metas = []
         if isinstance(m := post.message, str):
             text = emojize(m, add_delimiters=False)
         else:
@@ -160,34 +164,39 @@ class Contact(LegacyContact[str]):
 
         when = datetime.fromtimestamp(post.update_at / 1000)
 
-        assert isinstance(text, str)
-        if not file_metas:
-            self.send_text(
-                text,
-                legacy_msg_id=post_id,
-                when=when,
-                carbon=carbon,
-                thread=post.root_id or post_id,
-            )
-            return
+        await self.send_files(
+            [
+                Attachment.from_mm(x, await self.session.mm_client.get_file(x.id))
+                for x in file_metas
+            ],
+            post_id,
+            body=text,
+            when=when,
+            carbon=carbon,
+            thread=post.root_id or post_id,
+            body_first=True,
+        )
 
-        assert isinstance(file_metas, list)
-        last_file_i = len(file_metas) - 1
 
-        for i, file_meta in enumerate(file_metas):
-            assert isinstance(file_meta.name, str)
-            assert isinstance(file_meta.id, str)
-            last = i == last_file_i
-            await self.send_file(
-                file_name=file_meta.name,
-                data=await self.session.mm_client.get_file(file_meta.id),
-                legacy_file_id=file_meta.id,
-                legacy_msg_id=post_id if last else None,
-                caption=text if last else None,
-                carbon=carbon,
-                thread=post.root_id or post_id,
-                when=when,
-            )
+T = TypeVar("T")
+
+
+def unset_to_none(x: Union[T, Unset]) -> Union[T, None]:
+    if isinstance(x, Unset):
+        return None
+    return x
+
+
+class Attachment(LegacyAttachment):
+    @staticmethod
+    def from_mm(info: FileInfo, data: bytes):
+        return Attachment(
+            name=unset_to_none(info.name),
+            legacy_file_id=unset_to_none(info.id),
+            # TODO: data could be an awaitable of bytes in slidge core so we don't
+            #       have to fetch if legacy_file_id has already been seen
+            data=data,
+        )
 
 
 class Roster(LegacyRoster[str, Contact]):

@@ -92,6 +92,9 @@ class Contact(LegacyContact[int]):
         if sticker is not None:
             return await self.send_fb_sticker(sticker, **kwargs)
 
+        # TODO: rework this with the new send_files() interface
+        # I don't have a FB account to test anymore, so I'd rather leave it
+        # "the old way"
         if msg.attachments:
             return await self.send_fb_attachment(msg, **kwargs)
 

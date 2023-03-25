@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Union
 import discord as di
 
 from slidge.core.mixins.message import ContentMessageMixin
-from slidge.util.types import MessageReference
+from slidge.util.types import LegacyAttachment, MessageReference
 
 if TYPE_CHECKING:
     from .group import MUC
@@ -82,9 +82,6 @@ class Mixin(ContentMessageMixin):
         else:
             text = message.content
 
-        attachments = message.attachments
-        msg_id = message.id
-
         channel = message.channel
         if isinstance(channel, di.Thread):
             thread = channel.id
@@ -93,27 +90,23 @@ class Mixin(ContentMessageMixin):
         else:
             thread = None
 
-        if not attachments:
-            return self.send_text(
-                text,
-                legacy_msg_id=msg_id,
-                when=message.created_at,
-                thread=thread,
-                reply_to=reply_to,
-                archive_only=archive_only,
-            )
+        await self.send_files(
+            attachments=[Attachment.from_discord(a) for a in message.attachments],
+            legacy_msg_id=message.id,
+            when=message.created_at,
+            thread=thread,
+            body=text,
+            reply_to=reply_to,
+            archive_only=archive_only,
+        )
 
-        last_attachment_i = len(attachments := message.attachments) - 1
-        for i, attachment in enumerate(attachments):
-            last = i == last_attachment_i
-            await self.send_file(
-                file_url=attachment.url,
-                file_name=attachment.filename,
-                content_type=attachment.content_type,
-                legacy_msg_id=msg_id if last else None,
-                caption=text if last else None,
-                thread=thread,
-                reply_to=reply_to,
-                archive_only=archive_only,
-                when=message.created_at,
-            )
+
+class Attachment(LegacyAttachment):
+    @staticmethod
+    def from_discord(di_attachment: di.Attachment):
+        return Attachment(
+            url=di_attachment.url,
+            name=di_attachment.filename,
+            content_type=di_attachment.content_type,
+            legacy_file_id=di_attachment.id,
+        )

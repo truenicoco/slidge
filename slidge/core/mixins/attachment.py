@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 import shutil
@@ -6,7 +7,7 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Optional, Union
+from typing import IO, Collection, Optional, Union
 from uuid import uuid4
 
 from slixmpp import Message
@@ -14,7 +15,12 @@ from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
 
 from ...util import BiDict
-from ...util.types import LegacyMessageType, LegacyThreadType, MessageReference
+from ...util.types import (
+    LegacyAttachment,
+    LegacyMessageType,
+    LegacyThreadType,
+    MessageReference,
+)
 from ...util.util import fix_suffix
 from ...util.xep_0385.stanza import Sims
 from ...util.xep_0447.stanza import StatelessFileSharing
@@ -324,6 +330,71 @@ class AttachmentMixin(MessageMaker):
 
         self.__send_url(msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs)
         return new_url
+
+    def __send_body(
+        self,
+        body: Optional[str] = None,
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+        reply_to: Optional[MessageReference] = None,
+        when: Optional[datetime] = None,
+        thread: Optional[LegacyThreadType] = None,
+        **kwargs,
+    ):
+        if body:
+            self.send_text(
+                body,
+                legacy_msg_id,
+                reply_to=reply_to,
+                when=when,
+                thread=thread,
+                **kwargs,
+            )
+
+    async def send_files(
+        self,
+        attachments: Collection[LegacyAttachment],
+        legacy_msg_id: Optional[LegacyMessageType] = None,
+        body: Optional[str] = None,
+        *,
+        reply_to: Optional[MessageReference] = None,
+        when: Optional[datetime] = None,
+        thread: Optional[LegacyThreadType] = None,
+        body_first=False,
+        **kwargs,
+    ):
+        # TODO: once the epic XEP-0385 vs XEP-0447 battle is over, pick
+        #       one and stop sending several attachments this way
+        # we attach the legacy_message ID to the last message we send, because
+        # we don't want several messages with the same ID (especially for MUC MAM)
+        if not attachments and not body:
+            # ignoring empty message
+            return
+        send_body = functools.partial(
+            self.__send_body,
+            body=body,
+            reply_to=reply_to,
+            when=when,
+            thread=thread,
+            **kwargs,
+        )
+        if body_first:
+            send_body(legacy_msg_id=None if attachments and body else legacy_msg_id)
+        last_attachment_i = len(attachments) - 1 if not body else None
+        for i, attachment in enumerate(attachments):
+            last = i == last_attachment_i
+            await self.send_file(
+                file_path=attachment.path,
+                legacy_msg_id=legacy_msg_id if last else None,
+                file_url=attachment.url,
+                data_stream=attachment.stream,
+                data=attachment.data,
+                reply_to=reply_to,
+                when=when,
+                thread=thread,
+                **kwargs,
+            )
+        if not body_first:
+            send_body(legacy_msg_id=legacy_msg_id)
 
 
 log = logging.getLogger(__name__)

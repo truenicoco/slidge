@@ -14,7 +14,7 @@ from slidge import *
 from slidge.core.mixins.attachment import AttachmentMixin
 
 from slidge.util.test import SlidgeTest
-from slidge.util.types import LegacyMessageType, LegacyContactType
+from slidge.util.types import LegacyMessageType, LegacyContactType, LegacyAttachment
 from slidge.util.xep_0356.permissions import (
     Permissions,
     MessagePermission,
@@ -160,6 +160,18 @@ class TestAimShakespeareBase(SlidgeTest):
         return BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
+
+    @property
+    def juliet(self) -> LegacyContact:
+        session = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        return self.xmpp.loop.run_until_complete(
+            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
+        )
+
+    def loop(self, x):
+        self.xmpp.loop.run_until_complete(x)
 
     def test_jabber_iq_gateway(self):
         self.recv(
@@ -757,6 +769,78 @@ class TestAimShakespeareBase(SlidgeTest):
             """,
             use_values=False,
         )
+
+    def test_attachments(self):
+        a = LegacyAttachment(path="x")
+
+        ids = []
+
+        async def send_file(file_path, legacy_msg_id=None, *_a, **_k):
+            ids.append(legacy_msg_id)
+
+        self.juliet.send_file = send_file
+
+        self.loop(self.juliet.send_files([], body="Hey"))
+        assert not self.next_sent().get_id()
+
+        self.loop(self.juliet.send_files([], body=""))
+        assert self.next_sent() is None
+
+        self.loop(self.juliet.send_files([a, a, a], body=""))
+        assert ids.pop(-3) is None
+        assert ids.pop(-2) is None
+        assert ids.pop(-1) is None
+
+        self.loop(self.juliet.send_files([a, a, a], legacy_msg_id="leg"))
+        assert ids.pop(-3) is None
+        assert ids.pop(-2) is None
+        assert ids.pop(-1) == "leg"
+
+        self.loop(self.juliet.send_files([], body="hoy"))
+        assert not self.next_sent().get_id()
+
+        self.loop(self.juliet.send_files([], body="hoy", legacy_msg_id="leg"))
+        assert self.next_sent().get_id() == "leg"
+
+        self.loop(
+            self.juliet.send_files([], body="hoy", legacy_msg_id="leg", body_first=True)
+        )
+        assert self.next_sent().get_id() == "leg"
+
+        self.loop(
+            self.juliet.send_files(
+                [a, a, a, a], body="hoy", legacy_msg_id="leg", body_first=True
+            )
+        )
+        assert not self.next_sent().get_id() == "leg"
+        assert ids.pop(-4) is None
+        assert ids.pop(-3) is None
+        assert ids.pop(-2) is None
+        assert ids.pop(-1) is None
+
+        self.loop(
+            self.juliet.send_files(
+                [a, a, a, a], body="hoy", legacy_msg_id="leg", body_first=False
+            )
+        )
+        assert ids.pop(-4) is None
+        assert ids.pop(-3) is None
+        assert ids.pop(-2) is None
+        assert ids.pop(-1) is None
+        assert self.next_sent().get_id() == "leg"
+
+        self.loop(self.juliet.send_files([a, a, a, a], body="hoy"))
+        assert ids.pop(-4) is None
+        assert ids.pop(-3) is None
+        assert ids.pop(-2) is None
+        assert ids.pop(-1) is None
+        assert not self.next_sent().get_id()
+
+        self.loop(self.juliet.send_files([a]))
+        assert ids.pop(-1) is None
+
+        self.loop(self.juliet.send_files([a], legacy_msg_id="leg"))
+        assert ids.pop(-1) == "leg"
 
 
 class TestPrivilegeOld(SlidgeTest):

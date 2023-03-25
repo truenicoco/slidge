@@ -9,7 +9,7 @@ from typing import Optional, Union
 
 from slidge import BaseSession, GatewayUser, global_config
 from slidge.core.contact.roster import ContactIsUser
-from slidge.util.types import MessageReference
+from slidge.util.types import LegacyAttachment, MessageReference
 
 from .contact import Contact, Roster
 from .gateway import Gateway
@@ -59,6 +59,7 @@ class Session(BaseSession[str, Recipient]):
         self.whatsapp = self.xmpp.whatsapp.NewSession(device)
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
+        self._connected = self.xmpp.loop.create_future()
 
     def shutdown(self):
         for c in self.contacts:
@@ -72,7 +73,7 @@ class Session(BaseSession[str, Recipient]):
         or will re-connect to a previously existing Linked Device session.
         """
         self.whatsapp.Login()
-        self._connected: asyncio.Future[str] = self.xmpp.loop.create_future()
+        self._connected = self.xmpp.loop.create_future()
         return await self._connected
 
     async def logout(self):
@@ -151,6 +152,8 @@ class Session(BaseSession[str, Recipient]):
         contact = await self.contacts.by_legacy_id(call.JID)
         if call.State == whatsapp.CallMissed:
             text = "Missed call"
+        else:
+            text = "Call"
         text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
         if call.Timestamp > 0:
             call_at = datetime.fromtimestamp(call.Timestamp, tz=timezone.utc)
@@ -194,20 +197,13 @@ class Session(BaseSession[str, Recipient]):
                 carbon=message.IsCarbon,
             )
         elif message.Kind == whatsapp.MessageAttachment:
-            for ptr in message.Attachments:
-                attachment = whatsapp.Attachment(handle=ptr)
-                attachment_caption = attachment.Caption if attachment.Caption else None
-                await contact.send_file(
-                    file_path=None,
-                    file_name=attachment.Filename,
-                    content_type=attachment.MIME,
-                    data=bytes(attachment.Data),
-                    legacy_msg_id=message.ID,
-                    reply_to=reply_to,
-                    when=message_timestamp,
-                    caption=attachment_caption,
-                    carbon=message.IsCarbon,
-                )
+            await contact.send_files(
+                attachments=Attachment.convert_list(message.Attachments),
+                legacy_msg_id=message.ID,
+                reply_to=reply_to,
+                when=message_timestamp,
+                carbon=message.IsCarbon,
+            )
         elif message.Kind == whatsapp.MessageRevoke:
             contact.retract(legacy_msg_id=message.ID, carbon=message.IsCarbon)
         elif message.Kind == whatsapp.MessageReaction:
@@ -362,6 +358,23 @@ class Session(BaseSession[str, Recipient]):
             return legacy_msg_id in self.muc_sent_msg_ids
         else:
             return legacy_msg_id in self.sent
+
+
+class Attachment(LegacyAttachment):
+    @staticmethod
+    def convert_list(attachments: list):
+        return [
+            Attachment.convert(whatsapp.Attachment(handle=ptr)) for ptr in attachments
+        ]
+
+    @staticmethod
+    def convert(wa_attachment: whatsapp.Attachment):
+        return Attachment(
+            content_type=wa_attachment.MIME,
+            data=bytes(wa_attachment.Data),
+            caption=wa_attachment.Caption,
+            name=wa_attachment.Filename,
+        )
 
 
 def make_sync(func, loop):
