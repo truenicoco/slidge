@@ -64,11 +64,13 @@ class CredentialsValidation(aiotdlib.Client):
         self.code_future: asyncio.Future[
             str
         ] = asyncio.get_running_loop().create_future()
-        self._auth_get_code = self._get_code
-        self._auth_get_password = self._get_code
+        self.password = registration_form.get("password")
 
-    async def _get_code(self):
+    async def _auth_get_code(self):
         return await self.code_future
+
+    async def _auth_get_password(self):
+        return self.password
 
 
 class TelegramClient(aiotdlib.Client):

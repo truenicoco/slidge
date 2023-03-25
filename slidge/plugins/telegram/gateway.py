@@ -142,8 +142,12 @@ class Gateway(BaseGateway):
 
     SEARCH_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
-        FormField(var="first", label="First name", required=True),
-        FormField(var="last", label="Last name", required=False),
+        FormField(
+            var="password",
+            label="Password (only required if you set up one in Telegram)",
+            required=False,
+            private=True,
+        ),
     ]
 
     GROUPS = True
