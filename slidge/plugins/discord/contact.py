@@ -89,10 +89,10 @@ class Roster(LegacyRoster[int, Contact]):
     async def fill(self):
         for u in self.session.discord.users:
             if not isinstance(u, di.User):
-                self.session.log.debug(f"Skipping %s", u)
+                self.session.log.debug("Skipping %s", u)
                 continue
             if not u.is_friend():
-                self.session.log.debug(f"%s is not a friend", u)
+                self.session.log.debug("%s is not a friend", u)
                 continue
             c = await self.by_legacy_id(u.id)
             await c.add_to_roster()

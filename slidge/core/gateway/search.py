@@ -19,8 +19,8 @@ class Search:
         xmpp.plugin["xep_0030"].add_feature("jabber:iq:gateway")
         xmpp.register_handler(
             CoroutineCallback(
-                f"iq:gateway",
-                StanzaPath(f"iq/gateway"),
+                "iq:gateway",
+                StanzaPath("iq/gateway"),
                 self._handle_gateway_iq,  # type: ignore
             )
         )

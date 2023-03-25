@@ -78,7 +78,7 @@ class Mixin(ContentMessageMixin):
         if mtype == di.MessageType.thread_created:
             text = f"/me created a thread named '{message.content}'"
         elif mtype == di.MessageType.thread_starter_message:
-            text = f"I started a new thread from this message ↑"
+            text = "I started a new thread from this message ↑"
         else:
             text = message.content
 

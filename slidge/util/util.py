@@ -17,8 +17,6 @@ except ImportError as e:
         e,
     )
 
-from .types import FieldType
-
 
 def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
     guessed = magic.from_file(path, mime=True)

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import discord as di
 from slixmpp import JID
 

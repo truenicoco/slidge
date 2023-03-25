@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
 
-from slidge import *
+from slidge import LegacyContact, LegacyRoster, XMPPError, global_config
 
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 

@@ -16,7 +16,7 @@ from typing import Any, Optional
 import aiohttp
 from slixmpp import JID
 
-from slidge import *
+from slidge import BaseGateway, BaseSession, FormField, LegacyContact, XMPPError
 
 
 class Gateway(BaseGateway):

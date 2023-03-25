@@ -12,7 +12,7 @@ import qrcode
 from aiosignald import SignaldAPI
 from slixmpp import JID
 
-from slidge import *
+from slidge import BaseGateway, GatewayUser, XMPPError, user_store
 from slidge.core.command import Command, CommandAccess, Form, FormField, TableResult
 from slidge.core.command.register import RegistrationType
 from slidge.util import is_valid_phone_number

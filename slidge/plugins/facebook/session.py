@@ -10,12 +10,11 @@ from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant
 from maufbapi.types.graphql.responses import FriendshipStatus
 
-from slidge import *
+from slidge import BaseSession, FormField, LegacyMUC, SearchResult, XMPPError
 
 from . import config
 from .client import AndroidMQTT
 from .contact import Contact, Roster
-from .gateway import Gateway
 from .util import FacebookMessage, Messages, get_shelf_path
 
 Recipient = Union[Contact, LegacyMUC]

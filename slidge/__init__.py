@@ -8,7 +8,7 @@ from .core.contact import LegacyContact, LegacyRoster
 from .core.gateway import BaseGateway
 from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from .core.session import BaseSession
-from .util import (
+from .util import (  # noqa: F401
     xep_0030,
     xep_0050,
     xep_0054,

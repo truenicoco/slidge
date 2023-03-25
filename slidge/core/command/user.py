@@ -77,7 +77,7 @@ class SyncContacts(Command):
 
     async def run(self, session, _ifrom, *_):
         return Confirmation(
-            prompt=f"Are you sure you want to sync your roster?",
+            prompt="Are you sure you want to sync your roster?",
             success=None,
             handler=self.sync,
         )

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Union
 import discord as di
 
 if TYPE_CHECKING:
-    from . import Contact
+    from .contact import Contact
     from .session import Session
 
 

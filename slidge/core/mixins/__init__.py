@@ -1,4 +1,4 @@
-from .disco import BaseDiscoMixin, ChatterDiscoMixin
+from .disco import ChatterDiscoMixin
 from .message import MessageCarbonMixin, MessageMixin
 from .presence import PresenceMixin
 

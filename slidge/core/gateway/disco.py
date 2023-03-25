@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -9,7 +8,6 @@ from ...util.error import XMPPError
 from ...util.xep_0030.stanza.items import DiscoItems
 
 if TYPE_CHECKING:
-    from ..session import BaseSession
     from .base import BaseGateway
 
 

@@ -2,7 +2,7 @@ from typing import Optional
 
 from slixmpp import JID
 
-from slidge import *
+from slidge import BaseGateway, FormField
 
 from .api import get_client_from_registration_form
 
@@ -36,7 +36,10 @@ class Gateway(BaseGateway):
     COMPONENT_NAME = "Mattermost (slidge)"
     COMPONENT_TYPE = "mattermost"
 
-    COMPONENT_AVATAR = "https://play-lh.googleusercontent.com/aX7JaAPkmnkeThK4kgb_HHlBnswXF0sPyNI8I8LNmEMMo1vDvMx32tCzgPMsyEXXzZRc"
+    COMPONENT_AVATAR = (
+        "https://play-lh.googleusercontent.com/"
+        "aX7JaAPkmnkeThK4kgb_HHlBnswXF0sPyNI8I8LNmEMMo1vDvMx32tCzgPMsyEXXzZRc"
+    )
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]

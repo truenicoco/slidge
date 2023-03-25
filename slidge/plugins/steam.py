@@ -27,7 +27,17 @@ from steam.protobufs.steammessages_friendmessages_pb2 import (
 )
 from steam.steamid import SteamID
 
-from slidge import *
+from slidge import (
+    BaseGateway,
+    BaseSession,
+    FormField,
+    GatewayUser,
+    LegacyContact,
+    LegacyMUC,
+    LegacyRoster,
+    XMPPError,
+    global_config,
+)
 from slidge.core.command.register import RegistrationType, TwoFactorNotRequired
 from slidge.util import BiDict
 
@@ -206,11 +216,11 @@ class Session(BaseSession[int, Recipient]):
 
     def on_steam_disconnected(self):
         self.logged = False
-        self.send_gateway_status(f"Disconnected from steam", show="busy")
+        self.send_gateway_status("Disconnected from steam", show="busy")
         self.send_gateway_message(
-            f"You have been disconnected from steam. "
-            f"You can try to re-login via the dedicated adhoc command, but you "
-            f"might need to unregister and re-register to the gateway component."
+            "You have been disconnected from steam. "
+            "You can try to re-login via the dedicated adhoc command, but you "
+            "might need to unregister and re-register to the gateway component."
         )
 
     async def login(self):

@@ -18,7 +18,16 @@ from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
 
-from slidge import *
+from slidge import (
+    BaseGateway,
+    BaseSession,
+    LegacyBookmarks,
+    LegacyContact,
+    LegacyMUC,
+    LegacyParticipant,
+    LegacyRoster,
+    user_store,
+)
 
 from ..core import config
 from ..core.command import Command

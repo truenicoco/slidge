@@ -3,14 +3,13 @@ import functools
 import logging
 import os
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 
-from slidge import *
+from slidge import BaseSession, FormField, GatewayUser, SearchResult, XMPPError
 from slidge.util.util import is_valid_phone_number
 
 if TYPE_CHECKING:

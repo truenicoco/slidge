@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import discord as di
 
-from slidge import *
+from slidge import BaseSession, XMPPError
 
 if TYPE_CHECKING:
-    from .client import Discord
     from .contact import Contact, Roster
     from .group import MUC
 

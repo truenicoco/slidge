@@ -32,6 +32,7 @@ ARG TARGETARCH
 RUN poetry build
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
       poetry install --all-extras; \
+      poetry run ruff slidge --check; \
       poetry run mypy slidge; \
       poetry run pytest tests; \
       poetry run black slidge --check; \

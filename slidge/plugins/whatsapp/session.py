@@ -1,4 +1,3 @@
-import asyncio
 from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime, timezone
 from functools import wraps

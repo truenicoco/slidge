@@ -53,6 +53,7 @@ types-requests = "^2.28.1"
 isort = "^5.11.4"
 types-emoji = "^2.0.0"
 pybindgen = "^0.22.1"
+ruff = "^0.0.259"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "pybindgen>=0.22.1"]
@@ -79,3 +80,6 @@ check_untyped_defs = true
 exclude = "xep_*|slidge/plugins/whatsapp/generated/*"
 experimental-string-processing = true
 
+[tool.ruff]
+line-length = 120
+exclude = ["xep_*", "slidge/plugins/whatsapp/generated/*"]

@@ -12,13 +12,10 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from ..core.contact import LegacyContact, LegacyRoster
-    from ..core.gateway import BaseGateway
-    from ..core.muc.bookmarks import LegacyBookmarks
+    from ..core.contact import LegacyContact
     from ..core.muc.participant import LegacyParticipant
     from ..core.muc.room import LegacyMUC
     from ..core.pubsub import PepItem
-    from ..core.session import BaseSession
     from .db import GatewayUser
 
 
@@ -27,13 +24,9 @@ LegacyMessageType = TypeVar("LegacyMessageType", bound=Hashable)
 LegacyThreadType = TypeVar("LegacyThreadType", bound=Hashable)
 LegacyUserIdType = TypeVar("LegacyUserIdType", bound=Hashable)
 
-# BookmarksType = TypeVar("BookmarksType", bound="LegacyBookmarks")
 LegacyContactType = TypeVar("LegacyContactType", bound="LegacyContact")
-# GatewayType = TypeVar("GatewayType", bound="BaseGateway")
 LegacyMUCType = TypeVar("LegacyMUCType", bound="LegacyMUC")
 LegacyParticipantType = TypeVar("LegacyParticipantType", bound="LegacyParticipant")
-# LegacyRosterType = TypeVar("LegacyRosterType", bound="LegacyRoster")
-# SessionType = TypeVar("SessionType", bound="BaseSession")
 
 PepItemType = TypeVar("PepItemType", bound="PepItem")
 

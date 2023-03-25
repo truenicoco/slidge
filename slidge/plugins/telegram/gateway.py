@@ -7,7 +7,14 @@ from datetime import datetime
 import aiotdlib.api as tgapi
 from slixmpp import JID
 
-from slidge import *
+from slidge import (
+    BaseGateway,
+    FormField,
+    GatewayUser,
+    XMPPError,
+    global_config,
+    user_store,
+)
 from slidge.core.command import Command, CommandAccess, Confirmation, Form, TableResult
 from slidge.core.command.register import RegistrationType
 

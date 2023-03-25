@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
 
-from slidge import *
+from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType, XMPPError
 
 from . import config
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin

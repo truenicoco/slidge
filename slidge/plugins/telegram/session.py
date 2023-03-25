@@ -9,7 +9,7 @@ from typing import Union
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
 
-from slidge import *
+from slidge import BaseSession, FormField, SearchResult, XMPPError
 
 from . import config
 from .client import TelegramClient

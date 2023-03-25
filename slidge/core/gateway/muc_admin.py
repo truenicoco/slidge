@@ -13,8 +13,8 @@ class MucAdmin:
         self.xmpp = xmpp
         xmpp.register_handler(
             CoroutineCallback(
-                f"muc#admin",
-                StanzaPath(f"iq/mucadmin_query"),
+                "muc#admin",
+                StanzaPath("iq/mucadmin_query"),
                 self._handle_admin,  # type: ignore
             )
         )

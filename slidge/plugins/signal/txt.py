@@ -1,4 +1,4 @@
-from slidge import *
+from slidge import FormField
 
 REGISTRATION_INSTRUCTIONS = (
     "Fill the form to register a new signal account. If you want to link slidge to an"

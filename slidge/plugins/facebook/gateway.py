@@ -24,7 +24,10 @@ class Gateway(BaseGateway):
 
     COMPONENT_NAME = "Facebook (slidge)"
     COMPONENT_TYPE = "facebook"
-    COMPONENT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
+    COMPONENT_AVATAR = (
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/"
+        "Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
+    )
 
     SEARCH_TITLE = "Search in your facebook friends"
     SEARCH_INSTRUCTIONS = (

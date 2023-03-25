@@ -8,7 +8,7 @@ from uuid import UUID
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 
-from slidge import *
+from slidge import LegacyContact, LegacyRoster, XMPPError
 
 from . import config
 from .util import AttachmentSenderMixin

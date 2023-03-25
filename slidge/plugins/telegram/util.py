@@ -53,7 +53,7 @@ class AvailableEmojisMixin:
             try:
                 chat = await self.session.tg.get_chat(self.chat_id)
             except XMPPError as e:
-                self.log.debug(f"Could not get the available emojis: %s", e)
+                self.log.debug("Could not get the available emojis: %s", e)
                 return
             emojis = set(chat.available_reactions)
             return emojis

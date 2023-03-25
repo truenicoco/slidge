@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
 
-from slidge import *
+from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType, XMPPError
 
 from .util import AttachmentSenderMixin
 

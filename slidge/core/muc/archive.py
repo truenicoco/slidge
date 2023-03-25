@@ -6,7 +6,6 @@ from typing import Collection, Optional
 
 from slixmpp import Iq, Message
 from slixmpp.plugins.xep_0297.stanza import Forwarded
-from slixmpp.plugins.xep_0444.stanza import NS as ReactionsNameSpace
 
 from ...util.error import XMPPError
 from .. import config

@@ -11,7 +11,16 @@ import skpy
 from requests.exceptions import ConnectionError
 from slixmpp import JID
 
-from slidge import *
+from slidge import (
+    BaseGateway,
+    BaseSession,
+    FormField,
+    LegacyContact,
+    LegacyMUC,
+    LegacyRoster,
+    XMPPError,
+    global_config,
+)
 
 
 class Gateway(BaseGateway):

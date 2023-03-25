@@ -12,7 +12,20 @@ from typing import Any, Optional, Union
 
 from slixmpp import JID
 
-from slidge import *
+from slidge import (
+    BaseGateway,
+    BaseSession,
+    FormField,
+    GatewayUser,
+    LegacyBookmarks,
+    LegacyContact,
+    LegacyMUC,
+    LegacyParticipant,
+    LegacyRoster,
+    MucType,
+    SearchResult,
+    XMPPError,
+)
 from slidge.core.command.register import RegistrationType
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "dev" / "assets"
@@ -62,9 +75,13 @@ class MUC(LegacyMUC):
         p = await self.get_participant("errorer")
         p.send_text("ERRORING", full_jid="test@localhost/gajim.EF51E8Y")
         # resource does not exist
-        # <message type="error" id="3d7fa9d5b1f34dff9eb4f9161a867a01" from="test@localhost/caca" to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
+        # <message type="error" id="3d7fa9d5b1f34dff9eb4f9161a867a01" from="test@localhost/caca"
+        # to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable
+        # xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
         # resource is not joined
-        # <message type="error" id="a116ffc9d046457c850fa79d1ca59886" from="test@localhost/gajim.EF51PE" to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
+        # <message type="error" id="a116ffc9d046457c850fa79d1ca59886" from="test@localhost/gajim.EF51PE"
+        # to="prout-1@dummy.localhost/live-messager"><error type="cancel"><service-unavailable
+        # xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
 
     async def update_info(self):
         if self.legacy_id == "prout-1":
@@ -202,13 +219,13 @@ class Session(BaseSession):
         baba = await self.contacts.by_legacy_id("baba")
 
         baba.send_text(
-            f"You're bad!",
+            "You're bad!",
             legacy_msg_id=i,
             when=datetime.now() - timedelta(hours=5),
             carbon=True,
         )
         baba.send_text(
-            f"You're worse",
+            "You're worse",
             legacy_msg_id=i,
             when=datetime.now() - timedelta(hours=4),
         )

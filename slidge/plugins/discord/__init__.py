@@ -6,9 +6,7 @@ from slixmpp import JID
 
 from slidge import BaseGateway, FormField
 
-from . import commands, config, group
-from .contact import Contact
-from .session import Session
+from . import commands, config, contact, group, session  # noqa: F401
 
 
 class Gateway(BaseGateway):

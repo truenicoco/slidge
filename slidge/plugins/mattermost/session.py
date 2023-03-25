@@ -5,14 +5,13 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 from mattermost_api_reference_client.models import Post, Reaction
 from mattermost_api_reference_client.models.user import User
 
-from slidge import *
+from slidge import BaseSession, LegacyMUC, XMPPError
 
 from .api import ContactNotFound, get_client_from_registration_form
 from .websocket import MattermostEvent, Websocket
 
 if TYPE_CHECKING:
     from .contact import Contact, Roster
-    from .gateway import Gateway
 
 
 Recipient = Union["Contact", "LegacyMUC"]
