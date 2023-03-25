@@ -1,5 +1,7 @@
+ARG PYTHONVER=3.9
 ## Base build stage for Slidge, prepares and installs common dependencies.
-FROM docker.io/library/python:3.9-slim AS builder
+FROM docker.io/library/python:$PYTHONVER-slim AS builder
+ARG PYTHONVER
 ENV PATH="/venv/bin:/root/.local/bin:$PATH"
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -9,8 +11,8 @@ RUN python3 -m venv /venv && python3 -m pip install wheel
 RUN curl -fL https://install.python-poetry.org | python3 -
 
 # copy compiled stringprep module
-RUN mkdir -p /venv/lib/python3.9/site-packages/slixmpp
-RUN cp /usr/lib/python3/dist-packages/slixmpp/* /venv/lib/python3.9/site-packages/slixmpp/
+RUN mkdir -p /venv/lib/python$PYTHONVER/site-packages/slixmpp
+RUN cp /usr/lib/python3/dist-packages/slixmpp/* /venv/lib/python$PYTHONVER/site-packages/slixmpp/
 
 WORKDIR /build
 
@@ -29,7 +31,8 @@ RUN python3 -m pip install --requirement requirements.txt
 ## Minimal runtime environment for slidge
 # We re-use this for plugins that need extra dependencies, but copy the ./slidge
 # dir as the last step to be docker cache-friendly
-FROM docker.io/library/python:3.9-slim AS base
+FROM docker.io/library/python:$PYTHONVER-slim AS base
+ARG PYTHONVER
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
@@ -52,9 +55,10 @@ ENTRYPOINT ["python", "-m", "slidge"]
 
 ## Base execution stage for Slidge; most plugins can run in this stage with `SLIDGE_LEGACY_MODULE` set.
 FROM base as slidge
+ARG PYTHONVER
 
 # Copy late to be cache-friendly.
-COPY slidge /venv/lib/python3.9/site-packages/slidge
+COPY slidge /venv/lib/python$PYTHONVER/site-packages/slidge
 
 ## Plugin-specific build stages. Certain plugins require additional dependencies and/or preparation,
 ## and can thus only be executed in these stages.
@@ -77,7 +81,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 
 USER slidge
 
-COPY slidge /venv/lib/python3.9/site-packages/slidge
+COPY slidge /venv/lib/python$PYTHONVER/site-packages/slidge
 
 FROM slidge AS slidge-skype
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.skype
@@ -92,6 +96,7 @@ FROM slidge AS slidge-discord
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.discord
 
 FROM base AS slidge-whatsapp
+ARG PYTHONVER
 ENV SLIDGE_LEGACY_MODULE=slidge.plugins.whatsapp
 ENV GOBIN="/usr/local/bin"
 
@@ -111,8 +116,8 @@ RUN cd /whatsapp && \
 RUN rm -Rf /root/go
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false golang
 
-COPY slidge /venv/lib/python3.9/site-packages/slidge
-RUN mv /whatsapp/generated /venv/lib/python3.9/site-packages/slidge/plugins/whatsapp
+COPY slidge /venv/lib/python$PYTHONVER/site-packages/slidge
+RUN mv /whatsapp/generated /venv/lib/python$PYTHONVER/site-packages/slidge/plugins/whatsapp
 
 USER slidge
 
@@ -133,15 +138,17 @@ ENTRYPOINT ["prosody", "-F"]
 
 ## Slidge execution environment for local development across all plugins.
 FROM slidge AS slidge-dev
+ARG PYTHONVER
 USER root
 
 COPY --from=prosody-dev /etc/prosody/certs/localhost.crt /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 
-COPY ./dev/assets /venv/lib/python3.9/site-packages/dev/assets
+COPY ./dev/assets /venv/lib/python$PYTHONVER/site-packages/dev/assets
 COPY ./dev/watcher.py /watcher.py
 RUN pip install watchdog[watchmedo]
 
+# FIXME: how do I dynamically set that 3.9?
 ENTRYPOINT ["/venv/bin/python", "/watcher.py", "/venv/lib/python3.9/site-packages/slidge/"]
 
 FROM slidge-dev AS slidge-telegram-dev
