@@ -3,6 +3,7 @@ import functools
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
+from uuid import UUID
 
 import aiosignald.exc as sigexc
 import aiosignald.generated as sigapi
@@ -112,20 +113,20 @@ class Roster(LegacyRoster[str, Contact]):
         return await self.by_legacy_id(address.uuid)
 
     async def jid_username_to_legacy_id(self, jid_username: str):
-        check = (await self.session.signal).is_identifier_registered(
-            account=self.session.phone, identifier=jid_username
-        )
-        try:
-            if (await check).value:
-                return jid_username
-            else:
-                raise XMPPError(
-                    "item-not-found", f"No account identified by {jid_username}"
-                )
-        except sigexc.IllegalArgumentException:
+        if not is_valid_uuid(jid_username):
             raise XMPPError(
                 "bad-request",
                 f"The identifier {jid_username} is not a valid signal account identifier",
+            )
+
+        check = (await self.session.signal).is_identifier_registered(
+            account=self.session.phone, identifier=jid_username
+        )
+        if (await check).value:
+            return jid_username
+        else:
+            raise XMPPError(
+                "item-not-found", f"No account identified by {jid_username}"
             )
 
     async def fill(self):
@@ -139,6 +140,35 @@ class Roster(LegacyRoster[str, Contact]):
                 self.log.warning(
                     "Something is wrong the signald contact: %s", profile, exc_info=e
                 )
+
+
+# from https://stackoverflow.com/a/33245493/5902284
+def is_valid_uuid(uuid_to_test, version=4):
+    """
+    Check if uuid_to_test is a valid UUID.
+
+     Parameters
+    ----------
+    uuid_to_test : str
+    version : {1, 2, 3, 4}
+
+     Returns
+    -------
+    `True` if uuid_to_test is a valid UUID, otherwise `False`.
+
+     Examples
+    --------
+    >>> is_valid_uuid('c9bf9e57-1685-4c89-bafb-ff5af830be8a')
+    True
+    >>> is_valid_uuid('c9bf9e58')
+    False
+    """
+
+    try:
+        uuid_obj = UUID(uuid_to_test, version=version)
+    except ValueError:
+        return False
+    return str(uuid_obj) == uuid_to_test
 
 
 log = logging.getLogger(__name__)
