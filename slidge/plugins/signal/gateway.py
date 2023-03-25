@@ -40,8 +40,10 @@ class Link(Command):
     async def run(self, _session, ifrom: JID, *args):
         return Form(
             title="Linking your signal account to slidge.",
-            instructions="Fill this form and prepare the official signal app. "
-            "You will have to scan a QR code from it.",
+            instructions=(
+                "Fill this form and prepare the official signal app. "
+                "You will have to scan a QR code from it."
+            ),
             fields=[
                 FormField(
                     "phone",
@@ -164,7 +166,10 @@ class LinkDevice(Command):
             fields=[
                 FormField(
                     "uri",
-                    label="Linking URI.  Use a QR code reader app to get it from official signal clients.",
+                    label=(
+                        "Linking URI.  Use a QR code reader app to get it from official"
+                        " signal clients."
+                    ),
                     required=True,
                 )
             ],
@@ -181,7 +186,10 @@ class LinkDevice(Command):
 
 class ChangeContactName(Command):
     NAME = "Rename a signal contact"
-    HELP = "Change the contact_name of a signal contact. This is stored on your signal account only."
+    HELP = (
+        "Change the contact_name of a signal contact. This is stored on your signal"
+        " account only."
+    )
     CHAT_COMMAND = NODE = "contact-name"
     ACCESS = CommandAccess.USER_LOGGED
 

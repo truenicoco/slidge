@@ -116,7 +116,10 @@ class Roster(LegacyRoster[str, Contact]):
         if not is_valid_uuid(jid_username):
             raise XMPPError(
                 "bad-request",
-                f"The identifier {jid_username} is not a valid signal account identifier",
+                (
+                    f"The identifier {jid_username} is not a valid signal account"
+                    " identifier"
+                ),
             )
 
         check = (await self.session.signal).is_identifier_registered(

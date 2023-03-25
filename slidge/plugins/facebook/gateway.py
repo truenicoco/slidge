@@ -27,7 +27,10 @@ class Gateway(BaseGateway):
     COMPONENT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Messenger_logo_2018.svg/480px-Facebook_Messenger_logo_2018.svg.png"
 
     SEARCH_TITLE = "Search in your facebook friends"
-    SEARCH_INSTRUCTIONS = "Enter something that can be used to search for one of your friends, eg, a first name"
+    SEARCH_INSTRUCTIONS = (
+        "Enter something that can be used to search for one of your friends, eg, a"
+        " first name"
+    )
     SEARCH_FIELDS = [FormField(var="query", label="Search term(s)", required=True)]
 
     def __init__(self):

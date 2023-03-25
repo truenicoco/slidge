@@ -17,8 +17,8 @@ from .generated import go, whatsapp  # type:ignore
 from .group import MUC, Bookmarks
 
 MESSAGE_PAIR_SUCCESS = (
-    "Pairing successful! You might need to repeat this process in the future if the Linked Device is "
-    "re-registered from your main device."
+    "Pairing successful! You might need to repeat this process in the future if the"
+    " Linked Device is re-registered from your main device."
 )
 
 MESSAGE_LOGGED_OUT = (

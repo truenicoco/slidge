@@ -376,7 +376,8 @@ class Session(BaseSession[int, Recipient]):
             if emoji_translate.inverse.get(emoji) is None:
                 # should not happen anymore, slidge core should  take care of that never happening
                 self.send_gateway_message(
-                    f"On steam, you can only react with {' '.join(emoji_translate.values())}"
+                    "On steam, you can only react with"
+                    f" {' '.join(emoji_translate.values())}"
                 )
             else:
                 new.add(emoji)

@@ -29,9 +29,7 @@ SERVER__DOC = (
 SERVER__SHORT = "s"
 
 SECRET: str
-SECRET__DOC = (
-    "The gateway component's secret (required to connect" " to the XMPP server)"
-)
+SECRET__DOC = "The gateway component's secret (required to connect to the XMPP server)"
 
 JID: JIDType
 JID__DOC = "The gateway component's JID"
@@ -120,7 +118,10 @@ NO_UPLOAD_METHOD__DOC = (
 )
 
 NO_UPLOAD_FILE_READ_OTHERS = False
-NO_UPLOAD_FILE_READ_OTHERS__DOC = "After writing a file in NO_UPLOAD_PATH, change its permission so that 'others' can read it."
+NO_UPLOAD_FILE_READ_OTHERS__DOC = (
+    "After writing a file in NO_UPLOAD_PATH, change its permission so that 'others' can"
+    " read it."
+)
 
 IGNORE_DELAY_THRESHOLD = _TimedeltaSeconds("300")
 IGNORE_DELAY_THRESHOLD__DOC = (
@@ -136,9 +137,9 @@ PARTIAL_REGISTRATION_TIMEOUT__DOC = (
 
 LAST_SEEN_FALLBACK = True
 LAST_SEEN_FALLBACK__DOC = (
-    "When using XEP-0319 (Last User Interaction in Presence), use the presence status "
-    "to display the last seen information in the presence status. Useful for clients that "
-    "do not implement XEP-0319."
+    "When using XEP-0319 (Last User Interaction in Presence), use the presence status"
+    " to display the last seen information in the presence status. Useful for clients"
+    " that do not implement XEP-0319."
 )
 
 QR_TIMEOUT = 60
@@ -149,19 +150,19 @@ DOWNLOAD_CHUNK_SIZE__DOC = "Chunk size when slidge needs to download files using
 
 LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND = False
 LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND__DOC = (
-    "If the legacy service does not support last message correction but supports message "
-    "retractions, slidge can 'retract' the edited message when you edit from an XMPP "
-    "client, as a workaround. This may only work for editing messages **once**. "
-    "If the legacy service does not support retractions and this is set to true, when "
-    "XMPP clients attempt to correct, this will send a new message."
+    "If the legacy service does not support last message correction but supports"
+    " message retractions, slidge can 'retract' the edited message when you edit from"
+    " an XMPP client, as a workaround. This may only work for editing messages"
+    " **once**. If the legacy service does not support retractions and this is set to"
+    " true, when XMPP clients attempt to correct, this will send a new message."
 )
 
 FIX_FILENAME_SUFFIX_MIME_TYPE = False
 FIX_FILENAME_SUFFIX_MIME_TYPE__DOC = (
-    "Fix the Filename suffix based on the Mime Type of the file. "
-    "Some clients (eg Conversations) may not inline files that have a wrong suffix for the MIME Type. "
-    "Therefore the MIME Type of the file is checked, if the suffix is not valid for that MIME Type, "
-    "a valid one will be picked."
+    "Fix the Filename suffix based on the Mime Type of the file. Some clients (eg"
+    " Conversations) may not inline files that have a wrong suffix for the MIME Type."
+    " Therefore the MIME Type of the file is checked, if the suffix is not valid for"
+    " that MIME Type, a valid one will be picked."
 )
 
 LOG_FILE: Optional[Path] = None

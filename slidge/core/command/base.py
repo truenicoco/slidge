@@ -361,13 +361,19 @@ class Command(ABC):
             if session is None or session.logged:
                 raise XMPPError(
                     "forbidden",
-                    "This is only available for users that are not logged to the legacy service",
+                    (
+                        "This is only available for users that are not logged to the"
+                        " legacy service"
+                    ),
                 )
         elif self.ACCESS == CommandAccess.USER_LOGGED:
             if session is None or not session.logged:
                 raise XMPPError(
                     "forbidden",
-                    "This is only available when you are logged in to the legacy service",
+                    (
+                        "This is only available when you are logged in to the legacy"
+                        " service"
+                    ),
                 )
         return session
 

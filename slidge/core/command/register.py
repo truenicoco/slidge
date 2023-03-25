@@ -147,7 +147,9 @@ class Register(Command):
         except asyncio.TimeoutError:
             raise XMPPError(
                 "remote-server-timeout",
-                "It does not seem that the QR code was correctly used, "
-                "or you took too much time",
+                (
+                    "It does not seem that the QR code was correctly used, "
+                    "or you took too much time"
+                ),
             )
         return self._finalize(user)

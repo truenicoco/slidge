@@ -230,7 +230,8 @@ class Session(BaseSession[int, Recipient]):
                             contact.retract(msg_id)
                         else:
                             contact.send_text(
-                                "/me tried to remove a message, but slidge got in trouble"
+                                "/me tried to remove a message, but slidge got in"
+                                " trouble"
                             )
         elif isinstance(event, skpy.SkypeChatUpdateEvent):
             if log.isEnabledFor(logging.DEBUG):

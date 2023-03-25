@@ -119,8 +119,10 @@ class MUC(LegacyMUC[int, int, Participant, int]):
             return await self.get_participant_by_legacy_id(user.id)
         except XMPPError as e:
             self.log.warning(
-                "Could not get participant with contact for %s, "
-                "falling back to a 'contact-less' participant.",
+                (
+                    "Could not get participant with contact for %s, "
+                    "falling back to a 'contact-less' participant."
+                ),
                 user,
                 exc_info=e,
             )

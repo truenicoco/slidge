@@ -19,10 +19,10 @@ if typing.TYPE_CHECKING:
     from .session import Session
 
 REGISTRATION_INSTRUCTIONS = (
-    "You need to create a telegram account in an official telegram client.\n\n"
-    "Then you can enter your phone number here, and you will receive a confirmation code "
-    "in the official telegram client. "
-    "You can uninstall the telegram client after this if you want."
+    "You need to create a telegram account in an official telegram client.\n\nThen you"
+    " can enter your phone number here, and you will receive a confirmation code in the"
+    " official telegram client. You can uninstall the telegram client after this if you"
+    " want."
 )
 
 
@@ -109,8 +109,10 @@ class TerminateSession(SessionCommandMixin, Command):
         i = int(form_values["tg-session"])
         tg_session = tg_sessions[i]
         return Confirmation(
-            prompt=f"Are you sure you want to terminate session #{i} "
-            f"(last active on {fmt_timestamp(tg_session.last_active_date)})",
+            prompt=(
+                f"Are you sure you want to terminate session #{i} "
+                f"(last active on {fmt_timestamp(tg_session.last_active_date)})"
+            ),
             success="The session has been terminated",
             handler=self.finish,
             handler_args=[i],
@@ -184,8 +186,10 @@ class Gateway(BaseGateway):
         except asyncio.TimeoutError:
             raise XMPPError(
                 "not-authorized",
-                text="Something went wrong when trying to authenticate you on the "
-                "telegram network. Please retry and/or contact your slidge admin.",
+                text=(
+                    "Something went wrong when trying to authenticate you on the "
+                    "telegram network. Please retry and/or contact your slidge admin."
+                ),
             )
         await tg_client.stop()
 

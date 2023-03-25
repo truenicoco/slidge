@@ -77,4 +77,5 @@ check_untyped_defs = true
 
 [tool.black]
 exclude = "xep_*|slidge/plugins/whatsapp/generated/*"
+experimental-string-processing = true
 

@@ -49,7 +49,10 @@ class Contact(LegacyContact[int]):
         if self.legacy_id != int(participant.messaging_actor.id):
             raise XMPPError(
                 "bad-request",
-                f"Legacy ID {self.legacy_id} does not match participant {participant.messaging_actor.id}",
+                (
+                    f"Legacy ID {self.legacy_id} does not match participant"
+                    f" {participant.messaging_actor.id}"
+                ),
             )
         self.name = participant.messaging_actor.name
         if self.avatar is None or update_avatar:
@@ -199,7 +202,10 @@ class Roster(LegacyRoster[int, Contact]):
         if len(nodes) != 2:
             raise XMPPError(
                 "internal-server-error",
-                "This facebook thread has more than two participants. This is a slidge bug.",
+                (
+                    "This facebook thread has more than two participants. This is a"
+                    " slidge bug."
+                ),
             )
 
         for participant in nodes:

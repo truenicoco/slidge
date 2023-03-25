@@ -126,6 +126,8 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
         msg = update.message
+        if msg.sending_state is not None and msg.is_outgoing:
+            return
         if await self.is_private_chat(msg.chat_id):
             await self.handle_direct_message(msg)
         else:
@@ -133,9 +135,6 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_direct_message(self, msg: tgapi.Message):
         carbon = msg.is_outgoing
-        if carbon and msg.sending_state is not None:
-            return
-
         sender = msg.sender_id
         if not isinstance(sender, tgapi.MessageSenderUser):
             # Does this happen?
@@ -149,9 +148,8 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_group_message(self, msg: tgapi.Message):
         self.log.debug("MUC message: %s", msg)
-        if msg.is_outgoing:
-            if msg.sending_state is not None or msg.id in self.session.sent:
-                return
+        if msg.is_outgoing and msg.id in self.session.sent:
+            return
 
         muc = await self.bookmarks.by_legacy_id(msg.chat_id)
         participant = await muc.participant_by_sender_id(msg.sender_id)

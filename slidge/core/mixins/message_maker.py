@@ -111,8 +111,8 @@ class MessageMaker(BaseSender):
                         # TODO: accept a Contact here and use muc.get_participant_by_legacy_id()
                         # a bit of work because right now this is a sync function
                         warnings.warn(
-                            "The author of a message reference in a MUC must be a Participant instance, "
-                            "not a Contact"
+                            "The author of a message reference in a MUC must be a"
+                            " Participant instance, not a Contact"
                         )
                     fallback_nick = entity.jid.resource
                 else:

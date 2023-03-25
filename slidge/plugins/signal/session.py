@@ -276,7 +276,8 @@ class Session(BaseSession[int, Recipient]):
         elif reply_to is None:
             quote = None
             self.log.warning(
-                "An XMPP client did not include reply to=, so we cannot make a quote here."
+                "An XMPP client did not include reply to=, so we cannot make a quote"
+                " here."
             )
         else:
             quote = sigapi.JsonQuotev1(
@@ -308,7 +309,7 @@ class Session(BaseSession[int, Recipient]):
             ).identities
             ans = await self.input(
                 f"The identity of {chat.legacy_id} has changed. "
-                f"Do you want to trust all their identities and resend the message?"
+                "Do you want to trust all their identities and resend the message?"
             )
             if ans.lower().startswith("y"):
                 for i in identities:
@@ -442,7 +443,8 @@ class Session(BaseSession[int, Recipient]):
                 emoji = chat.user_reactions.pop(legacy_msg_id)
             except KeyError:
                 self.send_gateway_message(
-                    f"Slidge failed to remove your reactions on message '{legacy_msg_id}'"
+                    "Slidge failed to remove your reactions on message"
+                    f" '{legacy_msg_id}'"
                 )
                 self.log.warning("Could not find the emoji to remove reaction")
                 raise XMPPError(

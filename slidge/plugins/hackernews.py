@@ -153,7 +153,10 @@ class Session(BaseSession):
             match = re.search(HMAC_RE, first_attempt_html_content)
             if match is None:
                 raise XMPPError(
-                    text="We should repost but haven't found any hmac field on the repost page"
+                    text=(
+                        "We should repost but haven't found any hmac field on the"
+                        " repost page"
+                    )
                 )
 
             await asyncio.sleep(SLEEP_BEFORE_POST2)

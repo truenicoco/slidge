@@ -298,7 +298,10 @@ class BaseSession(
             async with self.http.get(url) as response:
                 if response.status >= 400:
                     self.log.warning(
-                        "OOB url cannot be downloaded: %s, sending the URL as text instead.",
+                        (
+                            "OOB url cannot be downloaded: %s, sending the URL as text"
+                            " instead."
+                        ),
                         response,
                     )
                     legacy_msg_id = await self.send_text(e, url, **kwargs)
@@ -476,7 +479,8 @@ class BaseSession(
             ):
                 if legacy_id is not None:
                     self.send_gateway_message(
-                        "Slidge will attempt to retract the original message you wanted to edit."
+                        "Slidge will attempt to retract the original message you wanted"
+                        " to edit."
                     )
                     await self.retract(e, legacy_id, thread=legacy_thread)
 

@@ -14,4 +14,7 @@ ALWAYS_SYNC_ROSTER__DOC = (
 )
 
 SKIP_VERIFY_TLS = False
-SKIP_VERIFY_TLS__DOC = "Whether or not HTTPS connections made by this plugin should verify TLS certificates."
+SKIP_VERIFY_TLS__DOC = (
+    "Whether or not HTTPS connections made by this plugin should verify TLS"
+    " certificates."
+)

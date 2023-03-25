@@ -10,8 +10,10 @@ try:
 except ImportError as e:
     magic = None  # type:ignore
     logging.warning(
-        "Libmagic is not available: %s. "
-        "It's OK if you don't use fix-filename-suffix-mime-type.",
+        (
+            "Libmagic is not available: %s. "
+            "It's OK if you don't use fix-filename-suffix-mime-type."
+        ),
         e,
     )
 

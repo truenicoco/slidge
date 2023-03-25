@@ -296,9 +296,9 @@ class LegacyContact(
             await self._set_roster(**kw)
         except PermissionError:
             warnings.warn(
-                "Slidge does not have privileges to add contacts to the roster. "
-                "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
-                "for more info."
+                "Slidge does not have privileges to add contacts to the roster. Refer"
+                " to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html for"
+                " more info."
             )
             if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
                 self._send_subscription_request()
@@ -325,8 +325,10 @@ class LegacyContact(
         presence = self.xmpp.make_presence(
             pfrom=self.jid.bare,
             ptype="subscribe",
-            pstatus=f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
-            f"slidge is not allowed to manage your roster.",
+            pstatus=(
+                f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
+                "slidge is not allowed to manage your roster."
+            ),
         )
         presence["nick"] = self.name
         # very awkward, slixmpp bug maybe?

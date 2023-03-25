@@ -92,8 +92,10 @@ class AttachmentMixin(MessageMaker):
                 )
             else:
                 log.warning(
-                    "There are several or zero files in %s, "
-                    "slidge doesn't know which one to pick among %s",
+                    (
+                        "There are several or zero files in %s, "
+                        "slidge doesn't know which one to pick among %s"
+                    ),
                     destination_dir,
                     files,
                 )

@@ -31,9 +31,11 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
         except ValueError:
             raise XMPPError(
                 "bad-request",
-                "This does not look like a valid telegram ID, at least not for slidge. "
-                "Do not be like edhelas, do not attempt to join groups you had joined "
-                "through spectrum. ",
+                (
+                    "This does not look like a valid telegram ID, at least not for"
+                    " slidge. Do not be like edhelas, do not attempt to join groups you"
+                    " had joined through spectrum. "
+                ),
             )
         info = await self.session.tg.get_chat_info(group_id)
         if isinstance(info, (tgapi.User, tgapi.UserFullInfo, tgapi.SecretChat)):

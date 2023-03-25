@@ -160,7 +160,10 @@ class LegacyParticipant(
                 item["jid"] = self.contact.jid.bare
             else:
                 warnings.warn(
-                    f"Public group but no contact JID associated to {self.jid} in {self}",
+                    (
+                        f"Public group but no contact JID associated to {self.jid} in"
+                        f" {self}"
+                    ),
                 )
         return item
 

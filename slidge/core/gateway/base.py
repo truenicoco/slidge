@@ -353,7 +353,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
             log.exception(e)
             session.send_gateway_status(f"Could not login: {e}", show="busy")
             session.send_gateway_message(
-                f"You are not connected to this gateway! "
+                "You are not connected to this gateway! "
                 f"Maybe this message will tell you why: {e}"
             )
             return

@@ -174,8 +174,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             self.send_text(body=content.text, **kwargs)
         else:
             self.send_text(
-                "/me tried to send an unsupported content. "
-                "Please report this: https://todo.sr.ht/~nicoco/slidge",
+                (
+                    "/me tried to send an unsupported content. "
+                    "Please report this: https://todo.sr.ht/~nicoco/slidge"
+                ),
                 **kwargs,
             )
             self.session.log.warning("Ignoring content: %s", type(content))
@@ -193,7 +195,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         size = best_file.size
         if size > config.ATTACHMENT_MAX_SIZE:
             return self.send_text(
-                f"/me tried to send an attachment larger than {config.ATTACHMENT_MAX_SIZE}",
+                (
+                    "/me tried to send an attachment larger than"
+                    f" {config.ATTACHMENT_MAX_SIZE}"
+                ),
                 **kwargs,
             )
         try:

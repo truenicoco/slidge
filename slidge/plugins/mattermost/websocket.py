@@ -75,7 +75,7 @@ class MattermostEvent:
             f" \ndata: {pprint.pformat(self.data)}"
             f" \nbroadcast: {pprint.pformat(self.broadcast)}"
             f" \nleft: {pprint.pformat(self.left)}"
-            f">"
+            ">"
         )
 
 
@@ -125,8 +125,10 @@ class Websocket:
                             self.ready.set_result(True)
                         except asyncio.InvalidStateError as e:
                             log.warning(
-                                "We thought we were connected but we weren't. "
-                                "This is a bug!",
+                                (
+                                    "We thought we were connected but we weren't. "
+                                    "This is a bug!"
+                                ),
                                 exc_info=e,
                             )
                         while self._alive:

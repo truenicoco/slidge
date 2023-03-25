@@ -227,8 +227,10 @@ class ContentMessageMixin(AttachmentMixin):
         msg = self._make_message(
             state=None,
             hints={"store"},
-            mbody=f"I have deleted the message {legacy_msg_id}, "
-            "but your XMPP client does not support that",
+            mbody=(
+                f"I have deleted the message {legacy_msg_id}, "
+                "but your XMPP client does not support that"
+            ),
             carbon=kwargs.get("carbon"),
             thread=thread,
         )
@@ -248,9 +250,10 @@ class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
                 self.xmpp["xep_0356_old"].send_privileged_message(msg)
             except PermissionError:
                 warnings.warn(
-                    "Slidge does not have privileges to send message on behalf of user."
-                    "Refer to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html "
-                    "for more info."
+                    "Slidge does not have privileges to send message on behalf of"
+                    " user.Refer to"
+                    " https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html"
+                    " for more info."
                 )
 
 

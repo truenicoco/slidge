@@ -9,8 +9,8 @@ from .api import get_client_from_registration_form
 
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = (
-        "Enter mattermost credentials. "
-        "Get your MMAUTH_TOKEN on the web interface, using the dev tools of your browser (it's a cookie)."
+        "Enter mattermost credentials. Get your MMAUTH_TOKEN on the web interface,"
+        " using the dev tools of your browser (it's a cookie)."
     )
     REGISTRATION_FIELDS = [
         FormField(var="url", label="Mattermost server URL", required=True),
