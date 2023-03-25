@@ -71,7 +71,7 @@ class Mixin(ContentMessageMixin):
 
         return reply_to
 
-    async def send_message(self, message: di.Message, archive_only=False):
+    async def send_message(self, message: di.Message, archive_only=False, carbon=False):
         reply_to = await self._reply_to(message)
 
         mtype = message.type
@@ -98,6 +98,7 @@ class Mixin(ContentMessageMixin):
             body=text,
             reply_to=reply_to,
             archive_only=archive_only,
+            carbon=carbon,
         )
 
 

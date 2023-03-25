@@ -63,21 +63,17 @@ class Discord(di.Client):
         if fut is None:
             if isinstance(message.channel, di.DMChannel):
                 contact = await self.get_contact(message.channel.recipient)
-                contact.send_text(
-                    message.content, legacy_msg_id=message.id, carbon=True
-                )
+                await contact.send_message(message, carbon=True)
             elif isinstance(message.channel, di.TextChannel):
                 muc = await self.session.bookmarks.by_legacy_id(message.channel.id)
                 participant = await muc.get_user_participant()
-                participant.send_text(message.content, legacy_msg_id=message.id)
+                participant.send_message(message)
             elif isinstance(message.channel, di.Thread):
                 muc = await self.session.bookmarks.by_legacy_id(
                     message.channel.parent_id
                 )
                 participant = await muc.get_user_participant()
-                participant.send_text(
-                    message.content, legacy_msg_id=message.id, thread=message.channel.id
-                )
+                participant.send_message(message)
             else:
                 self.log.warning("Ignoring carbon? %s", message)
         else:
