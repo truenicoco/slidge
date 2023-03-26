@@ -21,7 +21,7 @@ WORKDIR /build
 COPY poetry.lock pyproject.toml /build/
 
 # default=install all deps.
-ARG SLIDGE_PLUGIN="signal facebook telegram skype mattermost steam discord"
+ARG SLIDGE_PLUGIN="signal facebook telegram skype mattermost steam discord whatsapp"
 
 # some plugins don't have specific deps, so --extras=PLUGIN fails: fallback to slidge core deps
 RUN poetry export --extras="$SLIDGE_PLUGIN" --without-hashes > requirements.txt \

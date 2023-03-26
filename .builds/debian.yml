@@ -7,7 +7,7 @@ sources:
   - https://git.sr.ht/~nicoco/slidge
 environment:
   DOCKER_BUILDKIT: "1"
-  POETRY_EXTRAS: facebook signal skype mattermost steam discord telegram
+  POETRY_EXTRAS: facebook signal skype mattermost steam discord telegram whatsapp
 artifacts:
   - slidge-debian-arm64.tar
   - slidge-latest-arm64.deb
