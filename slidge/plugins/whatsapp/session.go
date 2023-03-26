@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"runtime"
 	"time"
 
@@ -144,12 +145,9 @@ func (s *Session) SendMessage(message Message) error {
 
 		// Attempt to download attachment data if URL is set.
 		if url := message.Attachments[0].URL; url != "" {
-			if resp, err := s.gateway.httpClient.Get(url); err != nil {
-				return fmt.Errorf("Failed downloading attachment: %s", err)
-			} else if buf, err := io.ReadAll(resp.Body); err != nil {
+			if buf, err := getFromURL(s.gateway.httpClient, url); err != nil {
 				return fmt.Errorf("Failed downloading attachment: %s", err)
 			} else {
-				resp.Body.Close()
 				message.Attachments[0].Data = buf
 			}
 		}
@@ -188,7 +186,7 @@ func (s *Session) SendMessage(message Message) error {
 			// Fall back to our own JID if no origin JID has been specified, in which case we assume
 			// we're replying to our own messages.
 			if message.OriginJID == "" {
-				message.OriginJID = s.device.JID().String()
+				message.OriginJID = s.device.JID().ToNonAD().String()
 			}
 			payload = &proto.Message{
 				ExtendedTextMessage: &proto.ExtendedTextMessage{
@@ -200,7 +198,25 @@ func (s *Session) SendMessage(message Message) error {
 					},
 				},
 			}
-		} else {
+		}
+		// Add URL preview, if any was given in message.
+		if message.Preview.URL != "" {
+			if payload == nil {
+				payload = &proto.Message{
+					ExtendedTextMessage: &proto.ExtendedTextMessage{Text: &message.Body},
+				}
+			}
+			payload.ExtendedTextMessage.MatchedText = &message.Preview.URL
+			payload.ExtendedTextMessage.Title = &message.Preview.Title
+			if url := message.Preview.ImageURL; url != "" {
+				if buf, err := getFromURL(s.gateway.httpClient, url); err == nil {
+					payload.ExtendedTextMessage.JpegThumbnail = buf
+				}
+			} else if len(message.Preview.ImageData) > 0 {
+				payload.ExtendedTextMessage.JpegThumbnail = message.Preview.ImageData
+			}
+		}
+		if payload == nil {
 			payload = &proto.Message{Conversation: &message.Body}
 		}
 		extra.ID = message.ID
@@ -459,6 +475,24 @@ func (s *Session) handleEvent(evt interface{}) {
 			}()
 		}
 	}
+}
+
+// GetFromURL is a convienience function for fetching the raw response body from the URL given, for
+// the provided HTTP client.
+func getFromURL(client *http.Client, url string) ([]byte, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
 }
 
 // PtrTo returns a pointer to the given value, and is used for convenience when converting between

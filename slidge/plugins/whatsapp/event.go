@@ -134,6 +134,7 @@ type Message struct {
 	ReplyID     string       // The unique message ID this message is in reply to, if any.
 	ReplyBody   string       // The full body of the message this message is in reply to, if any.
 	Attachments []Attachment // The list of file (image, video, etc.) attachments contained in this message.
+	Preview     Preview      // A short description for the URL provided in the message body, if any.
 }
 
 // A Attachment represents additional binary data (e.g. images, videos, documents) provided alongside
@@ -144,6 +145,16 @@ type Attachment struct {
 	Caption  string // The user-provided caption, provided alongside this attachment.
 	Data     []byte // The raw binary data for this attachment. Mutually exclusive with [.URL].
 	URL      string // The URL to download attachment data from. Mutually exclusive with [.Data].
+}
+
+// A Preview represents a short description for a URL provided in a message body, as usually derived
+// from the content of the page pointed at.
+type Preview struct {
+	URL         string // The original (or canonical) URL this preview was generated for.
+	Title       string // The short title for the URL preview.
+	Description string // The (optional) long-form description for the URL preview.
+	ImageData   []byte // The raw binary data for the image associated with the URL. Mutally exclusive with [.ImageURL].
+	ImageURL    string // The URL to download an image associated with the URL. Mutually exclusive with [.ImageData].
 }
 
 // GenerateMessageID returns a valid, pseudo-random message ID for use in outgoing messages. This
@@ -209,7 +220,22 @@ func newMessageEvent(client *whatsmeow.Client, evt *events.Message) (EventKind, 
 			message.ReplyID = c.GetStanzaId()
 			message.OriginJID = c.GetParticipant()
 			if q := c.GetQuotedMessage(); q != nil {
-				message.ReplyBody = q.GetConversation()
+				if qe := q.GetExtendedTextMessage(); qe != nil {
+					message.ReplyBody = qe.GetText()
+				} else {
+					message.ReplyBody = q.GetConversation()
+				}
+			}
+		}
+		if e.MatchedText != nil {
+			message.Preview = Preview{
+				Title:       e.GetTitle(),
+				Description: e.GetDescription(),
+				URL:         e.GetMatchedText(),
+				ImageData:   e.GetJpegThumbnail(),
+			}
+			if url := e.GetCanonicalUrl(); url != "" {
+				message.Preview.URL = url
 			}
 		}
 	}

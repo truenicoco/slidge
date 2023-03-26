@@ -18,3 +18,9 @@ SKIP_VERIFY_TLS__DOC = (
     "Whether or not HTTPS connections made by this plugin should verify TLS"
     " certificates."
 )
+
+ENABLE_LINK_PREVIEWS = True
+ENABLE_LINK_PREVIEWS__DOC = (
+    "Whether or not previews for links (URLs) should be generated on"
+    "outgoing messages"
+)
