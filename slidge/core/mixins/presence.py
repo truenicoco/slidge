@@ -122,14 +122,14 @@ class PresenceMixin(BaseSender):
         last_seen: Optional[datetime] = None,
     ):
         """
-        Send a "busy" presence from this contact to the user,
+        Send a "busy" (ie, "dnd") presence from this contact to the user,
 
         :param status: eg: "Trying to make sense of XEP-0100"
         :param last_seen: For :xep:`0319`
         """
         try:
             self._send(
-                self._make_presence(pstatus=status, pshow="busy", last_seen=last_seen)
+                self._make_presence(pstatus=status, pshow="dnd", last_seen=last_seen)
             )
         except _NoChange:
             pass
