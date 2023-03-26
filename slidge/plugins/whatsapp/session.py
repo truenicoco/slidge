@@ -1,8 +1,10 @@
 from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime, timezone
 from functools import wraps
+from linkpreview import Link, LinkPreview
 from os import remove
 from os.path import basename
+from re import search
 from shelve import open
 from typing import Optional, Union
 
@@ -24,6 +26,8 @@ MESSAGE_LOGGED_OUT = (
     "You have been logged out, please use the re-login adhoc command "
     "and re-scan the QR code on your main device."
 )
+
+URL_SEARCH_REGEX = r"(?P<url>https?://[^\s]+)"
 
 
 Recipient = Union[Contact, MUC]
@@ -174,6 +178,24 @@ class Session(BaseSession[str, Recipient]):
             )
         return reply_to
 
+    async def _get_preview(self, text: str) -> whatsapp.Preview:
+        match = search(URL_SEARCH_REGEX, text)
+        if not match:
+            return whatsapp.Preview()
+        url = match.group("url")
+        async with self.http.get(url) as resp:
+            if resp.status != 200:
+                return whatsapp.Preview()
+            preview = LinkPreview(Link(url, await resp.text()))
+            if not preview.title:
+                return whatsapp.Preview()
+            return whatsapp.Preview(
+                Title=preview.title,
+                Description=preview.description or "",
+                URL=url,
+                ImageURL=preview.image or "",
+            )
+
     async def handle_message(self, message: whatsapp.Message):
         """
         Handle incoming message, as propagated by the WhatsApp adapter. Messages can be one of many
@@ -225,7 +247,10 @@ class Session(BaseSession[str, Recipient]):
         Send outgoing plain-text message to given WhatsApp contact.
         """
         message_id = whatsapp.GenerateMessageID()
-        message = whatsapp.Message(ID=message_id, JID=chat.legacy_id, Body=text)
+        message_preview = await self._get_preview(text)
+        message = whatsapp.Message(
+            ID=message_id, JID=chat.legacy_id, Body=text, Preview=message_preview
+        )
         if reply_to_msg_id:
             message.ReplyID = reply_to_msg_id
         if reply_to:

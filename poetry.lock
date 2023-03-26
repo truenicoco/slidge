@@ -173,6 +173,7 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_aarch64.whl"
+
 [[package]]
 name = "aiotdlib"
 version = "0.19.2"
@@ -192,6 +193,7 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_i686.whl"
+
 [[package]]
 name = "aiotdlib"
 version = "0.19.2"
@@ -211,6 +213,7 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_x86_64.whl"
+
 [[package]]
 name = "alabaster"
 version = "0.7.13"
@@ -1377,6 +1380,22 @@ files = [
     {file = "lazy_object_proxy-1.9.0-cp39-cp39-win32.whl", hash = "sha256:9090d8e53235aa280fc9239a86ae3ea8ac58eff66a705fa6aa2ec4968b95c821"},
     {file = "lazy_object_proxy-1.9.0-cp39-cp39-win_amd64.whl", hash = "sha256:db1c1722726f47e10e0b5fdbf15ac3b8adb58c091d12b3ab713965795036985f"},
 ]
+
+[[package]]
+name = "linkpreview"
+version = "0.6.0"
+description = "Get link (URL) preview"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "linkpreview-0.6.0-py3-none-any.whl", hash = "sha256:de2cb27764b0df9a9a4a9fc377e4afa2e81462c48b576ea8cabe9081e2e9ba4d"},
+    {file = "linkpreview-0.6.0.tar.gz", hash = "sha256:127742ee46058ea81a63479a56c59ad62fbf8720f4738c7a7c6e27bd6f1691d7"},
+]
+
+[package.dependencies]
+beautifulsoup4 = ">=4.4.0"
+requests = ">=2.22.0"
 
 [[package]]
 name = "markupsafe"
@@ -3321,8 +3340,9 @@ signal = ["aiosignald"]
 skype = ["SkPy"]
 steam = ["steam"]
 telegram = ["aiotdlib", "aiotdlib", "aiotdlib", "pydantic"]
+whatsapp = ["linkpreview"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "711f89dc75dd6f1891b7f6b71f7393e09883e614846a157b854e5ff206105ad8"
+content-hash = "d56b13fc80a605dc636f434a305631bea6fa7ef30ae21ad19acf26b0cf1f2c21"
