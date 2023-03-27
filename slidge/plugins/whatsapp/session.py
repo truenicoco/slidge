@@ -1,12 +1,13 @@
 from asyncio import iscoroutine, run_coroutine_threadsafe
 from datetime import datetime, timezone
 from functools import wraps
-from linkpreview import Link, LinkPreview
 from os import remove
 from os.path import basename
 from re import search
 from shelve import open
 from typing import Optional, Union
+
+from linkpreview import Link, LinkPreview
 
 from slidge import BaseSession, GatewayUser, global_config
 from slidge.core.contact.roster import ContactIsUser

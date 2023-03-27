@@ -21,6 +21,5 @@ SKIP_VERIFY_TLS__DOC = (
 
 ENABLE_LINK_PREVIEWS = True
 ENABLE_LINK_PREVIEWS__DOC = (
-    "Whether or not previews for links (URLs) should be generated on"
-    "outgoing messages"
+    "Whether or not previews for links (URLs) should be generated on outgoing messages"
 )
