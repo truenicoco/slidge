@@ -80,7 +80,6 @@ check_untyped_defs = true
 
 [tool.black]
 exclude = "xep_*|slidge/plugins/whatsapp/generated/*"
-experimental-string-processing = true
 
 [tool.ruff]
 line-length = 120

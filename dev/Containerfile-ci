@@ -25,22 +25,23 @@ COPY poetry.lock \
      /build/
 COPY slidge /build/slidge
 COPY tests/ /build/tests
-COPY dev/ /build/dev
+COPY dev/build.py /build/dev/build.py
+COPY dev/assets /build/dev/assets
+COPY dev/confs /build/dev/confs
 COPY docs/ /build/docs
 
 ARG TARGETARCH
 RUN poetry build
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      poetry install --all-extras; \
-      poetry run ruff slidge --check; \
-      poetry run mypy slidge; \
-      poetry run pytest tests; \
-      poetry run black slidge --check; \
-      cd docs; \
-      make html; \
-      cd build/html; tar czf /slidge-docs.tar.gz .;\
-    fi
-RUN touch /slidge-docs.tar.gz
+# only run tests and build docs for the amd64 container for speed
+RUN if [ "$TARGETARCH" = "amd64" ]; then poetry install --all-extras; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then poetry run ruff slidge; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then poetry run mypy slidge; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then poetry run pytest tests; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then poetry run black slidge --check; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then cd docs; make html; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then cd docs/build/html; tar czf /slidge-docs.tar.gz .; fi
+# create a /slidge-docs.tar.gz file for arm64 to avoid failing docker build
+RUN if [ "$TARGETARCH" = "arm64" ]; then touch /slidge-docs.tar.gz; fi
 
 FROM scratch
 COPY --from=builder /slidge-docs.tar.gz /slidge-docs.tar.gz

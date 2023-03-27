@@ -13,6 +13,7 @@ persistent/
 requirements*
 slidge/plugins/whatsapp/generated
 dev/confs/slidge-tg.ini
+.ruff_cache
 
 /debian/.debhelper/generated
 /debian/.debhelper/slidge

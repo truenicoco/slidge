@@ -41,7 +41,7 @@ tasks:
       docker buildx create --use
   - build: |
       cd slidge
-      docker buildx build . \
+      BUILDKIT_PROGRESS=plain docker buildx build . \
         --platform linux/amd64,linux/arm64 \
         -f dev/Containerfile-ci \
         -o ./build
