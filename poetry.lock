@@ -173,7 +173,6 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_aarch64.whl"
-
 [[package]]
 name = "aiotdlib"
 version = "0.19.2"
@@ -193,7 +192,6 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_i686.whl"
-
 [[package]]
 name = "aiotdlib"
 version = "0.19.2"
@@ -213,7 +211,6 @@ ujson = ">=5.4.0,<6.0.0"
 [package.source]
 type = "url"
 url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_x86_64.whl"
-
 [[package]]
 name = "alabaster"
 version = "0.7.13"
@@ -249,14 +246,14 @@ trio = ["trio (>=0.16,<0.22)"]
 
 [[package]]
 name = "astroid"
-version = "2.15.0"
+version = "2.15.1"
 description = "An abstract syntax tree for Python with inference support."
 category = "dev"
 optional = false
 python-versions = ">=3.7.2"
 files = [
-    {file = "astroid-2.15.0-py3-none-any.whl", hash = "sha256:e3e4d0ffc2d15d954065579689c36aac57a339a4679a679579af6401db4d3fdb"},
-    {file = "astroid-2.15.0.tar.gz", hash = "sha256:525f126d5dc1b8b0b6ee398b33159105615d92dc4a17f2cd064125d57f6186fa"},
+    {file = "astroid-2.15.1-py3-none-any.whl", hash = "sha256:89860bda98fe2bbd1f5d262229be7629d778ce280de68d95d4a73d1f592ad268"},
+    {file = "astroid-2.15.1.tar.gz", hash = "sha256:af4e0aff46e2868218502789898269ed95b663fba49e65d91c1e09c966266c34"},
 ]
 
 [package.dependencies]
@@ -849,6 +846,20 @@ test-randomorder = ["pytest-randomly"]
 tox = ["tox"]
 
 [[package]]
+name = "discord-protos"
+version = "0.0.2"
+description = "Discord user settings protobufs."
+category = "main"
+optional = true
+python-versions = ">=3.8.0"
+files = [
+    {file = "discord-protos-0.0.2.tar.gz", hash = "sha256:23953a05f32beedb40b708ec4b457530a6196a49c8d75d337ae9282a2a41c997"},
+]
+
+[package.dependencies]
+protobuf = "*"
+
+[[package]]
 name = "discord.py-self"
 version = "2.0.0a2"
 description = "A Python wrapper for the Discord user API"
@@ -863,6 +874,7 @@ aiohttp = [
     {version = ">=3.7.4,<4"},
     {version = "*", extras = ["speedups"], optional = true, markers = "extra == \"speed\""},
 ]
+discord_protos = "<1.0.0"
 orjson = {version = ">=3.5.4", optional = true, markers = "extra == \"speed\""}
 
 [package.extras]
@@ -874,8 +886,8 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 [package.source]
 type = "git"
 url = "https://github.com/dolfies/discord.py-self.git"
-reference = "b48705a8bfbaeb587806b169a35b46583ec8e460"
-resolved_reference = "b48705a8bfbaeb587806b169a35b46583ec8e460"
+reference = "bea744bf1d4da9e3f4642d0338a3d9ccf988995c"
+resolved_reference = "bea744bf1d4da9e3f4642d0338a3d9ccf988995c"
 
 [[package]]
 name = "docutils"
@@ -2871,14 +2883,14 @@ types-urllib3 = "<1.27"
 
 [[package]]
 name = "types-urllib3"
-version = "1.26.25.8"
+version = "1.26.25.9"
 description = "Typing stubs for urllib3"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-urllib3-1.26.25.8.tar.gz", hash = "sha256:ecf43c42d8ee439d732a1110b4901e9017a79a38daca26f08e42c8460069392c"},
-    {file = "types_urllib3-1.26.25.8-py3-none-any.whl", hash = "sha256:95ea847fbf0bf675f50c8ae19a665baedcf07e6b4641662c4c3c72e7b2edf1a9"},
+    {file = "types-urllib3-1.26.25.9.tar.gz", hash = "sha256:160727879bdbe52f11f5feeca092a473f38d68ed3be88abb461b59cda40fb9bc"},
+    {file = "types_urllib3-1.26.25.9-py3-none-any.whl", hash = "sha256:b327d360ba4a9edd80ea82f5990ba19e76175a20b5b64be4b4813d9a1c424caa"},
 ]
 
 [[package]]
@@ -3345,4 +3357,4 @@ whatsapp = ["linkpreview"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d56b13fc80a605dc636f434a305631bea6fa7ef30ae21ad19acf26b0cf1f2c21"
+content-hash = "4be7e9b0bbd5af2f4dd7b8efb521b6275698d31e169db36ffea1bdee18c1f7ce"
