@@ -1,4 +1,4 @@
-ARG PYTHONVER=3.9
+ARG PYTHONVER=3.11
 ## Base build stage for Slidge, prepares and installs common dependencies.
 FROM docker.io/library/python:$PYTHONVER-slim AS builder
 ARG PYTHONVER
@@ -149,7 +149,7 @@ COPY ./dev/watcher.py /watcher.py
 RUN pip install watchdog[watchmedo]
 
 # FIXME: how do I dynamically set that 3.9?
-ENTRYPOINT ["/venv/bin/python", "/watcher.py", "/venv/lib/python3.9/site-packages/slidge/"]
+ENTRYPOINT ["/venv/bin/python", "/watcher.py", "/venv/lib/python3.11/site-packages/slidge/"]
 
 FROM slidge-dev AS slidge-telegram-dev
 ARG TARGETPLATFORM="linux/amd64"

@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.11"
 services:
   prosody:
     build:
@@ -18,7 +18,7 @@ services:
       - --jid=dummy.localhost
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
@@ -34,7 +34,7 @@ services:
       - --legacy-module=slidge.plugins.telegram
       - --jid=telegram.localhost
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/web:/slidge-web
       - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
@@ -68,7 +68,7 @@ services:
       - --jid=signal.localhost
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./persistent/signald:/signald
       - ./persistent/web:/slidge-web
@@ -88,7 +88,7 @@ services:
       - --legacy-module=slidge.plugins.facebook
       - --jid=facebook.localhost
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -106,7 +106,7 @@ services:
       - --jid=skype.localhost
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -122,7 +122,7 @@ services:
       - --legacy-module=slidge.plugins.hackernews
       - --jid=hackernews.localhost
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -140,7 +140,7 @@ services:
       - --jid=mattermost.localhost
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -156,7 +156,7 @@ services:
       - --legacy-module=slidge.plugins.steam
       - --jid=steam.localhost
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -175,7 +175,7 @@ services:
       - --discord-verbose
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
@@ -194,7 +194,7 @@ services:
       SLIDGE__WHATSAPP_SKIP_VERIFY_TLS: "true"
     network_mode: service:nginx
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
       - ./persistent:/var/lib/slidge
       - ./dev/confs/slidge-example.ini:/slidge-example.ini
       - ./persistent/web:/slidge-web
