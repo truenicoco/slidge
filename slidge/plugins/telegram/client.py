@@ -128,34 +128,14 @@ class TelegramClient(aiotdlib.Client):
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
         msg = update.message
-        if msg.sending_state is not None and msg.is_outgoing:
-            return
-        if await self.is_private_chat(msg.chat_id):
-            await self.handle_direct_message(msg)
-        else:
-            await self.handle_group_message(msg)
+        if msg.is_outgoing:
+            if msg.sending_state is not None:
+                return
+            if msg.id in self.session.sent:
+                return
 
-    async def handle_direct_message(self, msg: tgapi.Message):
-        carbon = msg.is_outgoing
-        sender = msg.sender_id
-        if not isinstance(sender, tgapi.MessageSenderUser):
-            # Does this happen?
-            self.log.warning("Ignoring chat sender in direct message: %s", msg)
-            return
-
-        session = self.session
-        await (await session.contacts.by_legacy_id(msg.chat_id)).send_tg_message(
-            msg, carbon=carbon
-        )
-
-    async def handle_group_message(self, msg: tgapi.Message):
-        self.log.debug("MUC message: %s", msg)
-        if msg.is_outgoing and msg.id in self.session.sent:
-            return
-
-        muc = await self.bookmarks.by_legacy_id(msg.chat_id)
-        participant = await muc.participant_by_sender_id(msg.sender_id)
-        await participant.send_tg_message(msg)
+        sender = await self.__get_contact_or_participant(msg)
+        await sender.send_tg_message(msg)
 
     async def handle_UserStatus(self, update: tgapi.UpdateUserStatus):
         if update.user_id == await self.get_my_id():
@@ -212,16 +192,25 @@ class TelegramClient(aiotdlib.Client):
             contact = await session.contacts.by_legacy_id(action.chat_id)
             contact.displayed(msg_id, carbon=True)
 
+    async def __get_contact_or_participant(self, msg: tgapi.Message):
+        session = self.session
+        chat_id = msg.chat_id
+        if await self.is_private_chat(chat_id):
+            return await self.session.contacts.by_legacy_id(chat_id)
+        muc = await session.bookmarks.by_legacy_id(chat_id)
+        participant = await muc.participant_by_sender_id(msg.sender_id)
+        return participant
+
     async def handle_MessageContent(self, action: tgapi.UpdateMessageContent):
-        new = action.new_content
-        if isinstance(new, tgapi.MessagePhoto):
+        new_content = action.new_content
+        if isinstance(new_content, tgapi.MessagePhoto):
             # Happens when the user send a picture, looks safe to ignore
             self.log.debug("Ignoring message photo update")
             return
-        if not isinstance(new, tgapi.MessageText):
-            self.log.warning("Ignoring message update: %s", new)
+        if not isinstance(new_content, tgapi.MessageText):
+            self.log.warning("Ignoring message update: %s", new_content)
             return
-        if new.web_page:
+        if new_content.web_page:
             self.log.debug("Ignoring update with web_page")
             return
 
@@ -236,27 +225,8 @@ class TelegramClient(aiotdlib.Client):
             return
 
         msg = await self.api.get_message(chat_id, corrected_msg_id)
-
-        if await self.is_private_chat(chat_id):
-            contact = await session.contacts.by_legacy_id(chat_id)
-            if not isinstance(msg.sender_id, tgapi.MessageSenderUser):
-                self.log.warning("Weird message update: %s", action)
-                return
-            if msg.sender_id.user_id == await self.get_my_id():
-                contact.correct(corrected_msg_id, new.text.text, carbon=True)
-            else:
-                contact.correct(corrected_msg_id, new.text.text)
-            return
-
-        muc = await session.bookmarks.by_legacy_id(chat_id)
-        if action.message_id in self.session.muc_sent_msg_ids:
-            participant = await muc.get_user_participant()
-        else:
-            msg = await self.api.get_message(chat_id, corrected_msg_id)
-            participant = await muc.participant_by_tg_user(
-                await self.get_user(msg.sender_id.user_id)
-            )
-        participant.correct(action.message_id, new.text.text)
+        sender = await self.__get_contact_or_participant(msg)
+        await sender.send_tg_message(msg, correction=True)
 
     async def handle_User(self, action: tgapi.UpdateUser):
         u = action.user

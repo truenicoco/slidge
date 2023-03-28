@@ -132,6 +132,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
                 legacy_msg_id=msg.id,
                 when=datetime.fromtimestamp(msg.date),
                 reply_to=await self._get_reply_to(msg),
+                carbon=msg.is_outgoing,
             )
         )
 
