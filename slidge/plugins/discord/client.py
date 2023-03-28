@@ -4,6 +4,7 @@ import discord as di
 
 if TYPE_CHECKING:
     from .contact import Contact
+    from .group import Participant
     from .session import Session
 
 
@@ -103,23 +104,25 @@ class Discord(di.Client):
 
         if isinstance(channel, di.DMChannel):
             correcter = await self.get_contact(channel.recipient)
-            if after.author == self.user:
-                return await self.on_carbon_edit(before, after, correcter)
-
         elif isinstance(channel, di.TextChannel):
             muc = await self.session.bookmarks.by_legacy_id(after.channel.id)
             correcter = await muc.get_participant_by_discord_user(after.author)
-
         else:
             self.log.debug("Ignoring edit in: %s", after.channel)
             return
 
+        if after.author == self.user:
+            return await self.on_carbon_edit(before, after, correcter)
+
         correcter.correct(after.id, after.content)
 
     async def on_carbon_edit(
-        self, before: di.Message, after: di.Message, contact: "Contact"
+        self,
+        before: di.Message,
+        after: di.Message,
+        contact: Union["Contact", "Participant"],
     ):
-        fut = self.session.edit_futures.pop(after.id, None)
+        fut = self.session.edit_futures.get(after.id, None)
         if fut is None:
             return contact.correct(before.id, after.content, carbon=True)
         fut.set_result(True)

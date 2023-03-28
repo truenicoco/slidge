@@ -107,9 +107,10 @@ class Session(BaseSession[int, Recipient]):
         channel = await get_recipient(c, thread)
 
         m = await channel.fetch_message(legacy_msg_id)
-        self.edit_futures[legacy_msg_id] = self.xmpp.loop.create_future()
+
+        self.edit_futures[legacy_msg_id] = f = self.xmpp.loop.create_future()
         await m.edit(content=text)
-        await self.edit_futures[legacy_msg_id]
+        await f
 
     async def react(
         self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
