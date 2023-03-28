@@ -123,6 +123,22 @@ class MarkerMixin(MessageMaker):
 
 
 class ContentMessageMixin(AttachmentMixin):
+    def __default_hints(self, hints: Optional[Iterable[ProcessingHint]] = None):
+        if hints is not None:
+            return hints
+        elif self.mtype == "chat":
+            return {"markable", "store"}
+        elif self.mtype == "groupchat":
+            return {"markable"}
+
+    def __replace_id(self, legacy_msg_id: LegacyMessageType):
+        if self.mtype == "groupchat":
+            return self.session.muc_sent_msg_ids.get(
+                legacy_msg_id
+            ) or self._legacy_to_xmpp(legacy_msg_id)
+        else:
+            return self._legacy_to_xmpp(legacy_msg_id)
+
     def send_text(
         self,
         body: str,
@@ -132,64 +148,86 @@ class ContentMessageMixin(AttachmentMixin):
         reply_to: Optional[MessageReference] = None,
         thread: Optional[LegacyThreadType] = None,
         hints: Optional[Iterable[ProcessingHint]] = None,
-        **kwargs,
+        carbon=False,
+        archive_only=False,
+        correction=False,
+        **send_kwargs,
     ):
         """
         Transmit a message from the entity to the user
 
-        :param body: Context of the message
+        :param body: Content of the message
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
             user to the legacy network, specify this
         :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
         :param reply_to: Quote another message (:xep:`0461`)
+        :param hints:
         :param thread:
         :param carbon: (only in 1:1) Reflect a message sent to this ``Contact`` by the user.
             Use this to synchronize outgoing history for legacy official apps.
+        :param correction: whether this message is a correction or not
         :param archive_only: (only in groups) Do not send this message to user,
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
-        carbon = kwargs.get("carbon")
         if carbon:
             self.session.sent[
                 legacy_msg_id
             ] = self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
-        if hints is None:
-            if self.mtype == "chat":
-                hints = {"markable", "store"}
-            elif self.mtype == "groupchat":
-                hints = {"markable"}
+        hints = self.__default_hints(hints)
         msg = self._make_message(
             mbody=body,
-            legacy_msg_id=legacy_msg_id,
+            legacy_msg_id=None if correction else legacy_msg_id,
             when=when,
             reply_to=reply_to,
             hints=hints or (),
             carbon=carbon,
             thread=thread,
         )
-        self._send(msg, **kwargs)
+        if correction:
+            msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
+        self._send(msg, archive_only=archive_only, carbon=carbon, **send_kwargs)
 
     def correct(
         self,
         legacy_msg_id: LegacyMessageType,
         new_text: str,
+        *,
+        when: Optional[datetime] = None,
+        reply_to: Optional[MessageReference] = None,
         thread: Optional[LegacyThreadType] = None,
-        **kwargs,
+        hints: Optional[Iterable[ProcessingHint]] = None,
+        carbon=False,
+        archive_only=False,
+        **send_kwargs,
     ):
         """
         Call this when a legacy contact has modified his last message content.
 
         Uses last message correction (:xep:`0308`)
 
-        :param legacy_msg_id: Legacy message ID this correction refers to
-        :param new_text: The new text
+        :param new_text: New content of the message
+        :param legacy_msg_id: The legacy message ID of the message to correct
+        :param when: when the message was sent, for a "delay" tag (:xep:`0203`)
+        :param reply_to: Quote another message (:xep:`0461`)
+        :param hints:
         :param thread:
+        :param carbon: (only in 1:1) Reflect a message sent to this ``Contact`` by the user.
+            Use this to synchronize outgoing history for legacy official apps.
+        :param archive_only: (only in groups) Do not send this message to user,
+            but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
-        msg = self._make_message(
-            mbody=new_text, carbon=kwargs.get("carbon"), thread=thread
+        self.send_text(
+            new_text,
+            legacy_msg_id,
+            when=when,
+            reply_to=reply_to,
+            hints=hints,
+            carbon=carbon,
+            thread=thread,
+            correction=True,
+            archive_only=archive_only,
+            **send_kwargs,
         )
-        msg["replace"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-        self._send(msg, **kwargs)
 
     def react(
         self,
