@@ -362,12 +362,15 @@ class AttachmentMixin(MessageMaker):
         when: Optional[datetime] = None,
         thread: Optional[LegacyThreadType] = None,
         body_first=False,
+        correction=False,
         **kwargs,
     ):
         # TODO: once the epic XEP-0385 vs XEP-0447 battle is over, pick
         #       one and stop sending several attachments this way
         # we attach the legacy_message ID to the last message we send, because
         # we don't want several messages with the same ID (especially for MUC MAM)
+        # TODO: add a correction argument to the signature, rename this to
+        #       send_rich_message and ditch send_text() and correct()
         if not attachments and not body:
             # ignoring empty message
             return
@@ -377,16 +380,18 @@ class AttachmentMixin(MessageMaker):
             reply_to=reply_to,
             when=when,
             thread=thread,
+            correction=correction,
+            legacy_msg_id=legacy_msg_id,
             **kwargs,
         )
         if body_first:
-            send_body(legacy_msg_id=None if attachments and body else legacy_msg_id)
-        last_attachment_i = len(attachments) - 1 if not body else None
+            send_body()
+        last_attachment_i = len(attachments) - 1
         for i, attachment in enumerate(attachments):
             last = i == last_attachment_i
             await self.send_file(
                 file_path=attachment.path,
-                legacy_msg_id=legacy_msg_id if last else None,
+                legacy_msg_id=legacy_msg_id if last and not body else None,
                 file_url=attachment.url,
                 data_stream=attachment.stream,
                 data=attachment.data,
@@ -396,7 +401,7 @@ class AttachmentMixin(MessageMaker):
                 **kwargs,
             )
         if not body_first:
-            send_body(legacy_msg_id=legacy_msg_id)
+            send_body()
 
 
 log = logging.getLogger(__name__)

@@ -812,7 +812,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 [a, a, a, a], body="hoy", legacy_msg_id="leg", body_first=True
             )
         )
-        assert not self.next_sent().get_id() == "leg"
+        assert self.next_sent().get_id() == "leg"
         assert ids.pop(-4) is None
         assert ids.pop(-3) is None
         assert ids.pop(-2) is None
