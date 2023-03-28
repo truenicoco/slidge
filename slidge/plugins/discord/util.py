@@ -7,9 +7,11 @@ from slidge.util.types import LegacyAttachment, MessageReference
 
 if TYPE_CHECKING:
     from .group import MUC
+    from .session import Session
 
 
 class Mixin(ContentMessageMixin):
+    session: "Session"
     legacy_id: int  # type:ignore
     avatar: str
     discord_user: Union[di.User, di.ClientUser]  # type: ignore
@@ -59,7 +61,7 @@ class Mixin(ContentMessageMixin):
 
         reply_to.body = quoted_msg.content
         author = quoted_msg.author
-        if author == self.discord_user:
+        if author == self.session.discord.user:
             reply_to.author = self.session.user
             return reply_to
 
@@ -71,7 +73,9 @@ class Mixin(ContentMessageMixin):
 
         return reply_to
 
-    async def send_message(self, message: di.Message, archive_only=False, carbon=False):
+    async def send_message(
+        self, message: di.Message, archive_only=False, correction=False
+    ):
         reply_to = await self._reply_to(message)
 
         mtype = message.type
@@ -90,15 +94,25 @@ class Mixin(ContentMessageMixin):
         else:
             thread = None
 
+        # it seems attachments cannot be edited in discord anyway, only the text
+        # of the message
+        attachments = (
+            [Attachment.from_discord(a) for a in message.attachments]
+            if not correction
+            else []
+        )
+
         await self.send_files(
-            attachments=[Attachment.from_discord(a) for a in message.attachments],
+            attachments,
+            body_first=True,
             legacy_msg_id=message.id,
             when=message.created_at,
             thread=thread,
             body=text,
             reply_to=reply_to,
             archive_only=archive_only,
-            carbon=carbon,
+            carbon=message.author == self.session.discord.user,
+            correction=correction,
         )
 
 

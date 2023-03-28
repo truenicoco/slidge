@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import discord as di
 
@@ -20,9 +20,6 @@ class Session(BaseSession[int, Recipient]):
         from .client import Discord
 
         self.discord = Discord(self)
-        self.delete_futures = dict[int, asyncio.Future[bool]]()
-        self.edit_futures = dict[int, asyncio.Future[bool]]()
-        self.send_futures = dict[int, asyncio.Future[bool]]()
         self.send_lock = asyncio.Lock()
 
     @staticmethod
@@ -59,9 +56,8 @@ class Session(BaseSession[int, Recipient]):
 
         async with self.send_lock:
             msg = await recipient.send(text, reference=reference)  # type:ignore
-            mid = msg.id
-            f = self.send_futures[mid] = self.xmpp.loop.create_future()
-        await f
+        mid = msg.id
+        self.discord.ignore_next_msg_event.add(mid)
         return mid
 
     async def logout(self):
@@ -103,14 +99,11 @@ class Session(BaseSession[int, Recipient]):
                 "Message %s should have been marked as read but this raised %s", m, e
             )
 
-    async def correct(self, c: Recipient, text: str, legacy_msg_id: Any, thread=None):
+    async def correct(self, c: Recipient, text: str, legacy_msg_id: int, thread=None):
         channel = await get_recipient(c, thread)
-
+        self.discord.ignore_next_msg_event.add(legacy_msg_id)
         m = await channel.fetch_message(legacy_msg_id)
-
-        self.edit_futures[legacy_msg_id] = f = self.xmpp.loop.create_future()
         await m.edit(content=text)
-        await f
 
     async def react(
         self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
@@ -128,11 +121,10 @@ class Session(BaseSession[int, Recipient]):
         for e in legacy_reactions - xmpp_reactions:
             await m.remove_reaction(e, self.discord.user)  # type:ignore
 
-    async def retract(self, c: Recipient, legacy_msg_id: Any, thread=None):
+    async def retract(self, c: Recipient, legacy_msg_id: int, thread=None):
         channel = await get_recipient(c, thread)
-
+        self.discord.ignore_next_msg_event.add(legacy_msg_id)
         m = await channel.fetch_message(legacy_msg_id)
-        self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await m.delete()
 
     async def update_reactions(self, message: di.Message):
