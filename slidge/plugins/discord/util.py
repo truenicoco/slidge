@@ -59,7 +59,7 @@ class Mixin(ContentMessageMixin):
             reply_to.body = "[quoted message could not be fetched]"
             return reply_to
 
-        reply_to.body = quoted_msg.content
+        reply_to.body = quoted_msg.clean_content
         author = quoted_msg.author
         if author == self.session.discord.user:
             reply_to.author = self.session.user
@@ -80,11 +80,11 @@ class Mixin(ContentMessageMixin):
 
         mtype = message.type
         if mtype == di.MessageType.thread_created:
-            text = f"/me created a thread named '{message.content}'"
+            text = f"/me created a thread named '{message.clean_content}'"
         elif mtype == di.MessageType.thread_starter_message:
             text = "I started a new thread from this message ↑"
         else:
-            text = message.content
+            text = message.clean_content
 
         channel = message.channel
         if isinstance(channel, di.Thread):
