@@ -47,6 +47,9 @@ class MessageArchive:
         self._msg_by_ids[to_archive.id] = to_archive
         self.__cleanup()
 
+    def __iter__(self):
+        return iter(self._msgs)
+
     def __cleanup(self):
         now = datetime.now(tz=timezone.utc)
         delta = timedelta(days=self._retention or config.MAM_MAX_DAYS)
@@ -129,10 +132,6 @@ class MessageArchive:
         else:
             reply.enable("mam_metadata")
         reply.send()
-
-    def get_oldest_message(self):
-        if self._msgs:
-            return self._msgs[0]
 
 
 class HistoryMessage:

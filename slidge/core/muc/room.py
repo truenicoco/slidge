@@ -148,13 +148,21 @@ class LegacyMUC(
                 log.debug("History has already been fetched %s", self)
                 return
             log.info("Fetching history for %s", self)
-            oldest = self.archive.get_oldest_message()
-            if oldest:
-                await self.backfill(
-                    self.session.xmpp_msg_id_to_legacy_msg_id(oldest.id), oldest.when
-                )
+            for msg in self.archive:
+                try:
+                    legacy_id = self.session.xmpp_msg_id_to_legacy_msg_id(msg.id)
+                    oldest_date = msg.when
+                except Exception as e:
+                    # not all archived stanzas have a valid legacy msg ID, eg
+                    # reactions, corrections, message with multiple attachments…
+                    self.log.debug(f"Could not convert during history back-filling {e}")
+                else:
+                    break
             else:
-                await self.backfill()
+                legacy_id = None
+                oldest_date = None
+                # oldest = self.archive.get_oldest_message()
+            await self.backfill(legacy_id, oldest_date)
             self.__history_filled = True
 
     @property
