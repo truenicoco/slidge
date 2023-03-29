@@ -175,10 +175,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             self.send_text(body=content.text, **kwargs)
         else:
             self.send_text(
-                (
-                    "/me tried to send an unsupported content. "
-                    "Please report this: https://todo.sr.ht/~nicoco/slidge"
-                ),
+                f"/me tried to send an unsupported content: {type(content)}.",
                 **kwargs,
             )
             self.session.log.warning("Ignoring content: %s", type(content))
