@@ -170,8 +170,6 @@ class LegacyParticipant(
     def send_initial_presence(
         self,
         full_jid: JID,
-        status: Optional[str] = None,
-        last_seen: Optional[datetime] = None,
         nick_change=False,
         presence_id: Optional[str] = None,
     ):
@@ -182,8 +180,6 @@ class LegacyParticipant(
         Can be called this to trigger a "participant has joined the group" event.
 
         :param full_jid: Set this to only send to a specific user XMPP resource.
-        :param status: a presence message, eg "having a bug, watching the game"
-        :param last_seen: when the participant was last online :xep:`0319` (Last User Interaction in Presence)
         :param nick_change: Used when the user joins and the MUC renames them (code 210)
         :param presence_id: set the presence ID. used internally by slidge
         """
@@ -191,11 +187,17 @@ class LegacyParticipant(
         codes = set()
         if nick_change:
             codes.add(210)
+        cache = getattr(self, "_last_presence", None)
+        if cache:
+            last_seen = cache.last_seen
+            kwargs = cache.presence_kwargs
+            if kwargs.get("ptype") == "unavailable":
+                return
+        else:
+            last_seen = None
+            kwargs = {}
         p = self._make_presence(
-            pstatus=status,
-            last_seen=last_seen,
-            status_codes=codes,
-            user_full_jid=full_jid,
+            last_seen=last_seen, status_codes=codes, user_full_jid=full_jid, **kwargs
         )
         if presence_id:
             p["id"] = presence_id
