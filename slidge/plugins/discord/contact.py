@@ -1,16 +1,16 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import discord as di
 
 from slidge import LegacyContact, LegacyRoster, XMPPError
 
-from .util import Mixin
+from .util import MessageMixin, StatusMixin
 
 if TYPE_CHECKING:
     from .session import Session
 
 
-class Contact(Mixin, LegacyContact[int]):  # type: ignore
+class Contact(StatusMixin, MessageMixin, LegacyContact[int]):  # type: ignore
     session: "Session"
 
     @property
@@ -28,25 +28,6 @@ class Contact(Mixin, LegacyContact[int]):  # type: ignore
     def direct_channel_id(self):
         assert self.discord_user.dm_channel is not None
         return self.discord_user.dm_channel.id
-
-    def update_status(
-        self,
-        status: di.Status,
-        activity: Optional[
-            Union[di.Activity, di.Game, di.CustomActivity, di.Streaming, di.Spotify]
-        ],
-    ):
-        # TODO: implement timeouts for activities (the Activity object has timestamps
-        #       attached to it)
-        msg = str(activity) if activity else None
-        if status == di.Status.online:
-            self.online(msg)
-        elif status == di.Status.offline:
-            self.offline(msg)
-        elif status == di.Status.idle:
-            self.away(msg)
-        elif status == di.Status.dnd:
-            self.busy(msg)
 
     async def update_info(self):
         u = self.discord_user

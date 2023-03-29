@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import discord as di
 
 from slidge.core.mixins.message import ContentMessageMixin
+from slidge.core.mixins.presence import PresenceMixin
 from slidge.util.types import LegacyAttachment, MessageReference
 
 if TYPE_CHECKING:
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Mixin(ContentMessageMixin):
+class MessageMixin(ContentMessageMixin):
     session: "Session"
     legacy_id: int  # type:ignore
     avatar: str
@@ -114,6 +115,27 @@ class Mixin(ContentMessageMixin):
             carbon=message.author == self.session.discord.user,
             correction=correction,
         )
+
+
+class StatusMixin(PresenceMixin):
+    def update_status(
+        self,
+        status: di.Status,
+        activity: Optional[
+            Union[di.Activity, di.Game, di.CustomActivity, di.Streaming, di.Spotify]
+        ],
+    ):
+        # TODO: implement timeouts for activities (the Activity object has timestamps
+        #       attached to it)
+        msg = str(activity) if activity else None
+        if status == di.Status.online:
+            self.online(msg)
+        elif status == di.Status.offline:
+            self.offline(msg)
+        elif status == di.Status.idle:
+            self.away(msg)
+        elif status == di.Status.dnd:
+            self.busy(msg)
 
 
 class Attachment(LegacyAttachment):

@@ -10,7 +10,7 @@ from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType, XMPPE
 from . import config
 from .contact import Contact
 from .session import Session
-from .util import Mixin
+from .util import MessageMixin, StatusMixin
 
 
 class Bookmarks(LegacyBookmarks[int, "MUC"]):
@@ -22,7 +22,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 await self.by_legacy_id(channel.id)
 
 
-class Participant(Mixin, LegacyParticipant):
+class Participant(StatusMixin, MessageMixin, LegacyParticipant):
     session: Session
     contact: Contact
 
@@ -54,7 +54,8 @@ class MUC(LegacyMUC[int, int, Participant, int]):
                 await self.get_user_participant()
                 continue
             co = await self.session.contacts.by_discord_user(m)
-            await self.get_participant_by_contact(co)
+            p = await self.get_participant_by_contact(co)
+            p.update_status(m.status, m.activity)
 
     async def update_info(self):
         while not (chan := await self.get_discord_channel()):

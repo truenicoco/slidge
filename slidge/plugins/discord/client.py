@@ -111,18 +111,26 @@ class Discord(di.Client):
             # we don't care about self presences
             return
 
-        if not isinstance(after, di.Relationship):
-            # we only parse friends presences now
-            # TODO: parse guild presences
-            return
+        if isinstance(after, di.Relationship):
+            await self.on_friend_presence_update(after)
+        elif isinstance(after, di.Member):
+            await self.on_guild_presence_update(after)
 
-        if not after.type == di.RelationshipType.friend:
-            # we only parse friends presences now
+    async def on_friend_presence_update(self, friend: di.Relationship):
+        if not friend.type == di.RelationshipType.friend:
             return
+        c = await self.session.contacts.by_discord_user(friend.user)
+        c.update_status(friend.status, friend.activity)
 
-        c = await self.session.contacts.by_discord_user(after.user)
-        self.log.debug("Activity %s", after.activity)
-        c.update_status(after.status, after.activity)
+    async def on_guild_presence_update(self, member: di.Member):
+        guild = member.guild
+        # contact = await self.session.contacts.by_discord_user(member.user)
+        for channel in guild.channels:
+            if not isinstance(channel, di.TextChannel):
+                continue
+            muc = await self.session.bookmarks.by_legacy_id(channel.id)
+            participant = await muc.get_participant_by_legacy_id(member.id)
+            participant.update_status(member.status, member.activity)
 
     async def get_contact(self, user: Union[di.User, di.Member]):
         return await self.session.contacts.by_discord_user(user)
