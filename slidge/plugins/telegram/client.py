@@ -116,7 +116,21 @@ class TelegramClient(aiotdlib.Client):
         except tgapi.NotFound as e:
             raise NotFound(e)
 
+    async def get_main_list_chats(self, limit=10):
+        self.log.debug("Caching chats")
+        r = await self.cache.get_main_list_chats(limit)
+        self.log.debug("Chats cached")
+        return r
+
     async def dispatch_update(self, _self, update: tgapi.Update):
+        if update.ID == "ok":
+            return
+        if not self.cache.have_full_main_chats_list:
+            # TODO: (maybe?) ditch all aiotdlib caching and rely on our own instead?
+            self.session.log.debug(
+                "Ignoring update %s until aiotdlib filled its chat cache", update.ID
+            )
+            return
         try:
             handler = getattr(self, "handle_" + update.ID[6:])
         except AttributeError:
