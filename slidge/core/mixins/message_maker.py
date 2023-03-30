@@ -42,7 +42,12 @@ class MessageMaker(BaseSender):
             msg_cls = Message
         else:
             msg_cls = self.xmpp.Message  # type:ignore
-        msg = msg_cls(sfrom=mfrom, stype=self.mtype, sto=mto, **kwargs)
+        msg = msg_cls(
+            sfrom=mfrom,
+            stype=kwargs.pop("mtype", None) or self.mtype,
+            sto=mto,
+            **kwargs,
+        )
         if body:
             msg["body"] = body
             state = "active"

@@ -641,6 +641,21 @@ class BaseSession(
             mto=self.user.jid, mbody=text, mfrom=self.xmpp.boundjid, **msg_kwargs
         )
 
+    def send_gateway_invite(
+        self,
+        muc: LegacyMUC,
+        reason: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
+        """
+        Send an invitation to join a MUC, emanating from the gateway component.
+
+        :param muc:
+        :param reason:
+        :param password:
+        """
+        self.xmpp.invite_to(muc, reason=reason, password=password, mto=self.user.jid)
+
     async def input(self, text: str, **msg_kwargs):
         """
         Request user input via direct messages.

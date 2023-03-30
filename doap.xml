@@ -283,8 +283,9 @@
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0249.html"/>
-            <xmpp:status>planned</xmpp:status>
-            <xmpp:note>Planned for 0.2.0</xmpp:note>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Slidge can send MUC invitations. In the future, it might support incoming-from-xmpp invitations.</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
     <implements>

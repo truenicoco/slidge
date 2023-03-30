@@ -287,6 +287,10 @@ class Session(BaseSession):
             chat.avatar = ASSETS_DIR / "5x5.png"
         elif text == "nonick":
             chat.name = None
+        elif text == "invite":
+            self.send_gateway_invite(
+                await self.bookmarks.by_legacy_id("prout-1"), reason="Because why not?"
+            )
         else:
             self.xmpp.loop.create_task(self.later(chat, i, body=text))
 

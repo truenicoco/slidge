@@ -1,7 +1,7 @@
 import logging
 import warnings
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from slixmpp import Message
 
@@ -15,6 +15,9 @@ from ...util.types import (
 )
 from .attachment import AttachmentMixin
 from .message_maker import MessageMaker
+
+if TYPE_CHECKING:
+    from ..muc import LegacyMUC
 
 
 class ChatStateMixin(MessageMaker):
@@ -295,11 +298,38 @@ class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
                 )
 
 
-class MessageMixin(ChatStateMixin, MarkerMixin, ContentMessageMixin):
+class InviteMixin(MessageMaker):
+    def invite_to(
+        self,
+        muc: "LegacyMUC",
+        reason: Optional[str] = None,
+        password: Optional[str] = None,
+        **send_kwargs,
+    ):
+        """
+        Send an invitation to join a group (:xep:`0249`) to the user,
+        emanating from this contact
+
+        :param muc: the muc the user is invited to
+        :param reason: a text explaining why the user should join this muc
+        :param password: maybe this will make sense later? not sure
+        :param send_kwargs: additional kwargs to be passed to _send()
+            (internal use by slidge)
+        """
+        msg = self._make_message(mtype="normal")
+        msg["groupchat_invite"]["jid"] = muc.jid
+        if reason:
+            msg["groupchat_invite"]["reason"] = reason
+        if password:
+            msg["groupchat_invite"]["password"] = password
+        self._send(msg, **send_kwargs)
+
+
+class MessageMixin(InviteMixin, ChatStateMixin, MarkerMixin, ContentMessageMixin):
     pass
 
 
-class MessageCarbonMixin(ChatStateMixin, CarbonMessageMixin):
+class MessageCarbonMixin(InviteMixin, ChatStateMixin, CarbonMessageMixin):
     pass
 
 
