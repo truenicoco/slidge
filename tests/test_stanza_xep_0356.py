@@ -33,5 +33,33 @@ class TestPermissions(SlixTest):
 
         self.check(msg, xmlstring)
 
+    def testIqPermission(self):
+        x = stanza.Privilege()
+        x["access"] = "iq"
+        ns = stanza.NameSpace()
+        ns["ns"] = "some_ns"
+        ns["type"] = "get"
+        x["perm"]["access"] = "iq"
+        x["perm"].append(ns)
+        ns = stanza.NameSpace()
+        ns["ns"] = "some_other_ns"
+        ns["type"] = "both"
+        x["perm"].append(ns)
+        self.check(
+            x,
+            """
+              <privilege xmlns='urn:xmpp:privilege:2'>
+                <perm access='iq'>
+                  <namespace ns='some_ns' type='get' />
+                  <namespace ns='some_other_ns' type='both' />
+                </perm>
+              </privilege>
+            """
+        )
+        nss = set()
+        for perm in x["perms"]:
+            for ns in perm["namespaces"]:
+                nss.add((ns["ns"], ns["type"]))
+        assert nss == {("some_ns", "get"), ("some_other_ns", "both")}
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestPermissions)

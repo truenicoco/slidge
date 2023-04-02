@@ -10,7 +10,7 @@ from slixmpp.xmlstream.handler import Callback
 from slixmpp.xmlstream.matcher import StanzaPath
 
 from . import stanza
-from .permissions import MessagePermission, Permissions, RosterAccess
+from .permissions import IqPermission, MessagePermission, Permissions, RosterAccess
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +59,15 @@ class XEP_0356(BasePlugin):
         Stores the privileges in this instance's granted_privileges attribute (a dict)
         and raises the privileges_advertised event
         """
+        permissions = self.granted_privileges[msg.get_from()]
         for perm in msg["privilege"]["perms"]:
-            setattr(
-                self.granted_privileges[msg.get_from()], perm["access"], perm["type"]
-            )
+            if perm["access"] == "iq":
+                for ns in perm["namespaces"]:
+                    permissions.iq[ns["ns"]] = ns["type"]
+            else:
+                setattr(
+                    permissions, perm["access"], perm["type"]
+                )
         log.debug(f"Privileges: {self.granted_privileges}")
         self.xmpp.event("privileges_advertised")
 
@@ -158,3 +163,26 @@ class XEP_0356(BasePlugin):
             )
         else:
             return await self._make_set_roster(jid, roster_items).send(**send_kwargs)
+
+    async def send_privileged_iq(self, encapsulated_iq: Iq):
+        # TODO: ensure that encapsulated_iq uses jabber:client here
+        server = encapsulated_iq.get_to().domain
+        perms = self.granted_privileges.get(server)
+        if not perms:
+            raise PermissionError(f"{server} has not granted us any privilege")
+        itype = encapsulated_iq["type"]
+        for ns in encapsulated_iq.plugins.values():
+            type_ = perms.iq[ns.namespace]
+            if type_ == IqPermission.NONE:
+                raise PermissionError(f"{server} has not granted any IQ privilege for namespace {ns.namespace}")
+            elif type_ == IqPermission.BOTH:
+                pass
+            elif type_ != itype:
+                raise PermissionError(f"{server} has not granted IQ {type_} privilege for namespace {ns.namespace}")
+        iq = self.xmpp.make_iq(
+            itype=itype,
+            ifrom=self.xmpp.boundjid.bare,
+            ito=encapsulated_iq.get_from()
+        )
+        iq["privileged_iq"].append(encapsulated_iq)
+        return iq.send()
