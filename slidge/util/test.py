@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Union
 from xml.dom.minidom import parseString
 
+import xmldiff.main
 from slixmpp import (
     ElementBase,
     MatcherId,
@@ -143,6 +144,14 @@ class SlixTestPlus(SlixTest):
                 result = self.compare(xml, stanza.xml, stanza2.xml)
             stanza_class.namespace = old_ns
 
+            if not result:
+                debug += str(
+                    xmldiff.main.diff_texts(tostring(xml), tostring(stanza.xml))
+                )
+                if use_values:
+                    debug += str(
+                        xmldiff.main.diff_texts(tostring(xml), tostring(stanza2.xml))
+                    )
             self.assertTrue(result, debug)
 
     def next_sent(self):
