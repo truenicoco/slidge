@@ -1,6 +1,7 @@
 import hashlib
 import io
 import logging
+import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
 from enum import Enum
@@ -10,6 +11,9 @@ from uuid import uuid4
 
 from PIL import Image
 from slixmpp import JID, Iq, Message, Presence
+from slixmpp.exceptions import IqError
+from slixmpp.plugins.xep_0004 import Form
+from slixmpp.plugins.xep_0060.stanza import Item
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.xmlstream import ET
 
@@ -744,6 +748,85 @@ class LegacyMUC(
         p["muc"]["status_codes"] = {110, 333}
         p.send()
 
+    async def add_to_bookmarks(self, auto_join=True, invite=False, preserve=True):
+        """
+        Add the MUC to the user's XMPP bookmarks (:xep:`0402')
+
+        This requires that slidge has the IQ privileged set correctly
+        on the XMPP server
+
+        :param auto_join: whether XMPP clients should automatically join
+            this MUC on startup. In theory, XMPP clients will receive
+            a "push" notification when this is called, and they will
+            join if they are online.
+        :param invite: send an invitation to join this MUC emanating from
+            the gateway. While this should not be strictly necessary,
+            it can help for clients that do not support :xep:`0402`, or
+            that have 'do not honor bookmarks auto-join' turned on in their
+            settings.
+        :param preserve: preserve name, auto-join and bookmarks extensions
+            set by the user outside slidge
+        """
+        item = Item()
+        item["id"] = self.jid
+        # item["id"] = "OCOCOCO"
+
+        iq = Iq(stype="get", sfrom=self.user.jid, sto=self.user.jid)
+        iq["pubsub"]["items"]["node"] = self.xmpp["xep_0402"].stanza.NS
+        iq["pubsub"]["items"].append(item)
+
+        is_update = False
+        if preserve:
+            try:
+                ans = await self.xmpp["xep_0356"].send_privileged_iq(iq)
+                is_update = len(ans["pubsub"]["items"]) == 1
+                item = ans["pubsub"]["items"]["item"]
+            except IqError:
+                item["conference"]["name"] = self.name
+                item["conference"]["autojoin"] = auto_join
+            except PermissionError:
+                warnings.warn(
+                    "IQ privileges (XEP0356) are not set, we cannot fetch the user bookmarks"
+                )
+            else:
+                # if the bookmark is already present, we preserve it as much as
+                # possible, especially custom <extensions>
+                self.log.debug("Existing: %s", item)
+                if not item["conference"]["name"]:
+                    item["conference"]["name"] = self.name
+                if item["conference"]["autojoin"] is None:
+                    item["conference"]["autojoin"] = auto_join
+        else:
+            item["conference"]["name"] = self.name
+            item["conference"]["autojoin"] = auto_join
+
+        item["conference"]["nick"] = self.user_nick_non_none
+        iq = Iq(stype="set", sfrom=self.user.jid, sto=self.user.jid)
+        iq["pubsub"]["publish"]["node"] = self.xmpp["xep_0402"].stanza.NS
+        iq["pubsub"]["publish"].append(item)
+
+        iq["pubsub"]["publish_options"] = _BOOKMARKS_OPTIONS
+
+        try:
+            await self.xmpp["xep_0356"].send_privileged_iq(iq)
+        except PermissionError:
+            warnings.warn(
+                "IQ privileges (XEP0356) are not set, we cannot add bookmarks for the user"
+            )
+            # fallback by forcing invitation
+            invite = True
+        except IqError as e:
+            warnings.warn(
+                f"Something went wrong while trying to set the bookmarks: {e}"
+            )
+            # fallback by forcing invitation
+            invite = True
+
+        if invite or (config.ALWAYS_INVITE_WHEN_ADDING_BOOKMARKS and not is_update):
+            self.session.send_gateway_invite(
+                self, reason="This group could not be added automatically for you"
+            )
+
 
 def set_origin_id(msg: Message, origin_id: str):
     sub = ET.Element("{urn:xmpp:sid:0}origin-id")
@@ -773,5 +856,22 @@ def str_to_datetime_or_none(date: Optional[str]):
     except ValueError:
         return None
 
+
+def bookmarks_form():
+    form = Form()
+    form["type"] = "submit"
+    form.add_field(
+        "FORM_TYPE",
+        value="http://jabber.org/protocol/pubsub#publish-options",
+        ftype="hidden",
+    )
+    form.add_field("pubsub#persist_items", value="1")
+    form.add_field("pubsub#max_items", value="max")
+    form.add_field("pubsub#send_last_published_item", value="never")
+    form.add_field("pubsub#access_model", value="whitelist")
+    return form
+
+
+_BOOKMARKS_OPTIONS = bookmarks_form()
 
 log = logging.getLogger(__name__)

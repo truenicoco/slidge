@@ -721,6 +721,7 @@ SLIXMPP_PLUGINS = [
     "xep_0356_old",  # Privileged Entity (old namespace)
     "xep_0363",  # HTTP file upload
     "xep_0385",  # Stateless in-line media sharing
+    "xep_0402",  # PEP Native Bookmarks
     "xep_0424",  # Message retraction
     "xep_0425",  # Message moderation
     "xep_0444",  # Message reactions

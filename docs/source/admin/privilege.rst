@@ -14,6 +14,7 @@ With privileges, slidge can:
   such official apps of the legacy service
 - synchronize other actions done via a non-XMPP client, such as read state, emoji reactions,
   retractions, etc.
+- automatically add XMPP bookmarks (:xep:`0402`) for MUCs (:xep:`0045`)
 
 Prosody
 -------
@@ -42,6 +43,7 @@ Define the gateway component's privileges in the appropriate virtualhost block:
         ["superduper.example.org"] = {
           roster = "both";
           message = "outgoing";
+          iq = { ["http://jabber.org/protocol/pubsub"] = "set"; };
         }
       }
 

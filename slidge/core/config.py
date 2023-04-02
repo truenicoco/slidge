@@ -185,3 +185,10 @@ ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH__DOC = (
     "Some legacy network provide ridiculously long filenames, strip above this limit, "
     "preserving suffix."
 )
+
+ALWAYS_INVITE_WHEN_ADDING_BOOKMARKS = True
+ALWAYS_INVITE_WHEN_ADDING_BOOKMARKS__DOC = (
+    "Send an invitation to join MUCs when adding them to the bookmarks. While this "
+    "should not be necessary, it helps with clients that do not support :xep:`0402` "
+    "or that do not respect the auto-join flag."
+)

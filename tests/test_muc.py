@@ -1837,3 +1837,58 @@ class TestMuc(SlidgeTest):
                 """,
                 use_values=False,
             )
+
+    def test_add_to_bookmarks(self):
+        muc = self.get_private_muc()
+        self.xmpp["xep_0356"].granted_privileges["montague.lit"].iq[
+            "http://jabber.org/protocol/pubsub"
+        ] = "both"
+        self.xmpp.loop.create_task(muc.add_to_bookmarks(auto_join=True, preserve=False))
+        import slidge.util.xep_0356.privilege
+
+        o = slidge.util.xep_0356.privilege.uuid.uuid4
+        slidge.util.xep_0356.privilege.uuid.uuid4 = lambda: "0"
+        self.send(
+            """
+            <iq from="aim.shakespeare.lit"
+                to="romeo@montague.lit"
+                xmlns="jabber:component:accept"
+                type="set" id="0">
+              <privileged_iq xmlns='urn:xmpp:privilege:2'>
+                <iq xmlns="jabber:client" from='romeo@montague.lit' to='romeo@montague.lit' type='set' id='0'>
+                  <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+                    <publish node='urn:xmpp:bookmarks:1'>
+                      <item id='room-private@aim.shakespeare.lit'>
+                        <conference xmlns='urn:xmpp:bookmarks:1'
+                                    name='Private Room'
+                                    autojoin='true'>
+                          <nick>thirdwitch</nick>
+                        </conference>
+                      </item>
+                    </publish>
+                    <publish-options>
+                      <x xmlns='jabber:x:data' type='submit'>
+                        <field var='FORM_TYPE' type='hidden'>
+                          <value>http://jabber.org/protocol/pubsub#publish-options</value>
+                        </field>
+                        <field var='pubsub#persist_items'>
+                          <value>1</value>
+                        </field>
+                        <field var='pubsub#max_items'>
+                          <value>max</value>
+                        </field>
+                        <field var='pubsub#send_last_published_item'>
+                          <value>never</value>
+                        </field>
+                        <field var='pubsub#access_model'>
+                          <value>whitelist</value>
+                        </field>
+                      </x>
+                    </publish-options>
+                  </pubsub>
+                </iq>
+            </privileged_iq></iq>
+            """,
+            use_values=False,
+        )
+        slidge.util.xep_0356.privilege.uuid.uuid4 = o
