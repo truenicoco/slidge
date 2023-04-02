@@ -1,18 +1,18 @@
 import unittest
 
-from slixmpp import Message, JID
-from slixmpp.test import SlixTest
+from slixmpp import Message, JID, Iq
+from slidge.util.test import SlidgeTest
 
 import slidge.util.xep_0356
 import slidge.util.xep_0356_old
 from slidge.util.xep_0356 import XEP_0356, permissions
 
 
-class TestPermissions(SlixTest):
+class TestPermissions(SlidgeTest):
     def setUp(self):
         self.stream_start(
             mode="component",
-            plugins=["xep_0356", "xep_0356_old"],
+            plugins=["xep_0356", "xep_0356_old", "xep_0045"],
             jid="pubsub.capulet.lit",
             server="capulet.lit",
         )
@@ -37,6 +37,10 @@ class TestPermissions(SlixTest):
                 <privilege xmlns='urn:xmpp:privilege:2'>
                     <perm access='roster' type='both'/>
                     <perm access='message' type='outgoing'/>
+                    <perm access='iq'>
+                      <namespace ns='some_ns' type='get' />
+                      <namespace ns='some_other_ns' type='both' />
+                    </perm>
                 </privilege>
             </message>
             """
@@ -48,9 +52,17 @@ class TestPermissions(SlixTest):
         self.assertEqual(
             x.granted_privileges[server].message, permissions.MessagePermission.OUTGOING
         )
-        self.assertEqual(x.granted_privileges[server].iq, permissions.IqPermission.NONE)
         self.assertEqual(
             x.granted_privileges[server].presence, permissions.PresencePermission.NONE
+        )
+        self.assertEqual(
+            x.granted_privileges[server].iq["nope"], permissions.IqPermission.NONE
+        )
+        self.assertEqual(
+            x.granted_privileges[server].iq["some_ns"], permissions.IqPermission.GET
+        )
+        self.assertEqual(
+            x.granted_privileges[server].iq["some_other_ns"], permissions.IqPermission.BOTH
         )
         self.assertTrue(results["event"])
 
@@ -141,5 +153,34 @@ class TestPermissions(SlixTest):
         assert priv_msg.get_to() == "something"
         assert priv_msg.get_from() == "pubsub.capulet.lit"
 
+    def testIqOnBehalf(self):
+        iq = Iq()
+        iq["mucadmin_query"]["item"]["affiliation"] = "member"
+        iq.set_from("juliet@xxx")
+        iq.set_to("somemuc@conf")
+        iq.set_type("get")
+        self.xmpp["xep_0356"].granted_privileges["conf"].iq["http://jabber.org/protocol/muc#admin"] = permissions.IqPermission.BOTH
+        r = self.xmpp.loop.create_task(self.xmpp["xep_0356"].send_privileged_iq(iq, iq_id="0"))
+        self.send(
+            """
+            <iq from="pubsub.capulet.lit"
+                to="juliet@xxx"
+                xmlns="jabber:component:accept"
+                type="get" id="0">
+                <privileged_iq xmlns='urn:xmpp:privilege:2'>
+                    <iq xmlns='jabber:client'
+                        type='get'
+                        to='somemuc@conf'
+                        from='juliet@xxx'
+                         id="0">
+                          <query xmlns='http://jabber.org/protocol/muc#admin'>
+                            <item affiliation='member'/>
+                          </query>
+                    </iq>
+                </privileged_iq>
+            </iq>
+            """,
+            use_values=False
+        )
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestPermissions)

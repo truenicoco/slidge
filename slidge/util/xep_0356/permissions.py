@@ -1,4 +1,5 @@
 import dataclasses
+from collections import defaultdict
 from enum import Enum
 
 
@@ -31,5 +32,5 @@ class PresencePermission(str, Enum):
 class Permissions:
     roster = RosterAccess.NONE
     message = MessagePermission.NONE
-    iq = MessagePermission.NONE
+    iq = defaultdict(lambda : IqPermission.NONE)
     presence = PresencePermission.NONE

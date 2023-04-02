@@ -1,10 +1,11 @@
 from slixmpp.plugins.xep_0297 import Forwarded
-from slixmpp.stanza import Message
+from slixmpp.stanza import Iq, Message
 from slixmpp.xmlstream import ElementBase, register_stanza_plugin
 
+NS = "urn:xmpp:privilege:2"
 
 class Privilege(ElementBase):
-    namespace = "urn:xmpp:privilege:2"
+    namespace = NS
     name = "privilege"
     plugin_attrib = "privilege"
 
@@ -31,14 +32,31 @@ class Privilege(ElementBase):
 
 
 class Perm(ElementBase):
-    namespace = "urn:xmpp:privilege:2"
+    namespace = NS
     name = "perm"
     plugin_attrib = "perm"
     plugin_multi_attrib = "perms"
     interfaces = {"type", "access"}
 
 
+class NameSpace(ElementBase):
+    namespace = NS
+    name = "namespace"
+    plugin_attrib = "namespace"
+    plugin_multi_attrib = "namespaces"
+    interfaces = {"ns", "type"}
+
+
+class PrivilegedIq(ElementBase):
+    namespace = NS
+    name = "privileged_iq"
+    plugin_attrib = "privileged_iq"
+
+
 def register():
     register_stanza_plugin(Message, Privilege)
+    register_stanza_plugin(Iq, Privilege)
     register_stanza_plugin(Privilege, Forwarded)
     register_stanza_plugin(Privilege, Perm, iterable=True)
+    register_stanza_plugin(Perm, NameSpace, iterable=True)
+    register_stanza_plugin(Iq, PrivilegedIq)
