@@ -21,6 +21,7 @@ modules_enabled = {
     "register"; -- Allow users to register on this server using a client and change passwords
     "mam"; -- Store messages in an archive and allow users to access it
     "admin_adhoc"; -- Allows administration via an XMPP client that supports ad-hoc commands
+    "bookmarks"; -- Conversion between different bookmarks formats
     "privilege";
 }
 
@@ -50,48 +51,24 @@ log = {
 
 certificates = "certs"
 
+local _privileges = {
+    roster = "both";
+    message = "outgoing";
+    iq = { ["http://jabber.org/protocol/pubsub"] = "set"; };
+ }
+
 VirtualHost "localhost"
   privileged_entities = {
-     ["dummy.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["telegram.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["signal.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["mattermost.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["facebook.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["skype.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["hackernews.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["steam.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["discord.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
-     ["whatsapp.localhost"] = {
-           roster = "both";
-           message = "outgoing";
-     },
+     ["dummy.localhost"] = _privileges,
+     ["telegram.localhost"] = _privileges,
+     ["signal.localhost"] = _privileges,
+     ["mattermost.localhost"] = _privileges,
+     ["facebook.localhost"] = _privileges,
+     ["skype.localhost"] = _privileges,
+     ["hackernews.localhost"] = _privileges,
+     ["steam.localhost"] = _privileges,
+     ["discord.localhost"] = _privileges,
+     ["whatsapp.localhost"] = _privileges,
   }
 
 Component "muc.localhost" "muc"

@@ -291,6 +291,9 @@ class Session(BaseSession):
             self.send_gateway_invite(
                 await self.bookmarks.by_legacy_id("prout-1"), reason="Because why not?"
             )
+        elif text == "bookmarks":
+            muc = await self.bookmarks.by_legacy_id("prout-1")
+            await muc.add_to_bookmarks(auto_join=True)
         else:
             self.xmpp.loop.create_task(self.later(chat, i, body=text))
 
