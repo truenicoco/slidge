@@ -398,6 +398,10 @@ class AttachmentMixin(MessageMaker):
                 reply_to=reply_to,
                 when=when,
                 thread=thread,
+                file_name=attachment.name,
+                content_type=attachment.content_type,
+                legacy_file_id=attachment.legacy_file_id,
+                caption=attachment.caption,
                 **kwargs,
             )
         if not body_first:
