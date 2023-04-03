@@ -9,10 +9,6 @@ RUN python3 -m pip install wheel pybindgen
 RUN curl -fL https://install.python-poetry.org | python3 - || cat /poetry-installer-error-*
 
 ENV PATH=/root/.local/bin:$PATH
-# furo (sphinx theme) cannot install without that,
-# cf https://github.com/python-poetry/poetry/pull/7358
-RUN poetry config installer.modern-installation false
-RUN poetry config experimental.new-installer true
 
 ENV GOBIN="/usr/local/bin"
 RUN go install github.com/go-python/gopy@latest && \
