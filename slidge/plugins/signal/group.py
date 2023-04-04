@@ -22,7 +22,10 @@ class Participant(AttachmentSenderMixin, LegacyParticipant):
 
     def send_text(self, body: str, legacy_msg_id=None, **k):
         if legacy_msg_id:
-            self.muc.sent[legacy_msg_id] = self.signal_address
+            if self.is_user:
+                self.session.sent_in_muc[legacy_msg_id] = self.muc
+            else:
+                self.muc.sent[legacy_msg_id] = self.signal_address
         super().send_text(body, legacy_msg_id, **k)
 
 
