@@ -10,7 +10,7 @@ from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce
-from ...util.types import LegacyMessageType
+from ...util.types import LegacyMessageType, MucAffiliation, MucRole
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 from .room import MucType
@@ -42,8 +42,8 @@ class LegacyParticipant(
         self.session = session = muc.session
         self.user = session.user
         self.xmpp = session.xmpp
-        self.role = "participant"
-        self.affiliation = "member"
+        self.role: MucRole = "participant"
+        self.affiliation: MucAffiliation = "member"
         self.is_user = is_user
         self.is_system = is_system
 

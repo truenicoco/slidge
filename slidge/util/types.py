@@ -48,6 +48,8 @@ FieldType = Literal[
     "list-multi",
     "text-private",
 ]
+MucAffiliation = Literal["owner", "admin", "member", "outcast", "none"]
+MucRole = Literal["visitor", "participant", "moderator", "none"]
 
 
 @dataclass
