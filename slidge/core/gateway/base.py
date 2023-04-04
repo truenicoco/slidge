@@ -579,12 +579,12 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         Optionally override this if you need to clean additional
         stuff after a user has been removed from the permanent user_store.
 
-        You may need to manually logout the legacy session in here, ``Session.logout()``
-        will *not* be called automatically.
+        By default, this just calls session.logout()
 
         :param user:
         """
-        pass
+        session = self.get_session_from_user(user)
+        await session.logout()
 
     async def input(
         self, jid: JID, text=None, mtype: MessageTypes = "chat", **msg_kwargs
