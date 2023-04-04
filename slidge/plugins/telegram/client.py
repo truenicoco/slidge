@@ -58,7 +58,14 @@ class NotFound(tgapi.NotFound, XMPPError):
         XMPPError.__init__(self, "item-not-found", self.message)
 
 
-class CredentialsValidation(aiotdlib.Client):
+class BaseClient(aiotdlib.Client):
+    async def get_main_list_chats(self, limit=0):
+        # do not prefetch any chats, unlike aiotdlib's default behaviour
+        r = await self.cache.get_main_list_chats(limit)
+        return r
+
+
+class CredentialsValidation(BaseClient):
     def __init__(self, registration_form: dict):
         super().__init__(**get_base_kwargs(registration_form))
         self.code_future: asyncio.Future[
@@ -73,7 +80,7 @@ class CredentialsValidation(aiotdlib.Client):
         return self.password
 
 
-class TelegramClient(aiotdlib.Client):
+class TelegramClient(BaseClient):
     def __init__(self, session: "Session"):
         super().__init__(
             parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
@@ -116,20 +123,8 @@ class TelegramClient(aiotdlib.Client):
         except tgapi.NotFound as e:
             raise NotFound(e)
 
-    async def get_main_list_chats(self, limit=10):
-        self.log.debug("Caching chats")
-        r = await self.cache.get_main_list_chats(limit)
-        self.log.debug("Chats cached")
-        return r
-
     async def dispatch_update(self, _self, update: tgapi.Update):
         if update.ID == "ok":
-            return
-        if not self.cache.have_full_main_chats_list:
-            # TODO: (maybe?) ditch all aiotdlib caching and rely on our own instead?
-            self.session.log.debug(
-                "Ignoring update %s until aiotdlib filled its chat cache", update.ID
-            )
             return
         try:
             handler = getattr(self, "handle_" + update.ID[6:])
@@ -246,8 +241,18 @@ class TelegramClient(aiotdlib.Client):
         u = action.user
         if u.id == await self.get_my_id():
             return
+        if not u.is_contact:
+            return
         contact = await self.session.contacts.by_legacy_id(u.id)
         await contact.update_info(u)
+
+    async def handle_NewChat(self, action: tgapi.UpdateNewChat):
+        if isinstance(action.chat.type_, tgapi.ChatTypePrivate):
+            await self.session.contacts.by_legacy_id(action.chat.id)
+        elif isinstance(
+            action.chat.type_, (tgapi.ChatTypeBasicGroup, tgapi.ChatTypeSupergroup)
+        ):
+            await self.session.bookmarks.by_legacy_id(action.chat.id)
 
     async def handle_MessageInteractionInfo(
         self, update: tgapi.UpdateMessageInteractionInfo

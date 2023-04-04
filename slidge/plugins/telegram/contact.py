@@ -102,6 +102,8 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             if user.is_contact:
                 self._subscribe_to = True
                 self._subscribe_from = user.is_mutual_contact
+                if not self.added_to_roster:
+                    await self.add_to_roster()
             else:
                 self._subscribe_to = self._subscribe_from = False
 
@@ -121,6 +123,10 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
 class Roster(LegacyRoster[int, Contact]):
     session: "Session"
 
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.__fill_task: Optional[asyncio.Task] = None
+
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             tg_id = int(jid_username)
@@ -134,9 +140,11 @@ class Roster(LegacyRoster[int, Contact]):
                 raise XMPPError("bad-request", "This looks like a telegram group ID")
 
     async def fill(self):
-        users = await self.session.tg.api.get_contacts()
-        for id_ in users.user_ids:
-            await self.by_legacy_id(id_)
+        if self.__fill_task is not None:
+            self.__fill_task.cancel()
+        self.__fill_task = self.session.xmpp.loop.create_task(
+            self.session.tg.api.get_contacts()
+        )
 
 
 log = logging.getLogger(__name__)

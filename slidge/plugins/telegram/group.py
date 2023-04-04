@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,10 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
 
     # COMPAT: We prefix with 'group' because movim does not like MUC local parts
     #         starting with a hyphen
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.__fill_task: Optional[asyncio.Task] = None
 
     @staticmethod
     async def legacy_id_to_jid_local_part(legacy_id: int):
@@ -45,12 +50,11 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
         return group_id
 
     async def fill(self):
-        tg = self.session.tg
-        for chat in await tg.get_main_list_chats_all():
-            if isinstance(
-                chat.type_, (tgapi.ChatTypeBasicGroup, tgapi.ChatTypeSupergroup)
-            ):
-                await self.by_legacy_id(chat.id)
+        if self.__fill_task is not None:
+            self.__fill_task.cancel()
+        self.__fill_task = self.xmpp.loop.create_task(
+            self.session.tg.get_main_list_chats_all()
+        )
 
 
 class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
