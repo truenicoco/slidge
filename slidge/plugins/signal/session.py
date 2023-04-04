@@ -140,6 +140,7 @@ class Session(BaseSession[int, Recipient]):
             nick = nick.replace("\u0000", " ")
             self.bookmarks.user_nick = nick
         self.user_uuid.set_result(profile.address.uuid)
+        self.contacts.user_legacy_id = profile.address.uuid
 
         return f"Connected as {self.phone}"
 
