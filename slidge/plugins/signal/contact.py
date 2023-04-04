@@ -136,6 +136,8 @@ class Roster(LegacyRoster[str, Contact]):
         session = self.session
         profiles = await (await session.signal).list_contacts(account=session.phone)
         for profile in profiles.profiles:
+            if profile.address.uuid == self.user_legacy_id:
+                continue
             # contacts are added automatically if their profile could be resolved
             try:
                 await self.by_json_address(profile.address)
