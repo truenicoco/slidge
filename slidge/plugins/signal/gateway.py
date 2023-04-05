@@ -240,6 +240,57 @@ class ChangeContactName(Command):
         return "Contact renamed successfully."
 
 
+class DeleteAccount(Command):
+    NAME = "Delete an account from signald"
+    HELP = (
+        "This should only be done if there is a inconsistency between signald "
+        "accounts slidge knows about and those listed in signald."
+    )
+    CHAT_COMMAND = NODE = "delete-signald-account"
+    ACCESS = CommandAccess.ADMIN_ONLY
+    xmpp: "Gateway"
+
+    async def run(self, _session, ifrom: JID, *args):
+        signal = await self.xmpp.signal
+        accounts = (await signal.list_accounts()).accounts
+        known_phones = {u.registration_form.get("phone") for u in user_store.get_all()}
+        options = [
+            {
+                "value": (phone := a.address.number),
+                "label": f"{phone} - Known in slidge: {phone in known_phones} - Pending: {bool(a.pending)}",
+            }
+            for a in accounts
+        ]
+
+        return Form(
+            title=self.NAME,
+            instructions=self.HELP,
+            fields=[
+                FormField(
+                    "phone",
+                    label="Signald accounts",
+                    type="list-single",
+                    options=options,  # type:ignore
+                    required=True,
+                ),
+                FormField(
+                    "server",
+                    label="Delete from Signal's servers",
+                    type="boolean",
+                    required=True,
+                    value="1",
+                ),
+            ],
+            handler=self.finish,
+        )
+
+    async def finish(self, form_values, _session: "Session", _ifrom):
+        await (await self.xmpp.signal).delete_account(
+            account=form_values["phone"], server=form_values["server"]
+        )
+        return "Account successfully deleted"
+
+
 class Gateway(BaseGateway):
     COMPONENT_NAME = "Signal (slidge)"
     COMPONENT_TYPE = "signal"
