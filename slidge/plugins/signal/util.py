@@ -27,7 +27,12 @@ class AttachmentSenderMixin(ContentMessageMixin):
         if muc := getattr(self, "muc", None):
             reply_to.author = await muc.get_participant_by_legacy_id(quote.author.uuid)
         else:
-            reply_to.author = await self.session.contacts.by_json_address(quote.author)
+            if quote.author.uuid == await self.session.user_uuid:
+                reply_to.author = self.session.user
+            else:
+                reply_to.author = await self.session.contacts.by_json_address(
+                    quote.author
+                )
 
         return reply_to
 
