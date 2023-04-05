@@ -158,7 +158,18 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             if not isinstance(sender, tgapi.MessageSenderUser):
                 self.log.debug("Ignoring non-user sender")  # Does this happen?
                 continue
-            await self.participant_by_sender_id(sender)
+            part = await self.participant_by_sender_id(sender)
+            status = member.status
+            if isinstance(status, tgapi.ChatMemberStatusCreator):
+                part.role = "moderator"
+                part.affiliation = "owner"
+            elif isinstance(status, tgapi.ChatMemberStatusAdministrator):
+                part.role = "moderator"
+                part.affiliation = "admin"
+            elif isinstance(status, tgapi.ChatMemberStatusBanned):
+                part.role = "none"
+                part.affiliation = "outcast"
+                part.offline()
 
     async def send_text(self, text: str) -> int:
         result = await self.session.tg.send_text(self.legacy_id, text)
