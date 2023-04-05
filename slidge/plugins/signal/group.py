@@ -99,7 +99,8 @@ class Bookmarks(LegacyBookmarks[str, MUC]):
         groups = await (await session.signal).list_groups(account=session.phone)
         self.log.debug("GROUPS: %r", groups)
         for group in groups.groups:
-            await self.by_legacy_id(group.id)
+            g = await self.by_legacy_id(group.id)
+            await g.add_to_bookmarks(auto_join=True)
 
 
 def local_part_to_group_id(s: str):
