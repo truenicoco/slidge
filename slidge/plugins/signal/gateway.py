@@ -304,7 +304,7 @@ class Gateway(BaseGateway):
         signal = await self.signal
         phone = user.registration_form.get("phone")
         try:
-            await signal.verify(phone, code)
+            await signal.verify(phone, code.removeprefix("signalcaptcha://"))
             await signal.set_profile(
                 account=phone, name=user.registration_form.get("name")
             )
