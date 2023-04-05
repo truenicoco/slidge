@@ -167,6 +167,9 @@ class Session(BaseSession[int, Recipient]):
         if sync_msg := msg.sync_message:
             await self.on_signal_sync_message(sync_msg)
 
+        if msg.source.uuid == await self.user_uuid:
+            return
+
         contact = await self.contacts.by_json_address(msg.source)
 
         if call := msg.call_message:
@@ -195,6 +198,8 @@ class Session(BaseSession[int, Recipient]):
             muc = await self.bookmarks.by_legacy_id(g.id)
             contact = await muc.get_user_participant()
         else:
+            if sent.destination.uuid == await self.user_uuid:
+                return
             contact = await self.contacts.by_json_address(sent.destination)
 
         await self.on_signal_data_message(contact, sent_msg, carbon=True)
