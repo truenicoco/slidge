@@ -246,10 +246,7 @@ class FormField:
                 raise XMPPError("not-acceptable", f"Not a valid option: '{value}'")
 
         elif self.type == "boolean":
-            try:
-                return bool(int(value))
-            except ValueError:
-                return False
+            return value.lower() in ("1", "true")
 
         return value
 
