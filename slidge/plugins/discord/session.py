@@ -76,7 +76,8 @@ class Session(BaseSession[int, Recipient]):
 
     async def composing(self, c: Recipient, thread=None):
         recipient = await get_recipient(c, thread)
-        await recipient.trigger_typing()
+        async with recipient.typing():
+            await asyncio.sleep(5)
 
     async def paused(self, c: Recipient, thread=None):
         pass

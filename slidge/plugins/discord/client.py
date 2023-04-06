@@ -15,6 +15,8 @@ MessageableChannel = Union[
     di.DMChannel,
     di.PartialMessageable,
     di.GroupChannel,
+    di.PartialMessageable,
+    di.StageChannel,
 ]
 Author = Union[di.User, di.Member, di.ClientUser]
 
