@@ -780,6 +780,8 @@ class LegacyMUC(
             try:
                 ans = await self.xmpp["xep_0356"].send_privileged_iq(iq)
                 is_update = len(ans["pubsub"]["items"]) == 1
+                # this below creates the item if it wasn't here already
+                # (slixmpp annoying magic)
                 item = ans["pubsub"]["items"]["item"]
             except IqError:
                 item["conference"]["name"] = self.name
@@ -792,9 +794,11 @@ class LegacyMUC(
                 # if the bookmark is already present, we preserve it as much as
                 # possible, especially custom <extensions>
                 self.log.debug("Existing: %s", item)
+                # if the entry has no name, we set it, even if it's an update
                 if not item["conference"]["name"]:
                     item["conference"]["name"] = self.name
-                if item["conference"]["autojoin"] is None:
+                # if it's an update, we do not touch the auto join flag
+                if not is_update:
                     item["conference"]["autojoin"] = auto_join
         else:
             item["conference"]["name"] = self.name
