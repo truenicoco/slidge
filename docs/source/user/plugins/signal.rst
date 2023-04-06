@@ -7,6 +7,11 @@ Signal
   self advertises as
   `"not nearly as secure as the real Signal clients" <https://gitlab.com/signald/signald/-/issues/101>`_,
   now you're warned.
+  
+.. known issues::
+  Currently, registration through signald isn't `working <https://gitlab.com/signald/signald/-/issues/351>`_.
+  Linking still works. If you still want to register through Slidge, you'll need to downgrade signald to 0.23.0,
+  register from Slidge, and then upgrade signald to the newest version.
 
 Roster
 ******
