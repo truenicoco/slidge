@@ -46,7 +46,7 @@ class Contact(StatusMixin, MessageMixin, LegacyContact[int]):  # type: ignore
 
     async def fetch_vcard(self):
         try:
-            profile = await self.discord_user.profile(fetch_note=False)
+            profile = await self.discord_user.profile()
         except di.Forbidden:
             self.session.log.debug("Forbidden to fetch the profile of %s", self)
         except di.HTTPException as e:
