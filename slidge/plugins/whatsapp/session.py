@@ -193,12 +193,16 @@ class Session(BaseSession[str, Recipient]):
             preview = LinkPreview(Link(url, await resp.text()))
             if not preview.title:
                 return None
-            return whatsapp.Preview(
-                Title=preview.title,
-                Description=preview.description or "",
-                URL=url,
-                ImageURL=preview.image or "",
-            )
+            try:
+                return whatsapp.Preview(
+                    Title=preview.title,
+                    Description=preview.description or "",
+                    URL=url,
+                    ImageURL=preview.image or "",
+                )
+            except Exception as e:
+                self.log.debug("Could not generate a preview for %s", url, exc_info=e)
+                return None
 
     async def handle_message(self, message: whatsapp.Message):
         """
