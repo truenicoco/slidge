@@ -6,6 +6,8 @@ from slidge.core.mixins.message import ContentMessageMixin
 from slidge.core.mixins.presence import PresenceMixin
 from slidge.util.types import LegacyAttachment, MessageReference
 
+from ...util import strip_illegal_chars
+
 if TYPE_CHECKING:
     from .group import MUC
     from .session import Session
@@ -127,7 +129,7 @@ class StatusMixin(PresenceMixin):
     ):
         # TODO: implement timeouts for activities (the Activity object has timestamps
         #       attached to it)
-        msg = str(activity) if activity else None
+        msg = strip_illegal_chars(str(activity)) if activity else None
         if status == di.Status.online:
             self.online(msg)
         elif status == di.Status.offline:
