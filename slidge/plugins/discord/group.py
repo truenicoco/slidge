@@ -54,6 +54,9 @@ class MUC(LegacyMUC[int, int, Participant, int]):
                 continue
             co = await self.session.contacts.by_discord_user(m)
             p = await self.get_participant_by_contact(co)
+            if chan.guild.owner == m:
+                p.role = "moderator"
+                p.affiliation = "owner"
             p.update_status(m.status, m.activity)
 
     async def update_info(self):
