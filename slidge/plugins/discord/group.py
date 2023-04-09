@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 from typing import Optional, Union
 
@@ -58,11 +57,7 @@ class MUC(LegacyMUC[int, int, Participant, int]):
             p.update_status(m.status, m.activity)
 
     async def update_info(self):
-        while not (chan := await self.get_discord_channel()):
-            await asyncio.sleep(0.1)
-
-        while not chan.guild.name and not chan.name:
-            await asyncio.sleep(0.1)
+        chan = await self.get_discord_channel()
 
         if chan.category:
             self.name = (
