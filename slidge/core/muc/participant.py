@@ -47,29 +47,11 @@ class LegacyParticipant(
         self.is_user = is_user
         self.is_system = is_system
 
-        self.nickname = nickname
+        self._nickname = nickname
 
         log.debug("Instantiation of: %r", nickname)
 
-        j: JID = copy(self.muc.jid)
-
-        if not is_system:
-            if not nickname:
-                warnings.warn(
-                    "Only the system participant is allowed to not have a nickname"
-                )
-                nickname = "unnamed"
-            try:
-                j.resource = nickname
-            except InvalidJID:
-                new = (
-                    "".join(x for x in nickname if x in string.printable)
-                    + f"-slidge-{hash(nickname)}"
-                )
-                warnings.warn(f"Could not use {nickname} as a nickname, using {new}")
-                j.resource = new
-
-        self.jid = j
+        self.__update_jid(nickname)
 
         self.contact: Optional["LegacyContact"] = None
         # we track if we already sent a presence for this participant.
@@ -81,6 +63,64 @@ class LegacyParticipant(
 
     def __repr__(self):
         return f"<Participant '{self.nickname}'/'{self.jid}' of '{self.muc}'>"
+
+    def __update_jid(self, nickname: Optional[str]):
+        j: JID = copy(self.muc.jid)
+
+        if self.is_system:
+            self.jid = j
+            return
+
+        if not nickname:
+            warnings.warn(
+                "Only the system participant is allowed to not have a nickname"
+            )
+            nickname = "unnamed"
+        try:
+            j.resource = nickname
+        except InvalidJID:
+            new = (
+                "".join(x for x in nickname if x in string.printable)
+                + f"-slidge-{hash(nickname)}"
+            )
+            warnings.warn(f"Could not use {nickname} as a nickname, using {new}")
+            j.resource = new
+
+        self.jid = j
+
+    @property
+    def nickname(self):
+        return self._nickname
+
+    @nickname.setter
+    def nickname(self, new_nickname: str):
+        old = self._nickname
+        if new_nickname == old:
+            return
+
+        cache = getattr(self, "_last_presence", None)
+        if cache:
+            last_seen = cache.last_seen
+            kwargs = cache.presence_kwargs
+        else:
+            last_seen = None
+            kwargs = {}
+
+        kwargs["status_codes"] = {303}
+
+        p = self._make_presence(ptype="unavailable", last_seen=last_seen, **kwargs)
+        p["muc"]["item"]["nick"] = new_nickname
+        self._send(p)
+
+        self.__update_jid(new_nickname)
+        self._nickname = new_nickname
+
+        kwargs["status_codes"] = set()
+        p = self._make_presence(ptype="available", last_seen=last_seen, **kwargs)
+        self._send(p)
+
+        if old:
+            self.muc.rename_participant(old, new_nickname)
 
     def _make_presence(
         self,

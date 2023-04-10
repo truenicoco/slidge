@@ -253,7 +253,7 @@ class TestMuc(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="error" from="non-room@aim.shakespeare.lit"
                 to="romeo@montague.lit/gajim"
@@ -408,7 +408,7 @@ class TestMuc(SlidgeTest):
         session = self.get_romeo_session()
         self.xmpp.loop.run_until_complete(session.bookmarks.fill())
         self.recv(
-            f"""
+            """
             <iq type="get" from="romeo@montague.lit/gajim" to="aim.shakespeare.lit" id="123">
                 <query xmlns='http://jabber.org/protocol/disco#items'/>
             </iq>
@@ -499,7 +499,7 @@ class TestMuc(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq type="result" from="room-public@aim.shakespeare.lit/firstwitch"
                 to="romeo@montague.lit/gajim" id="123">
               <query xmlns='http://jabber.org/protocol/disco#info'>
@@ -913,7 +913,9 @@ class TestMuc(SlidgeTest):
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
-            reply_to=MessageReference(legacy_id="legacy-REPLY-TO", author=muc.session.user),
+            reply_to=MessageReference(
+                legacy_id="legacy-REPLY-TO", author=muc.session.user
+            ),
         )
         self.send(
             f"""
@@ -1518,7 +1520,9 @@ class TestMuc(SlidgeTest):
         muc = self.get_private_muc()
         muc.user_resources.add("gajim")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
-        user_participant: Participant = self.xmpp.loop.run_until_complete(muc.get_user_participant())
+        user_participant: Participant = self.xmpp.loop.run_until_complete(
+            muc.get_user_participant()
+        )
         user_participant.send_text("blabla", "legacy-666", when=now)
         now_fmt = now.isoformat().replace("+00:00", "Z")
         self.send(
@@ -1531,7 +1535,7 @@ class TestMuc(SlidgeTest):
             <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" from="aim.shakespeare.lit"/>
            </message>
             """,
-            use_values=False  # necessary because the third has origin-id
+            use_values=False,  # necessary because the third has origin-id
         )
         self.recv(
             """
@@ -1658,7 +1662,7 @@ class TestMuc(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq from="room-private@aim.shakespeare.lit"
                 type="error"
                 to="romeo@montague.lit/gajim"
@@ -1892,3 +1896,63 @@ class TestMuc(SlidgeTest):
             use_values=False,
         )
         slidge.util.xep_0356.privilege.uuid.uuid4 = o
+
+    def __get_participants(self):
+        muc = self.get_private_muc()
+        muc.user_resources.add("movim")
+        self.xmpp.loop.run_until_complete(muc.session.contacts.fill())
+        muc.session.contacts.ready.set_result(True)
+        participants_before: list[Participant] = self.xmpp.loop.run_until_complete(
+            muc.get_participants()
+        )
+        return participants_before
+
+    def __test_rename_common(self, old_nick, participants_before):
+        muc = self.get_private_muc()
+        p = participants_before[0]
+        self.send(
+            f"""
+           <presence xmlns="jabber:component:accept" type="unavailable"
+           from="room-private@aim.shakespeare.lit/{old_nick}" to="romeo@montague.lit/movim">
+            <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}" nick="new-nick" />
+                <status code="303"/>
+            </x>
+           </presence>
+           """
+        )
+        self.send(
+            f"""
+           <presence xmlns="jabber:component:accept"
+            from="room-private@aim.shakespeare.lit/new-nick" to="romeo@montague.lit/movim">
+            <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}"/>
+            </x>
+           </presence>
+           """
+        )
+
+        participants_after = self.xmpp.loop.run_until_complete(muc.get_participants())
+        assert len(participants_after) == len(participants_before)
+        assert self.next_sent() is None
+
+    def test_rename_participant_from_participant(self):
+        participants_before = self.__get_participants()
+        p = participants_before[0]
+        old_nick = p.nickname
+        p.nickname = "new-nick"
+        self.__test_rename_common(old_nick, participants_before)
+
+    def test_rename_participant_from_muc(self):
+        participants_before = self.__get_participants()
+        p = participants_before[0]
+        old_nick = p.nickname
+        p.muc.rename_participant(old_nick, "new-nick")
+        self.__test_rename_common(old_nick, participants_before)
+
+    def test_rename_from_contact(self):
+        participants_before = self.__get_participants()
+        p = participants_before[0]
+        old_nick = p.nickname
+        p.contact.name = "new-nick"
+        self.__test_rename_common(old_nick, participants_before)

@@ -14,6 +14,7 @@ from ..mixins import FullCarbonMixin
 from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 
 if TYPE_CHECKING:
+    from ..muc import LegacyParticipant
     from ..session import BaseSession
 
 
@@ -105,6 +106,7 @@ class LegacyContact(
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
         self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid.bare}")
+        self.participants = set["LegacyParticipant"]()
 
     def __repr__(self):
         return f"<Contact '{self.legacy_id}'/'{self.jid.bare}'>"
@@ -170,6 +172,8 @@ class LegacyContact(
     def name(self, n: Optional[str]):
         if self._name == n:
             return
+        for p in self.participants:
+            p.nickname = n
         self._name = n
         self.xmpp.pubsub.set_nick(
             jid=self.jid.bare, nick=n, restrict_to=self.user.jid.bare

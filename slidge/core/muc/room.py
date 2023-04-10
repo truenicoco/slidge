@@ -570,6 +570,7 @@ class LegacyMUC(
         if p is None:
             p = self.Participant(self, c.name or c.legacy_id, **kwargs)
             p.contact = c
+            c.participants.add(p)
             self.__store_participant(p)
         return p
 
@@ -590,7 +591,7 @@ class LegacyMUC(
         :return:
         """
         await self.__fill_participants()
-        return self._participants_by_nicknames.values()
+        return list(self._participants_by_nicknames.values())
 
     def remove_participant(self, p: "LegacyParticipantType"):
         """
@@ -600,8 +601,19 @@ class LegacyMUC(
         """
         if p.contact is not None:
             del self._participants_by_contacts[p.contact]
+            p.contact.participants.remove(p)
         del self._participants_by_nicknames[p.nickname]  # type:ignore
         p.leave()
+
+    def rename_participant(self, old_nickname: str, new_nickname: str):
+        try:
+            p = self._participants_by_nicknames.pop(old_nickname)
+        except KeyError:
+            # when called by participant.nickname.setter
+            return
+        self._participants_by_nicknames[new_nickname] = p
+        if p.nickname == old_nickname:
+            p.nickname = new_nickname
 
     async def fill_participants(self):
         """

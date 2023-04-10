@@ -99,11 +99,13 @@ class MUC(LegacyMUC):
             for nick in "anon1", "anon2", "anon3", "anon4":
                 await self.get_participant(nick)
 
-    async def send_text(self, text: str) -> str:
-        self.msg_ids[self.legacy_id] += 1
-        i = self.msg_ids[self.legacy_id]
-        self.xmpp.loop.create_task(self.session.muc_later(self, text, i))
-        return str(self.msg_ids[self.legacy_id])
+    async def rename_all(self):
+        for p in list(await self.get_participants()):
+            log.debug("Renaming %s", p)
+            if p.contact:
+                p.contact.name = "new--" + p.nickname
+            elif not p.is_system and not p.is_user:
+                p.nickname = "new--anon--" + p.nickname
 
 
 class Participant(LegacyParticipant):
@@ -268,8 +270,8 @@ class Session(BaseSession):
             )
 
         if isinstance(chat, MUC):
-            await chat.send_text(text)
-            return
+            self.xmpp.loop.create_task(chat.rename_all())
+            return str(uuid.uuid4())
 
         log.debug("REPLY FALLBACK: %r", reply_to_fallback_text)
         i = self.counter
