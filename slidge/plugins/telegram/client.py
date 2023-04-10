@@ -248,6 +248,8 @@ class TelegramClient(BaseClient):
 
     async def handle_NewChat(self, action: tgapi.UpdateNewChat):
         if isinstance(action.chat.type_, tgapi.ChatTypePrivate):
+            if action.chat.id == await self.get_my_id():
+                return
             await self.session.contacts.by_legacy_id(action.chat.id)
         elif isinstance(action.chat.type_, tgapi.ChatTypeBasicGroup):
             g = await self.session.bookmarks.by_legacy_id(action.chat.id)
