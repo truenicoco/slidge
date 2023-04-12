@@ -1,4 +1,4 @@
-# More info at https://slidge.im/admin/config.html
+# More info at https://slidge.im/admin/config
 
 admins=root@example.com
 upload-service=upload.example.com
