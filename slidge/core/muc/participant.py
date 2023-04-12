@@ -1,5 +1,6 @@
 import logging
 import string
+import uuid
 import warnings
 from copy import copy
 from datetime import datetime
@@ -9,7 +10,7 @@ from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
-from ...util import SubclassableOnce
+from ...util import SubclassableOnce, strip_illegal_chars
 from ...util.types import LegacyMessageType, MucAffiliation, MucRole
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
@@ -71,11 +72,16 @@ class LegacyParticipant(
             self.jid = j
             return
 
-        if not nickname:
+        if nickname:
+            nickname = strip_illegal_chars(nickname)
+        else:
             warnings.warn(
                 "Only the system participant is allowed to not have a nickname"
             )
-            nickname = "unnamed"
+            nickname = f"unnamed-{uuid.uuid4()}"
+
+        assert isinstance(nickname, str)
+
         try:
             j.resource = nickname
         except InvalidJID:
