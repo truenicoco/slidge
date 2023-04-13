@@ -781,7 +781,11 @@ class LegacyMUC(
         """
         item = Item()
         item["id"] = self.jid
-        # item["id"] = "OCOCOCO"
+        if self.jid.local == "":
+            self.log.error(
+                "Tried to add a bookmark without a local part", exc_info=True
+            )
+            return
 
         iq = Iq(stype="get", sfrom=self.user.jid, sto=self.user.jid)
         iq["pubsub"]["items"]["node"] = self.xmpp["xep_0402"].stanza.NS
