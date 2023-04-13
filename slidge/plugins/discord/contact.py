@@ -37,8 +37,10 @@ class Contact(StatusMixin, MessageMixin, LegacyContact[int]):  # type: ignore
         if a := u.avatar:
             await self.set_avatar(a.url, a.key)
 
+        self.is_friend = u.is_friend()
+
         # massive rate limiting if trying to fetch profiles of non friends
-        if u.is_friend():
+        if self.is_friend:
             await self.fetch_vcard()
 
         # TODO: use the relationship here

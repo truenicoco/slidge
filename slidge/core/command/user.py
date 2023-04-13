@@ -117,7 +117,7 @@ class SyncContacts(Command):
                         updated += 1
                 else:
                     if contact.name != item["name"]:
-                        await contact.add_to_roster()
+                        await contact.add_to_roster(force=True)
                         updated += 1
 
         # we popped before so this only acts on slidge contacts not in the xmpp roster

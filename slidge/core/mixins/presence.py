@@ -28,11 +28,18 @@ class PresenceMixin(BaseSender):
         **presence_kwargs,
     ):
         old = self._last_presence
-        self._last_presence = _CachedPresence(
-            last_seen=last_seen, presence_kwargs=presence_kwargs
-        )
 
-        if not force and self._ONLY_SEND_PRESENCE_CHANGES:
+        if presence_kwargs.get("ptype") not in (
+            "subscribe",
+            "unsubscribe",
+            "subscribed",
+            "unsubscribed",
+        ):
+            self._last_presence = _CachedPresence(
+                last_seen=last_seen, presence_kwargs=presence_kwargs
+            )
+
+        if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:
             if old == self._last_presence:
                 self.session.log.debug("Presence is the same as cached")
                 raise _NoChange
@@ -49,8 +56,10 @@ class PresenceMixin(BaseSender):
             p["idle"]["since"] = last_seen
         return p
 
-    def _send_last_presence(self):
+    def send_last_presence(self, force=False):
         if (cache := self._last_presence) is None:
+            if force:
+                self.offline()
             return
         self._send(
             self._make_presence(

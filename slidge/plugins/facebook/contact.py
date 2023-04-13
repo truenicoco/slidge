@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import ParticipantNode, Thread
+from maufbapi.types.graphql.responses import FriendshipStatus
 from maufbapi.types.mqtt.message import PresenceInfo
 
 from slidge import LegacyContact, LegacyRoster, XMPPError
@@ -54,6 +55,10 @@ class Contact(LegacyContact[int]):
                     f" {participant.messaging_actor.id}"
                 ),
             )
+        self.is_friend = (
+            participant.messaging_actor.friendship_status
+            == FriendshipStatus.ARE_FRIENDS
+        )
         self.name = participant.messaging_actor.name
         if self.avatar is None or update_avatar:
             pic = participant.messaging_actor.profile_pic_large

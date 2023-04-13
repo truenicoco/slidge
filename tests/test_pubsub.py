@@ -85,7 +85,8 @@ class TestPubSubNickname(SlixTest):
                   <item>
                     <nick xmlns="http://jabber.org/protocol/nick">BUBU</nick>
             </item></items></event></message>
-            """
+            """,
+            use_values=False
         )
 
     def test_no_nick(self):

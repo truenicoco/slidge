@@ -27,6 +27,9 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
         super().__init__(*a, **k)
         # keys = msg timestamp; vals = single character emoji
         self.user_reactions = dict[int, str]()
+        # no presences in signal, but we'll show everyone whose profile could
+        # be fetched as online, so we need is_friend here
+        self.is_friend = True
 
     @functools.cached_property
     def signal_address(self):

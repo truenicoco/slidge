@@ -568,48 +568,6 @@ class BaseSession(
         muc = await self.bookmarks.by_jid(p.get_to())
         await muc.join(p)
 
-    async def __get_contact_or_ignore_or_raise(self, p: Presence):
-        pto = p.get_to()
-        if pto == self.xmpp.boundjid.bare:
-            return
-
-        entity = await self.get_contact_or_group_or_participant(pto)
-
-        if not isinstance(entity, LegacyContact):
-            raise XMPPError(
-                "bad-request", f"You can't subscribe to the presence of {entity.jid}"
-            )
-
-        return entity
-
-    async def on_subscribe(self, p: Presence):
-        """
-        Called when receiving a "subscribe" presence, which is more or less
-        a "friend request".
-
-        Right now, this is mostly a placeholder for a future friend request workflow,
-        but is useful to ensure avatars and nicks ard broadcast when XEP-0356
-        is not available for slidge
-
-        :param p:
-        """
-        if contact := await self.__get_contact_or_ignore_or_raise(p):
-            await contact.on_added_to_roster_no_privilege()
-
-    async def on_subscribed(self, p: Presence):
-        """
-        Called when receiving a "subscribed" presence, confirming that a contact
-        is in the roster.
-
-        Right now, this is mostly a placeholder for a future friend request workflow,
-        but is useful to ensure avatars and nicks ard broadcast when XEP-0356
-        is not available for slidge
-
-        :param p:
-        """
-        if contact := await self.__get_contact_or_ignore_or_raise(p):
-            await contact.on_added_to_roster_no_privilege()
-
     def send_gateway_status(
         self,
         status: Optional[str] = None,

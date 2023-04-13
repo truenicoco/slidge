@@ -2,11 +2,12 @@ import datetime
 import logging
 import re
 import tempfile
+import unittest.mock
 from copy import copy
 from pathlib import Path
 from typing import Hashable, Optional, Dict, Any
 
-from slixmpp import JID, Presence, Message
+from slixmpp import JID, Presence, Message, Iq
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0082 import format_datetime
 
@@ -121,6 +122,8 @@ class Roster(LegacyRoster):
         log.debug("Requested JID to legacy: %s", jid_username)
         if jid_username == "juliet":
             return 123
+        elif jid_username == "new-friend":
+            return 456
         else:
             raise XMPPError(text="Only juliet", condition="item-not-found")
 
@@ -128,6 +131,8 @@ class Roster(LegacyRoster):
     async def legacy_id_to_jid_username(legacy_id: int) -> str:
         if legacy_id == 123:
             return "juliet"
+        elif legacy_id == 456:
+            return "new-friend"
         else:
             raise RuntimeError
 
@@ -471,7 +476,7 @@ class TestAimShakespeareBase(SlidgeTest):
         juliet = self.xmpp.loop.run_until_complete(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.added_to_roster = True
+        juliet.is_friend = True
         now = datetime.datetime.now(datetime.timezone.utc)
         juliet.away(last_seen=now)
         sent = self.next_sent()
@@ -906,6 +911,7 @@ class TestPrivilegeOld(SlidgeTest):
             </message>
             """,
         )
+        juliet.is_friend = True
         self.xmpp.loop.create_task(juliet.add_to_roster())
         self.send(
             """
@@ -983,6 +989,7 @@ class TestPrivilege(SlidgeTest):
             </message>
             """,
         )
+        juliet.is_friend = True
         self.xmpp.loop.create_task(juliet.add_to_roster())
         self.send(
             """
@@ -1013,13 +1020,31 @@ class TestContact(SlidgeTest):
             JID("romeo@montague.lit")
         )
 
-    def get_juliet(self) -> LegacyContact:
+    @staticmethod
+    def get_presence(ptype: str):
+        return f"""
+            <presence
+                from="romeo@montague.lit"
+                to="juliet@aim.shakespeare.lit"
+                type="{ptype}"
+            />
+            """
+
+    def get_contact(self, legacy_id: int):
         session = self.get_romeo_session()
-        return self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(123))
+        return self.xmpp.loop.run_until_complete(
+            session.contacts.by_legacy_id(legacy_id)
+        )
+
+    def get_juliet(self) -> LegacyContact:
+        return self.get_contact(123)
+
+    def get_new_friend(self) -> LegacyContact:
+        return self.get_contact(456)
 
     def test_caps(self):
         juliet = self.get_juliet()
-        juliet.added_to_roster = True
+        juliet.is_friend = True
         juliet.online()
         self.send(
             """
@@ -1038,7 +1063,7 @@ class TestContact(SlidgeTest):
         juliet.REACTIONS_SINGLE_EMOJI = True
         juliet.CORRECTION = False
         juliet.reset_caps_cache()
-        juliet.added_to_roster = True
+        juliet.is_friend = True
         juliet.online()
         self.send(
             """
@@ -1051,6 +1076,149 @@ class TestContact(SlidgeTest):
             </presence>
             """
         )
+
+    def test_probe(self):
+        juliet = self.get_juliet()
+        probe = self.get_presence("probe")
+
+        juliet.is_friend = True
+
+        self.recv(probe)
+        p = self.next_sent()
+        assert p["type"] == "unavailable"
+
+        juliet.online()
+        assert self.next_sent()["type"] == "available"
+
+        self.recv(probe)
+        assert self.next_sent()["type"] == "available"
+
+
+        juliet.is_friend = False
+        self.recv(probe)
+        p = self.next_sent()
+        assert p["type"] == "unsubscribed"
+        assert self.next_sent() is None
+
+    def test_user_subscribe_to_friend(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = True
+        sub = self.get_presence("subscribe")
+
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_request"
+        ) as mock:
+            self.recv(sub)
+            mock.assert_not_awaited()
+        p = self.next_sent()
+        assert p["type"] == "subscribed"
+        assert self.next_sent() is None
+        assert juliet.is_friend
+
+    def test_user_subscribe_to_non_friend_accept(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = False
+        sub = self.get_presence("subscribe")
+
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_request"
+        ) as mock:
+            self.recv(sub)
+            mock.assert_awaited_once()
+
+        assert self.next_sent() is None
+        assert not juliet.is_friend
+
+        juliet.name = "JULIET"
+        assert self.next_sent() is None
+        self.xmpp.loop.run_until_complete(juliet.accept_friend_request())
+        assert self.next_sent()["type"] == "subscribed"
+        assert (
+            self.next_sent()["pubsub_event"]["items"]["item"]["nick"]["nick"]
+            == "JULIET"
+        )
+        assert self.next_sent() is None
+        assert juliet.is_friend
+
+    def test_user_subscribe_to_non_friend_reject(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = False
+        sub = self.get_presence("subscribe")
+
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_request"
+        ) as mock:
+            self.recv(sub)
+            mock.assert_awaited_once()
+
+        assert self.next_sent() is None
+
+        juliet.name = "JULIET"
+        assert self.next_sent() is None
+        juliet.reject_friend_request()
+        assert self.next_sent()["type"] == "unsubscribed"
+        assert self.next_sent() is None
+        assert not juliet.is_friend
+
+    def test_juliet_send_friend_request_user_accepts(self):
+        juliet = self.get_juliet()
+        juliet.name = "JUJU"
+
+        juliet.send_friend_request()
+        p = self.next_sent()
+        assert p["type"] == "subscribe"
+        assert p["to"] == "romeo@montague.lit"
+        assert p["nick"]["nick"] == "JUJU"
+        assert self.next_sent() is None
+
+        juliet.session.contacts.ready.set_result(True)
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_accept"
+        ) as mock:
+            self.recv(
+                f"""
+                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="subscribed" />
+                """
+            )
+            mock.assert_awaited_once()
+        assert self.next_sent() is None
+
+    def test_juliet_send_friend_request_user_rejects(self):
+        juliet = self.get_juliet()
+        juliet.name = "JUJU"
+        juliet.is_friend = False
+
+        juliet.send_friend_request()
+        p = self.next_sent()
+        assert p["type"] == "subscribe"
+        assert p["to"] == "romeo@montague.lit"
+        assert p["nick"]["nick"] == "JUJU"
+        assert self.next_sent() is None
+
+        juliet.session.contacts.ready.set_result(True)
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_delete"
+        ) as mock:
+            self.recv(
+                f"""
+                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="unsubscribed" />
+                """
+            )
+            mock.assert_not_awaited()
+
+        assert self.next_sent() is None
+
+        juliet.is_friend = True
+        with unittest.mock.patch(
+            "slidge.core.contact.LegacyContact.on_friend_delete"
+        ) as mock:
+            self.recv(
+                f"""
+                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="unsubscribed" />
+                """
+            )
+            mock.assert_awaited_once()
+        assert self.next_sent() is None
 
 
 class TestCarbon(SlidgeTest):

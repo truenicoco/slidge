@@ -28,6 +28,9 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
 
+    async def get_telegram_user(self):
+        return await self.session.tg.get_user(self.legacy_id)
+
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()
         how_long = timestamp - now
@@ -66,7 +69,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
 
     async def update_info(self, user: Optional[tgapi.User] = None):
         if user is None:
-            user = await self.session.tg.get_user(self.legacy_id)
+            user = await self.get_telegram_user()
         if username := user.username:
             name = username
         else:
@@ -98,15 +101,6 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             # confirmation codes and announces telegram-related stuff
             self.CLIENT_TYPE = "bot"
 
-        else:
-            if user.is_contact:
-                self._subscribe_to = True
-                self._subscribe_from = user.is_mutual_contact
-                if not self.added_to_roster:
-                    await self.add_to_roster()
-            else:
-                self._subscribe_to = self._subscribe_from = False
-
         if p := user.phone_number:
             phone = "+" + p
         else:
@@ -115,9 +109,31 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             given=user.first_name, surname=user.last_name, phone=phone, full_name=name
         )
 
+        self.is_friend = user.is_contact
         if user.is_contact:
             await self.add_to_roster()
             self.update_status(user.status)
+
+    async def on_friend_request(self, text=None):
+        tg_user = await self.get_telegram_user()
+        if tg_user.is_contact:
+            return
+        await self.session.tg.api.add_contact(
+            contact=tgapi.Contact.construct(
+                user_id=tg_user.id,
+                first_name=tg_user.first_name,
+                last_name=tg_user.last_name,
+                phone_number=tg_user.phone_number,
+            ),
+            share_phone_number=False,
+        )
+        await self.accept_friend_request("I am your contact on telegram")
+
+    async def on_friend_delete(self, text=None):
+        tg_user = await self.get_telegram_user()
+        if not tg_user.is_contact:
+            return
+        await self.session.tg.api.remove_contacts(user_ids=[self.legacy_id])
 
 
 class Roster(LegacyRoster[int, Contact]):

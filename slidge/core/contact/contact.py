@@ -91,13 +91,8 @@ class LegacyContact(
         self.legacy_id = legacy_id
         self.jid_username = jid_username
 
-        self.added_to_roster = False
-
         self._name: Optional[str] = None
         self._avatar: Optional[Union[AvatarType, bool]] = None
-
-        self._subscribe_from = True
-        self._subscribe_to = True
 
         if self.xmpp.MARK_ALL_MESSAGES:
             self._sent_order = list[str]()
@@ -107,20 +102,20 @@ class LegacyContact(
         self.jid.resource = self.RESOURCE
         self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid.bare}")
         self.participants = set["LegacyParticipant"]()
+        self.is_friend = False
+        self.__added_to_roster = False
 
     def __repr__(self):
         return f"<Contact '{self.legacy_id}'/'{self.jid.bare}'>"
 
     def __get_subscription_string(self):
-        if self._subscribe_from and self._subscribe_to:
+        if self.is_friend:
             return "both"
-        if self._subscribe_from:
-            return "from"
-        if self._subscribe_to:
-            return "to"
         return "none"
 
-    def _send(self, stanza: Union[Message, Presence], carbon=False, **send_kwargs):
+    def _send(
+        self, stanza: Union[Message, Presence], carbon=False, nick=False, **send_kwargs
+    ):
         if carbon and isinstance(stanza, Message):
             stanza["to"] = self.jid.bare
             stanza["from"] = self.user.jid
@@ -128,10 +123,14 @@ class LegacyContact(
         else:
             if (
                 isinstance(stanza, Presence)
-                and not self.added_to_roster
-                and stanza["type"] != "subscribe"
+                and not self.is_friend
+                and stanza["type"] not in ("subscribe", "unsubscribed")
             ):
                 return
+            if self.name and (nick or not self.is_friend):
+                n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
+                n["nick"] = self.name
+                stanza.append(n)
             if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
                 self._sent_order.append(stanza["id"])
             stanza["to"] = self.user.jid
@@ -279,10 +278,14 @@ class LegacyContact(
 
         self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user.jid.bare})
 
-    async def add_to_roster(self):
+    async def add_to_roster(self, force=False):
         """
         Add this contact to the user roster using :xep:`0356`
+
+        :param force: add even if the contact was already added successfully
         """
+        if self.__added_to_roster and not force:
+            return
         if config.NO_ROSTER_PUSH:
             log.debug("Roster push request by plugin ignored (--no-roster-push)")
             return
@@ -305,16 +308,19 @@ class LegacyContact(
                 " more info."
             )
             if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:
-                self._send_subscription_request()
+                self.send_friend_request(
+                    f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
+                    "slidge is not allowed to manage your roster."
+                )
             return
         except IqError as e:
             self.log.warning("Could not add to roster", exc_info=e)
         else:
-            self.added_to_roster = True
             # we only broadcast pubsub events for contacts added to the roster
             # so if something was set before, we need to push it now
+            self.__added_to_roster = True
             self.xmpp.loop.create_task(self.__broadcast_pubsub_items())
-            self._send_last_presence()
+            self.send_last_presence()
 
     async def __broadcast_pubsub_items(self):
         await self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user.jid)
@@ -325,27 +331,78 @@ class LegacyContact(
         except PermissionError:
             return await self.xmpp["xep_0356_old"].set_roster(**kw)
 
-    def _send_subscription_request(self):
-        presence = self.xmpp.make_presence(
-            pfrom=self.jid.bare,
-            ptype="subscribe",
-            pstatus=(
-                f"I'm already your friend on {self.xmpp.COMPONENT_TYPE}, but "
-                "slidge is not allowed to manage your roster."
-            ),
-        )
-        presence["nick"] = self.name
-        # very awkward, slixmpp bug maybe?
-        presence.append(presence["nick"])
-        self._send(presence)
+    def send_friend_request(self, text: Optional[str] = None):
+        presence = self._make_presence(ptype="subscribe", pstatus=text)
+        self._send(presence, nick=True)
 
-    async def on_added_to_roster_no_privilege(self):
-        self.added_to_roster = True
-        self._send_last_presence()
+    async def accept_friend_request(self, text: Optional[str] = None):
+        """
+        Call this to signify that this Contact has accepted to be a friend
+        of the user.
+
+        :param text: Optional message from the friend to the user
+        """
+        self.is_friend = True
+        self.log.debug("Accepting friend request")
+        presence = self._make_presence(ptype="subscribed", pstatus=text)
+        self._send(presence, nick=True)
+        self.send_last_presence()
         await self.__broadcast_pubsub_items()
+        self.log.debug("Accepted friend request")
+
+    def reject_friend_request(self, text: Optional[str] = None):
+        """
+        Call this to signify that this Contact has refused to be a contact
+        of the user (or that they don't want to be friends anymore)
+
+        :param text: Optional message from the non-friend to the user
+        """
+        presence = self._make_presence(ptype="unsubscribed", pstatus=text)
+        self.offline()
+        self._send(presence, nick=True)
+        self.is_friend = False
+
+    async def on_friend_request(self, text=""):
+        """
+        Called when receiving a "subscribe" presence, ie, "I would like to add
+        you to my contacts/friends", from the user to this contact.
+
+        In XMPP terms: "I would like to receive your presence updates"
+
+        This is only called if self.is_friend = False. If self.is_friend = True,
+        slidge will automatically "accept the friend request", ie, reply with
+        a "subscribed" presence.
+
+        When called, a 'friend request event' should be sent to the legacy
+        service, and when the contact responds, you should either call
+        self.accept_subscription() or self.reject_subscription()
+        """
+        pass
+
+    async def on_friend_delete(self, text=""):
+        """
+        Called when receiving an "unsubscribed" presence, ie, "I would like to
+        remove you to my contacts/friends" or "I refuse your friend request"
+        from the user to this contact.
+
+        In XMPP terms: "You won't receive my presence updates anymore (or you
+        never have)".
+        """
+        pass
+
+    async def on_friend_accept(self):
+        """
+        Called when receiving a "subscribed"  presence, ie, "I accept to be
+        your/confirm that you are my friend" from the user to this contact.
+
+        In XMPP terms: "You will receive my presence updates".
+        """
+        pass
 
     def unsubscribe(self):
         """
+        (internal use by slidge)
+
         Send an "unsubscribe", "unsubscribed", "unavailable" presence sequence
         from this contact to the user, ie, "this contact has removed you from
         their 'friends'".

@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import aiohttp
 from PIL import Image, UnidentifiedImageError
-from slixmpp import JID, CoroutineCallback, Iq, Presence, StanzaPath
+from slixmpp import (
+    JID,
+    CoroutineCallback,
+    Iq,
+    Presence,
+    StanzaPath,
+    register_stanza_plugin,
+)
 from slixmpp.plugins.base import BasePlugin, register_plugin
 from slixmpp.plugins.xep_0060.stanza import Event, EventItem, EventItems, Item
 from slixmpp.plugins.xep_0084 import Data as AvatarData
@@ -142,6 +149,7 @@ class PubSubComponent(BasePlugin):
         super(PubSubComponent, self).__init__(*a, **kw)
         self._avatars = dict[JID, PepAvatar]()
         self._nicks = dict[JID, PepNick]()
+        register_stanza_plugin(EventItem, UserNick)
 
     def plugin_init(self):
         self.xmpp.register_handler(
@@ -200,7 +208,7 @@ class PubSubComponent(BasePlugin):
                 log.warning("Could not determine if %s was added to the roster.", to)
                 log.exception(e)
                 return
-            if not contact.added_to_roster:
+            if not contact.is_friend:
                 return
 
         if ver_string:
@@ -340,7 +348,7 @@ class PubSubComponent(BasePlugin):
                 return
             await session.ready
             entity = await session.get_contact_or_group_or_participant(from_)
-            if isinstance(entity, LegacyContact) and not entity.added_to_roster:
+            if isinstance(entity, LegacyContact) and not entity.is_friend:
                 return
 
         item = EventItem()

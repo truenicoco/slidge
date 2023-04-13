@@ -180,8 +180,7 @@ class AndroidMQTT(AndroidMQTTOriginal):
 
         fb_msg = FacebookMessage(mid=meta.id, timestamp_ms=meta.timestamp)
 
-        if not contact.added_to_roster:
-            await contact.add_to_roster()
+        await contact.add_to_roster()
 
         if meta.sender == self.session.my_id:
             try:

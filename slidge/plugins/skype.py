@@ -75,7 +75,7 @@ class Contact(LegacyContact[str]):
         if mood_str:
             if self._last_presence:
                 self._last_presence.presence_kwargs["pstatus"] = mood_str
-                self._send_last_presence()
+                self.send_last_presence()
             else:
                 self.online(status=mood_str)
 
@@ -108,6 +108,7 @@ class Contact(LegacyContact[str]):
         )
 
         self.update_mood(contact.mood)
+        self.is_friend = True
 
 
 class ListenThread(Thread):

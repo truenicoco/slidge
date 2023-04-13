@@ -34,6 +34,8 @@ class Contact(LegacyContact[str]):
         self._custom_status: Optional[UpdateUserCustomStatusJsonBody] = None
         self._custom_status_expires: Optional[datetime] = None
         self._last_mm_picture_update = None
+        # everybody is a friend in mattermost
+        self.is_friend = True
 
     async def fetch_status(self):
         if not self.session.ws.ready.done():
@@ -231,7 +233,7 @@ class Roster(LegacyRoster[str, Contact]):
                 if username is None:
                     continue
                 c = self._contacts_by_legacy_id.get(username)
-                if c is not None and c.added_to_roster:
+                if c is not None and c.is_friend:
                     await c.update_status(status)
 
     async def by_mm_user_id(self, user_id: str):

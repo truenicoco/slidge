@@ -26,9 +26,31 @@ from slidge import (
     SearchResult,
     XMPPError,
 )
+from slidge.core.command import Command, CommandAccess, Form
 from slidge.core.command.register import RegistrationType
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "dev" / "assets"
+
+
+class Friend(Command):
+    NAME = ""
+    HELP = ""
+    NODE = CHAT_COMMAND = "friend"
+    ACCESS = CommandAccess.USER_LOGGED
+
+    async def run(self, session: Optional["BaseSession"], ifrom: JID, *args):
+        return Form(
+            title="Name of your friend",
+            instructions="Give a random name",
+            fields=[FormField("name", required=True)],
+            handler=self.finish,
+        )
+
+    @staticmethod
+    async def finish(form_values, session: "Session", _ifrom):
+        contact = await session.contacts.by_legacy_id(form_values["name"])
+        contact.is_friend = False
+        contact.send_friend_request("Voulez-vous être mon ami et devenir riche?")
 
 
 class Bookmarks(LegacyBookmarks):
@@ -122,10 +144,26 @@ class Contact(LegacyContact):
 
     async def update_info(self):
         self.name = self.legacy_id.title()
-        self.avatar = AVATARS[BUDDIES.index(self.legacy_id)]
-        await self.add_to_roster()
-        await asyncio.sleep(1)
-        self.online("I am not a real person, so what?")
+        try:
+            self.avatar = AVATARS[BUDDIES.index(self.legacy_id)]
+        except ValueError:
+            pass
+        self.is_friend = self.name.lower() in BUDDIES
+        if self.is_friend:
+            await self.add_to_roster()
+            await asyncio.sleep(1)
+            self.online("I am not a real person, so what?")
+
+    async def on_friend_request(self, text=""):
+        self.send_text("Qui es-tu?")
+        await asyncio.sleep(5)
+        if text == "refuse":
+            await self.reject_friend_request("Nope")
+        else:
+            await self.accept_friend_request("OK let's see")
+
+    async def on_friend_delete(self, text=""):
+        self.send_friend_request("Stay my friend, please :(")
 
 
 class Gateway(BaseGateway):
@@ -165,10 +203,7 @@ class Gateway(BaseGateway):
 
 
 class Roster(LegacyRoster):
-    @staticmethod
-    async def jid_username_to_legacy_id(jid_username: str):
-        if jid_username not in BUDDIES + ["bubu"]:
-            raise XMPPError("item-not-found")
+    async def jid_username_to_legacy_id(self, jid_username: str):
         return jid_username
 
     async def fill(self):

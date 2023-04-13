@@ -48,10 +48,12 @@ class Roster(LegacyRoster[str, Contact]):
             return
         contact = await self.by_legacy_id(data.JID)
         contact.name = data.Name
+        contact.is_friend = True
         if data.Avatar.URL:
             avatar_id = data.Avatar.ID if data.Avatar.ID else None
             await contact.set_avatar(data.Avatar.URL, avatar_id)
         contact.set_vcard(full_name=contact.name, phone=str(contact.jid.local))
+        contact.is_friend = True
         await contact.add_to_roster()
 
     async def legacy_id_to_jid_username(self, legacy_id: str) -> str:

@@ -34,6 +34,7 @@ from .disco import Disco
 from .mam import Mam
 from .muc_admin import MucAdmin
 from .ping import Ping
+from .presence import PresenceHandlerMixin
 from .registration import Registration
 from .search import Search
 from .session_dispatcher import SessionDispatcher
@@ -43,7 +44,12 @@ if TYPE_CHECKING:
     from ..muc.room import LegacyMUC
 
 
-class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMost):
+class BaseGateway(
+    PresenceHandlerMixin,
+    ComponentXMPP,
+    MessageMixin,
+    metaclass=ABCSubclassableOnceAtMost,
+):
     """
     Must be subclassed by a plugin to set up various aspects of the XMPP
     component behaviour, such as its display name or its registration process.
@@ -207,7 +213,7 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
         self.get_session_from_stanza: Callable[
             [Union[Message, Presence, Iq]], BaseSession
-        ] = self.session_cls.from_stanza
+        ] = self.session_cls.from_stanza  # type: ignore
         self.get_session_from_user: Callable[
             [GatewayUser], BaseSession
         ] = self.session_cls.from_user

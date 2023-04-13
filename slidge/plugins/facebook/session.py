@@ -8,7 +8,6 @@ import maufbapi.types
 from maufbapi import AndroidAPI, AndroidState, ProxyHandler
 from maufbapi.types import mqtt as mqtt_t
 from maufbapi.types.graphql import Participant
-from maufbapi.types.graphql.responses import FriendshipStatus
 
 from slidge import BaseSession, FormField, LegacyMUC, SearchResult, XMPPError
 
@@ -166,19 +165,15 @@ class Session(BaseSession[str, Recipient]):
         for search_result in results.search_results.edges:
             result = search_result.node
             if isinstance(result, Participant):
-                is_friend = (
-                    friend := result.friendship_status
-                ) is not None and friend == FriendshipStatus.ARE_FRIENDS
-                if is_friend:
-                    contact = await self.contacts.by_legacy_id(int(result.id))
-                    if not contact.added_to_roster:
-                        await contact.add_to_roster()
+                contact = await self.contacts.by_legacy_id(int(result.id))
+                if contact.is_friend:
+                    await contact.add_to_roster()
                 items.append(
                     {
                         "name": result.name + " (friend)"
-                        if is_friend
+                        if contact.is_friend
                         else " (not friend)",
-                        "jid": f"{result.id}@{self.xmpp.boundjid.bare}",
+                        "jid": contact.jid.bare,
                     }
                 )
 

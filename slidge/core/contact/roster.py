@@ -70,10 +70,10 @@ class LegacyRoster(
             self._contacts_by_bare_jid[c.jid.bare] = c
         return c
 
-    def known_contacts(self):
-        return {
-            j: c for j, c in self._contacts_by_bare_jid.items() if c.added_to_roster
-        }
+    def known_contacts(self, only_friends=True):
+        if only_friends:
+            return {j: c for j, c in self._contacts_by_bare_jid.items() if c.is_friend}
+        return self._contacts_by_bare_jid.items()
 
     async def by_jid(self, contact_jid: JID) -> LegacyContactType:
         """

@@ -150,9 +150,6 @@ class TelegramClient(BaseClient):
         if update.user_id == await self.get_my_id():
             return
         contact = await self.contacts.by_legacy_id(update.user_id)
-        if not contact.added_to_roster:
-            self.log.debug("Ignoring presence of contact not in the roster")
-            return
         contact.update_status(update.status)
 
     async def handle_ChatReadOutbox(self, update: tgapi.UpdateChatReadOutbox):
@@ -250,7 +247,14 @@ class TelegramClient(BaseClient):
         if isinstance(action.chat.type_, tgapi.ChatTypePrivate):
             if action.chat.id == await self.get_my_id():
                 return
-            await self.session.contacts.by_legacy_id(action.chat.id)
+            contact = await self.session.contacts.by_legacy_id(action.chat.id)
+            user: tgapi.User = await contact.get_telegram_user()
+            if not isinstance(user.type_, tgapi.UserTypeRegular):
+                return
+            if not user.is_contact:
+                contact.send_friend_request(
+                    "We have a direct chat, do you want to add me as a Telegram contact?"
+                )
         elif isinstance(action.chat.type_, tgapi.ChatTypeBasicGroup):
             g = await self.session.bookmarks.by_legacy_id(action.chat.id)
             await g.add_to_bookmarks(auto_join=True)
