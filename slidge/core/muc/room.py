@@ -568,7 +568,7 @@ class LegacyMUC(
         await self.session.contacts.ready
         p = self._participants_by_contacts.get(c)
         if p is None:
-            p = self.Participant(self, c.name or c.legacy_id, **kwargs)
+            p = self.Participant(self, c.name or c.jid_username, **kwargs)
             p.contact = c
             c.participants.add(p)
             self.__store_participant(p)
