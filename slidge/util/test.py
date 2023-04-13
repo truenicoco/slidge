@@ -154,9 +154,9 @@ class SlixTestPlus(SlixTest):
                     )
             self.assertTrue(result, debug)
 
-    def next_sent(self):
+    def next_sent(self, timeout=0.05):
         self.wait_for_send_queue()
-        sent = self.xmpp.socket.next_sent(timeout=1)
+        sent = self.xmpp.socket.next_sent(timeout=timeout)
         if sent is None:
             return None
         xml = self.parse_xml(sent)
