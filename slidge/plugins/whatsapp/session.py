@@ -159,7 +159,10 @@ class Session(BaseSession[str, Recipient]):
             text = "Missed call"
         else:
             text = "Call"
-        text = text + f" from {contact.name} (xmpp:{contact.jid.bare})"
+        text = (
+            text
+            + f" from {contact.name or 'tel:' + str(contact.jid.local)} (xmpp:{contact.jid.bare})"
+        )
         if call.Timestamp > 0:
             call_at = datetime.fromtimestamp(call.Timestamp, tz=timezone.utc)
             text = text + f" at {call_at}"
