@@ -781,11 +781,6 @@ class LegacyMUC(
         """
         item = Item()
         item["id"] = self.jid
-        if self.jid.local == "":
-            self.log.error(
-                "Tried to add a bookmark without a local part", exc_info=True
-            )
-            return
 
         iq = Iq(stype="get", sfrom=self.user.jid, sto=self.user.jid)
         iq["pubsub"]["items"]["node"] = self.xmpp["xep_0402"].stanza.NS
@@ -799,6 +794,7 @@ class LegacyMUC(
                 # this below creates the item if it wasn't here already
                 # (slixmpp annoying magic)
                 item = ans["pubsub"]["items"]["item"]
+                item["id"] = self.jid
             except IqError:
                 item["conference"]["name"] = self.name
                 item["conference"]["autojoin"] = auto_join
