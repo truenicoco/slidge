@@ -161,7 +161,6 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
 
     GROUPS = False
 
-    jid: JID  # type: ignore
     mtype: MessageTypes = "chat"
     is_group = False
     _can_send_carbon = False
@@ -284,6 +283,13 @@ class BaseGateway(ComponentXMPP, MessageMixin, metaclass=ABCSubclassableOnceAtMo
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
         self.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
+
+    @property  # type: ignore
+    def jid(self):
+        """
+        Override to avoid slixmpp deprecation warnings.
+        """
+        return self.boundjid
 
     async def __on_group_chat_error(self, msg: Message):
         condition = msg["error"].get_condition()
