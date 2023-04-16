@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -88,6 +89,18 @@ class MUC(LegacyMUC[str, str, Participant, str]):
                 elif data.Affiliation == whatsapp.GroupAffiliationOwner:
                     participant.affiliation = "owner"
 
+    def replace_mentions(self, t: str):
+        return replace_mentions(
+            t,
+            participants={
+                c.jid_username: c.name
+                for c, p in self._participants_by_contacts.items()
+            }
+            | {self.session.user_phone: self.user_nick}
+            if self.session.user_phone  # user_phone *should* be set at this point,
+            else {},  # but better safe than sorry
+        )
+
 
 class Bookmarks(LegacyBookmarks[str, MUC]):
     session: "Session"
@@ -127,3 +140,12 @@ class Bookmarks(LegacyBookmarks[str, MUC]):
             raise XMPPError("item-not-found", f"No group found for {whatsapp_group_id}")
 
         return whatsapp_group_id
+
+
+def replace_mentions(t: str, participants: dict[str, str]):
+    def match(m: re.Match):
+        mat = m.group(0)
+        sub = participants.get(mat.replace("@", "+"), mat)
+        return sub
+
+    return re.sub(r"@\d+", match, t)
