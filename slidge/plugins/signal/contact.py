@@ -61,6 +61,7 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
                     e.message,
                 )
             else:
+                assert profile.address
                 if (
                     profile.name
                     or profile.profile_name  # in theory .name would be enough but
@@ -81,6 +82,7 @@ class Contact(AttachmentSenderMixin, LegacyContact[str]):
                 )
                 return
 
+        assert profile.address
         if config.PREFER_PROFILE_NAME:
             nick = (
                 profile.profile_name or profile.contact_name or profile.address.number
@@ -113,6 +115,8 @@ class Roster(LegacyRoster[str, Contact]):
         return await self.by_json_address(sigapi.JsonAddressv1(uuid=uuid))
 
     async def by_json_address(self, address: sigapi.JsonAddressv1):
+        if not address.uuid:
+            raise XMPPError("internal-server-error", "No UUID in this JsonAddressv1")
         return await self.by_legacy_id(address.uuid)
 
     async def jid_username_to_legacy_id(self, jid_username: str):
@@ -139,6 +143,9 @@ class Roster(LegacyRoster[str, Contact]):
         session = self.session
         profiles = await (await session.signal).list_contacts(account=session.phone)
         for profile in profiles.profiles:
+            if not profile.address:
+                continue
+
             if profile.address.uuid == self.user_legacy_id:
                 continue
             # contacts are added automatically if their profile could be resolved

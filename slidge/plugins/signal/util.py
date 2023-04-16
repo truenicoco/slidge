@@ -20,6 +20,8 @@ class AttachmentSenderMixin(ContentMessageMixin):
         if quote is None:
             return
 
+        assert quote.author is not None
+
         reply_to = MessageReference(
             legacy_id=quote.id,
             body=quote.text,
@@ -40,7 +42,7 @@ class AttachmentSenderMixin(ContentMessageMixin):
         await self.send_files(
             attachments=[Attachment.from_json(a) for a in data.attachments],
             legacy_msg_id=data.timestamp,
-            when=datetime.fromtimestamp(data.timestamp / 1000),
+            when=get_timestamp(data.timestamp),
             reply_to=await self.__get_reference(data.quote),
             carbon=carbon,
             body=data.body,
@@ -50,7 +52,7 @@ class AttachmentSenderMixin(ContentMessageMixin):
                 self.react(reaction.targetSentTimestamp, carbon=carbon)
             else:
                 self.react(
-                    reaction.targetSentTimestamp, [reaction.emoji], carbon=carbon
+                    reaction.targetSentTimestamp, get_emoji(reaction), carbon=carbon
                 )
         if (delete := data.remoteDelete) is not None:
             self.retract(delete.target_sent_timestamp, carbon=carbon)
@@ -72,7 +74,19 @@ def get_filename(attachment: sigapi.JsonAttachmentv1):
         return f
     else:
         filename = attachment.id or "unnamed"
-        ext = guess_extension(attachment.contentType)
-        if ext is not None:
-            filename += ext
+        if attachment.contentType:
+            ext = guess_extension(attachment.contentType)
+            if ext is not None:
+                filename += ext
         return filename
+
+
+def get_timestamp(t: Optional[int] = None):
+    if t:
+        return datetime.fromtimestamp(t / 1000)
+
+
+def get_emoji(r: sigapi.JsonReactionv1):
+    if r.emoji:
+        return [r.emoji]
+    return []

@@ -128,6 +128,7 @@ class Session(BaseSession[int, Recipient]):
         except sigexc.ProfileUnavailableError:
             accounts = await sig.list_accounts()
             for a in accounts.accounts:
+                assert a.address
                 if a.address.number == self.phone:
                     profile = await sig.get_profile(
                         account=self.phone, address=a.address
@@ -139,6 +140,8 @@ class Session(BaseSession[int, Recipient]):
         if nick is not None:
             nick = nick.replace("\u0000", " ")
             self.bookmarks.user_nick = nick
+        assert profile.address
+        assert profile.address.uuid
         self.user_uuid.set_result(profile.address.uuid)
         self.contacts.user_legacy_id = profile.address.uuid
 
@@ -163,6 +166,9 @@ class Session(BaseSession[int, Recipient]):
 
         :param msg:
         """
+
+        assert msg.source
+        assert msg.source.uuid
 
         if sync_msg := msg.sync_message:
             await self.on_signal_sync_message(sync_msg)
@@ -191,13 +197,15 @@ class Session(BaseSession[int, Recipient]):
             log.debug("No sent message in this sync message")
             return
         sent_msg = sent.message
+        assert sent_msg
         if sent_msg.group:
             # group V1 not supported
             return
-        elif g := sent_msg.groupV2:
+        elif (g := sent_msg.groupV2) and g.id:
             muc = await self.bookmarks.by_legacy_id(g.id)
             contact = await muc.get_user_participant()
         else:
+            assert sent.destination
             if sent.destination.uuid == await self.user_uuid:
                 return
             contact = await self.contacts.by_json_address(sent.destination)
@@ -219,7 +227,7 @@ class Session(BaseSession[int, Recipient]):
         if data.group:
             return
 
-        if data.groupV2 and not carbon:
+        if data.groupV2 and not carbon and data.groupV2.id:
             muc = await self.bookmarks.by_legacy_id(data.groupV2.id)
             entity = await muc.get_participant_by_contact(contact)
         else:
@@ -327,8 +335,10 @@ class Session(BaseSession[int, Recipient]):
             else:
                 raise XMPPError("internal-server-error", str(result))
         legacy_msg_id = response.timestamp
-        if group:
+        if group and legacy_msg_id:
             self.sent_in_muc[legacy_msg_id] = cast("MUC", chat)
+        if not legacy_msg_id:
+            raise XMPPError("internal-server-error", "No server timestamp")
         return legacy_msg_id
 
     @handle_unregistered_recipient
@@ -426,12 +436,13 @@ class Session(BaseSession[int, Recipient]):
                 if legacy_msg_id in self.sent_in_muc:
                     target_author = sigapi.JsonAddressv1(number=self.phone)
                 else:
-                    target_author = chat.sent.get(legacy_msg_id)
-                if target_author is None:
-                    self.log.warning(
-                        "Could not the message author to react to %s", legacy_msg_id
-                    )
-                    return
+                    try:
+                        target_author = chat.sent[legacy_msg_id]
+                    except KeyError:
+                        self.log.warning(
+                            "Could not the message author to react to %s", legacy_msg_id
+                        )
+                        return
             else:
                 chat = cast("Contact", chat)
                 target_author = chat.signal_address

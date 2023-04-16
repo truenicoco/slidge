@@ -50,6 +50,8 @@ class MUC(LegacyMUC[str, int, Participant, str]):
     async def fill_participants(self):
         group = await self.get_signal_group()
         for m in group.memberDetail:
+            if not m.uuid:
+                continue
             part = await self.get_participant_by_legacy_id(m.uuid)
             if m.role == "ADMINISTRATOR":
                 part.role = "moderator"
@@ -62,9 +64,11 @@ class MUC(LegacyMUC[str, int, Participant, str]):
 
     async def update_info(self):
         group = await self.get_signal_group()
-        self.DISCO_NAME = group.title
-        self.subject = group.description
-        self.description = group.description
+        if group.title:
+            self.DISCO_NAME = group.title
+        if group.description:
+            self.subject = group.description
+            self.description = group.description
         self.n_participants = len(group.members)
         if path := group.avatar:
             self.avatar = Path(path)
@@ -99,6 +103,8 @@ class Bookmarks(LegacyBookmarks[str, MUC]):
         groups = await (await session.signal).list_groups(account=session.phone)
         self.log.debug("GROUPS: %r", groups)
         for group in groups.groups:
+            if not group.id:
+                continue
             g = await self.by_legacy_id(group.id)
             await g.add_to_bookmarks(auto_join=True)
 

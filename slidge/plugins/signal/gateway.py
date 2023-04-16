@@ -62,6 +62,7 @@ class Link(Command):
     async def show_code(self, form_values: dict, _session, ifrom):
         resp = await (await self.xmpp.signal).generate_linking_uri()
         qr_text = resp.uri
+        assert qr_text
         qr = qrcode.make(qr_text)
         with tempfile.NamedTemporaryFile(suffix=".png") as f:
             qr.save(f.name)
@@ -138,7 +139,7 @@ class LinkedDevices(Command):
             ],
             items=[
                 {
-                    "name": d.name,
+                    "name": d.name or "",
                     "id": str(d.id),
                     "created": fmt_time(d.created),
                     "last_seen": fmt_time(d.lastSeen),
@@ -203,12 +204,14 @@ class ChangeContactName(Command):
         ).profiles
         options = [
             {
-                "value": c.address.uuid,
+                "value": c.address.uuid if c.address else "no-uuid?",
                 "label": repr(c.contact_name)
                 + " - "
                 + repr(c.profile_name)
                 + " - "
-                + str(c.address.uuid),
+                + str(c.address.uuid)
+                if c.address
+                else "",
             }
             for c in contacts
         ]
@@ -254,13 +257,17 @@ class DeleteAccount(Command):
         signal = await self.xmpp.signal
         accounts = (await signal.list_accounts()).accounts
         known_phones = {u.registration_form.get("phone") for u in user_store.get_all()}
-        options = [
-            {
-                "value": (phone := a.address.number),
-                "label": f"{phone} - Known in slidge: {phone in known_phones} - Pending: {bool(a.pending)}",
-            }
-            for a in accounts
-        ]
+
+        options = []
+        for a in accounts:
+            if not a.address:
+                continue
+            options.append(
+                {
+                    "value": (phone := a.address.number),
+                    "label": f"{phone} - Known in slidge: {phone in known_phones} - Pending: {bool(a.pending)}",
+                }
+            )
 
         return Form(
             title=self.NAME,
@@ -421,12 +428,16 @@ class Signal(SignaldAPI):
         :param msg: the data!
         :param _payload:
         """
+        if not msg.account:
+            return
         session = self.sessions_by_phone[msg.account]
         await session.on_signal_message(msg)
 
 
-def fmt_time(t: float):
-    return datetime.fromtimestamp(t / 1000).isoformat(timespec="minutes")
+def fmt_time(t: Optional[float]):
+    if t is not None:
+        return datetime.fromtimestamp(t / 1000).isoformat(timespec="minutes")
+    return ""
 
 
 log = logging.getLogger(__name__)
