@@ -203,7 +203,7 @@ class LegacyMUC(
                 b = f.getvalue()
         self._avatar = a
         self._avatar_bytes = b
-        self._avatar_type = "image/" + img.format.lower()
+        self._avatar_type = "image/" + img.format.lower() if img.format else "unknown"
         self._avatar_hash = hashlib.sha1(b).hexdigest()
         self._send_room_presence()
 

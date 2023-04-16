@@ -49,13 +49,16 @@ Pygments = "^2.8.0"
 sphinx-argparse = "^0.4.0"
 sphinx-autoapi = "^2.0.0"
 furo = "^2023.03.27"
-mypy = "^1.1.1"
+mypy = "^1.2"
 types-requests = "^2.28.1"
 isort = "^5.11.4"
 types-emoji = "^2.0.0"
 pybindgen = "^0.22.1"
 ruff = "^0.0.259"
 xmldiff = "^2.5"
+types-pillow = "^9.5.0.0"
+types-paho-mqtt = "^1.6.0.6"
+types-protobuf = "^4.22.0.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "pybindgen>=0.22.1"]
@@ -76,8 +79,25 @@ slidge = 'slidge.__main__:main'
 
 [tool.mypy]
 exclude = ["slidge.util.xep*", "slidge/plugins/whatsapp/generated"]
-ignore_missing_imports = true
 check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "aiotdlib.*",
+    "configargparse",
+    "linkpreview",
+    "maufbapi.*",
+    "qrcode",
+    "skpy",
+    "steam.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "aiosignald"
+]
+no_strict_optional = true
 
 [tool.black]
 exclude = "xep_*|slidge/plugins/whatsapp/generated/*"
