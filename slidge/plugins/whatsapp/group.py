@@ -80,7 +80,7 @@ class MUC(LegacyMUC[str, str, Participant, str]):
             data = whatsapp.GroupParticipant(handle=ptr)
             participant = await self.get_participant_by_legacy_id(data.JID)
             if data.Action == whatsapp.GroupParticipantActionRemove:
-                await self.remove_participant(participant)
+                self.remove_participant(participant)
             else:
                 participant.affiliation = "member"
                 if data.Affiliation == whatsapp.GroupAffiliationAdmin:
