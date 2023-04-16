@@ -65,6 +65,7 @@ class Session(BaseSession[str, Recipient]):
         self._handle_event = make_sync(self.handle_event, self.xmpp.loop)
         self.whatsapp.SetEventHandler(self._handle_event)
         self._connected = self.xmpp.loop.create_future()
+        self.user_phone: Optional[str] = None
 
     def shutdown(self):
         for c in self.contacts:
@@ -114,6 +115,7 @@ class Session(BaseSession[str, Recipient]):
         elif event == whatsapp.EventConnected:
             if not self._connected.done():
                 self.contacts.user_legacy_id = data.ConnectedJID
+                self.user_phone = "+" + data.ConnectedJID.split("@")[0]
                 self._connected.set_result("Connected")
         elif event == whatsapp.EventLoggedOut:
             self.logged = False
@@ -221,8 +223,12 @@ class Session(BaseSession[str, Recipient]):
             else None
         )
         if message.Kind == whatsapp.MessagePlain:
+            if hasattr(contact, "muc"):
+                body = contact.muc.replace_mentions(message.Body)
+            else:
+                body = message.Body
             contact.send_text(
-                body=message.Body,
+                body=body,
                 legacy_msg_id=message.ID,
                 when=message_timestamp,
                 reply_to=reply_to,
