@@ -28,6 +28,7 @@ from .util import (  # noqa: F401
 )
 from .util.db import GatewayUser, user_store
 from .util.error import XMPPError
+from .util.util import addLoggingLevel
 
 
 def formatwarning(message, category, filename, lineno, line=""):
@@ -68,3 +69,5 @@ __all__ = [
     "user_store",
     "global_config",
 ]
+
+addLoggingLevel()

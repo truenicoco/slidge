@@ -151,7 +151,7 @@ class LegacyMUC(
             if self.__history_filled:
                 log.debug("History has already been fetched %s", self)
                 return
-            log.info("Fetching history for %s", self)
+            log.debug("Fetching history for %s", self)
             for msg in self.archive:
                 try:
                     legacy_id = self.session.xmpp_msg_id_to_legacy_msg_id(msg.id)
