@@ -109,8 +109,8 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             given=user.first_name, surname=user.last_name, phone=phone, full_name=name
         )
 
-        self.is_friend = user.is_contact
-        if user.is_contact:
+        self.is_friend = user.is_contact or self.CLIENT_TYPE == "bot"
+        if self.is_friend:
             await self.add_to_roster()
             self.update_status(user.status)
 
