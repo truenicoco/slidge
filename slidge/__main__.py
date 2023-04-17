@@ -16,7 +16,6 @@ import importlib
 import logging
 import os
 import signal
-import subprocess
 from pathlib import Path
 
 import configargparse
@@ -27,6 +26,7 @@ from slidge.core.cache import avatar_cache
 from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
+from slidge.util.util import get_version
 
 
 class MainConfig(ConfigModule):
@@ -173,17 +173,6 @@ def main():
         logging.info("Successful clean shut down")
     logging.debug("Exiting with code %s", return_code)
     exit(return_code)
-
-
-def get_version():
-    try:
-        git = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode()
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        pass
-    else:
-        return "git-" + git[:10]
-
-    return "NO_VERSION"
 
 
 # this should be modified before publish, but if someone cloned from the repo,

@@ -1,6 +1,7 @@
 import logging
 import mimetypes
 import re
+import subprocess
 from abc import ABCMeta
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
@@ -215,3 +216,14 @@ class SlidgeLogger(logging.Logger):
 
 
 log = logging.getLogger(__name__)
+
+
+def get_version():
+    try:
+        git = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+    else:
+        return "git-" + git[:10]
+
+    return "NO_VERSION"
