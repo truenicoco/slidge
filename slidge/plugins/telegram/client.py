@@ -238,10 +238,7 @@ class TelegramClient(BaseClient):
         u = action.user
         if u.id == await self.get_my_id():
             return
-        if not u.is_contact:
-            return
-        contact = await self.session.contacts.by_legacy_id(u.id)
-        await contact.update_info(u)
+        await self.session.contacts.by_legacy_id(u.id)
 
     async def handle_NewChat(self, action: tgapi.UpdateNewChat):
         if isinstance(action.chat.type_, tgapi.ChatTypePrivate):
