@@ -19,6 +19,7 @@ class PresenceHandlerMixin(ComponentXMPP):
         pto = pres.get_to()
         if pto == self.boundjid.bare:
             raise _IsDirectedAtComponent(sess)
+        await sess.contacts.ready
         return await sess.contacts.by_jid(pto)
 
     async def __get_session(self, p: Presence):

@@ -1013,6 +1013,7 @@ class TestContact(SlidgeTest):
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         self.get_romeo_session().logged = True
+        self.get_romeo_session().contacts.ready.set_result(True)
 
     @staticmethod
     def get_romeo_session() -> Session:
@@ -1171,7 +1172,6 @@ class TestContact(SlidgeTest):
         assert p["nick"]["nick"] == "JUJU"
         assert self.next_sent() is None
 
-        juliet.session.contacts.ready.set_result(True)
         with unittest.mock.patch(
             "slidge.core.contact.LegacyContact.on_friend_accept"
         ) as mock:
@@ -1195,7 +1195,6 @@ class TestContact(SlidgeTest):
         assert p["nick"]["nick"] == "JUJU"
         assert self.next_sent() is None
 
-        juliet.session.contacts.ready.set_result(True)
         with unittest.mock.patch(
             "slidge.core.contact.LegacyContact.on_friend_delete"
         ) as mock:
