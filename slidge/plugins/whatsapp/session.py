@@ -268,15 +268,7 @@ class Session(BaseSession[str, Recipient]):
         message = whatsapp.Message(
             ID=message_id, JID=chat.legacy_id, Body=text, Preview=message_preview
         )
-        if reply_to_msg_id:
-            message.ReplyID = reply_to_msg_id
-        if reply_to:
-            message.OriginJID = (
-                reply_to.contact.legacy_id if chat.is_group else chat.legacy_id
-            )
-        if reply_to_fallback_text:
-            message.ReplyBody = strip_quote_prefix(reply_to_fallback_text)
-            message.Body = message.Body.lstrip()
+        set_reply_to(chat, message, reply_to_msg_id, reply_to_fallback_text, reply_to)
         self.whatsapp.SendMessage(message)
         return message_id
 
@@ -286,6 +278,8 @@ class Session(BaseSession[str, Recipient]):
         url: str,
         http_response,
         reply_to_msg_id: Optional[str] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to=None,
         **_,
     ):
         """
@@ -302,6 +296,7 @@ class Session(BaseSession[str, Recipient]):
             ReplyID=reply_to_msg_id if reply_to_msg_id else "",
             Attachments=whatsapp.Slice_whatsapp_Attachment([message_attachment]),
         )
+        set_reply_to(chat, message, reply_to_msg_id, reply_to_fallback_text, reply_to)
         self.whatsapp.SendMessage(message)
         return message_id
 
@@ -439,3 +434,22 @@ def strip_quote_prefix(text: str):
     Return multi-line text without leading quote marks (i.e. the ">" character).
     """
     return "\n".join(x.lstrip(">").strip() for x in text.split("\n")).strip()
+
+
+def set_reply_to(
+    chat: Recipient,
+    message: whatsapp.Message,
+    reply_to_msg_id: Optional[str] = None,
+    reply_to_fallback_text: Optional[str] = None,
+    reply_to=None,
+):
+    if reply_to_msg_id:
+        message.ReplyID = reply_to_msg_id
+    if reply_to:
+        message.OriginJID = (
+            reply_to.contact.legacy_id if chat.is_group else chat.legacy_id
+        )
+    if reply_to_fallback_text:
+        message.ReplyBody = strip_quote_prefix(reply_to_fallback_text)
+        message.Body = message.Body.lstrip()
+    return message
