@@ -25,9 +25,9 @@ class ChatStateMixin(MessageMaker):
         super().__init__()
         self.__last_chat_state: Optional[ChatState] = None
 
-    def _chat_state(self, state: ChatState, **kwargs):
+    def _chat_state(self, state: ChatState, forced=False, **kwargs):
         carbon = kwargs.get("carbon", False)
-        if carbon or state == self.__last_chat_state:
+        if carbon or (state == self.__last_chat_state and not forced):
             return
         self.__last_chat_state = state
         msg = self._make_message(state=state, hints={"no-store"})
@@ -44,7 +44,7 @@ class ChatStateMixin(MessageMaker):
         Send a "composing" (ie "typing notification") chat state (:xep:`0085`)
         from this contact to the user.
         """
-        self._chat_state("composing", **kwargs)
+        self._chat_state("composing", force=True, **kwargs)
 
     def paused(self, **kwargs):
         """
