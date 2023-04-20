@@ -59,11 +59,9 @@ class AvatarCache:
                 headers["If-Modified-Since"] = last_modified
             if etag := cached.etag:
                 headers["If-None-Match"] = etag
-        log.debug("Request headers: %s", headers)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as response:
-                log.debug("Response headers: %s", response.headers)
                 if response.status == HTTPStatus.NOT_MODIFIED:
                     log.debug("Using avatar cache")
                     return cached
