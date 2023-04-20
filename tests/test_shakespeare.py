@@ -1099,6 +1099,7 @@ class TestContact(SlidgeTest):
         self.recv(probe)
         p = self.next_sent()
         assert p["type"] == "unsubscribed"
+        assert p["from"] == juliet.jid.bare
         assert self.next_sent() is None
 
     def test_user_subscribe_to_friend(self):
@@ -1113,6 +1114,7 @@ class TestContact(SlidgeTest):
             mock.assert_not_awaited()
         p = self.next_sent()
         assert p["type"] == "subscribed"
+        assert p["from"] == juliet.jid.bare
         assert self.next_sent() is None
         assert juliet.is_friend
 
@@ -1133,7 +1135,9 @@ class TestContact(SlidgeTest):
         juliet.name = "JULIET"
         assert self.next_sent() is None
         self.xmpp.loop.run_until_complete(juliet.accept_friend_request())
-        assert self.next_sent()["type"] == "subscribed"
+        p = self.next_sent()
+        assert p["type"] == "subscribed"
+        assert p["from"] == juliet.jid.bare
         assert (
             self.next_sent()["pubsub_event"]["items"]["item"]["nick"]["nick"]
             == "JULIET"
@@ -1157,7 +1161,9 @@ class TestContact(SlidgeTest):
         juliet.name = "JULIET"
         assert self.next_sent() is None
         juliet.reject_friend_request()
-        assert self.next_sent()["type"] == "unsubscribed"
+        p = self.next_sent()
+        assert p["from"] == juliet.jid.bare
+        assert p["type"] == "unsubscribed"
         assert self.next_sent() is None
         assert not juliet.is_friend
 
@@ -1167,6 +1173,7 @@ class TestContact(SlidgeTest):
 
         juliet.send_friend_request()
         p = self.next_sent()
+        assert p["from"] == juliet.jid.bare
         assert p["type"] == "subscribe"
         assert p["to"] == "romeo@montague.lit"
         assert p["nick"]["nick"] == "JUJU"
@@ -1191,6 +1198,7 @@ class TestContact(SlidgeTest):
         juliet.send_friend_request()
         p = self.next_sent()
         assert p["type"] == "subscribe"
+        assert p["from"] == juliet.jid.bare
         assert p["to"] == "romeo@montague.lit"
         assert p["nick"]["nick"] == "JUJU"
         assert self.next_sent() is None

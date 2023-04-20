@@ -25,6 +25,7 @@ class PresenceMixin(BaseSender):
         *,
         last_seen: Optional[datetime] = None,
         force=False,
+        bare=False,
         **presence_kwargs,
     ):
         old = self._last_presence
@@ -47,7 +48,9 @@ class PresenceMixin(BaseSender):
                 "Presence is not the same as cached: %s vs %s", old, self._last_presence
             )
 
-        p = self.xmpp.make_presence(pfrom=self.jid, **presence_kwargs)
+        p = self.xmpp.make_presence(
+            pfrom=self.jid.bare if bare else self.jid, **presence_kwargs
+        )
         if last_seen:
             if config.LAST_SEEN_FALLBACK and not presence_kwargs.get("pstatus"):
                 p["status"] = f"Last seen {last_seen:%A %H:%M GMT}"

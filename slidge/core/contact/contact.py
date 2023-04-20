@@ -332,7 +332,7 @@ class LegacyContact(
             return await self.xmpp["xep_0356_old"].set_roster(**kw)
 
     def send_friend_request(self, text: Optional[str] = None):
-        presence = self._make_presence(ptype="subscribe", pstatus=text)
+        presence = self._make_presence(ptype="subscribe", pstatus=text, bare=True)
         self._send(presence, nick=True)
 
     async def accept_friend_request(self, text: Optional[str] = None):
@@ -344,7 +344,7 @@ class LegacyContact(
         """
         self.is_friend = True
         self.log.debug("Accepting friend request")
-        presence = self._make_presence(ptype="subscribed", pstatus=text)
+        presence = self._make_presence(ptype="subscribed", pstatus=text, bare=True)
         self._send(presence, nick=True)
         self.send_last_presence()
         await self.__broadcast_pubsub_items()
@@ -357,7 +357,7 @@ class LegacyContact(
 
         :param text: Optional message from the non-friend to the user
         """
-        presence = self._make_presence(ptype="unsubscribed", pstatus=text)
+        presence = self._make_presence(ptype="unsubscribed", pstatus=text, bare=True)
         self.offline()
         self._send(presence, nick=True)
         self.is_friend = False
