@@ -180,7 +180,10 @@ class TelegramClient(BaseClient):
             muc: MUC = await self.bookmarks.by_legacy_id(chat_id)
             composer = await muc.participant_by_tg_user(await self.get_user(user_id))
 
-        composer.composing()
+        if isinstance(action.action, tgapi.ChatActionTyping):
+            composer.composing()
+        elif isinstance(action.action, tgapi.ChatActionCancel):
+            composer.paused()
 
     async def handle_ChatReadInbox(self, action: tgapi.UpdateChatReadInbox):
         if not await self.is_private_chat(action.chat_id):
