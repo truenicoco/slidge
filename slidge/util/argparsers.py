@@ -5,6 +5,7 @@ config system, for plugins, so they can be used to generate the docs.
 
 import importlib
 from pathlib import Path
+from typing import Optional
 
 from slidge.core import config
 from slidge.util.conf import ConfigModule
@@ -14,8 +15,11 @@ from slidge.util.test import reset_subclasses  # type:ignore
 config.HOME_DIR = Path("/var/lib/slidge/${SLIDGE_JID}/")
 
 
-def _parser(plugin: str):
-    config = importlib.import_module(f"slidge.plugins.{plugin}")
+def _parser(plugin: str, module: Optional[str] = None):
+    if module is None:
+        module = f"slidge.plugins.{plugin}"
+    config = importlib.import_module(module)
+
     try:
         parser = ConfigModule(config.config).parser
     except AttributeError:
@@ -50,3 +54,39 @@ def whatsapp():
             path = (generated_dir / f).with_suffix(".py")
             path.write_text("def __getattr__(name): return")
     return _parser("whatsapp")
+
+
+def slidgnal():
+    return _parser("slidgnal", "slidgnal")
+
+
+def messlidger():
+    return _parser("messlidger", "messlidger")
+
+
+def slidgram():
+    return _parser("slidgram", "slidgram")
+
+
+def skidge():
+    return _parser("skidge", "skidge")
+
+
+def matteridge():
+    return _parser("matteridge", "matteridge")
+
+
+def sleamdge():
+    return _parser("sleamdge", "sleamdge")
+
+
+def hackeridge():
+    return _parser("hackeridge", "hackeridge")
+
+
+def slidge_whatsapp():
+    return _parser("slidge_whatsapp", "slidge_whatsapp")
+
+
+def slidcord():
+    return _parser("slidcord", "slidcord")
