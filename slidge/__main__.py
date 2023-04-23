@@ -26,7 +26,7 @@ from slidge.core.cache import avatar_cache
 from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
-from slidge.util.util import get_version
+from slidge.util.util import get_version  # noqa: F401
 
 
 class MainConfig(ConfigModule):
