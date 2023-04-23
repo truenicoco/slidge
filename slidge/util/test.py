@@ -188,16 +188,19 @@ class SlidgeTest(SlixTestPlus):
             setattr(config, k.upper(), v)
 
     def setUp(self):
-        BaseGateway._subclass = find_subclass(self.plugin, BaseGateway)
-        BaseSession._subclass = find_subclass(self.plugin, BaseSession)
-        LegacyRoster._subclass = find_subclass(self.plugin, LegacyRoster, base_ok=True)
-        LegacyContact._subclass = find_subclass(
-            self.plugin, LegacyContact, base_ok=True
-        )
-        LegacyMUC._subclass = find_subclass(self.plugin, LegacyMUC, base_ok=True)
-        LegacyBookmarks._subclass = find_subclass(
-            self.plugin, LegacyBookmarks, base_ok=True
-        )
+        if hasattr(self, "plugin"):
+            BaseGateway._subclass = find_subclass(self.plugin, BaseGateway)
+            BaseSession._subclass = find_subclass(self.plugin, BaseSession)
+            LegacyRoster._subclass = find_subclass(
+                self.plugin, LegacyRoster, base_ok=True
+            )
+            LegacyContact._subclass = find_subclass(
+                self.plugin, LegacyContact, base_ok=True
+            )
+            LegacyMUC._subclass = find_subclass(self.plugin, LegacyMUC, base_ok=True)
+            LegacyBookmarks._subclass = find_subclass(
+                self.plugin, LegacyBookmarks, base_ok=True
+            )
 
         self.xmpp = BaseGateway.get_self_or_unique_subclass()()
 
