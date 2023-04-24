@@ -10,53 +10,87 @@ from slixmpp.xmlstream import ElementBase
 
 
 class Register(ElementBase):
-
-    namespace = 'jabber:iq:register'
-    name = 'query'
-    plugin_attrib = 'register'
-    interfaces = {'username', 'password', 'email', 'nick', 'name',
-                  'first', 'last', 'address', 'city', 'state', 'zip',
-                  'phone', 'url', 'date', 'misc', 'text', 'key',
-                  'registered', 'remove', 'instructions', 'fields'}
+    namespace = "jabber:iq:register"
+    name = "query"
+    plugin_attrib = "register"
+    interfaces = {
+        "username",
+        "password",
+        "email",
+        "nick",
+        "name",
+        "first",
+        "last",
+        "address",
+        "city",
+        "state",
+        "zip",
+        "phone",
+        "url",
+        "date",
+        "misc",
+        "text",
+        "key",
+        "registered",
+        "remove",
+        "instructions",
+        "fields",
+    }
     sub_interfaces = interfaces
-    form_fields = {'username', 'password', 'email', 'nick', 'name',
-                   'first', 'last', 'address', 'city', 'state', 'zip',
-                   'phone', 'url', 'date', 'misc', 'text', 'key'}
+    form_fields = {
+        "username",
+        "password",
+        "email",
+        "nick",
+        "name",
+        "first",
+        "last",
+        "address",
+        "city",
+        "state",
+        "zip",
+        "phone",
+        "url",
+        "date",
+        "misc",
+        "text",
+        "key",
+    }
 
     def get_registered(self):
-        present = self.xml.find('{%s}registered' % self.namespace)
+        present = self.xml.find("{%s}registered" % self.namespace)
         return present is not None
 
     def get_remove(self):
-        present = self.xml.find('{%s}remove' % self.namespace)
+        present = self.xml.find("{%s}remove" % self.namespace)
         return present is not None
 
     def set_registered(self, value):
         if value:
-            self.add_field('registered')
+            self.add_field("registered")
         else:
-            del self['registered']
+            del self["registered"]
 
     def set_remove(self, value):
         if value:
-            self.add_field('remove')
+            self.add_field("remove")
         else:
-            del self['remove']
+            del self["remove"]
 
     def add_field(self, value):
-        self._set_sub_text(value, '', keep=True)
+        self._set_sub_text(value, "", keep=True)
 
     def get_fields(self):
         fields = set()
         for field in self.form_fields:
-            if self.xml.find('{%s}%s' % (self.namespace, field)) is not None:
+            if self.xml.find("{%s}%s" % (self.namespace, field)) is not None:
                 fields.add(field)
         return fields
 
     def set_fields(self, fields):
-        del self['fields']
+        del self["fields"]
         for field in fields:
-            self._set_sub_text(field, '', keep=True)
+            self._set_sub_text(field, "", keep=True)
 
     def del_fields(self):
         for field in self.form_fields:
@@ -64,8 +98,7 @@ class Register(ElementBase):
 
 
 class RegisterFeature(ElementBase):
-
-    name = 'register'
-    namespace = 'http://jabber.org/features/iq-register'
+    name = "register"
+    namespace = "http://jabber.org/features/iq-register"
     plugin_attrib = name
     interfaces: ClassVar[Set[str]] = set()

@@ -5,9 +5,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Collection, Optional
 
 from slixmpp import Iq, Message
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 
-from ...util.error import XMPPError
 from .. import config
 
 

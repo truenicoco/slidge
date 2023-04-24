@@ -1,6 +1,8 @@
 import warnings
 
 import slixmpp.plugins
+from slixmpp import Message
+from slixmpp.xmlstream import StanzaBase
 
 from .core import config as global_config
 from .core.command import FormField, SearchResult
@@ -27,7 +29,6 @@ from .util import (  # noqa: F401
     xep_0461,
 )
 from .util.db import GatewayUser, user_store
-from .util.error import XMPPError
 from .util.util import addLoggingLevel
 
 
@@ -35,11 +36,32 @@ def formatwarning(message, category, filename, lineno, line=""):
     return f"{filename}:{lineno}:{category.__name__}:{message}\n"
 
 
+def reply(self, body=None, clear=True):
+    """
+    Overrides slixmpp's Message.reply(), since it strips to sender's resource
+    for mtype=groupchat, and we do not want that, because when we raise an XMPPError,
+    we actually want to preserve the resource.
+    (this is called in RootStanza.exception() to handle XMPPErrors)
+    """
+    new_message = StanzaBase.reply(self, clear)
+    new_message["thread"] = self["thread"]
+    new_message["parent_thread"] = self["parent_thread"]
+
+    del new_message["id"]
+    if self.stream is not None and self.stream.use_message_ids:
+        new_message["id"] = self.stream.new_id()
+
+    if body is not None:
+        new_message["body"] = body
+    return new_message
+
+
+Message.reply = reply  # type: ignore
+
 warnings.formatwarning = formatwarning
 
 
-# TODO: (later) mv from .__all__ to .PLUGINS on the next release of slixmpp
-slixmpp.plugins.__all__.extend(
+slixmpp.plugins.PLUGINS.extend(
     [
         "xep_0234",
         "xep_0292_provider",
@@ -65,7 +87,6 @@ __all__ = [
     "MucType",
     "FormField",
     "SearchResult",
-    "XMPPError",
     "user_store",
     "global_config",
 ]

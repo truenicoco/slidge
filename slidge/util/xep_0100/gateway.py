@@ -2,10 +2,10 @@ import logging
 import warnings
 
 from slixmpp import JID, Iq, Message, Presence, register_stanza_plugin
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.base import BasePlugin
 
 from slidge.core import config
-from slidge.util.error import XMPPError
 
 from . import stanza
 

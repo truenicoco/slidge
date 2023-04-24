@@ -30,9 +30,10 @@ class MAM(ElementBase):
         </iq>
 
     """
-    name = 'query'
-    namespace = 'urn:xmpp:mam:2'
-    plugin_attrib = 'mam'
+
+    name = "query"
+    namespace = "urn:xmpp:mam:2"
+    plugin_attrib = "mam"
     #: Available interfaces:
     #:
     #: - ``queryid``: The MAM query id
@@ -44,10 +45,25 @@ class MAM(ElementBase):
     #: - ``results``: pseudo-interface used to accumulate MAM results during
     #:   fetch, not relevant for the stanza itself.
     interfaces = {
-        'queryid', 'start', 'end', 'with', 'results',
-        'before_id', 'after_id', 'ids', 'flip_page'
+        "queryid",
+        "start",
+        "end",
+        "with",
+        "results",
+        "before_id",
+        "after_id",
+        "ids",
+        "flip_page",
     }
-    sub_interfaces = {'start', 'end', 'with', 'before_id', 'after_id', 'ids', 'flip_page'}
+    sub_interfaces = {
+        "start",
+        "end",
+        "with",
+        "before_id",
+        "after_id",
+        "ids",
+        "flip_page",
+    }
 
     def setup(self, xml=None):
         ElementBase.setup(self, xml)
@@ -55,98 +71,98 @@ class MAM(ElementBase):
 
     def _setup_form(self):
         found = self.xml.find(
-                '{jabber:x:data}x/'
-                '{jabber:x:data}field[@var="FORM_TYPE"]/'
-                "{jabber:x:data}value[.='urn:xmpp:mam:2']"
+            "{jabber:x:data}x/"
+            '{jabber:x:data}field[@var="FORM_TYPE"]/'
+            "{jabber:x:data}value[.='urn:xmpp:mam:2']"
         )
         if found is None:
-            self['form']['type'] = 'submit'
-            self['form'].add_field(
-                var='FORM_TYPE', ftype='hidden', value='urn:xmpp:mam:2'
+            self["form"]["type"] = "submit"
+            self["form"].add_field(
+                var="FORM_TYPE", ftype="hidden", value="urn:xmpp:mam:2"
             )
 
     def get_fields(self):
-        form = self.get_plugin('form', check=True)
+        form = self.get_plugin("form", check=True)
         if not form:
             return {}
         return form.get_fields()
 
     def get_start(self) -> Optional[datetime]:
         fields = self.get_fields()
-        field = fields.get('start')
-        if field and field['value']:
-            return xep_0082.parse(field['value'])
+        field = fields.get("start")
+        if field and field["value"]:
+            return xep_0082.parse(field["value"])
         return None
 
     def set_start(self, value: Union[str, datetime]):
         self._setup_form()
         if isinstance(value, datetime):
             value = xep_0082.format_datetime(value)
-        self.set_custom_field('start', value)
+        self.set_custom_field("start", value)
 
     def get_end(self) -> Optional[datetime]:
         fields = self.get_fields()
-        field = fields.get('end')
-        if field and field['value']:
-            return xep_0082.parse(field['value'])
+        field = fields.get("end")
+        if field and field["value"]:
+            return xep_0082.parse(field["value"])
         return None
 
     def set_end(self, value: Union[str, datetime]):
         if isinstance(value, datetime):
             value = xep_0082.format_datetime(value)
-        self.set_custom_field('end', value)
+        self.set_custom_field("end", value)
 
     def get_with(self) -> Optional[JID]:
         fields = self.get_fields()
-        field = fields.get('with')
+        field = fields.get("with")
         if field:
-            return JID(field['value'])
+            return JID(field["value"])
         return None
 
     def set_with(self, value: JID):
-        self.set_custom_field('with', value)
+        self.set_custom_field("with", value)
 
     def set_custom_field(self, fieldname: str, value: Any):
         self._setup_form()
         fields = self.get_fields()
         field = fields.get(fieldname)
         if field:
-            field['value'] = str(value)
+            field["value"] = str(value)
         else:
-            field = self['form'].add_field(var=fieldname)
-            field['value'] = str(value)
+            field = self["form"].add_field(var=fieldname)
+            field["value"] = str(value)
 
     def get_custom_field(self, fieldname: str) -> Optional[str]:
         fields = self.get_fields()
         field = fields.get(fieldname)
         if field:
-            return field['value']
+            return field["value"]
         return None
 
     def set_before_id(self, value: str):
-        self.set_custom_field('before-id', value)
+        self.set_custom_field("before-id", value)
 
     def get_before_id(self):
-        self.get_custom_field('before-id')
+        self.get_custom_field("before-id")
 
     def set_after_id(self, value: str):
-        self.set_custom_field('after-id', value)
+        self.set_custom_field("after-id", value)
 
     def get_after_id(self):
-        self.get_custom_field('after-id')
+        self.get_custom_field("after-id")
 
     def set_ids(self, value: List[str]):
         self._setup_form()
         fields = self.get_fields()
-        field = fields.get('ids')
+        field = fields.get("ids")
         if field:
-            field['ids'] = value
+            field["ids"] = value
         else:
-            field = self['form'].add_field(var='ids')
-            field['value'] = value
+            field = self["form"].add_field(var="ids")
+            field["value"] = value
 
     def get_ids(self):
-        self.get_custom_field('id')
+        self.get_custom_field("id")
 
     # The results interface is meant only as an easy
     # way to access the set of collected message responses
@@ -164,6 +180,7 @@ class MAM(ElementBase):
     def get_flip_page(self):
         return self.xml.find(f"{{{self.namespace}}}flip-page") is not None
 
+
 class Fin(ElementBase):
     """A MAM fin element (end of query).
 
@@ -179,10 +196,11 @@ class Fin(ElementBase):
         </iq>
 
     """
-    name = 'fin'
-    namespace = 'urn:xmpp:mam:2'
-    plugin_attrib = 'mam_fin'
-    interfaces = {'results', 'stable', 'complete'}
+
+    name = "fin"
+    namespace = "urn:xmpp:mam:2"
+    plugin_attrib = "mam_fin"
+    interfaces = {"results", "stable", "complete"}
 
     def setup(self, xml=None):
         ElementBase.setup(self, xml)
@@ -219,14 +237,15 @@ class Result(ElementBase):
           </result>
         </message>
     """
-    name = 'result'
-    namespace = 'urn:xmpp:mam:2'
-    plugin_attrib = 'mam_result'
+
+    name = "result"
+    namespace = "urn:xmpp:mam:2"
+    plugin_attrib = "mam_result"
     #: Available interfaces:
     #:
     #: - ``queryid``: MAM queryid
     #: - ``id``: ID of the result
-    interfaces = {'queryid', 'id'}
+    interfaces = {"queryid", "id"}
 
 
 class Metadata(ElementBase):
@@ -242,9 +261,10 @@ class Metadata(ElementBase):
         </iq>
 
     """
-    name = 'metadata'
-    namespace = 'urn:xmpp:mam:2'
-    plugin_attrib = 'mam_metadata'
+
+    name = "metadata"
+    namespace = "urn:xmpp:mam:2"
+    plugin_attrib = "mam_metadata"
 
 
 class Start(ElementBase):
@@ -260,22 +280,23 @@ class Start(ElementBase):
         </iq>
 
     """
-    name = 'start'
-    namespace = 'urn:xmpp:mam:2'
+
+    name = "start"
+    namespace = "urn:xmpp:mam:2"
     plugin_attrib = name
     #: Available interfaces:
     #:
     #: - ``id``: ID of the first message of the archive
     #: - ``timestamp`` (``datetime``): timestamp of the first message of the
     #:   archive
-    interfaces = {'id', 'timestamp'}
+    interfaces = {"id", "timestamp"}
 
     def get_timestamp(self) -> Optional[datetime]:
         """Get the timestamp.
 
         :returns: The timestamp.
         """
-        stamp = self.xml.attrib.get('timestamp', None)
+        stamp = self.xml.attrib.get("timestamp", None)
         if stamp is not None:
             return xep_0082.parse(stamp)
         return stamp
@@ -289,7 +310,7 @@ class Start(ElementBase):
         if isinstance(value, str):
             value = xep_0082.parse(value)
         value = xep_0082.format_datetime(value)
-        self.xml.attrib['timestamp'] = value
+        self.xml.attrib["timestamp"] = value
 
 
 class End(ElementBase):
@@ -305,22 +326,23 @@ class End(ElementBase):
         </iq>
 
     """
-    name = 'end'
-    namespace = 'urn:xmpp:mam:2'
+
+    name = "end"
+    namespace = "urn:xmpp:mam:2"
     plugin_attrib = name
     #: Available interfaces:
     #:
     #: - ``id``: ID of the first message of the archive
     #: - ``timestamp`` (``datetime``): timestamp of the first message of the
     #:   archive
-    interfaces = {'id', 'timestamp'}
+    interfaces = {"id", "timestamp"}
 
     def get_timestamp(self) -> Optional[datetime]:
         """Get the timestamp.
 
         :returns: The timestamp.
         """
-        stamp = self.xml.attrib.get('timestamp', None)
+        stamp = self.xml.attrib.get("timestamp", None)
         if stamp is not None:
             return xep_0082.parse(stamp)
         return stamp
@@ -334,4 +356,4 @@ class End(ElementBase):
         if isinstance(value, str):
             value = xep_0082.parse(value)
         value = xep_0082.format_datetime(value)
-        self.xml.attrib['timestamp'] = value
+        self.xml.attrib["timestamp"] = value

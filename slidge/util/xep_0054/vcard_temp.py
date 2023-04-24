@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2012 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -25,9 +24,9 @@ class XEP_0054(BasePlugin):
     XEP-0054: vcard-temp
     """
 
-    name = 'xep_0054'
-    description = 'XEP-0054: vcard-temp (slidge)'
-    dependencies = {'xep_0030', 'xep_0082'}
+    name = "xep_0054"
+    description = "XEP-0054: vcard-temp (slidge)"
+    dependencies = {"xep_0030", "xep_0082"}
     stanza = stanza
 
     def plugin_init(self):
@@ -36,28 +35,32 @@ class XEP_0054(BasePlugin):
         """
         register_stanza_plugin(Iq, VCardTemp)
 
-
-        self.api.register(self._set_vcard, 'set_vcard', default=True)
-        self.api.register(self._get_vcard, 'get_vcard', default=True)
-        self.api.register(self._del_vcard, 'del_vcard', default=True)
+        self.api.register(self._set_vcard, "set_vcard", default=True)
+        self.api.register(self._get_vcard, "get_vcard", default=True)
+        self.api.register(self._del_vcard, "del_vcard", default=True)
 
         self._vcard_cache = {}
 
     def plugin_end(self):
-        self.xmpp.remove_handler('VCardTemp')
-        self.xmpp['xep_0030'].del_feature(feature='vcard-temp')
+        self.xmpp.remove_handler("VCardTemp")
+        self.xmpp["xep_0030"].del_feature(feature="vcard-temp")
 
     def session_bind(self, jid):
-        self.xmpp['xep_0030'].add_feature('vcard-temp')
+        self.xmpp["xep_0030"].add_feature("vcard-temp")
 
     def make_vcard(self) -> VCardTemp:
         """Return an empty vcard element."""
         return VCardTemp()
 
-    async def get_vcard(self, jid: Optional[JID] = None, *,
-                        local: Optional[bool] = None, cached: bool = False,
-                        ifrom: Optional[JID] = None,
-                        **iqkwargs) -> Iq:
+    async def get_vcard(
+        self,
+        jid: Optional[JID] = None,
+        *,
+        local: Optional[bool] = None,
+        cached: bool = False,
+        ifrom: Optional[JID] = None,
+        **iqkwargs
+    ) -> Iq:
         """Retrieve a VCard.
 
         .. versionchanged:: 1.8.0
@@ -78,11 +81,11 @@ class XEP_0054(BasePlugin):
                     if str(jid) == str(self.xmpp.boundjid):
                         local = True
                 jid = jid.full
-            elif jid in (None, ''):
+            elif jid in (None, ""):
                 local = True
 
         if local:
-            vcard = await self.api['get_vcard'](jid, None, ifrom)
+            vcard = await self.api["get_vcard"](jid, None, ifrom)
             if not isinstance(vcard, Iq):
                 iq = self.xmpp.Iq()
                 if vcard is None:
@@ -92,7 +95,7 @@ class XEP_0054(BasePlugin):
             return vcard
 
         if cached:
-            vcard = await self.api['get_vcard'](jid, None, ifrom)
+            vcard = await self.api["get_vcard"](jid, None, ifrom)
             if vcard is not None:
                 if not isinstance(vcard, Iq):
                     iq = self.xmpp.Iq()
@@ -101,12 +104,16 @@ class XEP_0054(BasePlugin):
                 return vcard
 
         iq = self.xmpp.make_iq_get(ito=jid, ifrom=ifrom)
-        iq.enable('vcard_temp')
+        iq.enable("vcard_temp")
         return await iq.send(**iqkwargs)
 
-    async def publish_vcard(self, vcard: Optional[VCardTemp] = None,
-                            jid: Optional[JID] = None,
-                            ifrom: Optional[JID] = None, **iqkwargs):
+    async def publish_vcard(
+        self,
+        vcard: Optional[VCardTemp] = None,
+        jid: Optional[JID] = None,
+        ifrom: Optional[JID] = None,
+        **iqkwargs
+    ):
         """Publish a vcard.
 
         .. versionchanged:: 1.8.0
@@ -115,7 +122,7 @@ class XEP_0054(BasePlugin):
         :param vcard: The VCard to publish.
         :param jid: The JID to publish the VCard to.
         """
-        await self.api['set_vcard'](jid, None, ifrom, vcard)
+        await self.api["set_vcard"](jid, None, ifrom, vcard)
         if self.xmpp.is_component:
             return
 

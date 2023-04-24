@@ -2,9 +2,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from slixmpp import Presence
+from slixmpp.exceptions import XMPPError
 from slixmpp.xmlstream import StanzaBase
 
-from ...util.error import XMPPError
 from ..contact import LegacyContact
 
 if TYPE_CHECKING:

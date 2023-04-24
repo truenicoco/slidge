@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2010 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -69,31 +68,28 @@ class XEP_0030(BasePlugin):
                  static node handlers.
     """
 
-    name = 'xep_0030'
-    description = 'XEP-0030: Service Discovery (Slidge)'
+    name = "xep_0030"
+    description = "XEP-0030: Service Discovery (Slidge)"
     dependencies = set()
     stanza = stanza
-    default_config = {
-        'use_cache': True,
-        'wrap_results': False
-    }
+    default_config = {"use_cache": True, "wrap_results": False}
     static: StaticDisco
 
     def plugin_init(self):
         """
         Start the XEP-0030 plugin.
         """
-        self.xmpp.register_handler(CoroutineCallback(
-            'Disco Info',
-            StanzaPath('iq/disco_info'),
-            self._handle_disco_info
-        ))
+        self.xmpp.register_handler(
+            CoroutineCallback(
+                "Disco Info", StanzaPath("iq/disco_info"), self._handle_disco_info
+            )
+        )
 
-        self.xmpp.register_handler(CoroutineCallback(
-            'Disco Items',
-            StanzaPath('iq/disco_items'),
-            self._handle_disco_items
-        ))
+        self.xmpp.register_handler(
+            CoroutineCallback(
+                "Disco Items", StanzaPath("iq/disco_items"), self._handle_disco_items
+            )
+        )
 
         register_stanza_plugin(Iq, DiscoInfo)
         register_stanza_plugin(Iq, DiscoItems)
@@ -101,11 +97,26 @@ class XEP_0030(BasePlugin):
         self.static = StaticDisco(self.xmpp, self)
 
         self._disco_ops = [
-                'get_info', 'set_info', 'set_identities', 'set_features',
-                'get_items', 'set_items', 'del_items', 'add_identity',
-                'del_identity', 'add_feature', 'del_feature', 'add_item',
-                'del_item', 'del_identities', 'del_features', 'cache_info',
-                'get_cached_info', 'supports', 'has_identity']
+            "get_info",
+            "set_info",
+            "set_identities",
+            "set_features",
+            "get_items",
+            "set_items",
+            "del_items",
+            "add_identity",
+            "del_identity",
+            "add_feature",
+            "del_feature",
+            "add_item",
+            "del_item",
+            "del_identities",
+            "del_features",
+            "cache_info",
+            "get_cached_info",
+            "supports",
+            "has_identity",
+        ]
 
         for op in self._disco_ops:
             self.api.register(getattr(self.static, op), op, default=True)
@@ -113,18 +124,22 @@ class XEP_0030(BasePlugin):
         self.domain_infos = {}
 
     def session_bind(self, jid):
-        self.add_feature('http://jabber.org/protocol/disco#info')
+        self.add_feature("http://jabber.org/protocol/disco#info")
 
     def plugin_end(self):
-        self.del_feature('http://jabber.org/protocol/disco#info')
+        self.del_feature("http://jabber.org/protocol/disco#info")
 
     def _add_disco_op(self, op, default_handler):
         self.api.register(default_handler, op)
         self.api.register_default(default_handler, op)
 
-    def set_node_handler(self, htype: str, jid: OptJid = None,
-                         node: Optional[str] = None,
-                         handler: Optional[Callable] = None):
+    def set_node_handler(
+        self,
+        htype: str,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        handler: Optional[Callable] = None,
+    ):
         """
         Add a node handler for the given hierarchy level and
         handler type.
@@ -200,8 +215,12 @@ class XEP_0030(BasePlugin):
         """
         self.api.unregister(htype, jid, node)
 
-    def restore_defaults(self, jid: OptJid = None, node: Optional[str] = None,
-                         handlers: Optional[List[Callable]] = None):
+    def restore_defaults(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        handlers: Optional[List[Callable]] = None,
+    ):
         """
         Change all or some of a node's handlers to the default
         handlers. Useful for manually overriding the contents
@@ -223,9 +242,15 @@ class XEP_0030(BasePlugin):
         for op in handlers:
             self.api.restore_default(op, jid, node)
 
-    def supports(self, jid: OptJid = None, node: Optional[str] = None,
-                 feature: Optional[str] = None, local: bool = False,
-                 cached: bool = True, ifrom: OptJid = None) -> Future:
+    def supports(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        feature: Optional[str] = None,
+        local: bool = False,
+        cached: bool = True,
+        ifrom: OptJid = None,
+    ) -> Future:
         """
         Check if a JID supports a given feature.
 
@@ -252,16 +277,20 @@ class XEP_0030(BasePlugin):
         :returns False: The feature is not listed as supported
         :returns None: Nothing could be found due to a timeout
         """
-        data = {'feature': feature,
-                'local': local,
-                'cached': cached}
-        return self.api['supports'](jid, node, ifrom, data)
+        data = {"feature": feature, "local": local, "cached": cached}
+        return self.api["supports"](jid, node, ifrom, data)
 
-    def has_identity(self, jid: OptJid = None, node: Optional[str] = None,
-                     category: Optional[str] = None,
-                     itype: Optional[str] = None, lang: Optional[str] = None,
-                     local: bool = False, cached: bool = True,
-                     ifrom: OptJid = None) -> Future:
+    def has_identity(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        category: Optional[str] = None,
+        itype: Optional[str] = None,
+        lang: Optional[str] = None,
+        local: bool = False,
+        cached: bool = True,
+        ifrom: OptJid = None,
+    ) -> Future:
         """
         Check if a JID provides a given identity.
 
@@ -291,38 +320,37 @@ class XEP_0030(BasePlugin):
         :returns False: The identity is not listed
         :returns None: Nothing could be found due to a timeout
         """
-        data = {'category': category,
-                'itype': itype,
-                'lang': lang,
-                'local': local,
-                'cached': cached}
-        return self.api['has_identity'](jid, node, ifrom, data)
+        data = {
+            "category": category,
+            "itype": itype,
+            "lang": lang,
+            "local": local,
+            "cached": cached,
+        }
+        return self.api["has_identity"](jid, node, ifrom, data)
 
-    async def get_info_from_domain(self, domain=None, timeout=None,
-                                   cached=True, callback=None, **iqkwargs):
-        """Fetch disco#info of specified domain and one disco#items level below
-        """
+    async def get_info_from_domain(
+        self, domain=None, timeout=None, cached=True, callback=None, **iqkwargs
+    ):
+        """Fetch disco#info of specified domain and one disco#items level below"""
 
         if domain is None:
             domain = self.xmpp.boundjid.domain
 
         if not cached or domain not in self.domain_infos:
-            infos = [self.get_info(
-                domain, timeout=timeout, **iqkwargs)]
-            iq_items = await self.get_items(
-                domain, timeout=timeout, **iqkwargs)
-            items = iq_items['disco_items']['items']
+            infos = [self.get_info(domain, timeout=timeout, **iqkwargs)]
+            iq_items = await self.get_items(domain, timeout=timeout, **iqkwargs)
+            items = iq_items["disco_items"]["items"]
             infos += [
-                self.get_info(item[0], timeout=timeout, **iqkwargs)
-                for item in items]
+                self.get_info(item[0], timeout=timeout, **iqkwargs) for item in items
+            ]
             info_futures, _ = await asyncio.wait(
-                infos,
+                [asyncio.create_task(i) for i in infos],
                 timeout=timeout,
             )
 
             self.domain_infos[domain] = [
-                future.result()
-                for future in info_futures if not future.exception()
+                future.result() for future in info_futures if not future.exception()
             ]
 
         results = self.domain_infos[domain]
@@ -331,9 +359,14 @@ class XEP_0030(BasePlugin):
             callback(results)
         return results
 
-    async def get_info(self, jid: OptJid = None, node: Optional[str] = None,
-                       local: Optional[bool] = None,
-                       cached: Optional[bool] = None, **kwargs) -> Iq:
+    async def get_info(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        local: Optional[bool] = None,
+        cached: Optional[bool] = None,
+        **kwargs
+    ) -> Iq:
         """
         Retrieve the disco#info results from a given JID/node combination.
 
@@ -373,40 +406,38 @@ class XEP_0030(BasePlugin):
                     if str(jid) == str(self.xmpp.boundjid):
                         local = True
                 jid = jid.full
-            elif jid in (None, ''):
+            elif jid in (None, ""):
                 local = True
 
-        ifrom = kwargs.pop('ifrom', self.xmpp.boundjid) or self.xmpp.boundjid
+        ifrom = kwargs.pop("ifrom", self.xmpp.boundjid) or self.xmpp.boundjid
         if local:
-            log.debug("Looking up local disco#info data "
-                      "for %s, node %s.", jid, node)
-            info = await self.api['get_info'](
-                jid, node, ifrom,
-                kwargs
-            )
+            log.debug("Looking up local disco#info data " "for %s, node %s.", jid, node)
+            info = await self.api["get_info"](jid, node, ifrom, kwargs)
             info = self._fix_default_info(info)
             return self._wrap(ifrom, jid, info)
 
         if cached:
-            log.debug("Looking up cached disco#info data "
-                      "for %s, node %s.", jid, node)
-            info = await self.api['get_cached_info'](
-                jid, node, ifrom,
-                kwargs
+            log.debug(
+                "Looking up cached disco#info data " "for %s, node %s.", jid, node
             )
+            info = await self.api["get_cached_info"](jid, node, ifrom, kwargs)
             if info is not None:
                 return self._wrap(ifrom, jid, info)
 
         iq = self.xmpp.Iq()
         # Check dfrom parameter for backwards compatibility
-        iq['from'] = ifrom or kwargs.get('dfrom', '')
-        iq['to'] = jid
-        iq['type'] = 'get'
-        iq['disco_info']['node'] = node if node else ''
+        iq["from"] = ifrom or kwargs.get("dfrom", "")
+        iq["to"] = jid
+        iq["type"] = "get"
+        iq["disco_info"]["node"] = node if node else ""
         return await iq.send(**kwargs)
 
-    def set_info(self, jid: OptJid = None, node: Optional[str] = None,
-                 info: Optional[Union[Iq, DiscoInfo]] = None) -> Future:
+    def set_info(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        info: Optional[Union[Iq, DiscoInfo]] = None,
+    ) -> Future:
         """
         Set the disco#info data for a JID/node based on an existing
         disco#info stanza.
@@ -416,12 +447,17 @@ class XEP_0030(BasePlugin):
 
         """
         if isinstance(info, Iq):
-            info = info['disco_info']
-        return self.api['set_info'](jid, node, None, info)
+            info = info["disco_info"]
+        return self.api["set_info"](jid, node, None, info)
 
-    async def get_items(self, jid: OptJid = None, node: Optional[str] = None,
-                        local: bool = False, ifrom: OptJid = None,
-                        **kwargs) -> Iq:
+    async def get_items(
+        self,
+        jid: OptJid = None,
+        node: Optional[str] = None,
+        local: bool = False,
+        ifrom: OptJid = None,
+        **kwargs
+    ) -> Iq:
         """
         Retrieve the disco#items results from a given JID/node combination.
 
@@ -451,22 +487,23 @@ class XEP_0030(BasePlugin):
             ifrom = self.xmpp.boundjid.bare
 
         if local or local is None and jid is None:
-            items = await self.api['get_items'](jid, node, ifrom, kwargs)
+            items = await self.api["get_items"](jid, node, ifrom, kwargs)
             return self._wrap(ifrom, jid, items)
 
         iq = self.xmpp.Iq()
         # Check dfrom parameter for backwards compatibility
-        iq['from'] = ifrom or kwargs.get('dfrom', '')
-        iq['to'] = jid
-        iq['type'] = 'get'
-        iq['disco_items']['node'] = node if node else ''
-        if kwargs.get('iterator', False) and self.xmpp['xep_0059']:
-            return self.xmpp['xep_0059'].iterate(iq, 'disco_items')
+        iq["from"] = ifrom or kwargs.get("dfrom", "")
+        iq["to"] = jid
+        iq["type"] = "get"
+        iq["disco_items"]["node"] = node if node else ""
+        if kwargs.get("iterator", False) and self.xmpp["xep_0059"]:
+            return self.xmpp["xep_0059"].iterate(iq, "disco_items")
         else:
             return await iq.send(**kwargs)
 
-    def set_items(self, jid: OptJid = None, node: Optional[str] = None,
-                  **kwargs) -> Future:
+    def set_items(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Set or replace all items for the specified JID/node combination.
 
@@ -481,10 +518,11 @@ class XEP_0030(BasePlugin):
         :param node: Optional node to modify.
         :param items: A series of items in tuple format.
         """
-        return self.api['set_items'](jid, node, None, kwargs)
+        return self.api["set_items"](jid, node, None, kwargs)
 
-    def del_items(self, jid: OptJid = None, node: Optional[str] = None,
-                  **kwargs) -> Future:
+    def del_items(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove all items from the given JID/node combination.
 
@@ -495,11 +533,16 @@ class XEP_0030(BasePlugin):
         :param jid: The JID to modify.
         :param node: Optional node to modify.
         """
-        return self.api['del_items'](jid, node, None, kwargs)
+        return self.api["del_items"](jid, node, None, kwargs)
 
-    def add_item(self, jid: str = '', name: str = '',
-                 node: Optional[str] = None, subnode: str = '',
-                 ijid: OptJid = None) -> Future:
+    def add_item(
+        self,
+        jid: str = "",
+        name: str = "",
+        node: Optional[str] = None,
+        subnode: str = "",
+        ijid: OptJid = None,
+    ) -> Future:
         """
         Add a new item element to the given JID/node combination.
 
@@ -517,13 +560,12 @@ class XEP_0030(BasePlugin):
         """
         if not jid:
             jid = self.xmpp.boundjid.full
-        kwargs = {'ijid': jid,
-                  'name': name,
-                  'inode': subnode}
-        return self.api['add_item'](ijid, node, None, kwargs)
+        kwargs = {"ijid": jid, "name": name, "inode": subnode}
+        return self.api["add_item"](ijid, node, None, kwargs)
 
-    def del_item(self, jid: OptJid = None, node: Optional[str] = None,
-                 **kwargs) -> Future:
+    def del_item(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove a single item from the given JID/node combination.
 
@@ -532,11 +574,17 @@ class XEP_0030(BasePlugin):
         :param ijid: The item's JID.
         :param inode: The item's node.
         """
-        return self.api['del_item'](jid, node, None, kwargs)
+        return self.api["del_item"](jid, node, None, kwargs)
 
-    def add_identity(self, category: str = '', itype: str = '', name: str = '',
-                     node: Optional[str] = None, jid: OptJid = None,
-                     lang: Optional[str] = None) -> Future:
+    def add_identity(
+        self,
+        category: str = "",
+        itype: str = "",
+        name: str = "",
+        node: Optional[str] = None,
+        jid: OptJid = None,
+        lang: Optional[str] = None,
+    ) -> Future:
         """
         Add a new identity to the given JID/node combination.
 
@@ -558,14 +606,12 @@ class XEP_0030(BasePlugin):
         :param node: The node to modify.
         :param jid: The JID to modify.
         """
-        kwargs = {'category': category,
-                  'itype': itype,
-                  'name': name,
-                  'lang': lang}
-        return self.api['add_identity'](jid, node, None, kwargs)
+        kwargs = {"category": category, "itype": itype, "name": name, "lang": lang}
+        return self.api["add_identity"](jid, node, None, kwargs)
 
-    def add_feature(self, feature: str, node: Optional[str] = None,
-                    jid: OptJid = None) -> Future:
+    def add_feature(
+        self, feature: str, node: Optional[str] = None, jid: OptJid = None
+    ) -> Future:
         """
         Add a feature to a JID/node combination.
 
@@ -576,11 +622,12 @@ class XEP_0030(BasePlugin):
         :param node: The node to modify.
         :param jid: The JID to modify.
         """
-        kwargs = {'feature': feature}
-        return self.api['add_feature'](jid, node, None, kwargs)
+        kwargs = {"feature": feature}
+        return self.api["add_feature"](jid, node, None, kwargs)
 
-    def del_identity(self, jid: OptJid = None,
-                     node: Optional[str] = None, **kwargs) -> Future:
+    def del_identity(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove an identity from the given JID/node combination.
 
@@ -594,10 +641,11 @@ class XEP_0030(BasePlugin):
         :param name: Optional, human readable name for the identity.
         :param lang: Optional, the identity's xml:lang value.
         """
-        return self.api['del_identity'](jid, node, None, kwargs)
+        return self.api["del_identity"](jid, node, None, kwargs)
 
-    def del_feature(self, jid: OptJid = None, node: Optional[str] = None,
-                    **kwargs) -> Future:
+    def del_feature(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove a feature from a given JID/node combination.
 
@@ -608,10 +656,11 @@ class XEP_0030(BasePlugin):
         :param node: The node to modify.
         :param feature: The feature's namespace.
         """
-        return self.api['del_feature'](jid, node, None, kwargs)
+        return self.api["del_feature"](jid, node, None, kwargs)
 
-    def set_identities(self, jid: OptJid = None, node: Optional[str] = None,
-                       **kwargs) -> Future:
+    def set_identities(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Add or replace all identities for the given JID/node combination.
 
@@ -626,10 +675,11 @@ class XEP_0030(BasePlugin):
         :param identities: A set of identities in tuple form.
         :param lang: Optional, xml:lang value.
         """
-        return self.api['set_identities'](jid, node, None, kwargs)
+        return self.api["set_identities"](jid, node, None, kwargs)
 
-    def del_identities(self, jid: OptJid = None, node: Optional[str] = None,
-                       **kwargs) -> Future:
+    def del_identities(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove all identities for a JID/node combination.
 
@@ -644,10 +694,11 @@ class XEP_0030(BasePlugin):
         :param lang: Optional. If given, only remove identities
                     using this xml:lang value.
         """
-        return self.api['del_identities'](jid, node, None, kwargs)
+        return self.api["del_identities"](jid, node, None, kwargs)
 
-    def set_features(self, jid: OptJid = None, node: Optional[str] = None,
-                     **kwargs) -> Future:
+    def set_features(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Add or replace the set of supported features
         for a JID/node combination.
@@ -659,10 +710,11 @@ class XEP_0030(BasePlugin):
         :param node: The node to modify.
         :param features: The new set of supported features.
         """
-        return self.api['set_features'](jid, node, None, kwargs)
+        return self.api["set_features"](jid, node, None, kwargs)
 
-    def del_features(self, jid: OptJid = None, node: Optional[str] = None,
-                     **kwargs) -> Future:
+    def del_features(
+        self, jid: OptJid = None, node: Optional[str] = None, **kwargs
+    ) -> Future:
         """
         Remove all features from a JID/node combination.
 
@@ -672,10 +724,11 @@ class XEP_0030(BasePlugin):
         :param jid: The JID to modify.
         :param node: The node to modify.
         """
-        return self.api['del_features'](jid, node, None, kwargs)
+        return self.api["del_features"](jid, node, None, kwargs)
 
-    async def _run_node_handler(self, htype, jid, node: Optional[str] = None,
-                                ifrom: OptJid = None, data=None):
+    async def _run_node_handler(
+        self, htype, jid, node: Optional[str] = None, ifrom: OptJid = None, data=None
+    ):
         """
         Execute the most specific node handler for the given
         JID/node combination.
@@ -699,39 +752,42 @@ class XEP_0030(BasePlugin):
 
         :param iq: The incoming disco#items stanza.
         """
-        if iq['type'] == 'get':
-            log.debug("Received disco info query from "
-                      "<%s> to <%s>.", iq['from'], iq['to'])
-            info = await self.api['get_info'](iq['to'],
-                                              iq['disco_info']['node'],
-                                              iq['from'],
-                                              iq)
+        if iq["type"] == "get":
+            log.debug(
+                "Received disco info query from " "<%s> to <%s>.", iq["from"], iq["to"]
+            )
+            info = await self.api["get_info"](
+                iq["to"], iq["disco_info"]["node"], iq["from"], iq
+            )
             if isinstance(info, Iq):
-                info['id'] = iq['id']
+                info["id"] = iq["id"]
                 info.send()
             else:
-                node = iq['disco_info']['node']
+                node = iq["disco_info"]["node"]
                 iq = iq.reply()
                 if info:
                     info = self._fix_default_info(info)
-                    info['node'] = node
+                    info["node"] = node
                     iq.set_payload(info.xml)
                 iq.send()
-        elif iq['type'] == 'result':
-            log.debug("Received disco info result from "
-                      "<%s> to <%s>.", iq['from'], iq['to'])
+        elif iq["type"] == "result":
+            log.debug(
+                "Received disco info result from " "<%s> to <%s>.", iq["from"], iq["to"]
+            )
             if self.use_cache:
-                log.debug("Caching disco info result from "
-                          "<%s> to <%s>.", iq['from'], iq['to'])
+                log.debug(
+                    "Caching disco info result from " "<%s> to <%s>.",
+                    iq["from"],
+                    iq["to"],
+                )
                 if self.xmpp.is_component:
-                    ito = iq['to'].full
+                    ito = iq["to"].full
                 else:
                     ito = None
-                await self.api['cache_info'](iq['from'],
-                                             iq['disco_info']['node'],
-                                             ito,
-                                             iq)
-            self.xmpp.event('disco_info', iq)
+                await self.api["cache_info"](
+                    iq["from"], iq["disco_info"]["node"], ito, iq
+                )
+            self.xmpp.event("disco_info", iq)
 
     async def _handle_disco_items(self, iq: Iq):
         """
@@ -741,13 +797,13 @@ class XEP_0030(BasePlugin):
 
         :param iq: The incoming disco#items stanza.
         """
-        if iq['type'] == 'get':
-            log.debug("Received disco items query from "
-                      "<%s> to <%s>.", iq['from'], iq['to'])
-            items = await self.api['get_items'](iq['to'],
-                                                iq['disco_items']['node'],
-                                                iq['from'],
-                                                iq)
+        if iq["type"] == "get":
+            log.debug(
+                "Received disco items query from " "<%s> to <%s>.", iq["from"], iq["to"]
+            )
+            items = await self.api["get_items"](
+                iq["to"], iq["disco_items"]["node"], iq["from"], iq
+            )
             if isinstance(items, Iq):
                 items.send()
             else:
@@ -755,10 +811,11 @@ class XEP_0030(BasePlugin):
                 if items:
                     iq.set_payload(items.xml)
                 iq.send()
-        elif iq['type'] == 'result':
-            log.debug("Received disco items result from "
-                      "%s to %s.", iq['from'], iq['to'])
-            self.xmpp.event('disco_items', iq)
+        elif iq["type"] == "result":
+            log.debug(
+                "Received disco items result from " "%s to %s.", iq["from"], iq["to"]
+            )
+            self.xmpp.event("disco_items", iq)
 
     def _fix_default_info(self, info: DiscoInfo):
         """
@@ -772,20 +829,26 @@ class XEP_0030(BasePlugin):
         """
         result = info
         if isinstance(info, Iq):
-            info = info['disco_info']
-        if not info['node']:
-            if not info['identities']:
+            info = info["disco_info"]
+        if not info["node"]:
+            if not info["identities"]:
                 if self.xmpp.is_component:
-                    log.debug("No identity found for this entity. "
-                              "Using default component identity.")
-                    info.add_identity('component', 'generic')
+                    log.debug(
+                        "No identity found for this entity. "
+                        "Using default component identity."
+                    )
+                    info.add_identity("component", "generic")
                 else:
-                    log.debug("No identity found for this entity. "
-                              "Using default client identity.")
-                    info.add_identity('client', 'bot')
-            if not info['features']:
-                log.debug("No features found for this entity. "
-                          "Using default disco#info feature.")
+                    log.debug(
+                        "No identity found for this entity. "
+                        "Using default client identity."
+                    )
+                    info.add_identity("client", "bot")
+            if not info["features"]:
+                log.debug(
+                    "No features found for this entity. "
+                    "Using default disco#info feature."
+                )
                 info.add_feature(info.namespace)
         return result
 
@@ -803,9 +866,9 @@ class XEP_0030(BasePlugin):
             iq = self.xmpp.Iq()
             # Since we're simulating a result, we have to treat
             # the 'from' and 'to' values opposite the normal way.
-            iq['to'] = self.xmpp.boundjid if ito is None else ito
-            iq['from'] = self.xmpp.boundjid if ifrom is None else ifrom
-            iq['type'] = 'result'
+            iq["to"] = self.xmpp.boundjid if ito is None else ito
+            iq["from"] = self.xmpp.boundjid if ifrom is None else ifrom
+            iq["type"] = "result"
             iq.append(payload)
             return iq
         return payload

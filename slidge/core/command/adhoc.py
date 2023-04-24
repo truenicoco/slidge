@@ -5,9 +5,9 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from slixmpp import JID, Iq
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form as SlixForm
 
-from ...util.error import XMPPError
 from ...util.xep_0030.stanza.items import DiscoItems
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 

@@ -1,68 +1,45 @@
-image: alpine/edge
+image: alpine/3.17
 packages:
-  - docker
-  - docker-cli-buildx
-  - python3-dev
-  - py3-slixmpp
-sources:
-  - https://git.sr.ht/~nicoco/slidge
+  - poetry
 secrets:
   - 3ecea679-dec7-4ac0-8821-75d0f4fe0773
   - dc710d9d-8043-4e1d-9837-b35bfa02800a
 artifacts:
-  - ./slidge-docs.tar.gz
-  - ./slidge.tar
+  - ./docs.tar.gz
+  - ./package.tar.gz
+  - ./package.whl
 tasks:
-  - muc-bot: |
-      cd slidge
-      if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
-        python3 dev/muc_bot.py || echo Could not announce commits in slidge MUC
-      else
-        echo Not on master, not activating C3P0
-      fi
-  - version: |
-      cd slidge
-      export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
-      echo VER=$VER >> ~/.buildenv
-      for TAG in $(git tag --points-at HEAD); do
-        if [[ $TAG == v* ]] ; then
-          export VER=$(echo $TAG | cut -c2-)
-          echo VER=$VER >> ~/.buildenv
-          sed "s/0\.0\.0-dev/$VER/" -i pyproject.toml
-        fi
-      done
-      sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
-  - setup-docker1: |
-      sudo service docker start
-      sudo addgroup build docker
-  - setup-docker2: |
-      while ! test -e /var/run/docker.sock; do sleep 1; done
-      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
-      docker buildx create --use
-  - build: |
-      cd slidge
-      BUILDKIT_PROGRESS=plain docker buildx build . \
-        --platform linux/amd64,linux/arm64 \
-        -f dev/Containerfile-ci \
-        -o ./build
-      mkdir dist
-      for p in arm64 amd64; do
-        mv ./build/linux_${p}/dist/* ./dist 
-      done
-      mv ./build/linux_amd64/slidge-docs.tar.gz /home/build
-  - tar: |
-      tar cf slidge.tar slidge/dist
+  - set-project: |
+      echo PROJECT=$(ls ~) >> ~/.buildenv
+  - install: |
+      cd $PROJECT
+      poetry install
+      poetry run c3p0 $PROJECT
+      poetry run set_version
+      poetry build
+      cp dist/*.tar.gz ~/package.tar.gz
+      cp dist/*.whl ~/package.whl
+  - tests: |
+      cd $PROJECT
+      poetry run ruff $PROJECT
+      poetry run mypy $PROJECT
+      poetry run pytest tests
+      poetry run black --check $PROJECT
+      poetry run isort --check $PROJECT
+  - docs: |
+      cd $PROJECT/docs
+      make html
+      cd build/html
+      tar cvzf ~/docs.tar.gz .
   - publish: |
-      cd slidge
-      curl -sSL https://install.python-poetry.org | python3 -
-      sudo ln -s /home/build/.local/bin/poetry /usr/local/bin
-      
-      if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
-        set +x
-        export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
-        set -x
-  
-        poetry publish || echo Could not publish to pypi
-      else
-        echo Not on master, not publishing
+      if [ -z "$PYPI" ]; then
+        echo Not a release, no publishing
+        exit
       fi
+
+      set +x
+      export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
+      set -x
+
+      cd $PROJECT
+      poetry publish

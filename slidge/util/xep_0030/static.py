@@ -24,10 +24,7 @@ class NodeType(TypedDict):
     items: DiscoItems
 
 
-NodesType = Dict[
-    Tuple[str, str, str],
-    NodeType
-]
+NodesType = Dict[Tuple[str, str, str], NodeType]
 
 
 class StaticDisco:
@@ -47,7 +44,7 @@ class StaticDisco:
     :var disco: The instance of the XEP-0030 plugin.
     """
 
-    def __init__(self, xmpp: 'BaseXMPP', disco: 'XEP_0030'):
+    def __init__(self, xmpp: "BaseXMPP", disco: "XEP_0030"):
         """
         Create a static disco interface. Sets of disco#info and
         disco#items are maintained for every given JID and node
@@ -59,34 +56,36 @@ class StaticDisco:
         """
         self.nodes: NodesType = {}
         self.xmpp: BaseXMPP = xmpp
-        self.disco: 'XEP_0030' = disco
+        self.disco: "XEP_0030" = disco
 
-    def add_node(self, jid: OptJidStr = None, node: Optional[str] = None,
-                 ifrom: OptJidStr = None) -> NodeType:
+    def add_node(
+        self, jid: OptJidStr = None, node: Optional[str] = None, ifrom: OptJidStr = None
+    ) -> NodeType:
         if jid is None:
             node_jid = self.xmpp.boundjid.full
         elif isinstance(jid, JID):
             node_jid = jid.full
         if ifrom is None:
-            node_ifrom = ''
+            node_ifrom = ""
         elif isinstance(ifrom, JID):
             node_ifrom = ifrom.full
         else:
             node_ifrom = ifrom
         if node is None:
-            node = ''
+            node = ""
         if (node_jid, node, node_ifrom) not in self.nodes:
             node_dict: NodeType = {
-                'info': DiscoInfo(),
-                'items': DiscoItems(),
+                "info": DiscoInfo(),
+                "items": DiscoItems(),
             }
-            node_dict['info']['node'] = node
-            node_dict['items']['node'] = node
+            node_dict["info"]["node"] = node
+            node_dict["items"]["node"] = node
             self.nodes[(node_jid, node, node_ifrom)] = node_dict
         return self.nodes[(node_jid, node, node_ifrom)]
 
-    def get_node(self, jid: OptJidStr = None, node: Optional[str] = None,
-                 ifrom: OptJidStr = None) -> NodeType:
+    def get_node(
+        self, jid: OptJidStr = None, node: Optional[str] = None, ifrom: OptJidStr = None
+    ) -> NodeType:
         if jid is None:
             node_jid = self.xmpp.boundjid.full
         elif isinstance(jid, JID):
@@ -94,9 +93,9 @@ class StaticDisco:
         else:
             node_jid = jid
         if node is None:
-            node = ''
+            node = ""
         if ifrom is None:
-            node_ifrom = ''
+            node_ifrom = ""
         elif isinstance(ifrom, JID):
             node_ifrom = ifrom.full
         else:
@@ -105,8 +104,9 @@ class StaticDisco:
             self.add_node(node_jid, node, node_ifrom)
         return self.nodes[(node_jid, node, node_ifrom)]
 
-    def node_exists(self, jid: OptJidStr = None, node: Optional[str] = None,
-                    ifrom: OptJidStr = None) -> bool:
+    def node_exists(
+        self, jid: OptJidStr = None, node: Optional[str] = None, ifrom: OptJidStr = None
+    ) -> bool:
         if jid is None:
             node_jid = self.xmpp.boundjid.full
         elif isinstance(jid, JID):
@@ -114,9 +114,9 @@ class StaticDisco:
         else:
             node_jid = jid
         if node is None:
-            node = ''
+            node = ""
         if ifrom is None:
-            node_ifrom = ''
+            node_ifrom = ""
         elif isinstance(ifrom, JID):
             node_ifrom = ifrom.full
         else:
@@ -137,8 +137,9 @@ class StaticDisco:
     # the requester's JID, except for cached results. To do that,
     # register a custom node handler.
 
-    async def supports(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                       data: Any) -> Optional[bool]:
+    async def supports(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ) -> Optional[bool]:
         """
         Check if a JID supports a given feature.
 
@@ -158,28 +159,26 @@ class StaticDisco:
                         be skipped, even if a result has already been
                         cached. Defaults to false.
         """
-        feature = data.get('feature', None)
+        feature = data.get("feature", None)
 
-        data = {'local': data.get('local', False),
-                'cached': data.get('cached', True)}
+        data = {"local": data.get("local", False), "cached": data.get("cached", True)}
 
         if not feature:
             return False
 
         try:
-            info = await self.disco.get_info(jid=jid, node=node,
-                                             ifrom=ifrom, **data)
+            info = await self.disco.get_info(jid=jid, node=node, ifrom=ifrom, **data)
             info = self.disco._wrap(ifrom, jid, info, True)
-            features = info['disco_info']['features']
+            features = info["disco_info"]["features"]
             return feature in features
         except IqError:
             return False
         except IqTimeout:
             return None
 
-    async def has_identity(self, jid: OptJid, node: Optional[str],
-                           ifrom: OptJid, data: Dict[str, Any]
-                           ) -> Optional[bool]:
+    async def has_identity(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Dict[str, Any]
+    ) -> Optional[bool]:
         """
         Check if a JID has a given identity.
 
@@ -201,28 +200,30 @@ class StaticDisco:
                          be skipped, even if a result has already been
                          cached. Defaults to false.
         """
-        identity = (data.get('category', None),
-                    data.get('itype', None),
-                    data.get('lang', None))
+        identity = (
+            data.get("category", None),
+            data.get("itype", None),
+            data.get("lang", None),
+        )
 
-        data = {'local': data.get('local', False),
-                'cached': data.get('cached', True)}
+        data = {"local": data.get("local", False), "cached": data.get("cached", True)}
 
         try:
-            info = await self.disco.get_info(jid=jid, node=node,
-                                             ifrom=ifrom, **data)
+            info = await self.disco.get_info(jid=jid, node=node, ifrom=ifrom, **data)
             info = self.disco._wrap(ifrom, jid, info, True)
 
             def trunc(i):
                 return (i[0], i[1], i[2])
-            return identity in map(trunc, info['disco_info']['identities'])
+
+            return identity in map(trunc, info["disco_info"]["identities"])
         except IqError:
             return False
         except IqTimeout:
             return None
 
-    def get_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                 data: Any) -> Optional[DiscoInfo]:
+    def get_info(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ) -> Optional[DiscoInfo]:
         """
         Return the stored info data for the requested JID/node combination.
 
@@ -232,32 +233,33 @@ class StaticDisco:
             if not node:
                 return DiscoInfo()
             else:
-                raise XMPPError(condition='item-not-found')
+                raise XMPPError(condition="item-not-found")
         else:
-            return self.get_node(jid, node)['info']
+            return self.get_node(jid, node)["info"]
 
-    def set_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                 data: DiscoInfo):
+    def set_info(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: DiscoInfo
+    ):
         """
         Set the entire info stanza for a JID/node at once.
 
         The data parameter is a disco#info substanza.
         """
         new_node = self.add_node(jid, node)
-        new_node['info'] = data
+        new_node["info"] = data
 
-    def del_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                 data: Any):
+    def del_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any):
         """
         Reset the info stanza for a given JID/node combination.
 
         The data parameter is not used.
         """
         if self.node_exists(jid, node):
-            self.get_node(jid, node)['info'] = DiscoInfo()
+            self.get_node(jid, node)["info"] = DiscoInfo()
 
-    def get_items(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                  data: Any) -> Optional[DiscoItems]:
+    def get_items(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ) -> Optional[DiscoItems]:
         """
         Return the stored items data for the requested JID/node combination.
 
@@ -267,34 +269,43 @@ class StaticDisco:
             if not node:
                 return DiscoItems()
             else:
-                raise XMPPError(condition='item-not-found')
+                raise XMPPError(condition="item-not-found")
         else:
-            return self.get_node(jid, node)['items']
+            return self.get_node(jid, node)["items"]
 
-    def set_items(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                  data: Dict[str, Collection[Tuple]]):
+    def set_items(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Dict[str, Collection[Tuple]],
+    ):
         """
         Replace the stored items data for a JID/node combination.
 
         The data parameter may provide:
             items -- A set of items in tuple format.
         """
-        items = data.get('items', set())
+        items = data.get("items", set())
         new_node = self.add_node(jid, node)
-        new_node['items']['items'] = items
+        new_node["items"]["items"] = items
 
-    def del_items(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                  data: Any):
+    def del_items(self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any):
         """
         Reset the items stanza for a given JID/node combination.
 
         The data parameter is not used.
         """
         if self.node_exists(jid, node):
-            self.get_node(jid, node)['items'] = DiscoItems()
+            self.get_node(jid, node)["items"] = DiscoItems()
 
-    def add_identity(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                     data: Dict[str, Optional[str]]):
+    def add_identity(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Dict[str, Optional[str]],
+    ):
         """
         Add a new identity to the JID/node combination.
 
@@ -306,14 +317,20 @@ class StaticDisco:
         :param lang: Optional standard xml:lang value.
         """
         new_node = self.add_node(jid, node)
-        new_node['info'].add_identity(
-                data.get('category', ''),
-                data.get('itype', ''),
-                data.get('name', None),
-                data.get('lang', None))
+        new_node["info"].add_identity(
+            data.get("category", ""),
+            data.get("itype", ""),
+            data.get("name", None),
+            data.get("lang", None),
+        )
 
-    def set_identities(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                       data: Dict[str, Collection[str]]):
+    def set_identities(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Dict[str, Collection[str]],
+    ):
         """
         Add or replace all identities for a JID/node combination.
 
@@ -322,12 +339,17 @@ class StaticDisco:
         :param identities: A list of identities in tuple form:
                            (category, type, name, lang)
         """
-        identities = data.get('identities', set())
+        identities = data.get("identities", set())
         new_node = self.add_node(jid, node)
-        new_node['info']['identities'] = identities
+        new_node["info"]["identities"] = identities
 
-    def del_identity(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                     data: Dict[str, Optional[str]]):
+    def del_identity(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Dict[str, Optional[str]],
+    ):
         """
         Remove an identity from a JID/node combination.
 
@@ -339,24 +361,27 @@ class StaticDisco:
         :param lang: Optional, standard xml:lang value.
         """
         if self.node_exists(jid, node):
-            self.get_node(jid, node)['info'].del_identity(
-                    data.get('category', ''),
-                    data.get('itype', ''),
-                    data.get('name', None),
-                    data.get('lang', None))
+            self.get_node(jid, node)["info"].del_identity(
+                data.get("category", ""),
+                data.get("itype", ""),
+                data.get("name", None),
+                data.get("lang", None),
+            )
 
-    def del_identities(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                       data: Any):
+    def del_identities(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ):
         """
         Remove all identities from a JID/node combination.
 
         The data parameter is not used.
         """
         if self.node_exists(jid, node):
-            del self.get_node(jid, node)['info']['identities']
+            del self.get_node(jid, node)["info"]["identities"]
 
-    def add_feature(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                    data: Dict[str, str]):
+    def add_feature(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Dict[str, str]
+    ):
         """
         Add a feature to a JID/node combination.
 
@@ -365,11 +390,15 @@ class StaticDisco:
         :param feature: The namespace of the supported feature.
         """
         new_node = self.add_node(jid, node)
-        new_node['info'].add_feature(
-                data.get('feature', ''))
+        new_node["info"].add_feature(data.get("feature", ""))
 
-    def set_features(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                     data: Dict[str, Collection[str]]):
+    def set_features(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Dict[str, Collection[str]],
+    ):
         """
         Add or replace all features for a JID/node combination.
 
@@ -377,12 +406,13 @@ class StaticDisco:
 
         :param features: The new set of supported features.
         """
-        features = data.get('features', set())
+        features = data.get("features", set())
         new_node = self.add_node(jid, node)
-        new_node['info']['features'] = features
+        new_node["info"]["features"] = features
 
-    def del_feature(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                    data: Dict[str, str]):
+    def del_feature(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Dict[str, str]
+    ):
         """
         Remove a feature from a JID/node combination.
 
@@ -391,11 +421,9 @@ class StaticDisco:
         :param feature: The namespace of the removed feature.
         """
         if self.node_exists(jid, node):
-            self.get_node(jid, node)['info'].del_feature(
-                    data.get('feature', ''))
+            self.get_node(jid, node)["info"].del_feature(data.get("feature", ""))
 
-    def del_features(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                     data: Any):
+    def del_features(self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any):
         """
         Remove all features from a JID/node combination.
 
@@ -403,10 +431,11 @@ class StaticDisco:
         """
         if not self.node_exists(jid, node):
             return
-        del self.get_node(jid, node)['info']['features']
+        del self.get_node(jid, node)["info"]["features"]
 
-    def add_item(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                 data: Dict[str, str]):
+    def add_item(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Dict[str, str]
+    ):
         """
         Add an item to a JID/node combination.
 
@@ -418,13 +447,13 @@ class StaticDisco:
         :param name: Optional human readable name for the item.
         """
         new_node = self.add_node(jid, node)
-        new_node['items'].add_item(
-                data.get('ijid', ''),
-                node=data.get('inode', ''),
-                name=data.get('name', ''))
+        new_node["items"].add_item(
+            data.get("ijid", ""), node=data.get("inode", ""), name=data.get("name", "")
+        )
 
-    def del_item(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                 data: Dict[str, str]):
+    def del_item(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Dict[str, str]
+    ):
         """
         Remove an item from a JID/node combination.
 
@@ -434,12 +463,17 @@ class StaticDisco:
         :param inode: Optional extra identifying information.
         """
         if self.node_exists(jid, node):
-            self.get_node(jid, node)['items'].del_item(
-                    data.get('ijid', ''),
-                    node=data.get('inode', None))
+            self.get_node(jid, node)["items"].del_item(
+                data.get("ijid", ""), node=data.get("inode", None)
+            )
 
-    def cache_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                   data: Union[Iq, DiscoInfo]):
+    def cache_info(
+        self,
+        jid: OptJid,
+        node: Optional[str],
+        ifrom: OptJid,
+        data: Union[Iq, DiscoInfo],
+    ):
         """
         Cache disco information for an external JID.
 
@@ -448,15 +482,16 @@ class StaticDisco:
         the disco#info substanza itself.
         """
         if isinstance(data, Iq):
-            info = data['disco_info']
+            info = data["disco_info"]
         else:
             info = data
 
         new_node = self.add_node(jid, node, ifrom)
-        new_node['info'] = info
+        new_node["info"] = info
 
-    def get_cached_info(self, jid: OptJid, node: Optional[str], ifrom: OptJid,
-                        data: Any) -> Optional[DiscoInfo]:
+    def get_cached_info(
+        self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any
+    ) -> Optional[DiscoInfo]:
         """
         Retrieve cached disco info data.
 
@@ -464,4 +499,4 @@ class StaticDisco:
         """
         if not self.node_exists(jid, node, ifrom):
             return None
-        return self.get_node(jid, node, ifrom)['info']
+        return self.get_node(jid, node, ifrom)["info"]

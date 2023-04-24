@@ -1051,7 +1051,7 @@ class TestContact(SlidgeTest):
             """
             <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
                 <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/1.8.3"
+                   node="http://slixmpp.com/ver/1.8.3+slidge0"
                    hash="sha-1"
                    ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
                 <priority>0</priority>
@@ -1070,7 +1070,7 @@ class TestContact(SlidgeTest):
             """
             <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
                 <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/1.8.3"
+                   node="http://slixmpp.com/ver/1.8.3+slidge0"
                    hash="sha-1"
                    ver="g+W+C4Is6LMMAXwPpjeg2QE1p90="/>
                 <priority>0</priority>

@@ -1,3 +1,5 @@
+from aifc import Error
+
 import pytest
 
 from slixmpp import ComponentXMPP
@@ -5,6 +7,7 @@ from slixmpp.test import SlixTest
 
 import slidge.core.command.adhoc
 import slidge.core.command.base
+from slidge.util.test import SlixTestPlus
 from slidge.util.xep_0050.adhoc import XEP_0050
 from slidge.core.command.adhoc import AdhocProvider
 from slidge.core.command import Command, CommandAccess
@@ -43,7 +46,7 @@ class Command2(Command1):
     ACCESS = CommandAccess.ADMIN_ONLY
 
 
-class TestCommandsDisco(SlixTest):
+class TestCommandsDisco(SlixTestPlus):
     def setUp(self):
         self.stream_start(
             mode="component",
@@ -54,6 +57,7 @@ class TestCommandsDisco(SlixTest):
         self.adhoc = AdhocProvider(self.xmpp)
         self.adhoc.register(Command1(self.xmpp))
         self.adhoc.register(Command2(self.xmpp))
+        super().setUp()
 
     def test_disco_admin(self):
         self.recv(

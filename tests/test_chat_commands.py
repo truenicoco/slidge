@@ -66,6 +66,7 @@ class TestChatCommands(SlixTestPlus):
         self.commands = slidge.core.command.chat_command.ChatCommandProvider(self.xmpp)
         self.commands.register(CommandAdmin(self.xmpp))
         self.commands.register(CommandAdminConfirmFail(self.xmpp))
+        super().setUp()
 
     def test_non_existing(self):
         self.recv(

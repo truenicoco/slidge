@@ -72,7 +72,10 @@ class XEP_0356_OLD(BasePlugin):
         self.xmpp.event("privileges_advertised_old")
 
     def send_privileged_message(self, msg: Message):
-        if self.granted_privileges[msg.get_from().domain].message != MessagePermission.OUTGOING:
+        if (
+            self.granted_privileges[msg.get_from().domain].message
+            != MessagePermission.OUTGOING
+        ):
             raise PermissionError(
                 "The server hasn't authorized us to send messages on behalf of other users"
             )

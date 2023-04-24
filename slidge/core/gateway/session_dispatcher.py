@@ -2,8 +2,8 @@ import logging
 from typing import TYPE_CHECKING, Callable, Union
 
 from slixmpp import Message, Presence
+from slixmpp.exceptions import XMPPError
 
-from ...util.error import XMPPError
 from ..session import BaseSession
 
 if TYPE_CHECKING:

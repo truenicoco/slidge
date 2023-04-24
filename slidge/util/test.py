@@ -15,6 +15,7 @@ from slixmpp import (
     Presence,
     StanzaPath,
 )
+from slixmpp.stanza.error import Error
 from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
@@ -35,6 +36,10 @@ from ..core.command import Command
 
 
 class SlixTestPlus(SlixTest):
+    def setUp(self):
+        super().setUp()
+        Error.namespace = "jabber:component:accept"
+
     def check(self, stanza, criteria, method="exact", defaults=None, use_values=True):
         """
         Create and compare several stanza objects to a correct XML string.
@@ -233,6 +238,7 @@ class SlidgeTest(SlixTestPlus):
         # this to True in tests related to those plugins.
         self.xmpp.use_message_ids = False
         self.xmpp.use_presence_ids = False
+        Error.namespace = "jabber:component:accept"
 
     @classmethod
     def tearDownClass(cls):

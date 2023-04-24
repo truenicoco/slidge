@@ -6,39 +6,32 @@ authors = ["Nicolas Cedilnik <nicoco@nicoco.fr>"]
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 homepage = "https://sr.ht/~nicoco/slidge/"
-include = [
-    {path = "slidge/plugins/whatsapp/generated/*.py", format = "wheel"},
-    {path = "slidge/plugins/whatsapp/generated/*.so", format = "wheel"}
-]
-
-[tool.poetry.build]
-script = "dev/build.py"
-generate-setup-file = false
 
 [tool.poetry.dependencies]
 python = "^3.9"
-slixmpp = "^1.8.3"
 qrcode = ">=7.4.1"
 Pillow = ">=8.1.0"
-aiohttp = "^3.8.3"
+aiohttp = {version = "^3.8.3", extras = ["speedups"]}
 ConfigArgParse = "^1.5.3"
-
-aiotdlib = [
-    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_x86_64.whl", markers = "sys_platform == 'linux' and platform_machine == 'x86_64'", optional = true },
-    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_aarch64.whl", markers = "sys_platform == 'linux' and platform_machine == 'aarch64'", optional = true },
-    {url = "https://slidge.im/aiotdlib-0.19.2-cp39-cp39-manylinux_2_31_i686.whl", markers = "sys_platform == 'linux' and platform_machine == 'i686'", optional = true}
-]
-pydantic = { version = "*", optional = true }
-aiosignald = { version = "^0.3.7", optional = true }
-mautrix-facebook = { version = "^0.4.1", optional = true }
-mattermost-api-reference-client = { version =  "^4.0.0.post1", optional = true }
-emoji = { version =  "^2.0.0", optional = true }
-SkPy = { version =  "^0.10.4", optional = true }
-steam = {extras = ["client"], version = "^1.4.4", optional = true }
-"discord.py-self" = "^2.0.0"
 pickle-secure = "^0.99.9"
 python-magic = "^0.4.27"
-linkpreview = "^0.6.5"
+slixmpp = "^1.8.3+slidge0"
+
+[[tool.poetry.source]]
+name = "slidge-repo"
+url = "https://slidge.im/repo"
+
+# it is very unclear why I had to add these sections but got various setuptools-
+# related errors without them.
+[project]
+name = "slidge"
+version = "0.0.0-dev"
+[tool.setuptools]
+include-package-data = true
+[tool.setuptools.packages.find]
+include = ["slidge*"]
+[tool.setuptools.package-data]
+slidge = ["py.typed"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
@@ -50,58 +43,43 @@ sphinx-argparse = "^0.4.0"
 sphinx-autoapi = "^2.0.0"
 furo = "^2023.03.27"
 mypy = "^1.2"
-types-requests = "^2.28.1"
 isort = "^5.11.4"
-types-emoji = "^2.0.0"
-pybindgen = "^0.22.1"
 ruff = "^0.0.259"
 xmldiff = "^2.5"
 types-pillow = "^9.5.0.0"
-types-paho-mqtt = "^1.6.0.6"
-types-protobuf = "^4.22.0.2"
 
-[build-system]
-requires = ["poetry-core>=1.0.0", "pybindgen>=0.22.1"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.extras]
-telegram = ["aiotdlib", "pydantic"]
-discord = ["discord.py-self"]
-signal = ["aiosignald"]
-facebook = ["mautrix-facebook"]
-mattermost = ["mattermost-api-reference-client", "emoji"]
-skype = ["SkPy"]
-steam = ["steam", "asyncio-gevent"]
-whatsapp = ["linkpreview"]
+[tool.poetry.group.dev.dependencies.slidge-dev-helpers]
+git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
+branch = "master"
 
 [tool.poetry.scripts]
 slidge = 'slidge.__main__:main'
 
 [tool.mypy]
-exclude = ["slidge.util.xep*", "slidge/plugins/whatsapp/generated"]
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
-    "aiotdlib.*",
     "configargparse",
-    "linkpreview",
-    "maufbapi.*",
     "qrcode",
-    "skpy",
-    "steam.*",
 ]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-    "aiosignald"
+  "slidge.util.xep_0030.*",
+  "slidge.util.xep_0050.*",
+  "slidge.util.xep_0054.*",
+  "slidge.util.xep_0292.*",
+  "slidge.util.xep_0313.*",
+  "slidge.util.xep_0356.*",
+  "slidge.util.xep_0461.*",
 ]
-no_strict_optional = true
-
-[tool.black]
-exclude = "xep_*|slidge/plugins/whatsapp/generated/*"
+ignore_errors = true
 
 [tool.ruff]
 line-length = 120
-exclude = ["xep_*", "slidge/plugins/whatsapp/generated/*"]
+exclude = ["xep_*"]
+
+[tool.isort]
+profile = "black"

@@ -30,4 +30,3 @@ on signal, it is the phone number of the user you want to reach.
    contacts
    commands
    low_profile
-   plugins/index

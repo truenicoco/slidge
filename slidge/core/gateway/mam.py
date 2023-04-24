@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
 from slixmpp import CoroutineCallback, Iq, StanzaPath
+from slixmpp.exceptions import XMPPError
 
 from ...util.db import user_store
-from ...util.error import XMPPError
 
 if TYPE_CHECKING:
     from .base import BaseGateway

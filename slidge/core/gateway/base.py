@@ -11,13 +11,12 @@ from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Unio
 import aiohttp
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message, Presence
-from slixmpp.exceptions import IqError, IqTimeout
+from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
 from ...util import ABCSubclassableOnceAtMost
 from ...util.db import GatewayUser, RosterBackend, user_store
-from ...util.error import XMPPError
 from ...util.types import AvatarType
 from ...util.xep_0292.vcard4 import VCard4Provider
 from .. import config
@@ -173,6 +172,7 @@ class BaseGateway(
 
     def __init__(self):
         self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
+        self.default_ns = "jabber:component:accept"
         super().__init__(
             config.JID,
             config.SECRET,
@@ -199,6 +199,7 @@ class BaseGateway(
                     "upload_service": config.UPLOAD_SERVICE,
                 },
             },
+            fix_error_ns=True,
         )
         self.loop.set_exception_handler(self.__exception_handler)
         self.http: aiohttp.ClientSession = aiohttp.ClientSession()

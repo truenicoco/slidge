@@ -4,6 +4,7 @@ from slixmpp.xmlstream import ElementBase, register_stanza_plugin
 
 NS = "urn:xmpp:privilege:2"
 
+
 class Privilege(ElementBase):
     namespace = NS
     name = "privilege"
