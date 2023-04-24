@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2012 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -10,4 +9,4 @@ from .stanza import MAM, Metadata, Result
 
 register_plugin(XEP_0313)
 
-__all__ = ['XEP_0313', 'Result', 'MAM', 'Metadata']
+__all__ = ["XEP_0313", "Result", "MAM", "Metadata"]

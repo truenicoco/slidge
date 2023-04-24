@@ -36,3 +36,4 @@ dev/confs/slidge-tg.ini
 /debian/slidge.substvars
 /build/
 /docs/source/dev/api/slidge/
+*.egg-info

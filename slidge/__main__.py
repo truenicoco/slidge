@@ -122,6 +122,7 @@ def main():
     logging.info("Starting slidge version %s", __version__)
 
     legacy_module = importlib.import_module(config.LEGACY_MODULE)
+    logging.debug("Legacy module: %s", dir(legacy_module))
 
     if plugin_config_obj := getattr(
         legacy_module, "config", getattr(legacy_module, "Config", None)

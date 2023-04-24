@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 
 from slidge import (
     BaseGateway,
@@ -24,12 +25,11 @@ from slidge import (
     LegacyRoster,
     MucType,
     SearchResult,
-    XMPPError,
 )
 from slidge.core.command import Command, CommandAccess, Form
 from slidge.core.command.register import RegistrationType
 
-ASSETS_DIR = Path(__file__).parent.parent.parent / "dev" / "assets"
+ASSETS_DIR = Path(__file__).parent / "assets"
 
 
 class Friend(Command):

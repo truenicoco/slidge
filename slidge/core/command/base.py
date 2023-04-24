@@ -14,12 +14,12 @@ from typing import (
 )
 
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form as SlixForm
 from slixmpp.plugins.xep_0004 import FormField as SlixFormField
 from slixmpp.types import JidStr
 
 from ...util.db import user_store
-from ...util.error import XMPPError
 from ...util.types import FieldType
 from .. import config
 

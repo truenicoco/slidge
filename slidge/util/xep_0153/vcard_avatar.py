@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 
 
 class XEP_0153(BasePlugin):
-
     name = "xep_0153"
     description = "XEP-0153: vCard-Based Avatars (slidge, just for MUCs)"
     dependencies = {"xep_0054"}

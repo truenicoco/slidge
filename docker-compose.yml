@@ -1,224 +1,35 @@
 version: "3.9"
 services:
+  superduper:
+    build:
+      context: .
+      target: dev
+    network_mode: service:prosody
+    volumes:
+      - ./slidge:/venv/lib/python3.11/site-packages/slidge
+      - ./superduper:/venv/lib/python3.11/site-packages/legacy_module
+      - ./dev/assets:/venv/lib/python3.11/site-packages/legacy_module/assets
+      - ./persistent:/var/lib/slidge
+      - ./persistent/web:/slidge-web
+      - ./dev/confs/slidge-example.ini:/etc/slidge/conf.d/slidge-example.ini
+    depends_on:
+      - prosody
+
   prosody:
-    build:
-      context: .
-      target: prosody-dev
-    volumes:
-      - ./dev/confs/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua
-    network_mode: service:nginx
+    image: docker.io/nicocool84/slidge-prosody-dev:latest
+    ports:
+      - "127.0.0.1:5281:5281"  # XMPP port for clients to connect to
+      - "127.0.0.1:5222:5222"  # prosody's http_file_share
+      - "127.0.0.1:4444:4444"  # for nginx (optional, no-upload)
+      - "127.0.0.1:8888:80"    # for movim (optional)
 
-  slidge-dummy:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.dummy
-      - --jid=dummy.localhost
-    network_mode: service:nginx
+  nginx:
+    image: docker.io/library/nginx:mainline-alpine
     volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
+      - ./persistent/movim/html:/var/www/html:ro
+      - ./dev/confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./persistent/web:/slidge-web
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-    depends_on:
-      - prosody
-
-  slidge-telegram:
-    build:
-      context: .
-      target: slidge-telegram-dev
-    command:
-      - --config=/slidge-tg.ini
-      - --legacy-module=slidge.plugins.telegram
-      - --jid=telegram.localhost
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./persistent/web:/slidge-web
-      - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
-    depends_on:
-      - prosody
-    network_mode: service:nginx
-
-  slidge-telegram-debian:
-    build:
-      context: .
-      dockerfile: dev/Containerfile-debian-test
-    command:
-      - --config=/slidge-tg.ini
-      - --legacy-module=slidge.plugins.telegram
-      - --jid=telegram.localhost
-    volumes:
-      - ./persistent:/var/lib/slidge
-      - ./persistent/web:/slidge-web
-      - ./dev/confs/slidge-tg.ini:/slidge-tg.ini
-    depends_on:
-      - prosody
-    network_mode: service:nginx
-
-  slidge-signal:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.signal
-      - --jid=signal.localhost
-    network_mode: service:nginx
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./persistent/signald:/signald
-      - ./persistent/web:/slidge-web
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-    depends_on:
-      prosody:
-        condition: service_started
-      signald:
-        condition: service_healthy
-
-  slidge-facebook:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.facebook
-      - --jid=facebook.localhost
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-    network_mode: service:nginx
-
-  slidge-skype:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.skype
-      - --jid=skype.localhost
-    network_mode: service:nginx
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-
-  slidge-hackernews:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.hackernews
-      - --jid=hackernews.localhost
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-    network_mode: service:nginx
-
-  slidge-mattermost:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.mattermost
-      - --jid=mattermost.localhost
-    network_mode: service:nginx
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-
-  slidge-steam:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.steam
-      - --jid=steam.localhost
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-    network_mode: service:nginx
-
-  slidge-discord:
-    build:
-      context: .
-      target: slidge-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.discord
-      - --jid=discord.localhost
-      - --discord-verbose
-    network_mode: service:nginx
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-
-  slidge-whatsapp:
-    build:
-      context: .
-      target: slidge-whatsapp-dev
-    command:
-      - --config=/slidge-example.ini
-      - --legacy-module=slidge.plugins.whatsapp
-      - --jid=whatsapp.localhost
-    environment:
-      SLIDGE__WHATSAPP_SKIP_VERIFY_TLS: "true"
-    network_mode: service:nginx
-    volumes:
-      - ./slidge:/venv/lib/python3.9/site-packages/slidge
-      - ./persistent:/var/lib/slidge
-      - ./dev/confs/slidge-example.ini:/slidge-example.ini
-      - ./persistent/web:/slidge-web
-    depends_on:
-      - prosody
-
-  signald:
-    image: docker.io/signald/signald:0.23.2
-    command:
-      - -v
-      - -s
-      - /signald/signald.sock
-      - -d
-      - /signald/
-    volumes:
-      - ./persistent/signald:/signald
-    environment:
-      - SIGNALD_TRUST_ALL_KEYS:true
-      - SIGNALD_TRUST_NEW_KEYS:true
-    healthcheck:
-      test: [ "CMD", "bash", "-c", "signaldctl raw --socket /signald/signald.sock v1 version '{}' >/dev/null 2>&1" ]
-      interval: 5s
-      timeout: 1s
-      retries: 5
+    network_mode: service:prosody
 
   postgresql:
     environment:
@@ -242,7 +53,7 @@ services:
       POSTGRES_USER: movim
       POSTGRES_PASSWORD: BAD
     image: docker.io/movim/movim:0.21rc6
-    network_mode: service:nginx
+    network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:rw
       - ./dev/confs/movim.env:/var/www/html/.env:ro
@@ -256,24 +67,3 @@ services:
       - -c
       - php daemon.php start
       - www-data
-
-  nginx:
-    image: docker.io/library/nginx:mainline-alpine
-    ports:
-      - "127.0.0.1:8888:80"
-      - "127.0.0.1:5222:5222"
-      - "127.0.0.1:5281:5281"
-      - "127.0.0.1:8065:8065"
-      - "127.0.0.1:4444:4444"
-    volumes:
-      - ./persistent/movim/html:/var/www/html:ro
-      - ./dev/confs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./persistent/web:/slidge-web
-#    depends_on:
-#      - movim
-
-  mattermost:
-    image: docker.io/mattermost/mattermost-preview
-    network_mode: service:nginx
-    volumes:
-      - ./dev/confs/mattermost-mysql-darwin.cnf:/etc/mysql/mysql.conf.d/slidge.cnf

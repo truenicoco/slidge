@@ -53,9 +53,9 @@ class DiscoInfo(ElementBase):
         </iq>
     """
 
-    name = 'query'
-    namespace = 'http://jabber.org/protocol/disco#info'
-    plugin_attrib = 'disco_info'
+    name = "query"
+    namespace = "http://jabber.org/protocol/disco#info"
+    plugin_attrib = "disco_info"
     #: Stanza interfaces:
     #:
     #: - ``node``: The name of the node to either query or return the info from
@@ -63,8 +63,8 @@ class DiscoInfo(ElementBase):
     #:   category, type, xml:lang and name of an identity
     #: - ``features``: A set of namespaces for features
     #:
-    interfaces = {'node', 'features', 'identities'}
-    lang_interfaces = {'identities'}
+    interfaces = {"node", "features", "identities"}
+    lang_interfaces = {"identities"}
 
     # Cache identities and features
     _identities: Set[Tuple[str, str, Optional[str]]]
@@ -82,12 +82,16 @@ class DiscoInfo(ElementBase):
         """
         ElementBase.setup(self, xml)
 
-        self._identities = {id[0:3] for id in self['identities']}
-        self._features = self['features']
+        self._identities = {id[0:3] for id in self["identities"]}
+        self._features = self["features"]
 
-    def add_identity(self, category: str, itype: str,
-                     name: Optional[str] = None, lang: Optional[str] = None
-                     ) -> bool:
+    def add_identity(
+        self,
+        category: str,
+        itype: str,
+        name: Optional[str] = None,
+        lang: Optional[str] = None,
+    ) -> bool:
         """
         Add a new identity element. Each identity must be unique
         in terms of all four identity components.
@@ -105,19 +109,20 @@ class DiscoInfo(ElementBase):
         identity = (category, itype, lang)
         if identity not in self._identities:
             self._identities.add(identity)
-            id_xml = ET.Element('{%s}identity' % self.namespace)
-            id_xml.attrib['category'] = category
-            id_xml.attrib['type'] = itype
+            id_xml = ET.Element("{%s}identity" % self.namespace)
+            id_xml.attrib["category"] = category
+            id_xml.attrib["type"] = itype
             if lang:
-                id_xml.attrib['{%s}lang' % self.xml_ns] = lang
+                id_xml.attrib["{%s}lang" % self.xml_ns] = lang
             if name:
-                id_xml.attrib['name'] = name
+                id_xml.attrib["name"] = name
             self.xml.insert(0, id_xml)
             return True
         return False
 
-    def del_identity(self, category: str, itype: str, name=None,
-                     lang: Optional[str] = None) -> bool:
+    def del_identity(
+        self, category: str, itype: str, name=None, lang: Optional[str] = None
+    ) -> bool:
         """
         Remove a given identity.
 
@@ -129,17 +134,20 @@ class DiscoInfo(ElementBase):
         identity = (category, itype, lang)
         if identity in self._identities:
             self._identities.remove(identity)
-            for id_xml in self.xml.findall('{%s}identity' % self.namespace):
-                id = (id_xml.attrib['category'],
-                      id_xml.attrib['type'],
-                      id_xml.attrib.get('{%s}lang' % self.xml_ns, None))
+            for id_xml in self.xml.findall("{%s}identity" % self.namespace):
+                id = (
+                    id_xml.attrib["category"],
+                    id_xml.attrib["type"],
+                    id_xml.attrib.get("{%s}lang" % self.xml_ns, None),
+                )
                 if id == identity:
                     self.xml.remove(id_xml)
                     return True
         return False
 
-    def get_identities(self, lang: Optional[str] = None, dedupe: bool = True
-                       ) -> Iterable[IdentityType]:
+    def get_identities(
+        self, lang: Optional[str] = None, dedupe: bool = True
+    ) -> Iterable[IdentityType]:
         """
         Return a set of all identities in tuple form as so:
 
@@ -157,21 +165,24 @@ class DiscoInfo(ElementBase):
             identities = set()
         else:
             identities = []
-        for id_xml in self.xml.findall('{%s}identity' % self.namespace):
-            xml_lang = id_xml.attrib.get('{%s}lang' % self.xml_ns, None)
+        for id_xml in self.xml.findall("{%s}identity" % self.namespace):
+            xml_lang = id_xml.attrib.get("{%s}lang" % self.xml_ns, None)
             if lang is None or xml_lang == lang:
-                id = (id_xml.attrib['category'],
-                      id_xml.attrib['type'],
-                      id_xml.attrib.get('{%s}lang' % self.xml_ns, None),
-                      id_xml.attrib.get('name', None))
+                id = (
+                    id_xml.attrib["category"],
+                    id_xml.attrib["type"],
+                    id_xml.attrib.get("{%s}lang" % self.xml_ns, None),
+                    id_xml.attrib.get("name", None),
+                )
                 if isinstance(identities, set):
                     identities.add(id)
                 else:
                     identities.append(id)
         return identities
 
-    def set_identities(self, identities: Iterable[IdentityType],
-                       lang: Optional[str] = None):
+    def set_identities(
+        self, identities: Iterable[IdentityType], lang: Optional[str] = None
+    ):
         """
         Add or replace all identities. The identities must be a in set
         where each identity is a tuple of the form:
@@ -201,14 +212,17 @@ class DiscoInfo(ElementBase):
 
         :param lang: Optional, standard xml:lang value.
         """
-        for id_xml in self.xml.findall('{%s}identity' % self.namespace):
+        for id_xml in self.xml.findall("{%s}identity" % self.namespace):
             if lang is None:
                 self.xml.remove(id_xml)
-            elif id_xml.attrib.get('{%s}lang' % self.xml_ns, None) == lang:
-                self._identities.remove((
-                    id_xml.attrib['category'],
-                    id_xml.attrib['type'],
-                    id_xml.attrib.get('{%s}lang' % self.xml_ns, None)))
+            elif id_xml.attrib.get("{%s}lang" % self.xml_ns, None) == lang:
+                self._identities.remove(
+                    (
+                        id_xml.attrib["category"],
+                        id_xml.attrib["type"],
+                        id_xml.attrib.get("{%s}lang" % self.xml_ns, None),
+                    )
+                )
                 self.xml.remove(id_xml)
 
     def add_feature(self, feature: str) -> bool:
@@ -219,8 +233,8 @@ class DiscoInfo(ElementBase):
         """
         if feature not in self._features:
             self._features.add(feature)
-            feature_xml = ET.Element('{%s}feature' % self.namespace)
-            feature_xml.attrib['var'] = feature
+            feature_xml = ET.Element("{%s}feature" % self.namespace)
+            feature_xml.attrib["var"] = feature
             self.xml.append(feature_xml)
             return True
         return False
@@ -233,8 +247,8 @@ class DiscoInfo(ElementBase):
         """
         if feature in self._features:
             self._features.remove(feature)
-            for feature_xml in self.xml.findall('{%s}feature' % self.namespace):
-                if feature_xml.attrib['var'] == feature:
+            for feature_xml in self.xml.findall("{%s}feature" % self.namespace):
+                if feature_xml.attrib["var"] == feature:
                     self.xml.remove(feature_xml)
                     return True
         return False
@@ -246,11 +260,11 @@ class DiscoInfo(ElementBase):
             features = set()
         else:
             features = []
-        for feature_xml in self.xml.findall('{%s}feature' % self.namespace):
+        for feature_xml in self.xml.findall("{%s}feature" % self.namespace):
             if isinstance(features, set):
-                features.add(feature_xml.attrib['var'])
+                features.add(feature_xml.attrib["var"])
             else:
-                features.append(feature_xml.attrib['var'])
+                features.append(feature_xml.attrib["var"])
         return features
 
     def set_features(self, features: Iterable[str]):
@@ -266,5 +280,5 @@ class DiscoInfo(ElementBase):
     def del_features(self):
         """Remove all features."""
         self._features = set()
-        for feature_xml in self.xml.findall('{%s}feature' % self.namespace):
+        for feature_xml in self.xml.findall("{%s}feature" % self.namespace):
             self.xml.remove(feature_xml)

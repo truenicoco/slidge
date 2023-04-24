@@ -32,5 +32,5 @@ class PresencePermission(str, Enum):
 class Permissions:
     roster = RosterAccess.NONE
     message = MessagePermission.NONE
-    iq = defaultdict(lambda : IqPermission.NONE)
+    iq = defaultdict(lambda: IqPermission.NONE)
     presence = PresencePermission.NONE

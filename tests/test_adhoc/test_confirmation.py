@@ -64,6 +64,7 @@ class CommandAdminConfirmFail(CommandAdmin):
 
 class TestCommandsConfirmation(SlixTestPlus):
     def setUp(self):
+        super().setUp()
         self.stream_start(
             mode="component",
             plugins=["xep_0050"],

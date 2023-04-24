@@ -56,7 +56,7 @@ class AttachmentMixin(MessageMaker):
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
             )
         except (FileUploadError, IqError) as e:
-            warnings.warn(f"Something is wrong with the upload service: {e}")
+            warnings.warn(f"Something is wrong with the upload service: {e!r}")
             return None
         finally:
             if d is not None:

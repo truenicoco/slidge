@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Generic, Optional, Union, cast
 
 import aiohttp
 from slixmpp import JID, Message, Presence
+from slixmpp.exceptions import XMPPError
 
 from ..util import ABCSubclassableOnceAtMost, BiDict
 from ..util.db import GatewayUser, user_store
-from ..util.error import XMPPError
 from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,

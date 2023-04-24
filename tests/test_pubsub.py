@@ -4,10 +4,12 @@ from base64 import b64encode
 from pathlib import Path
 
 import pytest
+from slixmpp.stanza import Error
 from slixmpp.test import SlixTest
 
 from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PubSubComponent
+from slidge.util.test import SlixTestPlus
 
 
 class TestPubSubDisco(SlixTest):
@@ -18,6 +20,7 @@ class TestPubSubDisco(SlixTest):
             plugins={"pubsub"},
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
+        Error.namespace = "jabber:component:accept"
 
     def test_disco(self):
         self.recv(
@@ -107,8 +110,9 @@ class TestPubSubNickname(SlixTest):
 
 
 @pytest.mark.usefixtures("avatar")
-class TestPubSubAvatar(SlixTest):
+class TestPubSubAvatar(SlixTestPlus):
     def setUp(self):
+        super().setUp()
         self.stream_start(
             mode="component",
             jid="pubsub.south.park",

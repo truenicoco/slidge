@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2012 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -28,11 +27,9 @@ class XEP_0313(BasePlugin):
     XEP-0313 Message Archive Management
     """
 
-    name = 'xep_0313'
-    description = 'XEP-0313: Message Archive Management'
-    dependencies = {
-        'xep_0004', 'xep_0030', 'xep_0050', 'xep_0059', 'xep_0297'
-    }
+    name = "xep_0313"
+    description = "XEP-0313: Message Archive Management"
+    dependencies = {"xep_0004", "xep_0030", "xep_0050", "xep_0059", "xep_0297"}
     stanza = stanza
 
     def plugin_init(self):
@@ -40,28 +37,25 @@ class XEP_0313(BasePlugin):
         register_stanza_plugin(Iq, stanza.MAM)
         register_stanza_plugin(Message, stanza.Result)
         register_stanza_plugin(Iq, stanza.Fin)
-        register_stanza_plugin(
-            stanza.Result,
-            self.xmpp['xep_0297'].stanza.Forwarded
-        )
-        register_stanza_plugin(stanza.MAM, self.xmpp['xep_0059'].stanza.Set)
-        register_stanza_plugin(stanza.Fin, self.xmpp['xep_0059'].stanza.Set)
+        register_stanza_plugin(stanza.Result, self.xmpp["xep_0297"].stanza.Forwarded)
+        register_stanza_plugin(stanza.MAM, self.xmpp["xep_0059"].stanza.Set)
+        register_stanza_plugin(stanza.Fin, self.xmpp["xep_0059"].stanza.Set)
         register_stanza_plugin(Iq, stanza.Metadata)
         register_stanza_plugin(stanza.Metadata, stanza.Start)
         register_stanza_plugin(stanza.Metadata, stanza.End)
 
     def retrieve(
-            self,
-            jid: Optional[JID] = None,
-            start: Optional[datetime] = None,
-            end: Optional[datetime] = None,
-            with_jid: Optional[JID] = None,
-            ifrom: Optional[JID] = None,
-            reverse: bool = False,
-            timeout: int = None,
-            callback: Callable[[Iq], None] = None,
-            iterator: bool = False,
-            rsm: Optional[Dict[str, Any]] = None
+        self,
+        jid: Optional[JID] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        with_jid: Optional[JID] = None,
+        ifrom: Optional[JID] = None,
+        reverse: bool = False,
+        timeout: int = None,
+        callback: Callable[[Iq], None] = None,
+        iterator: bool = False,
+        rsm: Optional[Dict[str, Any]] = None,
     ) -> Awaitable:
         """
         Send a MAM query and retrieve the results.
@@ -76,67 +70,66 @@ class XEP_0313(BasePlugin):
         :param bool iterator: Use RSM and iterate over a paginated query
         :param dict rsm: RSM custom options
         """
-        iq, stanza_mask = self._pre_mam_retrieve(
-            jid, start, end, with_jid, ifrom
-        )
-        query_id = iq['id']
+        iq, stanza_mask = self._pre_mam_retrieve(jid, start, end, with_jid, ifrom)
+        query_id = iq["id"]
         amount = 10
         if rsm:
             for key, value in rsm.items():
-                iq['mam']['rsm'][key] = str(value)
-                if key == 'max':
+                iq["mam"]["rsm"][key] = str(value)
+                if key == "max":
                     amount = value
         cb_data = {}
 
         xml_mask = str(stanza_mask)
 
         def pre_cb(query: Iq) -> None:
-            stanza_mask['mam_result']['queryid'] = query['id']
+            stanza_mask["mam_result"]["queryid"] = query["id"]
             xml_mask = str(stanza_mask)
-            query['mam']['queryid'] = query['id']
-            collector = Collector(
-                'MAM_Results_%s' % query_id,
-                MatchXMLMask(xml_mask))
+            query["mam"]["queryid"] = query["id"]
+            collector = Collector("MAM_Results_%s" % query_id, MatchXMLMask(xml_mask))
             self.xmpp.register_handler(collector)
-            cb_data['collector'] = collector
+            cb_data["collector"] = collector
 
         def post_cb(result: Iq) -> None:
-            results = cb_data['collector'].stop()
-            if result['type'] == 'result':
-                result['mam']['results'] = results
-                result['mam_fin']['results'] = results
+            results = cb_data["collector"].stop()
+            if result["type"] == "result":
+                result["mam"]["results"] = results
+                result["mam_fin"]["results"] = results
 
         if iterator:
-            return self.xmpp['xep_0059'].iterate(
-                iq, 'mam', 'results', amount=amount,
-                reverse=reverse, recv_interface='mam_fin',
-                pre_cb=pre_cb, post_cb=post_cb
+            return self.xmpp["xep_0059"].iterate(
+                iq,
+                "mam",
+                "results",
+                amount=amount,
+                reverse=reverse,
+                recv_interface="mam_fin",
+                pre_cb=pre_cb,
+                post_cb=post_cb,
             )
 
-        collector = Collector(
-            'MAM_Results_%s' % query_id,
-            MatchXMLMask(xml_mask))
+        collector = Collector("MAM_Results_%s" % query_id, MatchXMLMask(xml_mask))
         self.xmpp.register_handler(collector)
 
         def wrapped_cb(iq: Iq) -> None:
             results = collector.stop()
-            if iq['type'] == 'result':
-                iq['mam']['results'] = results
+            if iq["type"] == "result":
+                iq["mam"]["results"] = results
             if callback:
                 callback(iq)
 
         return iq.send(timeout=timeout, callback=wrapped_cb)
 
     async def iterate(
-            self,
-            jid: Optional[JID] = None,
-            start: Optional[datetime] = None,
-            end: Optional[datetime] = None,
-            with_jid: Optional[JID] = None,
-            ifrom: Optional[JID] = None,
-            reverse: bool = False,
-            rsm: Optional[Dict[str, Any]] = None,
-            total: Optional[int] = None,
+        self,
+        jid: Optional[JID] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        with_jid: Optional[JID] = None,
+        ifrom: Optional[JID] = None,
+        reverse: bool = False,
+        rsm: Optional[Dict[str, Any]] = None,
+        total: Optional[int] = None,
     ) -> AsyncGenerator:
         """
         Iterate over each message of MAM query.
@@ -153,44 +146,45 @@ class XEP_0313(BasePlugin):
         :param total: A number of messages received after which the query
                       should stop.
         """
-        iq, stanza_mask = self._pre_mam_retrieve(
-            jid, start, end, with_jid, ifrom
-        )
-        query_id = iq['id']
+        iq, stanza_mask = self._pre_mam_retrieve(jid, start, end, with_jid, ifrom)
+        query_id = iq["id"]
         amount = 10
 
         if rsm:
             for key, value in rsm.items():
-                iq['mam']['rsm'][key] = str(value)
-                if key == 'max':
+                iq["mam"]["rsm"][key] = str(value)
+                if key == "max":
                     amount = value
         cb_data = {}
 
         def pre_cb(query: Iq) -> None:
-            stanza_mask['mam_result']['queryid'] = query['id']
+            stanza_mask["mam_result"]["queryid"] = query["id"]
             xml_mask = str(stanza_mask)
-            query['mam']['queryid'] = query['id']
-            collector = Collector(
-                'MAM_Results_%s' % query_id,
-                MatchXMLMask(xml_mask))
+            query["mam"]["queryid"] = query["id"]
+            collector = Collector("MAM_Results_%s" % query_id, MatchXMLMask(xml_mask))
             self.xmpp.register_handler(collector)
-            cb_data['collector'] = collector
+            cb_data["collector"] = collector
 
         def post_cb(result: Iq) -> None:
-            results = cb_data['collector'].stop()
-            if result['type'] == 'result':
-                result['mam']['results'] = results
-                result['mam_fin']['results'] = results
+            results = cb_data["collector"].stop()
+            if result["type"] == "result":
+                result["mam"]["results"] = results
+                result["mam_fin"]["results"] = results
 
-        iterator = self.xmpp['xep_0059'].iterate(
-            iq, 'mam', 'results', amount=amount,
-            reverse=reverse, recv_interface='mam_fin',
-            pre_cb=pre_cb, post_cb=post_cb
+        iterator = self.xmpp["xep_0059"].iterate(
+            iq,
+            "mam",
+            "results",
+            amount=amount,
+            reverse=reverse,
+            recv_interface="mam_fin",
+            pre_cb=pre_cb,
+            post_cb=post_cb,
         )
         recv_count = 0
 
         async for page in iterator:
-            messages = [message for message in page['mam']['results']]
+            messages = [message for message in page["mam"]["results"]]
             if reverse:
                 messages.reverse()
             for message in messages:
@@ -202,31 +196,30 @@ class XEP_0313(BasePlugin):
                 break
 
     def _pre_mam_retrieve(
-            self,
-            jid: Optional[JID] = None,
-            start: Optional[datetime] = None,
-            end: Optional[datetime] = None,
-            with_jid: Optional[JID] = None,
-            ifrom: Optional[JID] = None,
+        self,
+        jid: Optional[JID] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        with_jid: Optional[JID] = None,
+        ifrom: Optional[JID] = None,
     ) -> Tuple[Iq, Message]:
-        """Build the IQ and stanza mask for MAM results
-        """
+        """Build the IQ and stanza mask for MAM results"""
         iq = self.xmpp.make_iq_set(ito=jid, ifrom=ifrom)
-        query_id = iq['id']
-        iq['mam']['queryid'] = query_id
-        iq['mam']['start'] = start
-        iq['mam']['end'] = end
-        iq['mam']['with'] = with_jid
+        query_id = iq["id"]
+        iq["mam"]["queryid"] = query_id
+        iq["mam"]["start"] = start
+        iq["mam"]["end"] = end
+        iq["mam"]["with"] = with_jid
 
         stanza_mask = self.xmpp.Message()
 
-        auto_origin = stanza_mask.xml.find('{urn:xmpp:sid:0}origin-id')
+        auto_origin = stanza_mask.xml.find("{urn:xmpp:sid:0}origin-id")
         if auto_origin is not None:
             stanza_mask.xml.remove(auto_origin)
-        del stanza_mask['id']
-        del stanza_mask['lang']
-        stanza_mask['from'] = jid
-        stanza_mask['mam_result']['queryid'] = query_id
+        del stanza_mask["id"]
+        del stanza_mask["lang"]
+        stanza_mask["from"] = jid
+        stanza_mask["mam_result"]["queryid"] = query_id
 
         return (iq, stanza_mask)
 
@@ -238,14 +231,15 @@ class XEP_0313(BasePlugin):
         :param jid: JID to retrieve the policy from.
         :return: The Form of allowed options
         """
-        ifrom = iqkwargs.pop('ifrom', None)
+        ifrom = iqkwargs.pop("ifrom", None)
         iq = self.xmpp.make_iq_get(ito=jid, ifrom=ifrom)
-        iq.enable('mam')
+        iq.enable("mam")
         result = await iq.send(**iqkwargs)
-        return result['mam']['form']
+        return result["mam"]["form"]
 
-    async def get_configuration_commands(self, jid: Optional[JID],
-                                         **discokwargs) -> Future:
+    async def get_configuration_commands(
+        self, jid: Optional[JID], **discokwargs
+    ) -> Future:
         """Get the list of MAM advanced configuration commands.
 
         .. versionchanged:: 1.8.0
@@ -254,19 +248,16 @@ class XEP_0313(BasePlugin):
         """
         if jid is None:
             jid = self.xmpp.boundjid.bare
-        return await self.xmpp['xep_0030'].get_items(
-            jid=jid,
-            node='urn:xmpp:mam#configure',
-            **discokwargs
+        return await self.xmpp["xep_0030"].get_items(
+            jid=jid, node="urn:xmpp:mam#configure", **discokwargs
         )
 
-    def get_archive_metadata(self, jid: Optional[JID] = None,
-                             **iqkwargs) -> Future:
+    def get_archive_metadata(self, jid: Optional[JID] = None, **iqkwargs) -> Future:
         """Get the archive metadata from a JID.
 
         :param jid: JID to get the metadata from.
         """
-        ifrom = iqkwargs.pop('ifrom', None)
+        ifrom = iqkwargs.pop("ifrom", None)
         iq = self.xmpp.make_iq_get(ito=jid, ifrom=ifrom)
-        iq.enable('mam_metadata')
+        iq.enable("mam_metadata")
         return iq.send(**iqkwargs)

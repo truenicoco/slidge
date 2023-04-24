@@ -9,48 +9,34 @@
 
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
-[![debian version](https://slidge.im/debian-release.svg)](https://slidge.im/admin/install.html#debian)
-[![debian nightly package](https://slidge.im/debian-nightly.svg)](https://slidge.im/admin/install.html#debian)
+[![debian version](https://slidge.im/debian-release.svg)](https://slidge.im/core/admin/install.html#debian)
+[![debian nightly package](https://slidge.im/debian-nightly.svg)](https://slidge.im/core/admin/install.html#debian)
 
 Slidge is a general purpose XMPP (puppeteer) gateway framework in python.
 It's a work in progress, but it should make
-[writing gateways to other chat networks](https://slidge.im/dev/tutorial.html)
-(*plugins*) as frictionless as possible.
+[writing gateways to other chat networks](https://slidge.im/core/dev/tutorial.html)
+(*legacy modules*) as frictionless as possible.
+It supports fancy IM features, such as
+[(emoji) reactions](https://xmpp.org/extensions/xep-0444.html),
+[replies](https://xmpp.org/extensions/xep-0461.html), and
+[retractions](https://xmpp.org/extensions/xep-0424.html).
+The full list of supported XEPs in on [xmpp.org](https://xmpp.org/software/slidge/).
 
-It comes with a few plugins included, implementing basic direct messaging and more "advanced"
-instant messaging features:
+Slidge is meant for gateway developers, if you are an XMPP server admin and
+want to install gateways on your server, you are looking for one of these projects:
 
-|            | Presences[¹] | Typing[²] | Marks[³] | Upload[⁴] | Edit[⁵] | React[⁶] | Retract[⁷] | Reply[⁸] | Groups[⁹] |
-|------------|--------------|-----------|----------|-----------|---------|----------|------------|----------|-----------|
-| Signal     | N/A          | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ~         |
-| Telegram   | ✅            | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ~         |
-| Discord    | ✅            | ✅        | N/A      | ✅        | ✅      | ~        | ✅         | ✅       | ~         |
-| Steam      | ✅            | ✅        | N/A      | ❌        | N/A     | ~        | N/A        | N/A      | ❌         |
-| Mattermost | ✅            | ✅        | ~        | ✅        | ✅      | ✅       | ✅         | ❌       | ❌         |
-| Facebook   | ✅            | ✅        | ✅       | ✅        | ✅      | ✅       | ✅         | ✅       | ❌         |
-| Skype      | ~           | ✅        | ❌       | ✅        | ✅      | ❌       | ✅         | ❌       | ❌         |
-| WhatsApp   | ✅            | ✅        | ✅       | ✅        | N/A     | ✅       | ✅         | ✅       | ~         |
+- [slidgnal](https://git.sr.ht/~nicoco/slidgnal) ([Signal](https://signal.org))
+- [slidge-whatsapp](https://git.sr.ht/~nicoco/slidge-whatsapp) ([Whatsapp](https://whatsapp.com))
+- [slidgram](https://git.sr.ht/~nicoco/slidgram) ([Telegram](https://telegram.org))
+- [slidcord](https://git.sr.ht/~nicoco/slidcord) ([Discord](https://discord.com))
+- [matteridge](https://git.sr.ht/~nicoco/matteridge) ([Mattermost](https://mattermost.com))
+- [sleamdge](https://git.sr.ht/~nicoco/sleamdge) ([Steam](https://steamcommunity.com/))
+- [skidge](https://git.sr.ht/~nicoco/skidge) ([Skype](https://skype.com/))
+- [messlidger](https://git.sr.ht/~nicoco/messlidger) ([Facebook Messenger](https://messenger.com/))
 
-
-[¹]: https://xmpp.org/rfcs/rfc6121.html#presence
-[²]: https://xmpp.org/extensions/xep-0085.html
-[³]: https://xmpp.org/extensions/xep-0333.html
-[⁴]: https://xmpp.org/extensions/xep-0363.html
-[⁵]: https://xmpp.org/extensions/xep-0308.html
-[⁶]: https://xmpp.org/extensions/xep-0444.html
-[⁷]: https://xmpp.org/extensions/xep-0424.html
-[⁸]: https://xmpp.org/extensions/xep-0461.html
-[⁹]: https://xmpp.org/extensions/xep-0045.html
-
-
-This table may not be entirely accurate, but **in theory**, stuff marked ✅ works.
-N/A means that the legacy network does not have an equivalent of this XMPP feature
-(because XMPP is better, what did you think?).
-
-**WARNING**: you may break the terms of use of a legacy network and end up getting your account locked
-by using slidge. Refer to the
-[keeping a low profile](https://slidge.im/user/low_profile.html)
-documentation page for more info.
+If you use debian, you might also be interested in the
+[slidge-debian](https://git.sr.ht/~nicoco/slidge-debian)
+bundle.
 
 Status
 ------
@@ -70,8 +56,8 @@ Installation
 Slidge is available on
 [docker.io](https://hub.docker.com/u/nicocool84),
 [pypi](https://pypi.org/project/slidge/) and as
-[debian packages](https://slidge.im/admin/install.html#debian).
-Refer to [the docs](https://slidge.im/admin/install.html) for details.
+[debian packages](https://slidge.im/core/admin/install.html#debian).
+Refer to [the docs](https://slidge.im/core/admin/install.html) for details.
 
 About privacy
 -------------

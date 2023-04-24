@@ -11,6 +11,9 @@ See :ref:`Containers` for more details.
 debian
 ------
 
+A debian package containing slidge a bunch of legacy modules is available at
+`<https://git.sr.ht/~nicoco/slidge-debian>`_.
+
 .. image:: https://slidge.im/debian-release.svg
   :alt: debian version badge for the release channel
 
@@ -55,8 +58,8 @@ which will exit with return code 0 if it's available.
 
 .. code-block:: bash
 
-    pipx install slidge[signal]  # you can replace signal with another legacy service, eg telegram
-    slidge --legacy-module=slidge.plugins.signal
+    pipx install slidge
+    slidge --legacy-module=your_importable_legacy_module
 
 If you're looking for the bleeding edge, download an artifact
 `here <https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?>`_.

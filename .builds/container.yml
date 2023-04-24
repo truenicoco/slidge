@@ -2,28 +2,9 @@ image: alpine/edge
 packages:
   - docker
   - docker-cli-buildx
-sources:
-  - https://git.sr.ht/~nicoco/slidge
 secrets:
   - 173244e1-c233-43de-969f-65965c5487e1
-environment:
-  REGISTRY_PREFIX: docker.io/nicocool84/slidge
-  PLUGINS: signal facebook telegram skype hackernews mattermost steam discord whatsapp
-  DOCKER_BUILDKIT: "1"
 tasks:
-  - version: |
-      cd slidge
-      export VER=$(date +"%Y%m%d")-git-$(git rev-parse HEAD | cut -c1-5)
-      echo VER=$VER >> ~/.buildenv
-      echo TAG=latest >> ~/.buildenv
-      for TAG in $(git tag --points-at HEAD); do
-        if [[ $TAG == v* ]] ; then
-          export VER=$(echo $TAG | cut -c2-)
-          echo VER=$VER >> ~/.buildenv
-          echo TAG=$VER >> ~/.buildenv
-        fi
-      done
-      sed "s/__version__ = get_version()/__version__ = \"$VER\"/" -i slidge/__main__.py
   - setup-docker1: |
       sudo service docker start
       sudo addgroup build docker
@@ -33,13 +14,10 @@ tasks:
       docker buildx create --use
   - build: |
       cd slidge
-      for LEGACY in $PLUGINS; do
-        export NAME=$REGISTRY_PREFIX-$LEGACY:$TAG
-        export ARGS="--cache-from $NAME --platform linux/arm64,linux/amd64 --tag $NAME --build-arg SLIDGE_PLUGIN=$LEGACY --target slidge-$LEGACY ."
-        docker buildx build $ARGS
-        if [ "$(git rev-parse master)" = "$(git rev-parse HEAD)" ]; then
-          docker buildx build --push $ARGS || echo "We can't push to docker.io, continuing anyway"
-        else
-          echo Not on master, not publishing
-        fi
+      ARGS="--push --platform linux/amd64,linux/arm64"
+      for TARGET in builder base dev; do
+        docker buildx build . \
+          --tag docker.io/nicocool84/slidge-$TARGET \
+          --target $TARGET \
+          $ARGS
       done

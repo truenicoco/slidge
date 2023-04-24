@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Callable, Union
 from urllib.parse import quote as url_quote
 
 from slixmpp import JID, CoroutineCallback, Message, StanzaPath
+from slixmpp.exceptions import XMPPError
 from slixmpp.types import MessageTypes
 
-from ...util.error import XMPPError
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:

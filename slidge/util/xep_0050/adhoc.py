@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2011 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -52,13 +51,11 @@ class XEP_0050(BasePlugin):
 
     """
 
-    name = 'xep_0050'
-    description = 'XEP-0050: Ad-Hoc Commands (slidge)'
-    dependencies = {'xep_0030', 'xep_0004'}
+    name = "xep_0050"
+    description = "XEP-0050: Ad-Hoc Commands (slidge)"
+    dependencies = {"xep_0030", "xep_0004"}
     stanza = stanza
-    default_config = {
-        'session_db': None
-    }
+    default_config = {"session_db": None}
 
     def plugin_init(self):
         """Start the XEP-0050 plugin."""
@@ -69,23 +66,26 @@ class XEP_0050(BasePlugin):
         self.commands = {}
 
         self.xmpp.register_handler(
-            Callback("Ad-Hoc Execute",
-                     StanzaPath('iq@type=set/command'),
-                     self._handle_command))
+            Callback(
+                "Ad-Hoc Execute",
+                StanzaPath("iq@type=set/command"),
+                self._handle_command,
+            )
+        )
 
         register_stanza_plugin(Iq, Command)
         register_stanza_plugin(Command, Form, iterable=True)
 
-        self.xmpp.add_event_handler('command', self._handle_command_all)
+        self.xmpp.add_event_handler("command", self._handle_command_all)
 
     def plugin_end(self):
-        self.xmpp.del_event_handler('command', self._handle_command_all)
-        self.xmpp.remove_handler('Ad-Hoc Execute')
-        self.xmpp['xep_0030'].del_feature(feature=Command.namespace)
-        self.xmpp['xep_0030'].set_items(node=Command.namespace, items=tuple())
+        self.xmpp.del_event_handler("command", self._handle_command_all)
+        self.xmpp.remove_handler("Ad-Hoc Execute")
+        self.xmpp["xep_0030"].del_feature(feature=Command.namespace)
+        self.xmpp["xep_0030"].set_items(node=Command.namespace, items=tuple())
 
     def session_bind(self, jid):
-        self.xmpp['xep_0030'].add_feature(Command.namespace)
+        self.xmpp["xep_0030"].add_feature(Command.namespace)
         # self.xmpp['xep_0030'].set_items(node=Command.namespace, items=tuple())
 
     def set_backend(self, db):
@@ -114,7 +114,7 @@ class XEP_0050(BasePlugin):
     # =================================================================
     # Server side (command provider) API
 
-    def add_command(self, jid=None, node=None, name='', handler=None):
+    def add_command(self, jid=None, node=None, name="", handler=None):
         """
         Make a new command available to external entities.
 
@@ -139,49 +139,47 @@ class XEP_0050(BasePlugin):
             jid = JID(jid)
         item_jid = jid.full
 
-        self.xmpp['xep_0030'].add_identity(category='automation',
-                                           itype='command-list',
-                                           name='Ad-Hoc commands',
-                                           node=Command.namespace,
-                                           jid=jid)
-        self.xmpp['xep_0030'].add_item(jid=item_jid,
-                                       name=name,
-                                       node=Command.namespace,
-                                       subnode=node,
-                                       ijid=jid)
-        self.xmpp['xep_0030'].add_identity(category='automation',
-                                           itype='command-node',
-                                           name=name,
-                                           node=node,
-                                           jid=jid)
-        self.xmpp['xep_0030'].add_feature(Command.namespace, None, jid)
+        self.xmpp["xep_0030"].add_identity(
+            category="automation",
+            itype="command-list",
+            name="Ad-Hoc commands",
+            node=Command.namespace,
+            jid=jid,
+        )
+        self.xmpp["xep_0030"].add_item(
+            jid=item_jid, name=name, node=Command.namespace, subnode=node, ijid=jid
+        )
+        self.xmpp["xep_0030"].add_identity(
+            category="automation", itype="command-node", name=name, node=node, jid=jid
+        )
+        self.xmpp["xep_0030"].add_feature(Command.namespace, None, jid)
 
         self.commands[(item_jid, node)] = (name, handler)
 
     def new_session(self):
         """Return a new session ID."""
-        return str(time.time()) + '-' + self.xmpp.new_id()
+        return str(time.time()) + "-" + self.xmpp.new_id()
 
     def _handle_command(self, iq):
         """Raise command events based on the command action."""
-        self.xmpp.event('command', iq)
-        self.xmpp.event('command_%s' % iq['command']['action'], iq)
+        self.xmpp.event("command", iq)
+        self.xmpp.event("command_%s" % iq["command"]["action"], iq)
 
     async def _handle_command_all(self, iq: Iq) -> None:
-        action = iq['command']['action']
-        sessionid = iq['command']['sessionid']
+        action = iq["command"]["action"]
+        sessionid = iq["command"]["sessionid"]
         session = self.sessions.get(sessionid)
 
         if session is None:
             return await self._handle_command_start(iq)
 
-        if action in ('next', 'execute'):
+        if action in ("next", "execute"):
             return await self._handle_command_next(iq)
-        if action == 'prev':
+        if action == "prev":
             return await self._handle_command_prev(iq)
-        if action == 'complete':
+        if action == "complete":
             return await self._handle_command_complete(iq)
-        if action == 'cancel':
+        if action == "cancel":
             return await self._handle_command_cancel(iq)
         return None
 
@@ -192,15 +190,15 @@ class XEP_0050(BasePlugin):
         :param iq: The command execution request.
         """
         sessionid = self.new_session()
-        node = iq['command']['node']
-        key = (iq['to'].full, node)
-        name, handler = self.commands.get(key, ('Not found', None))
+        node = iq["command"]["node"]
+        key = (iq["to"].full, node)
+        name, handler = self.commands.get(key, ("Not found", None))
         if not handler:
-            log.debug('Command not found: %s, %s', key, self.commands)
-            raise XMPPError('item-not-found')
+            log.debug("Command not found: %s, %s", key, self.commands)
+            raise XMPPError("item-not-found")
 
         payload = []
-        for stanza in iq['command']['substanzas']:
+        for stanza in iq["command"]["substanzas"]:
             payload.append(stanza)
 
         if len(payload) == 1:
@@ -209,21 +207,23 @@ class XEP_0050(BasePlugin):
         interfaces = {item.plugin_attrib for item in payload}
         payload_classes = {item.__class__ for item in payload}
 
-        initial_session = {'id': sessionid,
-                           'from': iq['from'],
-                           'to': iq['to'],
-                           'node': node,
-                           'payload': payload,
-                           'interfaces': interfaces,
-                           'payload_classes': payload_classes,
-                           'notes': None,
-                           'has_next': False,
-                           'allow_complete': False,
-                           'allow_prev': False,
-                           'past': [],
-                           'next': None,
-                           'prev': None,
-                           'cancel': None}
+        initial_session = {
+            "id": sessionid,
+            "from": iq["from"],
+            "to": iq["to"],
+            "node": node,
+            "payload": payload,
+            "interfaces": interfaces,
+            "payload_classes": payload_classes,
+            "notes": None,
+            "has_next": False,
+            "allow_complete": False,
+            "allow_prev": False,
+            "past": [],
+            "next": None,
+            "prev": None,
+            "cancel": None,
+        }
 
         session = await _await_if_needed(handler, iq, initial_session)
 
@@ -236,14 +236,14 @@ class XEP_0050(BasePlugin):
 
         :param iq: The command continuation request.
         """
-        sessionid = iq['command']['sessionid']
+        sessionid = iq["command"]["sessionid"]
         session = self.sessions.get(sessionid)
 
         if session:
-            handler = session['next']
-            interfaces = session['interfaces']
+            handler = session["next"]
+            interfaces = session["interfaces"]
             results = []
-            for stanza in iq['command']['substanzas']:
+            for stanza in iq["command"]["substanzas"]:
                 if stanza.plugin_attrib in interfaces:
                     results.append(stanza)
             if len(results) == 1:
@@ -253,7 +253,7 @@ class XEP_0050(BasePlugin):
 
             self._process_command_response(iq, session)
         else:
-            raise XMPPError('item-not-found')
+            raise XMPPError("item-not-found")
 
     async def _handle_command_prev(self, iq):
         """
@@ -262,14 +262,14 @@ class XEP_0050(BasePlugin):
 
         :param iq: The command continuation request.
         """
-        sessionid = iq['command']['sessionid']
+        sessionid = iq["command"]["sessionid"]
         session = self.sessions.get(sessionid)
 
         if session:
-            handler = session['prev']
-            interfaces = session['interfaces']
+            handler = session["prev"]
+            interfaces = session["interfaces"]
             results = []
-            for stanza in iq['command']['substanzas']:
+            for stanza in iq["command"]["substanzas"]:
                 if stanza.plugin_attrib in interfaces:
                     results.append(stanza)
             if len(results) == 1:
@@ -279,7 +279,7 @@ class XEP_0050(BasePlugin):
 
             self._process_command_response(iq, session)
         else:
-            raise XMPPError('item-not-found')
+            raise XMPPError("item-not-found")
 
     def _process_command_response(self, iq, session):
         """
@@ -289,22 +289,22 @@ class XEP_0050(BasePlugin):
         :param iq: The command request stanza.
         :param session: A dictionary of relevant session data.
         """
-        sessionid = session['id']
+        sessionid = session["id"]
 
-        payload = session['payload']
+        payload = session["payload"]
         if payload is None:
             payload = []
         if not isinstance(payload, list):
             payload = [payload]
 
-        interfaces = session.get('interfaces', set())
-        payload_classes = session.get('payload_classes', set())
+        interfaces = session.get("interfaces", set())
+        payload_classes = session.get("payload_classes", set())
 
         interfaces.update({item.plugin_attrib for item in payload})
         payload_classes.update({item.__class__ for item in payload})
 
-        session['interfaces'] = interfaces
-        session['payload_classes'] = payload_classes
+        session["interfaces"] = interfaces
+        session["payload_classes"] = payload_classes
 
         self.sessions[sessionid] = session
 
@@ -312,28 +312,28 @@ class XEP_0050(BasePlugin):
             register_stanza_plugin(Command, item.__class__, iterable=True)
 
         iq = iq.reply()
-        iq['command']['node'] = session['node']
-        iq['command']['sessionid'] = session['id']
+        iq["command"]["node"] = session["node"]
+        iq["command"]["sessionid"] = session["id"]
 
-        if session['next'] is None:
-            iq['command']['actions'] = []
-            iq['command']['status'] = 'completed'
-        elif session['has_next']:
-            actions = ['next']
-            if session['allow_complete']:
-                actions.append('complete')
-            if session['allow_prev']:
-                actions.append('prev')
-            iq['command']['actions'] = actions
-            iq['command']['status'] = 'executing'
+        if session["next"] is None:
+            iq["command"]["actions"] = []
+            iq["command"]["status"] = "completed"
+        elif session["has_next"]:
+            actions = ["next"]
+            if session["allow_complete"]:
+                actions.append("complete")
+            if session["allow_prev"]:
+                actions.append("prev")
+            iq["command"]["actions"] = actions
+            iq["command"]["status"] = "executing"
         else:
-            iq['command']['actions'] = ['complete']
-            iq['command']['status'] = 'executing'
+            iq["command"]["actions"] = ["complete"]
+            iq["command"]["status"] = "executing"
 
-        iq['command']['notes'] = session['notes']
+        iq["command"]["notes"] = session["notes"]
 
         for item in payload:
-            iq['command'].append(item)
+            iq["command"].append(item)
 
         iq.send()
 
@@ -343,25 +343,24 @@ class XEP_0050(BasePlugin):
 
         :param iq: The command cancellation request.
         """
-        node = iq['command']['node']
-        sessionid = iq['command']['sessionid']
+        node = iq["command"]["node"]
+        sessionid = iq["command"]["sessionid"]
 
         session = self.sessions.get(sessionid)
 
         if session:
-            handler = session['cancel']
+            handler = session["cancel"]
             if handler:
                 await _await_if_needed(handler, iq, session)
             del self.sessions[sessionid]
             iq = iq.reply()
-            iq['command']['node'] = node
-            iq['command']['sessionid'] = sessionid
-            iq['command']['status'] = 'canceled'
-            iq['command']['notes'] = session['notes']
+            iq["command"]["node"] = node
+            iq["command"]["sessionid"] = sessionid
+            iq["command"]["status"] = "canceled"
+            iq["command"]["notes"] = session["notes"]
             iq.send()
         else:
-            raise XMPPError('item-not-found')
-
+            raise XMPPError("item-not-found")
 
     async def _handle_command_complete(self, iq):
         """
@@ -373,15 +372,15 @@ class XEP_0050(BasePlugin):
         Arguments:
         :param iq: The command completion request.
         """
-        node = iq['command']['node']
-        sessionid = iq['command']['sessionid']
+        node = iq["command"]["node"]
+        sessionid = iq["command"]["sessionid"]
         session = self.sessions.get(sessionid)
 
         if session:
-            handler = session['next']
-            interfaces = session['interfaces']
+            handler = session["next"]
+            interfaces = session["interfaces"]
             results = []
-            for stanza in iq['command']['substanzas']:
+            for stanza in iq["command"]["substanzas"]:
                 if stanza.plugin_attrib in interfaces:
                     results.append(stanza)
             if len(results) == 1:
@@ -392,7 +391,7 @@ class XEP_0050(BasePlugin):
 
             del self.sessions[sessionid]
 
-            payload = session['payload']
+            payload = session["payload"]
             if payload is None:
                 payload = []
             if not isinstance(payload, list):
@@ -403,18 +402,18 @@ class XEP_0050(BasePlugin):
 
             iq = iq.reply()
 
-            iq['command']['node'] = node
-            iq['command']['sessionid'] = sessionid
-            iq['command']['actions'] = []
-            iq['command']['status'] = 'completed'
-            iq['command']['notes'] = session['notes']
+            iq["command"]["node"] = node
+            iq["command"]["sessionid"] = sessionid
+            iq["command"]["actions"] = []
+            iq["command"]["status"] = "completed"
+            iq["command"]["notes"] = session["notes"]
 
             for item in payload:
-                iq['command'].append(item)
+                iq["command"].append(item)
 
             iq.send()
         else:
-            raise XMPPError('item-not-found')
+            raise XMPPError("item-not-found")
 
     # =================================================================
     # Client side (command user) API
@@ -433,12 +432,21 @@ class XEP_0050(BasePlugin):
                          the XEP-0059 plugin, if the plugin is loaded.
                          Otherwise the parameter is ignored.
         """
-        return self.xmpp['xep_0030'].get_items(jid=jid,
-                                               node=Command.namespace,
-                                               **kwargs)
+        return self.xmpp["xep_0030"].get_items(
+            jid=jid, node=Command.namespace, **kwargs
+        )
 
-    def send_command(self, jid, node, ifrom=None, action='execute',
-                     payload=None, sessionid=None, flow=False, **kwargs):
+    def send_command(
+        self,
+        jid,
+        node,
+        ifrom=None,
+        action="execute",
+        payload=None,
+        sessionid=None,
+        flow=False,
+        **kwargs,
+    ):
         """
         Create and send a command stanza, without using the provided
         workflow management APIs.
@@ -457,18 +465,18 @@ class XEP_0050(BasePlugin):
                      stanza itself. Defaults to False.
         """
         iq = self.xmpp.Iq()
-        iq['type'] = 'set'
-        iq['to'] = jid
-        iq['from'] = ifrom
-        iq['command']['node'] = node
-        iq['command']['action'] = action
+        iq["type"] = "set"
+        iq["to"] = jid
+        iq["from"] = ifrom
+        iq["command"]["node"] = node
+        iq["command"]["action"] = action
         if sessionid is not None:
-            iq['command']['sessionid'] = sessionid
+            iq["command"]["sessionid"] = sessionid
         if payload is not None:
             if not isinstance(payload, list):
                 payload = [payload]
             for item in payload:
-                iq['command'].append(item)
+                iq["command"].append(item)
         if not flow:
             return iq.send(**kwargs)
         else:
@@ -488,47 +496,49 @@ class XEP_0050(BasePlugin):
         :param node: The node for the desired command.
         :param session: A dictionary of relevant session data.
         """
-        session['jid'] = jid
-        session['node'] = node
-        session['timestamp'] = time.time()
-        if 'payload' not in session:
-            session['payload'] = None
+        session["jid"] = jid
+        session["node"] = node
+        session["timestamp"] = time.time()
+        if "payload" not in session:
+            session["payload"] = None
 
         iq = self.xmpp.Iq()
-        iq['type'] = 'set'
-        iq['to'] = jid
-        iq['from'] = ifrom
-        session['from'] = ifrom
-        iq['command']['node'] = node
-        iq['command']['action'] = 'execute'
-        if session['payload'] is not None:
-            payload = session['payload']
+        iq["type"] = "set"
+        iq["to"] = jid
+        iq["from"] = ifrom
+        session["from"] = ifrom
+        iq["command"]["node"] = node
+        iq["command"]["action"] = "execute"
+        if session["payload"] is not None:
+            payload = session["payload"]
             if not isinstance(payload, list):
                 payload = list(payload)
             for stanza in payload:
-                iq['command'].append(stanza)
-        sessionid = 'client:pending_' + iq['id']
-        session['id'] = sessionid
+                iq["command"].append(stanza)
+        sessionid = "client:pending_" + iq["id"]
+        session["id"] = sessionid
         self.sessions[sessionid] = session
         iq.send(callback=self._handle_command_result)
 
-    def continue_command(self, session, direction='next'):
+    def continue_command(self, session, direction="next"):
         """
         Execute the next action of the command.
 
         :param session: All stored data relevant to the current
                         command session.
         """
-        sessionid = 'client:' + session['id']
+        sessionid = "client:" + session["id"]
         self.sessions[sessionid] = session
 
-        self.send_command(session['jid'],
-                          session['node'],
-                          ifrom=session.get('from', None),
-                          action=direction,
-                          payload=session.get('payload', None),
-                          sessionid=session['id'],
-                          flow=True)
+        self.send_command(
+            session["jid"],
+            session["node"],
+            ifrom=session.get("from", None),
+            action=direction,
+            payload=session.get("payload", None),
+            sessionid=session["id"],
+            flow=True,
+        )
 
     def cancel_command(self, session):
         """
@@ -537,16 +547,18 @@ class XEP_0050(BasePlugin):
         :param session: All stored data relevant to the current
                         command session.
         """
-        sessionid = 'client:' + session['id']
+        sessionid = "client:" + session["id"]
         self.sessions[sessionid] = session
 
-        self.send_command(session['jid'],
-                          session['node'],
-                          ifrom=session.get('from', None),
-                          action='cancel',
-                          payload=session.get('payload', None),
-                          sessionid=session['id'],
-                          flow=True)
+        self.send_command(
+            session["jid"],
+            session["node"],
+            ifrom=session.get("from", None),
+            action="cancel",
+            payload=session.get("payload", None),
+            sessionid=session["id"],
+            flow=True,
+        )
 
     def complete_command(self, session):
         """
@@ -555,16 +567,18 @@ class XEP_0050(BasePlugin):
         :param session: All stored data relevant to the current
                         command session.
         """
-        sessionid = 'client:' + session['id']
+        sessionid = "client:" + session["id"]
         self.sessions[sessionid] = session
 
-        self.send_command(session['jid'],
-                          session['node'],
-                          ifrom=session.get('from', None),
-                          action='complete',
-                          payload=session.get('payload', None),
-                          sessionid=session['id'],
-                          flow=True)
+        self.send_command(
+            session["jid"],
+            session["node"],
+            ifrom=session.get("from", None),
+            action="complete",
+            payload=session.get("payload", None),
+            sessionid=session["id"],
+            flow=True,
+        )
 
     def terminate_command(self, session):
         """
@@ -574,7 +588,7 @@ class XEP_0050(BasePlugin):
         :param session: All stored data relevant to the current
                         command session.
         """
-        sessionid = 'client:' + session['id']
+        sessionid = "client:" + session["id"]
         try:
             del self.sessions[sessionid]
         except Exception as e:
@@ -589,42 +603,44 @@ class XEP_0050(BasePlugin):
 
         :param iq: The command response.
         """
-        sessionid = 'client:' + iq['command']['sessionid']
+        sessionid = "client:" + iq["command"]["sessionid"]
         pending = False
 
         if sessionid not in self.sessions:
             pending = True
-            pendingid = 'client:pending_' + iq['id']
+            pendingid = "client:pending_" + iq["id"]
             if pendingid not in self.sessions:
                 return
             sessionid = pendingid
 
         session = self.sessions[sessionid]
-        sessionid = 'client:' + iq['command']['sessionid']
-        session['id'] = iq['command']['sessionid']
+        sessionid = "client:" + iq["command"]["sessionid"]
+        session["id"] = iq["command"]["sessionid"]
 
         self.sessions[sessionid] = session
 
         if pending:
             del self.sessions[pendingid]
 
-        handler_type = 'next'
-        if iq['type'] == 'error':
-            handler_type = 'error'
+        handler_type = "next"
+        if iq["type"] == "error":
+            handler_type = "error"
         handler = session.get(handler_type, None)
         if handler:
             handler(iq, session)
-        elif iq['type'] == 'error':
+        elif iq["type"] == "error":
             self.terminate_command(session)
 
-        if iq['command']['status'] == 'completed':
+        if iq["command"]["status"] == "completed":
             self.terminate_command(session)
 
 
 def _iscoroutine_or_partial_coroutine(handler):
-    return asyncio.iscoroutinefunction(handler) \
-        or isinstance(handler, functools.partial) \
+    return (
+        asyncio.iscoroutinefunction(handler)
+        or isinstance(handler, functools.partial)
         and asyncio.iscoroutinefunction(handler.func)
+    )
 
 
 async def _await_if_needed(handler, *args):

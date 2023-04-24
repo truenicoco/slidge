@@ -11,14 +11,13 @@ from uuid import uuid4
 
 from PIL import Image
 from slixmpp import JID, Iq, Message, Presence
-from slixmpp.exceptions import IqError
+from slixmpp.exceptions import IqError, XMPPError
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0060.stanza import Item
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.xmlstream import ET
 
 from ...util import ABCSubclassableOnceAtMost
-from ...util.error import XMPPError
 from ...util.types import (
     AvatarType,
     LegacyGroupIdType,

@@ -1,4 +1,3 @@
-
 # Slixmpp: The Slick XMPP Library
 # Copyright (C) 2011 Nathanael C. Fritz, Lance J.T. Stout
 # This file is part of Slixmpp.
@@ -57,14 +56,13 @@ class Command(ElementBase):
 
     """
 
-    name = 'command'
-    namespace = 'http://jabber.org/protocol/commands'
-    plugin_attrib = 'command'
-    interfaces = {'action', 'sessionid', 'node',
-                  'status', 'actions', 'notes'}
-    actions = {'cancel', 'complete', 'execute', 'next', 'prev'}
-    statuses = {'canceled', 'completed', 'executing'}
-    next_actions = {'prev', 'next', 'complete'}
+    name = "command"
+    namespace = "http://jabber.org/protocol/commands"
+    plugin_attrib = "command"
+    interfaces = {"action", "sessionid", "node", "status", "actions", "notes"}
+    actions = {"cancel", "complete", "execute", "next", "prev"}
+    statuses = {"canceled", "completed", "executing"}
+    next_actions = {"prev", "next", "complete"}
 
     def get_action(self):
         """
@@ -73,9 +71,9 @@ class Command(ElementBase):
         If the Iq stanza's type is "set" then use a default
         value of "execute".
         """
-        if self.parent()['type'] == 'set':
-            return self._get_attr('action', default='execute')
-        return self._get_attr('action')
+        if self.parent()["type"] == "set":
+            return self._get_attr("action", default="execute")
+        return self._get_attr("action")
 
     def set_actions(self, values):
         """
@@ -86,11 +84,11 @@ class Command(ElementBase):
         """
         self.del_actions()
         if values:
-            self._set_sub_text('{%s}actions' % self.namespace, '', True)
-            actions = self.xml.find('{%s}actions' % self.namespace)
+            self._set_sub_text("{%s}actions" % self.namespace, "", True)
+            actions = self.xml.find("{%s}actions" % self.namespace)
             for val in values:
                 if val in self.next_actions:
-                    action = ET.Element('{%s}%s' % (self.namespace, val))
+                    action = ET.Element("{%s}%s" % (self.namespace, val))
                     actions.append(action)
 
     def get_actions(self):
@@ -98,11 +96,10 @@ class Command(ElementBase):
         Return the set of allowable next actions.
         """
         actions = set()
-        actions_xml = self.xml.find('{%s}actions' % self.namespace)
+        actions_xml = self.xml.find("{%s}actions" % self.namespace)
         if actions_xml is not None:
             for action in self.next_actions:
-                action_xml = actions_xml.find('{%s}%s' % (self.namespace,
-                                                          action))
+                action_xml = actions_xml.find("{%s}%s" % (self.namespace, action))
                 if action_xml is not None:
                     actions.add(action)
         return actions
@@ -111,7 +108,7 @@ class Command(ElementBase):
         """
         Remove all allowable next actions.
         """
-        self._del_sub('{%s}actions' % self.namespace)
+        self._del_sub("{%s}actions" % self.namespace)
 
     def get_notes(self):
         """
@@ -123,10 +120,9 @@ class Command(ElementBase):
              ('error', 'The command ran, but had errors')]
         """
         notes = []
-        notes_xml = self.xml.findall('{%s}note' % self.namespace)
+        notes_xml = self.xml.findall("{%s}note" % self.namespace)
         for note in notes_xml:
-            notes.append((note.attrib.get('type', 'info'),
-                          note.text))
+            notes.append((note.attrib.get("type", "info"), note.text))
         return notes
 
     def set_notes(self, notes):
@@ -154,11 +150,11 @@ class Command(ElementBase):
         """
         Remove all notes associated with the command result.
         """
-        notes_xml = self.xml.findall('{%s}note' % self.namespace)
+        notes_xml = self.xml.findall("{%s}note" % self.namespace)
         for note in notes_xml:
             self.xml.remove(note)
 
-    def add_note(self, msg='', ntype='info'):
+    def add_note(self, msg="", ntype="info"):
         """
         Add a single note annotation to the command.
 
@@ -166,7 +162,7 @@ class Command(ElementBase):
             msg   -- A human readable message.
             ntype -- One of: 'info', 'warning', 'error'
         """
-        xml = ET.Element('{%s}note' % self.namespace)
-        xml.attrib['type'] = ntype
+        xml = ET.Element("{%s}note" % self.namespace)
+        xml.attrib["type"] = ntype
         xml.text = msg
         self.xml.append(xml)

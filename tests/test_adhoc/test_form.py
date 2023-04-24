@@ -5,6 +5,7 @@ from slixmpp import JID
 from slixmpp.test import SlixTest
 
 import slidge.core.command.adhoc
+from slidge.util.test import SlixTestPlus
 from slidge.util.xep_0050.adhoc import XEP_0050
 from slidge.core.command.adhoc import AdhocProvider
 from slidge.core.command import Command, Form
@@ -68,8 +69,9 @@ class Command1(Command):
         return f"all good mate, {arg1}"
 
 
-class TestCommandsResults(SlixTest):
+class TestCommandsResults(SlixTestPlus):
     def setUp(self):
+        super().setUp()
         self.stream_start(
             mode="component",
             plugins=["xep_0050"],
