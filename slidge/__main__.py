@@ -123,6 +123,11 @@ def main():
 
     legacy_module = importlib.import_module(config.LEGACY_MODULE)
     logging.debug("Legacy module: %s", dir(legacy_module))
+    logging.info(
+        "Starting legacy module: '%s' version %s",
+        config.LEGACY_MODULE,
+        getattr(legacy_module, "__version__", "No version"),
+    )
 
     if plugin_config_obj := getattr(
         legacy_module, "config", getattr(legacy_module, "Config", None)
