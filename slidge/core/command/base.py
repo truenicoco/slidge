@@ -246,7 +246,7 @@ class FormField:
                 raise XMPPError("not-acceptable", f"Not a valid option: '{value}'")
 
         elif self.type == "boolean":
-            return value.lower() in ("1", "true")
+            return value.lower() in ("1", "true") if isinstance(value, str) else value
 
         return value
 
