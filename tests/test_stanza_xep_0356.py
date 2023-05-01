@@ -1,7 +1,8 @@
 import unittest
+
 from slixmpp.test import SlixTest
 
-from slidge.util.xep_0356 import stanza, permissions
+from slidge.util.xep_0356 import permissions, stanza
 
 
 class TestPermissions(SlixTest):
@@ -54,12 +55,13 @@ class TestPermissions(SlixTest):
                   <namespace ns='some_other_ns' type='both' />
                 </perm>
               </privilege>
-            """
+            """,
         )
         nss = set()
         for perm in x["perms"]:
             for ns in perm["namespaces"]:
                 nss.add((ns["ns"], ns["type"]))
         assert nss == {("some_ns", "get"), ("some_other_ns", "both")}
+
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestPermissions)

@@ -47,6 +47,7 @@ isort = "^5.11.4"
 ruff = "^0.0.259"
 xmldiff = "^2.5"
 types-pillow = "^9.5.0.0"
+pre-commit = "^3.3.0"
 
 [tool.poetry.group.dev.dependencies.slidge-dev-helpers]
 git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
@@ -57,6 +58,8 @@ slidge = 'slidge.__main__:main'
 
 [tool.mypy]
 check_untyped_defs = true
+files = ["slidge"]
+exclude = ["tests", "slidge.util.xep*"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -65,21 +68,9 @@ module = [
 ]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = [
-  "slidge.util.xep_0030.*",
-  "slidge.util.xep_0050.*",
-  "slidge.util.xep_0054.*",
-  "slidge.util.xep_0292.*",
-  "slidge.util.xep_0313.*",
-  "slidge.util.xep_0356.*",
-  "slidge.util.xep_0461.*",
-]
-ignore_errors = true
-
 [tool.ruff]
 line-length = 120
-exclude = ["xep_*"]
+exclude = ["xep_*", "tests"]
 
 [tool.isort]
 profile = "black"

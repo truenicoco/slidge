@@ -1,15 +1,12 @@
 import pytest
-
-from slixmpp import ComponentXMPP
-from slixmpp import JID
-from slixmpp.test import SlixTest
+from slixmpp import JID, ComponentXMPP
 
 import slidge.core.command.adhoc
+from slidge.core.command import Command, Form
+from slidge.core.command.adhoc import AdhocProvider
+from slidge.core.command.base import FormField
 from slidge.util.test import SlixTestPlus
 from slidge.util.xep_0050.adhoc import XEP_0050
-from slidge.core.command.adhoc import AdhocProvider
-from slidge.core.command import Command, Form
-from slidge.core.command.base import FormField
 
 
 class MockSession:
@@ -31,6 +28,7 @@ def mock(monkeypatch, MockRE):
         MockRE,
         raising=False,
     )
+
 
 class Command1(Command):
     NAME = "Command number one"
@@ -95,7 +93,7 @@ class TestCommandsResults(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
@@ -180,7 +178,7 @@ class TestCommandsResults(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
@@ -265,7 +263,7 @@ class TestCommandsResults(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
@@ -343,7 +341,7 @@ class TestCommandsResults(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"

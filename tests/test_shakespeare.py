@@ -5,25 +5,23 @@ import tempfile
 import unittest.mock
 from copy import copy
 from pathlib import Path
-from typing import Hashable, Optional, Dict, Any
+from typing import Any, Dict, Hashable, Optional
 
-from slixmpp import JID, Presence, Message, Iq
+from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0082 import format_datetime
 
 from slidge import *
+from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
-
 from slidge.util.test import SlidgeTest
-from slidge.util.types import LegacyMessageType, LegacyContactType, LegacyAttachment
+from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
 from slidge.util.xep_0356.permissions import (
-    Permissions,
     MessagePermission,
+    Permissions,
     PresencePermission,
     RosterAccess,
 )
-from slidge.core import config
-
 
 received_presences: list[Optional[Presence]] = []
 text_received_by_juliet = []
@@ -600,7 +598,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="error" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
               <error type="auth">
                 <not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
@@ -619,7 +617,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
                 <identity category="conference" type="text" name="Slidged rooms" />
@@ -652,7 +650,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="error" from="juliet@aim.shakespeare.lit" to="test@localhost/gajim" id="123">
               <error type="auth">
                 <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
@@ -671,7 +669,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="result"
                 from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
@@ -703,7 +701,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
            <iq xmlns="jabber:component:accept" type="result" from="juliet@aim.shakespeare.lit"
                 to="romeo@montague.lit/gajim" id="123">
                	<query xmlns="http://jabber.org/protocol/disco#items"/>
@@ -727,7 +725,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="result"
                 from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
@@ -748,7 +746,7 @@ class TestAimShakespeareBase(SlidgeTest):
                   <field var='max_reactions_per_user'>
                     <value>1</value>
                   </field>
-                </x> 
+                </x>
               </query>
             </iq>
             """,
@@ -764,7 +762,7 @@ class TestAimShakespeareBase(SlidgeTest):
             """
         )
         self.send(
-            f"""
+            """
             <message xmlns="jabber:component:accept" type="error" from="nope@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
@@ -1093,7 +1091,6 @@ class TestContact(SlidgeTest):
 
         self.recv(probe)
         assert self.next_sent()["type"] == "available"
-
 
         juliet.is_friend = False
         self.recv(probe)

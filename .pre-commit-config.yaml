@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+        args: [--assume-in-merge]
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.261
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/rcmdnk/pyproject-pre-commit
+    rev: v0.0.1
+    hooks:
+    - id: isort
+    - id: black
+    - id: mypy
+
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: poetry run pytest tests
+        language: system
+        pass_filenames: false
+        always_run: true

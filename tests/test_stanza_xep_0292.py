@@ -5,7 +5,6 @@ from slixmpp.test import SlixTest
 
 from slidge.util.xep_0292 import stanza
 
-
 REF = """
 <iq>
     <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'>
@@ -114,5 +113,5 @@ class TestVcard(SlixTest):
                 </tel>
             </vcard>
             """,
-            use_values=False
+            use_values=False,
         )

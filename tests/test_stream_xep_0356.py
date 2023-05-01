@@ -1,10 +1,8 @@
 import unittest
 
-from slixmpp import Message, JID, Iq
-from slidge.util.test import SlidgeTest
+from slixmpp import JID, Iq, Message
 
-import slidge.util.xep_0356
-import slidge.util.xep_0356_old
+from slidge.util.test import SlidgeTest
 from slidge.util.xep_0356 import XEP_0356, permissions
 
 
@@ -21,7 +19,7 @@ class TestPermissions(SlidgeTest):
         exc = False
         try:
             self.xmpp.plugin.disable("xep_0356")
-        except Exception as e:
+        except Exception:
             exc = True
         self.assertFalse(exc)
 
@@ -62,7 +60,8 @@ class TestPermissions(SlidgeTest):
             x.granted_privileges[server].iq["some_ns"], permissions.IqPermission.GET
         )
         self.assertEqual(
-            x.granted_privileges[server].iq["some_other_ns"], permissions.IqPermission.BOTH
+            x.granted_privileges[server].iq["some_other_ns"],
+            permissions.IqPermission.BOTH,
         )
         self.assertTrue(results["event"])
 
@@ -159,8 +158,12 @@ class TestPermissions(SlidgeTest):
         iq.set_from("juliet@xxx")
         iq.set_to("somemuc@conf")
         iq.set_type("get")
-        self.xmpp["xep_0356"].granted_privileges["conf"].iq["http://jabber.org/protocol/muc#admin"] = permissions.IqPermission.BOTH
-        r = self.xmpp.loop.create_task(self.xmpp["xep_0356"].send_privileged_iq(iq, iq_id="0"))
+        self.xmpp["xep_0356"].granted_privileges["conf"].iq[
+            "http://jabber.org/protocol/muc#admin"
+        ] = permissions.IqPermission.BOTH
+        self.xmpp.loop.create_task(
+            self.xmpp["xep_0356"].send_privileged_iq(iq, iq_id="0")
+        )
         self.send(
             """
             <iq from="pubsub.capulet.lit"
@@ -180,7 +183,8 @@ class TestPermissions(SlidgeTest):
                 </privileged_iq>
             </iq>
             """,
-            use_values=False
+            use_values=False,
         )
+
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestPermissions)

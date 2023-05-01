@@ -3,15 +3,15 @@ from datetime import datetime, timedelta
 import cryptography.fernet
 from slixmpp import JID
 
+from slidge.core import config
+from slidge.core.contact import LegacyContact
 from slidge.util import (
-    SubclassableOnce,
     ABCSubclassableOnceAtMost,
     BiDict,
+    SubclassableOnce,
     is_valid_phone_number,
 )
 from slidge.util.db import EncryptedShelf
-from slidge.core.contact import LegacyContact
-from slidge.core import config
 
 
 def test_subclass():
@@ -94,6 +94,7 @@ def test_strip_delay(monkeypatch):
         @staticmethod
         def set_stamp(x):
             pass
+
         @staticmethod
         def set_from(x):
             pass

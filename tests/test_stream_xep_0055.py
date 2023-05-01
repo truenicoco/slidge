@@ -1,4 +1,5 @@
 import unittest
+
 from slixmpp.test import SlixTest
 
 
@@ -14,7 +15,7 @@ class TestJabberSearch(SlixTest):
                 }
             },
             jid="characters.shakespeare.lit",
-            plugins={"xep_0055"}
+            plugins={"xep_0055"},
         )
         self.xmpp["xep_0055"].api.register(get_results, "search_query")
         self.xmpp["xep_0055"].api.register(get_results, "search_query")
@@ -150,6 +151,7 @@ class TestJabberSearch(SlixTest):
             """,
             use_values=False,  # TypeError: element indices must be integers without that
         )
+
 
 async def get_results(jid, node, ifrom, iq):
     reply = iq.reply()

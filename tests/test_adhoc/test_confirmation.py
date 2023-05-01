@@ -1,13 +1,12 @@
 import pytest
-
 import slixmpp.test
 from slixmpp import ComponentXMPP
 
 import slidge.core.command.adhoc
-from slidge.util.xep_0050.adhoc import XEP_0050
-from slidge.util.test import SlixTestPlus
-from slidge.core.command.adhoc import AdhocProvider
 from slidge.core.command import Command, Confirmation
+from slidge.core.command.adhoc import AdhocProvider
+from slidge.util.test import SlixTestPlus
+from slidge.util.xep_0050.adhoc import XEP_0050
 
 
 class MockSession:
@@ -35,6 +34,7 @@ def mock(monkeypatch, MockRE):
         MockRE,
         raising=False,
     )
+
 
 class CommandAdmin(Command):
     NAME = "Command number one"
@@ -89,7 +89,7 @@ class TestCommandsConfirmation(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
@@ -152,7 +152,7 @@ class TestCommandsConfirmation(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
@@ -223,7 +223,7 @@ class TestCommandsConfirmation(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"

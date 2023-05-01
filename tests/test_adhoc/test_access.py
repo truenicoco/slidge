@@ -1,23 +1,17 @@
-from aifc import Error
-
 import pytest
-
 from slixmpp import ComponentXMPP
-from slixmpp.test import SlixTest
 
 import slidge.core.command.adhoc
 import slidge.core.command.base
+from slidge.core.command import Command, CommandAccess
+from slidge.core.command.adhoc import AdhocProvider
 from slidge.util.test import SlixTestPlus
 from slidge.util.xep_0050.adhoc import XEP_0050
-from slidge.core.command.adhoc import AdhocProvider
-from slidge.core.command import Command, CommandAccess
 
 
 class MockSession:
     def __init__(self, jid):
         self.logged = "logged" in jid.username
-
-
 
 
 @pytest.fixture(autouse=True)
@@ -33,6 +27,7 @@ def mock(monkeypatch, MockRE):
         MockRE,
         raising=False,
     )
+
 
 class Command1(Command):
     NAME = "Command number one"
@@ -71,7 +66,7 @@ class TestCommandsDisco(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="result" from="slidge.whatever.ass" to="admin@whatever.ass/cheogram" id="1">
               <query xmlns="http://jabber.org/protocol/disco#items" node="http://jabber.org/protocol/commands">
                 <item jid="slidge.whatever.ass" node="command1" name="Command number one" />
@@ -92,7 +87,7 @@ class TestCommandsDisco(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept" type="result" from="slidge.whatever.ass" to="user@whatever.ass/cheogram" id="2">
               <query xmlns="http://jabber.org/protocol/disco#items" node="http://jabber.org/protocol/commands" />
             </iq>
@@ -113,7 +108,7 @@ class TestCommandsDisco(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="error"
                 from="slidge.whatever.ass"

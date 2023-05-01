@@ -10,8 +10,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
 
 # sys.path.insert(0, os.path.abspath('.'))
 # sys.path.insert(0, os.path.abspath('..'))
@@ -78,6 +76,4 @@ intersphinx_mapping = {
     "aiosignald": ("https://aiosignald.readthedocs.io/en/latest/", None),
 }
 
-extlinks = {
-    "xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")
-}
+extlinks = {"xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")}

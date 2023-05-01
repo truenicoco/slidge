@@ -89,7 +89,7 @@ class TestPubSubNickname(SlixTest):
                     <nick xmlns="http://jabber.org/protocol/nick">BUBU</nick>
             </item></items></event></message>
             """,
-            use_values=False
+            use_values=False,
         )
 
     def test_no_nick(self):
@@ -174,7 +174,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
         self.send(
             f"""
-            <iq xmlns="jabber:component:accept" 
+            <iq xmlns="jabber:component:accept"
                 type='result'
                 from='stan@pubsub.south.park'
                 to='kenny@south.park'
@@ -209,7 +209,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
         self.send(
             f"""
-            <iq xmlns="jabber:component:accept" 
+            <iq xmlns="jabber:component:accept"
                 type='result'
                 from='stan@pubsub.south.park'
                 to='kenny@south.park'
@@ -245,7 +245,7 @@ class TestPubSubAvatar(SlixTestPlus):
             """
         )
         self.send(
-            f"""
+            """
             <iq xmlns="jabber:component:accept"
                 type="error"
                 from="stan@pubsub.south.park"
@@ -276,7 +276,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
         self.send(
             f"""
-            <iq xmlns="jabber:component:accept" 
+            <iq xmlns="jabber:component:accept"
                 type='result'
                 from='stan@pubsub.south.park'
                 to='kenny@south.park'
@@ -313,7 +313,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
         self.send(
             f"""
-            <iq xmlns="jabber:component:accept" 
+            <iq xmlns="jabber:component:accept"
                 type='result'
                 from='stan@pubsub.south.park'
                 to='kenny@south.park'
