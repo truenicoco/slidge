@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     Generic,
     Hashable,
     Literal,
@@ -16,8 +17,12 @@ if TYPE_CHECKING:
     from ..core.muc.participant import LegacyParticipant
     from ..core.muc.room import LegacyMUC
     from ..core.pubsub import PepItem
+    from ..core.session import BaseSession
     from .db import GatewayUser
 
+    AnyBaseSession = BaseSession[Any, Any]
+else:
+    AnyBaseSession = None
 
 LegacyGroupIdType = TypeVar("LegacyGroupIdType", bound=Hashable)
 LegacyMessageType = TypeVar("LegacyMessageType", bound=Hashable)

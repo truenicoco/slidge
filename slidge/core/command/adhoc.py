@@ -4,9 +4,9 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
-from slixmpp import JID, Iq
+from slixmpp import JID, Iq  # type: ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
-from slixmpp.plugins.xep_0004 import Form as SlixForm
+from slixmpp.plugins.xep_0004 import Form as SlixForm  # type: ignore[attr-defined]
 
 from ...util.xep_0030.stanza.items import DiscoItems
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
@@ -16,13 +16,16 @@ if TYPE_CHECKING:
     from ..session import BaseSession
 
 
+AdhocSessionType = dict[str, Any]
+
+
 class AdhocProvider:
     """
     A slixmpp-like plugin to handle adhoc commands, with less boilerplate and
     untyped dict values than slixmpp.
     """
 
-    def __init__(self, xmpp: "BaseGateway"):
+    def __init__(self, xmpp: "BaseGateway") -> None:
         self.xmpp = xmpp
         self._commands = dict[str, Command]()
         xmpp.plugin["xep_0030"].set_node_handler(
@@ -33,8 +36,8 @@ class AdhocProvider:
         )
 
     async def __wrap_initial_handler(
-        self, command: Command, iq: Iq, adhoc_session: dict[str, Any]
-    ):
+        self, command: Command, iq: Iq, adhoc_session: AdhocSessionType
+    ) -> AdhocSessionType:
         ifrom = iq.get_from()
         session = command.raise_if_not_authorized(ifrom)
         result = await self.__wrap_handler(command.run, session, ifrom)
@@ -42,10 +45,10 @@ class AdhocProvider:
 
     async def __handle_result(
         self,
-        session: Optional["BaseSession"],
+        session: Optional["BaseSession[Any, Any]"],
         result: CommandResponseType,
-        adhoc_session: dict[str, Any],
-    ):
+        adhoc_session: AdhocSessionType,
+    ) -> AdhocSessionType:
         if isinstance(result, str) or result is None:
             adhoc_session["has_next"] = False
             adhoc_session["next"] = None
@@ -75,7 +78,7 @@ class AdhocProvider:
         raise XMPPError("internal-server-error", text="OOPS!")
 
     @staticmethod
-    async def __wrap_handler(f: Union[Callable, functools.partial], *a, **k):
+    async def __wrap_handler(f: Union[Callable, functools.partial], *a, **k):  # type: ignore
         try:
             if asyncio.iscoroutinefunction(f):
                 return await f(*a, **k)
@@ -89,13 +92,13 @@ class AdhocProvider:
 
     async def __wrap_form_handler(
         self,
-        session: Optional["BaseSession"],
+        session: Optional["BaseSession[Any, Any]"],
         result: Form,
         form: SlixForm,
-        adhoc_session: dict[str, Any],
-    ):
+        adhoc_session: AdhocSessionType,
+    ) -> AdhocSessionType:
         form_values = result.get_values(form)
-        result = await self.__wrap_handler(
+        new_result = await self.__wrap_handler(
             result.handler,
             form_values,
             session,
@@ -104,16 +107,16 @@ class AdhocProvider:
             **result.handler_kwargs
         )
 
-        return await self.__handle_result(session, result, adhoc_session)
+        return await self.__handle_result(session, new_result, adhoc_session)
 
     async def __wrap_confirmation(
         self,
-        session: Optional["BaseSession"],
+        session: Optional["BaseSession[Any, Any]"],
         confirmation: Confirmation,
         form: SlixForm,
-        adhoc_session: dict[str, Any],
-    ):
-        if form.get_values().get("confirm"):
+        adhoc_session: AdhocSessionType,
+    ) -> AdhocSessionType:
+        if form.get_values().get("confirm"):  # type: ignore[no-untyped-call]
             result = await self.__wrap_handler(
                 confirmation.handler,
                 session,
@@ -128,7 +131,7 @@ class AdhocProvider:
 
         return await self.__handle_result(session, result, adhoc_session)
 
-    def register(self, command: Command, jid: Optional[JID] = None):
+    def register(self, command: Command, jid: Optional[JID] = None) -> None:
         """
         Register a command as a adhoc command.
 
@@ -148,14 +151,14 @@ class AdhocProvider:
         elif not isinstance(jid, JID):
             jid = JID(jid)
 
-        self.xmpp.plugin["xep_0050"].add_command(
+        self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
             jid=jid,
             node=command.NODE,
             name=command.NAME,
             handler=partial(self.__wrap_initial_handler, command),
         )
 
-    async def get_items(self, jid: JID, node: str, iq: Iq):
+    async def get_items(self, jid: JID, node: str, iq: Iq) -> DiscoItems:
         """
         Get items for a disco query
 
@@ -167,7 +170,7 @@ class AdhocProvider:
         all_items = self.xmpp.plugin["xep_0030"].static.get_items(jid, node, None, None)
         log.debug("Static items: %r", all_items)
         if not all_items:
-            return all_items
+            return DiscoItems()
 
         ifrom = iq.get_from()
 

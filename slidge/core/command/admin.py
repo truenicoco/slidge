@@ -1,13 +1,24 @@
 """
 Commands only accessible for slidge admins
 """
+import functools
 import logging
+from typing import Optional
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from ...util.db import user_store
-from .base import Command, CommandAccess, Confirmation, Form, FormField, TableResult
+from ...util.types import AnyBaseSession
+from .base import (
+    Command,
+    CommandAccess,
+    Confirmation,
+    Form,
+    FormField,
+    FormValues,
+    TableResult,
+)
 
 
 class AdminCommand(Command):
@@ -50,7 +61,9 @@ class DeleteUser(AdminCommand):
             handler=self.delete,
         )
 
-    async def delete(self, form_values: dict[str, str], _session, _ifrom):
+    async def delete(
+        self, form_values: FormValues, _session: AnyBaseSession, _ifrom: JID
+    ) -> Confirmation:
         jid: JID = form_values.get("jid")  # type:ignore
         user = user_store.get_by_jid(jid)
         if user is None:
@@ -59,11 +72,12 @@ class DeleteUser(AdminCommand):
         return Confirmation(
             prompt=f"Are you sure you want to unregister '{jid}' from slidge?",
             success=f"User {jid} has been deleted",
-            handler=self.finish,
-            handler_args=(jid,),
+            handler=functools.partial(self.finish, jid=jid),
         )
 
-    async def finish(self, _session, _ifrom, jid: JID):
+    async def finish(
+        self, _session: Optional[AnyBaseSession], _ifrom: JID, jid: JID
+    ) -> None:
         user = user_store.get_by_jid(jid)
         if user is None:
             raise XMPPError("bad-request", f"{jid} has no account here!")
@@ -96,5 +110,7 @@ class ChangeLoglevel(AdminCommand):
         )
 
     @staticmethod
-    async def finish(form_values: dict[str, str], _session, _ifrom):
-        logging.getLogger().setLevel(int(form_values["level"]))
+    async def finish(
+        form_values: FormValues, _session: AnyBaseSession, _ifrom: JID
+    ) -> None:
+        logging.getLogger().setLevel(int(form_values["level"]))  # type:ignore

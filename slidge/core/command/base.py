@@ -1,9 +1,10 @@
 from abc import ABC
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
     Callable,
     Collection,
     Iterable,
@@ -13,19 +14,39 @@ from typing import (
     Union,
 )
 
-from slixmpp import JID
+from slixmpp import JID  # type: ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
-from slixmpp.plugins.xep_0004 import Form as SlixForm
-from slixmpp.plugins.xep_0004 import FormField as SlixFormField
+from slixmpp.plugins.xep_0004 import Form as SlixForm  # type: ignore[attr-defined]
+from slixmpp.plugins.xep_0004 import (
+    FormField as SlixFormField,  # type: ignore[attr-defined]
+)
 from slixmpp.types import JidStr
 
 from ...util.db import user_store
-from ...util.types import FieldType
+from ...util.types import AnyBaseSession, FieldType
 from .. import config
 
 if TYPE_CHECKING:
     from ..gateway import BaseGateway
     from ..session import BaseSession
+
+
+HandlerType = Union[
+    Callable[[AnyBaseSession, JID], "CommandResponseType"],
+    Callable[[AnyBaseSession, JID], Awaitable["CommandResponseType"]],
+]
+
+FormValues = dict[str, Union[str, JID, bool]]
+
+
+FormHandlerType = Callable[
+    [FormValues, AnyBaseSession, JID],
+    Awaitable["CommandResponseType"],
+]
+
+ConfirmationHandlerType = Callable[
+    [Optional[AnyBaseSession], JID], Awaitable["CommandResponseType"]
+]
 
 
 @dataclass
@@ -50,19 +71,19 @@ class TableResult:
 
     jids_are_mucs: bool = False
 
-    def get_xml(self):
+    def get_xml(self) -> SlixForm:
         """
         Get a slixmpp "form" (with <reported> header)to represent the data
 
         :return: some XML
         """
-        form = SlixForm()
+        form = SlixForm()  # type: ignore[no-untyped-call]
         form["type"] = "result"
         form["title"] = self.description
         for f in self.fields:
-            form.add_reported(f.var, label=f.label, type=f.type)
+            form.add_reported(f.var, label=f.label, type=f.type)  # type: ignore[no-untyped-call]
         for item in self.items:
-            form.add_item(item)
+            form.add_item(item)  # type: ignore[no-untyped-call]
         return form
 
 
@@ -85,9 +106,9 @@ class Confirmation:
     """
     The text presented to the command triggering user
     """
-    handler: Callable
+    handler: ConfirmationHandlerType
     """
-    An async function that should return a ResponseType 
+    An async function that should return a ResponseType
     """
     success: Optional[str] = None
     """
@@ -102,13 +123,13 @@ class Confirmation:
     keyword arguments passed to the handler
     """
 
-    def get_form(self):
+    def get_form(self) -> SlixForm:
         """
         Get the slixmpp form
 
         :return: some xml
         """
-        form = SlixForm()
+        form = SlixForm()  # type: ignore[no-untyped-call]
         form["type"] = "form"
         form["title"] = self.prompt
         form.append(
@@ -128,11 +149,11 @@ class Form:
     title: str
     instructions: str
     fields: Collection["FormField"]
-    handler: Callable
+    handler: FormHandlerType
     handler_args: Iterable[Any] = field(default_factory=list)
     handler_kwargs: dict[str, Any] = field(default_factory=dict)
 
-    def get_values(self, slix_form: SlixForm) -> dict[str, Union[str, JID]]:
+    def get_values(self, slix_form: SlixForm) -> dict[str, Union[str, JID, bool, None]]:
         """
         Parse form submission
 
@@ -140,18 +161,19 @@ class Form:
         :return: A dict where keys=field.var and values are either strings
             or JIDs (if field.type=jid-single)
         """
-        values = slix_form.get_values()
+        str_values: dict[str, str] = slix_form.get_values()  # type: ignore[no-untyped-call]
+        values = {}
         for f in self.fields:
-            values[f.var] = f.validate(values.get(f.var))
+            values[f.var] = f.validate(str_values.get(f.var))
         return values
 
-    def get_xml(self):
+    def get_xml(self) -> SlixForm:
         """
         Get the slixmpp "form"
 
         :return: some XML
         """
-        form = SlixForm()
+        form = SlixForm()  # type: ignore[no-untyped-call]
         form["type"] = "form"
         form["instructions"] = self.instructions
         form["title"] = self.title
@@ -212,17 +234,16 @@ class FormField:
     image_url: Optional[str] = None
     """An image associated to this field, eg, a QR code"""
 
-    def dict(self):
-        return asdict(self)
-
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.private:
             self.type = "text-private"
 
-    def __acceptable_options(self):
-        return [x["value"] for x in self.options]  # type: ignore
+    def __acceptable_options(self) -> list[str]:
+        if not self.options:
+            raise RuntimeError
+        return [x["value"] for x in self.options]
 
-    def validate(self, value: str):
+    def validate(self, value: Optional[str]) -> Union[str, JID, bool, None]:
         """
         Raise appropriate XMPPError if a given value is valid for this field
 
@@ -233,7 +254,7 @@ class FormField:
             raise XMPPError("not-acceptable", f"Missing field: '{self.label}'")
 
         if value is None:
-            return
+            return None
 
         if self.type == "jid-single":
             try:
@@ -250,7 +271,7 @@ class FormField:
 
         return value
 
-    def get_xml(self):
+    def get_xml(self) -> SlixFormField:
         """
         Get the field in slixmpp format
 
@@ -263,7 +284,7 @@ class FormField:
         f["type"] = self.type
         if self.options:
             for o in self.options:
-                f.add_option(**o)
+                f.add_option(**o)  # type: ignore[no-untyped-call]
         f["value"] = self.value
         if self.image_url:
             f["media"].add_uri(self.image_url, itype="image/png")
@@ -305,13 +326,13 @@ class Command(ABC):
     def __init__(self, xmpp: "BaseGateway"):
         self.xmpp = xmpp
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         # store subclasses so subclassing is enough for the command to be
         # picked up by slidge
         cls.subclasses.append(cls)
 
     async def run(
-        self, session: Optional["BaseSession"], ifrom: JID, *args
+        self, session: Optional["BaseSession[Any, Any]"], ifrom: JID, *args: str
     ) -> CommandResponseType:
         """
         Entry point of the command
@@ -325,12 +346,14 @@ class Command(ABC):
         """
         raise XMPPError("feature-not-implemented")
 
-    def _get_session(self, jid: JID):
+    def _get_session(self, jid: JID) -> Optional["BaseSession[Any, Any]"]:
         user = user_store.get_by_jid(jid)
-        if user is not None:
-            return self.xmpp.get_session_from_user(user)
+        if user is None:
+            return None
 
-    def raise_if_not_authorized(self, jid: JID):
+        return self.xmpp.get_session_from_user(user)
+
+    def raise_if_not_authorized(self, jid: JID) -> Optional["BaseSession[Any, Any]"]:
         """
         Raise an appropriate error is jid is not authorized to use the command
 
@@ -375,5 +398,5 @@ class Command(ABC):
         return session
 
 
-def is_admin(jid: JidStr):
+def is_admin(jid: JidStr) -> bool:
     return JID(jid).bare in config.ADMINS

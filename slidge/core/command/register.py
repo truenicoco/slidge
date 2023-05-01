@@ -5,6 +5,7 @@ Note that single step forms via jabber:iq:register are handled in ``xep_0077``
 """
 
 import asyncio
+import functools
 import tempfile
 from datetime import datetime
 from enum import Enum
@@ -16,7 +17,7 @@ from slixmpp.exceptions import XMPPError
 
 from ...util.db import GatewayUser
 from .. import config
-from .base import Command, CommandAccess, Form, FormField
+from .base import Command, CommandAccess, Form, FormField, FormValues
 
 
 class RegistrationType(int, Enum):
@@ -89,8 +90,7 @@ class Register(Command):
                 title=self.xmpp.REGISTRATION_2FA_TITLE,
                 instructions=self.xmpp.REGISTRATION_2FA_INSTRUCTIONS,
                 fields=[FormField("code", label="Code", required=True)],
-                handler=self.two_fa,
-                handler_args=[user],
+                handler=functools.partial(self.two_fa, user=user),
             )
 
         elif self.xmpp.REGISTRATION_TYPE == RegistrationType.QRCODE:
@@ -126,19 +126,17 @@ class Register(Command):
                         label="URL of the QR code image",
                     ),
                 ],
-                handler=self.qr,
-                handler_args=[user],
+                handler=functools.partial(self.qr, user=user),
             )
 
     async def two_fa(
-        self, form_values: dict[str, Any], _session, _ifrom, user: GatewayUser
+        self, form_values: FormValues, _session, _ifrom, user: GatewayUser
     ):
+        assert isinstance(form_values["code"], str)
         await self.xmpp.validate_two_factor_code(user, form_values["code"])
         return self._finalize(user)
 
-    async def qr(
-        self, _form_values: dict[str, Any], _session, _ifrom, user: GatewayUser
-    ):
+    async def qr(self, _form_values: FormValues, _session, _ifrom, user: GatewayUser):
         try:
             await asyncio.wait_for(
                 self.xmpp.qr_pending_registrations[user.bare_jid],  # type:ignore

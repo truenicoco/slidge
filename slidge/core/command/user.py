@@ -2,15 +2,25 @@
 Commands available to users
 """
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from slixmpp import JID
+from slixmpp import JID  # type:ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
 
-from .base import Command, CommandAccess, Confirmation, Form, FormField, TableResult
+from ...util.types import AnyBaseSession
+from .base import (
+    Command,
+    CommandAccess,
+    Confirmation,
+    Form,
+    FormField,
+    FormValues,
+    SearchResult,
+    TableResult,
+)
 
 if TYPE_CHECKING:
-    from ..session import BaseSession
+    pass
 
 
 class Search(Command):
@@ -20,7 +30,9 @@ class Search(Command):
     CHAT_COMMAND = "find"
     ACCESS = CommandAccess.USER_LOGGED
 
-    async def run(self, session, _ifrom, *args):
+    async def run(
+        self, session: Optional[AnyBaseSession], _ifrom: JID, *args: str
+    ) -> Union[Form, SearchResult, None]:
         if args:
             assert session is not None
             return await session.search(
@@ -35,10 +47,8 @@ class Search(Command):
 
     @staticmethod
     async def search(
-        form_values: dict[str, Union[str, JID]],
-        session: Optional["BaseSession"],
-        _ifrom: JID,
-    ):
+        form_values: FormValues, session: Optional[AnyBaseSession], _ifrom: JID
+    ) -> SearchResult:
         assert session is not None
         results = await session.search(form_values)  # type: ignore
         if results is None:
@@ -53,14 +63,16 @@ class Unregister(Command):
     NODE = CHAT_COMMAND = "unregister"
     ACCESS = CommandAccess.USER
 
-    async def run(self, session, _ifrom, *_):
+    async def run(
+        self, session: Optional[AnyBaseSession], _ifrom: JID, *_: Any
+    ) -> Confirmation:
         return Confirmation(
             prompt=f"Are you sure you want to unregister from '{self.xmpp.boundjid}'?",
             success=f"You are not registered to '{self.xmpp.boundjid}' anymore.",
             handler=self.unregister,
         )
 
-    async def unregister(self, session: Optional["BaseSession"], _ifrom: JID):
+    async def unregister(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
         assert session is not None
         await self.xmpp.unregister_user(session.user)
         return "OK"
@@ -75,14 +87,14 @@ class SyncContacts(Command):
     NODE = CHAT_COMMAND = "sync-contacts"
     ACCESS = CommandAccess.USER_LOGGED
 
-    async def run(self, session, _ifrom, *_):
+    async def run(self, session: Optional[AnyBaseSession], _ifrom, *_) -> Confirmation:
         return Confirmation(
             prompt="Are you sure you want to sync your roster?",
             success=None,
             handler=self.sync,
         )
 
-    async def sync(self, session: Optional["BaseSession"], _ifrom: JID):
+    async def sync(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
         if session is None:
             raise RuntimeError
         roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.bare_jid)
@@ -133,7 +145,9 @@ class ListContacts(Command):
     NODE = CHAT_COMMAND = "contacts"
     ACCESS = CommandAccess.USER_LOGGED
 
-    async def run(self, session, _ifrom, *_):
+    async def run(
+        self, session: Optional[AnyBaseSession], _ifrom: JID, *_
+    ) -> TableResult:
         assert session is not None
         await session.contacts.fill()
         contacts = sorted(
@@ -170,7 +184,7 @@ class Login(Command):
 
     ACCESS = CommandAccess.USER_NON_LOGGED
 
-    async def run(self, session: Optional["BaseSession"], _ifrom, *_):
+    async def run(self, session: Optional[AnyBaseSession], _ifrom, *_):
         assert session is not None
         try:
             msg = await session.login()
