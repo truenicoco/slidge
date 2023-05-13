@@ -84,4 +84,5 @@ ENTRYPOINT ["watchmedo", "auto-restart", \
   "python", "--", "-m", "slidge", \
   "--jid", "slidge.localhost", \
   "--secret", "secret", \
-  "--debug"]
+  "--debug", \
+  "--upload-service", "upload.localhost"]
