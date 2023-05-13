@@ -16,6 +16,9 @@ class _CachedPresence:
     last_seen: Optional[datetime] = None
 
 
+_FRIEND_REQUEST_PRESENCES = {"subscribe", "unsubscribe", "subscribed", "unsubscribed"}
+
+
 class PresenceMixin(BaseSender):
     _last_presence: Optional[_CachedPresence] = None
     _ONLY_SEND_PRESENCE_CHANGES = False
@@ -30,23 +33,19 @@ class PresenceMixin(BaseSender):
     ):
         old = self._last_presence
 
-        if presence_kwargs.get("ptype") not in (
-            "subscribe",
-            "unsubscribe",
-            "subscribed",
-            "unsubscribed",
-        ):
+        if presence_kwargs.get("ptype") not in _FRIEND_REQUEST_PRESENCES:
             self._last_presence = _CachedPresence(
                 last_seen=last_seen, presence_kwargs=presence_kwargs
             )
-
-        if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:
-            if old == self._last_presence:
-                self.session.log.debug("Presence is the same as cached")
-                raise _NoChange
-            self.session.log.debug(
-                "Presence is not the same as cached: %s vs %s", old, self._last_presence
-            )
+            if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:
+                if old == self._last_presence:
+                    self.session.log.debug("Presence is the same as cached")
+                    raise _NoChange
+                self.session.log.debug(
+                    "Presence is not the same as cached: %s vs %s",
+                    old,
+                    self._last_presence,
+                )
 
         p = self.xmpp.make_presence(
             pfrom=self.jid.bare if bare else self.jid, **presence_kwargs

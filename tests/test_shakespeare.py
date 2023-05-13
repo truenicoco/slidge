@@ -1224,6 +1224,14 @@ class TestContact(SlidgeTest):
             mock.assert_awaited_once()
         assert self.next_sent() is None
 
+    def test_send_several_subscription_requests_in_a_row(self):
+        juliet = self.get_juliet()
+        juliet.online()
+        juliet.send_friend_request()
+        assert self.next_sent()["type"] == "subscribe"
+        juliet.send_friend_request()
+        assert self.next_sent()["type"] == "subscribe"
+
 
 class TestCarbon(SlidgeTest):
     plugin = globals()
