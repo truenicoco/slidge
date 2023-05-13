@@ -63,7 +63,6 @@ ENTRYPOINT ["python", "-m", "slidge"]
 
 # dev container with hot reload on code change
 FROM base AS dev
-ARG PYTHONVER
 
 USER root
 
