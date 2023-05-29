@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Hashable, Optional
 
 from slixmpp import JID, Message, Presence
+from slixmpp import __version__ as slix_version
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0082 import format_datetime
 
@@ -1046,10 +1047,10 @@ class TestContact(SlidgeTest):
         juliet.is_friend = True
         juliet.online()
         self.send(
-            """
+            f"""
             <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
                 <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/1.8.3+slidge0"
+                   node="http://slixmpp.com/ver/{slix_version}"
                    hash="sha-1"
                    ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
                 <priority>0</priority>
@@ -1065,10 +1066,10 @@ class TestContact(SlidgeTest):
         juliet.is_friend = True
         juliet.online()
         self.send(
-            """
+            f"""
             <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
                 <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/1.8.3+slidge0"
+                   node="http://slixmpp.com/ver/{slix_version}"
                    hash="sha-1"
                    ver="g+W+C4Is6LMMAXwPpjeg2QE1p90="/>
                 <priority>0</priority>

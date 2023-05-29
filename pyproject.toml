@@ -15,11 +15,7 @@ aiohttp = {version = "^3.8.3", extras = ["speedups"]}
 ConfigArgParse = "^1.5.3"
 pickle-secure = "^0.99.9"
 python-magic = "^0.4.27"
-slixmpp = "^1.8.3+slidge0"
-
-[[tool.poetry.source]]
-name = "slidge-repo"
-url = "https://slidge.im/repo"
+slixmpp = "^1.8.4"
 
 # it is very unclear why I had to add these sections but got various setuptools-
 # related errors without them.
