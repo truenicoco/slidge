@@ -156,14 +156,14 @@ files = [
 
 [[package]]
 name = "astroid"
-version = "2.15.4"
+version = "2.15.5"
 description = "An abstract syntax tree for Python with inference support."
 category = "dev"
 optional = false
 python-versions = ">=3.7.2"
 files = [
-    {file = "astroid-2.15.4-py3-none-any.whl", hash = "sha256:a1b8543ef9d36ea777194bc9b17f5f8678d2c56ee6a45b2c2f17eec96f242347"},
-    {file = "astroid-2.15.4.tar.gz", hash = "sha256:c81e1c7fbac615037744d067a9bb5f9aeb655edf59b63ee8b59585475d6f80d8"},
+    {file = "astroid-2.15.5-py3-none-any.whl", hash = "sha256:078e5212f9885fa85fbb0cf0101978a336190aadea6e13305409d099f71b2324"},
+    {file = "astroid-2.15.5.tar.gz", hash = "sha256:1039262575027b441137ab4a62a793a9b43defb42c32d5670f38686207cd780f"},
 ]
 
 [package.dependencies]
@@ -830,20 +830,20 @@ files = [
 
 [[package]]
 name = "furo"
-version = "2023.3.27"
+version = "2023.5.20"
 description = "A clean customisable Sphinx documentation theme."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "furo-2023.3.27-py3-none-any.whl", hash = "sha256:4ab2be254a2d5e52792d0ca793a12c35582dd09897228a6dd47885dabd5c9521"},
-    {file = "furo-2023.3.27.tar.gz", hash = "sha256:b99e7867a5cc833b2b34d7230631dd6558c7a29f93071fdbb5709634bb33c5a5"},
+    {file = "furo-2023.5.20-py3-none-any.whl", hash = "sha256:594a8436ddfe0c071f3a9e9a209c314a219d8341f3f1af33fdf7c69544fab9e6"},
+    {file = "furo-2023.5.20.tar.gz", hash = "sha256:40e09fa17c6f4b22419d122e933089226dcdb59747b5b6c79363089827dea16f"},
 ]
 
 [package.dependencies]
 beautifulsoup4 = "*"
 pygments = ">=2.7"
-sphinx = ">=5.0,<7.0"
+sphinx = ">=6.0,<8.0"
 sphinx-basic-ng = "*"
 
 [[package]]
@@ -1463,14 +1463,14 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "pre-commit"
-version = "3.3.1"
+version = "3.3.2"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pre_commit-3.3.1-py2.py3-none-any.whl", hash = "sha256:218e9e3f7f7f3271ebc355a15598a4d3893ad9fc7b57fe446db75644543323b9"},
-    {file = "pre_commit-3.3.1.tar.gz", hash = "sha256:733f78c9a056cdd169baa6cd4272d51ecfda95346ef8a89bf93712706021b907"},
+    {file = "pre_commit-3.3.2-py2.py3-none-any.whl", hash = "sha256:8056bc52181efadf4aac792b1f4f255dfd2fb5a350ded7335d251a68561e8cb6"},
+    {file = "pre_commit-3.3.2.tar.gz", hash = "sha256:66e37bec2d882de1f17f88075047ef8962581f83c234ac08da21a0c58953d1f0"},
 ]
 
 [package.dependencies]
@@ -1744,14 +1744,14 @@ test = ["coverage", "pytest"]
 
 [[package]]
 name = "requests"
-version = "2.30.0"
+version = "2.31.0"
 description = "Python HTTP for Humans."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "requests-2.30.0-py3-none-any.whl", hash = "sha256:10e94cc4f3121ee6da529d358cdaeaff2f1c409cd377dbc72b825852f2f7e294"},
-    {file = "requests-2.30.0.tar.gz", hash = "sha256:239d7d4458afcb28a692cdd298d87542235f4ca8d36d03a15bfc128a6559a2f4"},
+    {file = "requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f"},
+    {file = "requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"},
 ]
 
 [package.dependencies]
@@ -1793,19 +1793,19 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "67.7.2"
+version = "67.8.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "setuptools-67.7.2-py3-none-any.whl", hash = "sha256:23aaf86b85ca52ceb801d32703f12d77517b2556af839621c641fca11287952b"},
-    {file = "setuptools-67.7.2.tar.gz", hash = "sha256:f104fa03692a2602fa0fec6c6a9e63b6c8a968de13e17c026957dd1f53d80990"},
+    {file = "setuptools-67.8.0-py3-none-any.whl", hash = "sha256:5df61bf30bb10c6f756eb19e7c9f3b473051f48db77fddbe06ff2ca307df9a6f"},
+    {file = "setuptools-67.8.0.tar.gz", hash = "sha256:62642358adc77ffa87233bc4d2354c4b2682d214048f500964dbe760ccedf102"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-hoverxref (<2)", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (==0.8.3)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
-testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8 (<5)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pip (>=19.1)", "pip-run (>=8.8)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-timeout", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pip (>=19.1)", "pip-run (>=8.8)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-ruff", "pytest-timeout", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
 testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
 
 [[package]]
@@ -1832,39 +1832,25 @@ resolved_reference = "4e11e1a193ff37212d97964843a7f8926dfb5518"
 
 [[package]]
 name = "slixmpp"
-version = "1.8.3+slidge0"
+version = "1.8.4"
 description = "Slixmpp is an elegant Python library for XMPP (aka Jabber)."
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "slixmpp-1.8.3+slidge0-cp310-cp310-linux_aarch64.whl", hash = "sha256:2fab918addbd664de66aa261df691ae297f8eb0239f8539e860b4ddd0f21b4f7"},
-    {file = "slixmpp-1.8.3+slidge0-cp310-cp310-linux_armv7l.whl", hash = "sha256:8d384ccc45049ee03ba78d48b1251b45115a967aaebf24e1517536aa8efd8ac0"},
-    {file = "slixmpp-1.8.3+slidge0-cp310-cp310-linux_x86_64.whl", hash = "sha256:a3188a1e49197297ce888cecb9ae0c5298199e0094eca886c5af3940279ad1b6"},
-    {file = "slixmpp-1.8.3+slidge0-cp311-cp311-linux_aarch64.whl", hash = "sha256:5630cc09bc563007f57bef70128c739867365bfc96facf617bf7a422de190543"},
-    {file = "slixmpp-1.8.3+slidge0-cp311-cp311-linux_armv7l.whl", hash = "sha256:992b6b4e9421d2db622683642a153a31994bc14ff03da7342a8343ac22d3ba37"},
-    {file = "slixmpp-1.8.3+slidge0-cp311-cp311-linux_x86_64.whl", hash = "sha256:16f7b27794c5b77a881bd26879c598e238f3d8958d3c219bef0f0381b6089971"},
-    {file = "slixmpp-1.8.3+slidge0-cp39-cp39-linux_aarch64.whl", hash = "sha256:02bb5a27f1306892a6e822a27a3bb0c986c2e9df51ea6bfc52ce8ea8c3fc27ac"},
-    {file = "slixmpp-1.8.3+slidge0-cp39-cp39-linux_armv7l.whl", hash = "sha256:4b546947817d5d8d1f52eae959ed3d024e02d6cc86e70f66dcb92005be6a4933"},
-    {file = "slixmpp-1.8.3+slidge0-cp39-cp39-linux_x86_64.whl", hash = "sha256:52d155344cc560d8cb05e5c725af05e508ef83c37910eace3a4d8ef088aa40cf"},
-    {file = "slixmpp-1.8.3+slidge0.tar.gz", hash = "sha256:c498cba032315c083a562f395f112a23394171a472510fa515179ded2fc83c07"},
+    {file = "slixmpp-1.8.4.tar.gz", hash = "sha256:406f1f4bab7e7573dd559a441027d3de33d17bba354bcf20ddc6aafba272286b"},
 ]
 
 [package.dependencies]
 aiodns = ">=1.0"
 pyasn1 = "*"
-pyasn1-modules = "*"
+pyasn1_modules = "*"
 
 [package.extras]
-safer-xml-parsing = ["defusedxml"]
+"safer xml parsing" = ["defusedxml"]
 xep-0363 = ["aiohttp"]
-xep-0444-compliance = ["emoji"]
+"xep-0444 compliance" = ["emoji"]
 xep-0454 = ["cryptography"]
-
-[package.source]
-type = "legacy"
-url = "https://slidge.im/repo"
-reference = "slidge-repo"
 
 [[package]]
 name = "snowballstemmer"
@@ -2107,14 +2093,14 @@ files = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.5.0"
+version = "4.6.2"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typing_extensions-4.5.0-py3-none-any.whl", hash = "sha256:fb33085c39dd998ac16d1431ebc293a8b3eedd00fd4a32de0ff79002c19511b4"},
-    {file = "typing_extensions-4.5.0.tar.gz", hash = "sha256:5cb5f4a79139d699607b3ef622a1dedafa84e115ab0024e0d9c044a9479ca7cb"},
+    {file = "typing_extensions-4.6.2-py3-none-any.whl", hash = "sha256:3a8b36f13dd5fdc5d1b16fe317f5668545de77fa0b8e02006381fd49d731ab98"},
+    {file = "typing_extensions-4.6.2.tar.gz", hash = "sha256:06006244c70ac8ee83fa8282cb188f697b8db25bc8b4df07be1873c43897060c"},
 ]
 
 [[package]]
@@ -2255,14 +2241,14 @@ files = [
 
 [[package]]
 name = "xmldiff"
-version = "2.6.1"
+version = "2.6.3"
 description = "Creates diffs of XML files"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "xmldiff-2.6.1-py3-none-any.whl", hash = "sha256:6ad5eb62cec5512103059bcef9663f2c0e10bc694acc3e325c7fea1e14ff6986"},
-    {file = "xmldiff-2.6.1.tar.gz", hash = "sha256:81b817ef2fd0de9b30336b47fd1d4648c99b30685024a07bc34f2c146404e159"},
+    {file = "xmldiff-2.6.3-py3-none-any.whl", hash = "sha256:5e18e7c2f69e92da05454fea7132b0c69943c973cf8b6f304cd0f7ddac291e67"},
+    {file = "xmldiff-2.6.3.tar.gz", hash = "sha256:19b030b3fa37d1f0b5c5ad9ada9059884c3bf2c751c5dd8f1eb4ed49cfe3fc60"},
 ]
 
 [package.dependencies]
@@ -2379,4 +2365,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d53aee74a08644d5143ba5a31a322e9d1c2add917bfccfa1fb377a50a037f7cd"
+content-hash = "b6b7638762a90b4a7fda042e06eb5a05e6503ed80f4302d8a7eed874743e34b0"
