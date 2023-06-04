@@ -26,6 +26,7 @@ from ...util.types import (
     LegacyUserIdType,
 )
 from .. import config
+from ..cache import avatar_cache
 from ..contact.roster import ContactIsUser
 from ..mixins.disco import ChatterDiscoMixin
 from ..mixins.lock import NamedLockMixin
@@ -73,10 +74,10 @@ class LegacyMUC(
     Because legacy events like reactions, editions, etc. don't all map to a stanza
     with a proper legacy ID, slidge usually cannot guarantee the stability of the archive
     across restarts.
-    
+
     Set this to True if you know what you're doing, but realistically, this can't
     be set to True until archive is permanently stored on disk by slidge.
-    
+
     This is just a flag on archive responses that most clients ignore anyway.
     """
 
@@ -179,8 +180,7 @@ class LegacyMUC(
 
     async def __set_avatar(self, a: Optional[AvatarType]):
         if isinstance(a, str):
-            async with self.xmpp.http.get(a) as r:  # type:ignore
-                b = await r.read()
+            b = (await avatar_cache.get_avatar_from_url_alone(a)).path.read_bytes()
         elif isinstance(a, bytes):
             b = a
         elif isinstance(a, Path):

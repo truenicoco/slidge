@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import io
 import logging
@@ -59,7 +60,12 @@ class AvatarCache:
                 headers["If-Modified-Since"] = last_modified
             if etag := cached.etag:
                 headers["If-None-Match"] = etag
+        async with _download_lock:
+            return await self.__download(cached, url, headers)
 
+    async def __download(
+        self, cached: Optional[CachedAvatar], url: str, headers: dict[str, str]
+    ):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as response:
                 if response.status == HTTPStatus.NOT_MODIFIED:
@@ -112,3 +118,6 @@ class AvatarCache:
 
 avatar_cache = AvatarCache()
 log = logging.getLogger(__name__)
+_download_lock = asyncio.Lock()
+
+__all__ = ("avatar_cache",)
