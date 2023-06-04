@@ -13,6 +13,8 @@ from uuid import uuid4
 from slixmpp import Message
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
+from slixmpp.plugins.xep_0385.stanza import Sims
+from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
 from ...util import BiDict
 from ...util.types import (
@@ -22,8 +24,6 @@ from ...util.types import (
     MessageReference,
 )
 from ...util.util import fix_suffix
-from ...util.xep_0385.stanza import Sims
-from ...util.xep_0447.stanza import StatelessFileSharing
 from .. import config
 from .message_maker import MessageMaker
 

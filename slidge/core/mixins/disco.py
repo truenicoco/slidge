@@ -1,8 +1,7 @@
 from typing import Optional
 
 from slixmpp.plugins.xep_0004 import Form
-
-from slidge.util.xep_0030.stanza.info import DiscoInfo
+from slixmpp.plugins.xep_0030.stanza.info import DiscoInfo
 
 from .base import Base
 

@@ -2,10 +2,10 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 from slixmpp.types import OptJid
 
 from ...util.db import user_store
-from ...util.xep_0030.stanza.items import DiscoItems
 
 if TYPE_CHECKING:
     from .base import BaseGateway

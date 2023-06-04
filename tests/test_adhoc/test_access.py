@@ -1,12 +1,12 @@
 import pytest
 from slixmpp import ComponentXMPP
+from slixmpp.plugins.xep_0050.adhoc import XEP_0050
 
 import slidge.core.command.adhoc
 import slidge.core.command.base
 from slidge.core.command import Command, CommandAccess
 from slidge.core.command.adhoc import AdhocProvider
 from slidge.util.test import SlixTestPlus
-from slidge.util.xep_0050.adhoc import XEP_0050
 
 
 class MockSession:

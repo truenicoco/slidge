@@ -11,21 +11,14 @@ from .core.gateway import BaseGateway
 from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from .core.session import BaseSession
 from .util import (  # noqa: F401
-    xep_0030,
-    xep_0050,
     xep_0054,
     xep_0077,
     xep_0100,
     xep_0153,
-    xep_0234,
     xep_0292,
     xep_0313,
     xep_0356,
     xep_0356_old,
-    xep_0372,
-    xep_0402,
-    xep_0446,
-    xep_0447,
     xep_0461,
 )
 from .util.db import GatewayUser, user_store
@@ -63,14 +56,9 @@ warnings.formatwarning = formatwarning
 
 slixmpp.plugins.PLUGINS.extend(
     [
-        "xep_0234",
         "xep_0292_provider",
         "xep_0356_old",
-        "xep_0372",
         "xep_0385",
-        "xep_0402",
-        "xep_0461",
-        "xep_0446",
         "xep_0447",
     ]
 )
