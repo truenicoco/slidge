@@ -275,6 +275,7 @@ class TestAimShakespeareBase(SlidgeTest):
         )  # there must be a better way to check for the presence of the markable thing
         m2.enable("markable")
         assert m == m2
+        text_received_by_juliet.clear()
 
     def test_delivery_receipt(self):
         self.xmpp.PROPER_RECEIPTS = True
@@ -467,6 +468,40 @@ class TestAimShakespeareBase(SlidgeTest):
         assert msg["reactions"]["id"] == "legacy1"
         for r in msg["reactions"]:
             assert r["value"] == "👋"
+        reactions_received_by_juliet.clear()
+
+    def test_reactions_fallback(self):
+        self.recv(
+            """
+            <message type='chat'
+                     to='juliet@aim.shakespeare.lit'
+                     from='romeo@montague.lit'>
+                <body>&gt; huuuuu\n👍</body>
+                <request xmlns="urn:xmpp:receipts" />
+                <markable xmlns="urn:xmpp:chat-markers:0" />
+                <origin-id xmlns="urn:xmpp:sid:0" id="e05cadc7-b752-4ed9-b47e-5ad862a4430d" />
+                <reply xmlns="urn:xmpp:reply:0" to="5308963142@telegram.slidge.im/slidge" id="4940890112" />
+                <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
+                    <body end="9" start="0" />
+                </fallback>
+                <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reactions:0">
+                    <body />
+                </fallback>
+                <reactions xmlns="urn:xmpp:reactions:0" id="4940890112">
+                    <reaction>👍</reaction>
+                </reactions>
+                <thread>0516cd85-4d78-4d29-bc87-378e33d820b3</thread>
+                <active xmlns="http://jabber.org/protocol/chatstates" />
+            </message>
+            """
+        )
+        assert len(reactions_received_by_juliet) == 1
+        msg_id, emoji = reactions_received_by_juliet[0]
+        assert msg_id == "4940890112"
+        assert emoji == "👍"
+        assert len(text_received_by_juliet) == 0
+        text_received_by_juliet.clear()
+        reactions_received_by_juliet.clear()
 
     def test_last_seen(self):
         session = BaseSession.get_self_or_unique_subclass().from_jid(

@@ -244,6 +244,10 @@ class BaseSession(
         if m.get_plugin("apply_to", check=True):
             # ignore message retraction (handled by a specific method)
             return
+        if m.get_plugin("reactions", check=True):
+            # ignore message reaction fallback.
+            # the reaction itself is handled by self.react_from_msg().
+            return
 
         e = await self.__get_entity(m)
         self.log.debug("Entity %r", e)
