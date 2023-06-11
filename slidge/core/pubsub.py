@@ -183,6 +183,10 @@ class PubSubComponent(BasePlugin):
         disco.add_feature("http://jabber.org/protocol/pubsub#persistent-items")
 
     async def _on_presence_available(self, p: Presence):
+        if p.get_plugin("muc_join", check=True) is not None:
+            log.debug("Ignoring MUC presence here")
+            return
+
         from_ = p.get_from()
         ver_string = p["caps"]["ver"]
         info = None
