@@ -238,13 +238,13 @@ class BaseSession(
         """
         # we MUST not use `if m["replace"]["id"]` because it adds the tag if not
         # present. this is a problem for MUC echoed messages
-        if m.get_plugin("replace", check=True):
+        if m.get_plugin("replace", check=True) is not None:
             # ignore last message correction (handled by a specific method)
             return
-        if m.get_plugin("apply_to", check=True):
+        if m.get_plugin("apply_to", check=True) is not None:
             # ignore message retraction (handled by a specific method)
             return
-        if m.get_plugin("reactions", check=True):
+        if m.get_plugin("reactions", check=True) is not None:
             # ignore message reaction fallback.
             # the reaction itself is handled by self.react_from_msg().
             return
