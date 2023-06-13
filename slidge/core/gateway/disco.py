@@ -71,7 +71,7 @@ class Disco:
         await session.wait_for_ready()
 
         d = DiscoItems()
-        for muc in session.bookmarks:
+        for muc in sorted(session.bookmarks, key=lambda m: m.name):
             d.add_item(muc.jid, name=muc.name)
 
         return d
