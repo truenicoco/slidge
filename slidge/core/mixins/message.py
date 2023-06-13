@@ -44,7 +44,7 @@ class ChatStateMixin(MessageMaker):
         Send a "composing" (ie "typing notification") chat state (:xep:`0085`)
         from this contact to the user.
         """
-        self._chat_state("composing", force=True, **kwargs)
+        self._chat_state("composing", forced=True, **kwargs)
 
     def paused(self, **kwargs):
         """
