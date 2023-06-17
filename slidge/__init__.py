@@ -2,6 +2,7 @@ import warnings
 
 import slixmpp.plugins
 from slixmpp import Message
+from slixmpp.plugins.xep_0050 import XEP_0050, Command
 from slixmpp.xmlstream import StanzaBase
 
 from .core import config as global_config
@@ -23,6 +24,16 @@ from .util import (  # noqa: F401
 )
 from .util.db import GatewayUser, user_store
 from .util.util import addLoggingLevel
+
+
+def session_bind(self, jid):
+    self.xmpp["xep_0030"].add_feature(Command.namespace)
+    # awful hack to for the disco items: we need to comment this line
+    # related issue: https://todo.sr.ht/~nicoco/slidge/131
+    # self.xmpp['xep_0030'].set_items(node=Command.namespace, items=tuple())
+
+
+XEP_0050.session_bind = session_bind  # type:ignore
 
 
 def formatwarning(message, category, filename, lineno, line=""):
