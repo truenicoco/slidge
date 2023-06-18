@@ -403,7 +403,7 @@ class PubSubComponent(BasePlugin):
                 pep_avatar = PepAvatar()
             try:
                 await pep_avatar.set_avatar(avatar, unique_id)
-            except UnidentifiedImageError as e:
+            except (UnidentifiedImageError, FileNotFoundError) as e:
                 log.warning("Failed to set avatar for %s: %r", self, e)
                 return
 
