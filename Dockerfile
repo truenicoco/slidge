@@ -42,11 +42,10 @@ ARG PYTHONVER
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-# libidn11: required by compiled stringprep module
 # libmagic1: to guess mime type from files
 # media-types: to determine file name suffix based on file type
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    libidn12 libmagic1 media-types shared-mime-info
+    libmagic1 media-types shared-mime-info python3-slixmpp-lib
 
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge
@@ -55,6 +54,8 @@ ENV SLIDGE_LEGACY_MODULE=legacy_module
 
 WORKDIR /var/lib/slidge
 COPY --from=builder-slidge /venv /venv
+# hacky, link compiled (fast) stringprep.so to the proper dir
+RUN ln -s /usr/lib/python3/dist-packages/slixmpp/stringprep*.so /venv/lib/python$PYTHONVER/site-packages/slixmpp/
 
 STOPSIGNAL SIGINT
 USER slidge
