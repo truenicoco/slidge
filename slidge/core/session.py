@@ -871,9 +871,9 @@ class BaseSession(
         :return:
         """
         try:
-            await asyncio.wait_for(self.ready, timeout)
-            await asyncio.wait_for(self.contacts.ready, timeout)
-            await asyncio.wait_for(self.bookmarks.ready, timeout)
+            await asyncio.wait_for(asyncio.shield(self.ready), timeout)
+            await asyncio.wait_for(asyncio.shield(self.contacts.ready), timeout)
+            await asyncio.wait_for(asyncio.shield(self.bookmarks.ready), timeout)
         except asyncio.TimeoutError:
             raise XMPPError(
                 "recipient-unavailable",
