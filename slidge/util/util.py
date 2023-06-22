@@ -220,7 +220,9 @@ log = logging.getLogger(__name__)
 
 def get_version():
     try:
-        git = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode()
+        git = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode()
     except (FileNotFoundError, subprocess.CalledProcessError):
         pass
     else:
