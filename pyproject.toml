@@ -44,6 +44,7 @@ ruff = "^0.0.259"
 xmldiff = "^2.5"
 types-pillow = "^9.5.0.0"
 pre-commit = "^3.3.0"
+coverage = "^7.2.7"
 
 [tool.poetry.group.dev.dependencies.slidge-dev-helpers]
 git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
@@ -70,3 +71,9 @@ exclude = ["xep_*", "tests"]
 
 [tool.isort]
 profile = "black"
+
+[tool.coverage.report]
+exclude_lines = [
+    "if .*TYPE_CHECKING:",
+    "raise NotImplementedError"
+]
