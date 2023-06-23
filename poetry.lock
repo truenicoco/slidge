@@ -1840,7 +1840,7 @@ sphinx = "^6.1.3"
 type = "git"
 url = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
 reference = "master"
-resolved_reference = "4e11e1a193ff37212d97964843a7f8926dfb5518"
+resolved_reference = "ec064965a32aa04775b40648309ab7481408810c"
 
 [[package]]
 name = "slixmpp"
