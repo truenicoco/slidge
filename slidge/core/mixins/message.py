@@ -173,7 +173,7 @@ class ContentMessageMixin(AttachmentMixin):
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
         if carbon:
-            if legacy_msg_id in self.session.sent:
+            if not correction and legacy_msg_id in self.session.sent:
                 log.warning(
                     "Carbon message for a message an XMPP has sent? This is a bug! %s",
                     legacy_msg_id,
