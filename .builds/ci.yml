@@ -8,6 +8,7 @@ artifacts:
   - ./docs.tar.gz
   - ./package.tar.gz
   - ./package.whl
+  - ./coverage.tar.gz
 tasks:
   - set-project: |
       echo PROJECT=$(ls ~) >> ~/.buildenv
@@ -20,10 +21,14 @@ tasks:
       cp dist/*.tar.gz ~/package.tar.gz
       cp dist/*.whl ~/package.whl
   - tests: |
+      poetry run coverage run -m pytest tests
+      poetry run coverage report
+      poetry run coverage html
+      tar czf ~/coverage.tar.gz htmlcov/
+  - lint: |
       cd $PROJECT
       poetry run ruff $PROJECT
       poetry run mypy $PROJECT
-      poetry run pytest tests
       poetry run black --check $PROJECT
       poetry run isort --check $PROJECT
   - docs: |

@@ -70,3 +70,6 @@ exclude = ["xep_*", "tests"]
 
 [tool.isort]
 profile = "black"
+
+[tool.coverage.report]
+exclude_lines = ["if .*TYPE_CHECKING:"]
