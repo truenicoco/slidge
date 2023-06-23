@@ -21,6 +21,7 @@ tasks:
       cp dist/*.tar.gz ~/package.tar.gz
       cp dist/*.whl ~/package.whl
   - tests: |
+      cd $PROJECT
       poetry run coverage run -m pytest tests
       poetry run coverage report
       poetry run coverage html
