@@ -1,7 +1,7 @@
 ![Slidge logo](./dev/assets/slidge-color-small.png)
 
 [Home](https://sr.ht/~nicoco/slidge) |
-[Docs](https://slidge.im) |
+[Docs](https://slidge.im/core) |
 [Source](https://sr.ht/~nicoco/slidge/sources) |
 [Issues](https://sr.ht/~nicoco/slidge/trackers) |
 [Patches](https://lists.sr.ht/~nicoco/public-inbox) |
