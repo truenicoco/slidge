@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  slidgram:
+    image: docker.io/nicocool84/slidgram:master
+     # or 'service: prosody' if you run prosody in this docker-compose too
+    network_mode: host
+    volumes:
+      # this persistent dir is required if you want to keep
+      - ./SOME/WHERE/:/var/lib/slidge
+      # you can also use env vars or CLI args for the config,
+      # cf https://slidge.im/core/admin/config/index.html
+      - ./SOME/WHERE/telegram.conf:/etc/slidge/conf.d/telegram.conf
+    command:
+      - --secret-key=ASECRETKEY  # can also be configured in conf file, or env var
+    environment:
+      - ADMINS=admin@example.com  # you get the idea?
+
+  slidge-whatsapp:
+    image: docker.io/nicocool84/slidge-whatsapp:master
+    network_mode: host
+    volumes:
+      - ./SOME/WHERE/:/var/lib/slidge
+      - ./SOME/WHERE/telegram.conf:/etc/slidge/conf.d/telegram.conf
