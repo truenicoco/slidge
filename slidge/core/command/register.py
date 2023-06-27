@@ -99,7 +99,9 @@ class Register(Command):
             ] = self.xmpp.loop.create_future()
             qr_text = await self.xmpp.get_qr_text(user)
             qr = qrcode.make(qr_text)
-            with tempfile.NamedTemporaryFile(suffix=".png") as f:
+            with tempfile.NamedTemporaryFile(
+                suffix=".png", delete=config.NO_UPLOAD_METHOD != "move"
+            ) as f:
                 qr.save(f.name)
                 img_url = await self.xmpp.send_file(f.name, mto=ifrom)
             self.xmpp.send_text(qr_text, mto=ifrom)

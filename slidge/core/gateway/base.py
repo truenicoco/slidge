@@ -88,10 +88,10 @@ class BaseGateway(
     REGISTRATION_TYPE = RegistrationType.SINGLE_STEP_FORM
     """
     SINGLE_STEP_FORM: 1 step, 1 form, compatible with :xep:`0077` (in-band registration)
-    
+
     QRCODE: The registration requires flashing a QR code in an official client.
     See :meth:`.BaseGateway.`
-    
+
     TWO_FACTOR_CODE: The registration requires confirming login with a 2FA code
     """
 
@@ -118,10 +118,10 @@ class BaseGateway(
     Fields used for searching items via the component, through :xep:`0055` (jabber search).
     A common use case is to allow users to search for legacy contacts by something else than
     their usernames, eg their phone number.
-    
+
     Plugins should implement search by overriding :meth:`.BaseSession.search`, effectively
     restricting search to registered users by default.
-    
+
     If there is only one field, it can also be used via the ``jabber:iq:gateway`` protocol
     described in :xep:`0100`. Limitation: this only works if the search request returns
     one result item, and if this item has a 'jid' var.
@@ -628,7 +628,9 @@ class BaseGateway(
             such as the recipient of the QR code.
         """
         qr = qrcode.make(text)
-        with tempfile.NamedTemporaryFile(suffix=".png") as f:
+        with tempfile.NamedTemporaryFile(
+            suffix=".png", delete=config.NO_UPLOAD_METHOD != "move"
+        ) as f:
             qr.save(f.name)
             await self.send_file(f.name, **msg_kwargs)
 
