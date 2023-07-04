@@ -591,7 +591,7 @@ class BaseSession(
             pto=self.user.bare_jid, pstatus=status, pshow=show, **kwargs
         )
 
-    def send_gateway_message(self, text, **msg_kwargs):
+    def send_gateway_message(self, text: str, **msg_kwargs):
         """
         Send a message from the gateway component to the user.
 
@@ -599,9 +599,7 @@ class BaseSession(
 
         :param text: A text
         """
-        self.xmpp.send_message(
-            mto=self.user.jid, mbody=text, mfrom=self.xmpp.boundjid, **msg_kwargs
-        )
+        self.xmpp.send_text(text, mto=self.user.jid, **msg_kwargs)
 
     def send_gateway_invite(
         self,
