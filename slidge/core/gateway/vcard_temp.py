@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 class VCardTemp:
     def __init__(self, xmpp: "BaseGateway"):
         self.xmpp = xmpp
+        # remove slixmpp's default handler to replace with our own
+        self.xmpp.remove_handler("VCardTemp")
         xmpp.register_handler(
             CoroutineCallback(
                 "VCardTemp",

@@ -11,7 +11,6 @@ from slixmpp.plugins.xep_0050 import XEP_0050, Command
 from slixmpp.xmlstream import StanzaBase
 
 from . import (
-    xep_0054,
     xep_0077,
     xep_0100,
     xep_0153,
