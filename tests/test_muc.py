@@ -3,20 +3,20 @@ import tempfile
 import uuid
 from base64 import b64encode
 from pathlib import Path
-from typing import Hashable, Optional, Dict, Any
+from typing import Any, Dict, Hashable, Optional
 
 import pytest
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
-import slidge.core.muc.room
 import slidge.core.mixins.message_maker
+import slidge.core.muc.room
 from slidge import *
+from slidge.core.cache import avatar_cache
 from slidge.core.muc import MucType
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyContactType, LegacyMessageType, MessageReference
-from slidge.core.cache import avatar_cache
 
 
 class Gateway(BaseGateway):
@@ -398,7 +398,7 @@ class TestMuc(SlidgeTest):
                     <value>❤️</value>
                     <value>💜</value>
                   </field>
-                </x> 
+                </x>
               </query>
             </iq>
             """,
@@ -416,7 +416,7 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
-           <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="romeo@montague.lit/gajim" id="123">   	
+           <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="romeo@montague.lit/gajim" id="123">
             <query xmlns="http://jabber.org/protocol/disco#items">
                 <item jid="room-private@aim.shakespeare.lit" name="Private Room"/>
                 <item jid="room-public@aim.shakespeare.lit" name="Public Room"/>
@@ -708,7 +708,7 @@ class TestMuc(SlidgeTest):
         )
         self.send(
             """
-           <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit" type="error" to="romeo@montague.lit/gajim">              
+           <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit" type="error" to="romeo@montague.lit/gajim">
             <error type="modify">
                 <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not connected to this chat</text>
@@ -1829,8 +1829,6 @@ class TestMuc(SlidgeTest):
             self.send(
                 f"""
                <iq xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/not-in-roster" to="romeo@montague.lit/gajim" type="result" xml:lang="en" id="1">
-                
-                                 
                 <vCard xmlns="vcard-temp">
                     <PHOTO>
                         <BINVAL>{v}</BINVAL>
