@@ -16,7 +16,6 @@ from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0385.stanza import Sims
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
-from ...util import BiDict
 from ...util.types import (
     LegacyAttachment,
     LegacyMessageType,
@@ -29,7 +28,7 @@ from .message_maker import MessageMaker
 
 
 class AttachmentMixin(MessageMaker):
-    __legacy_file_ids_to_urls = BiDict[Union[str, int], str]()
+    __legacy_file_ids_to_urls = dict[Union[str, int], str]()
     __uploaded_urls_to_sims = dict[Union[str, int], Sims]()
     __uploaded_urls_to_sfs = dict[Union[str, int], StatelessFileSharing]()
 
