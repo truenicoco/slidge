@@ -2,8 +2,8 @@ import unittest
 
 from slixmpp import JID, Iq, Message
 
+from slidge.slixfix.xep_0356 import XEP_0356, permissions
 from slidge.util.test import SlidgeTest
-from slidge.util.xep_0356 import XEP_0356, permissions
 
 
 class TestPermissions(SlidgeTest):

@@ -1880,10 +1880,10 @@ class TestMuc(SlidgeTest):
             "http://jabber.org/protocol/pubsub"
         ] = "both"
         self.xmpp.loop.create_task(muc.add_to_bookmarks(auto_join=True, preserve=False))
-        import slidge.util.xep_0356.privilege
+        import slidge.slixfix.xep_0356.privilege
 
-        o = slidge.util.xep_0356.privilege.uuid.uuid4
-        slidge.util.xep_0356.privilege.uuid.uuid4 = lambda: "0"
+        o = slidge.slixfix.xep_0356.privilege.uuid.uuid4
+        slidge.slixfix.xep_0356.privilege.uuid.uuid4 = lambda: "0"
         self.send(
             """
             <iq from="aim.shakespeare.lit"
@@ -1927,7 +1927,7 @@ class TestMuc(SlidgeTest):
             """,
             use_values=False,
         )
-        slidge.util.xep_0356.privilege.uuid.uuid4 = o
+        slidge.slixfix.xep_0356.privilege.uuid.uuid4 = o
 
     def __get_participants(self):
         muc = self.get_private_muc()

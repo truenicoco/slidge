@@ -15,14 +15,14 @@ from slixmpp.plugins.xep_0082 import format_datetime
 from slidge import *
 from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
-from slidge.util.test import SlidgeTest
-from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
-from slidge.util.xep_0356.permissions import (
+from slidge.slixfix.xep_0356.permissions import (
     MessagePermission,
     Permissions,
     PresencePermission,
     RosterAccess,
 )
+from slidge.util.test import SlidgeTest
+from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
 
 received_presences: list[Optional[Presence]] = []
 text_received_by_juliet = []

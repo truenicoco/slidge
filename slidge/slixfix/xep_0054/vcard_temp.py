@@ -6,12 +6,9 @@ import logging
 from typing import Optional
 
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import BasePlugin
 from slixmpp.stanza import Iq
 from slixmpp.xmlstream import register_stanza_plugin
-from slixmpp.xmlstream.handler import CoroutineCallback
-from slixmpp.xmlstream.matcher import StanzaPath
 
 from . import VCardTemp, stanza
 

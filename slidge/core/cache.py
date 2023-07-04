@@ -120,4 +120,7 @@ avatar_cache = AvatarCache()
 log = logging.getLogger(__name__)
 _download_lock = asyncio.Lock()
 
-__all__ = ("avatar_cache",)
+__all__ = (
+    "CachedAvatar",
+    "avatar_cache",
+)

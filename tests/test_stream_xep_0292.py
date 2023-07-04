@@ -1,5 +1,6 @@
 from slixmpp.test import SlixTest
-from slidge.util.xep_0292 import stanza, vcard4
+
+from slidge.slixfix.xep_0292 import stanza
 
 
 class TestVcard(SlixTest):

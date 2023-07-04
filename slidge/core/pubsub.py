@@ -24,9 +24,9 @@ from slixmpp.plugins.xep_0084 import MetaData as AvatarMetadata
 from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.types import JidStr, OptJidStr
 
+from ..slixfix.xep_0292.stanza import VCard4
 from ..util.db import user_store
 from ..util.types import AvatarType, PepItemType
-from ..util.xep_0292.stanza import VCard4
 from .cache import CachedAvatar, avatar_cache
 from .contact import LegacyContact
 

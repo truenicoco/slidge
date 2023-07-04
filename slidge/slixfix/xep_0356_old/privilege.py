@@ -9,7 +9,7 @@ from slixmpp.xmlstream import StanzaBase
 from slixmpp.xmlstream.handler import Callback
 from slixmpp.xmlstream.matcher import StanzaPath
 
-from slidge.util.xep_0356.permissions import (
+from slidge.slixfix.xep_0356.permissions import (
     MessagePermission,
     Permissions,
     RosterAccess,

@@ -15,10 +15,11 @@ from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
+from ...slixfix.roster import RosterBackend
+from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
-from ...util.db import GatewayUser, RosterBackend, user_store
+from ...util.db import GatewayUser, user_store
 from ...util.types import AvatarType
-from ...util.xep_0292.vcard4 import VCard4Provider
 from .. import config
 from ..command.adhoc import AdhocProvider
 from ..command.base import Command, FormField

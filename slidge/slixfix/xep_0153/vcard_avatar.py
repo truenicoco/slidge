@@ -6,7 +6,7 @@ import logging
 
 from slixmpp.plugins.base import BasePlugin
 from slixmpp.stanza import Presence
-from slixmpp.xmlstream import ElementBase, register_stanza_plugin
+from slixmpp.xmlstream import register_stanza_plugin
 
 from . import VCardTempUpdate, stanza
 

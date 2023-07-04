@@ -2,7 +2,7 @@ import unittest
 
 from slixmpp.test import SlixTest
 
-from slidge.util.xep_0356 import permissions, stanza
+from slidge.slixfix.xep_0356 import permissions, stanza
 
 
 class TestPermissions(SlixTest):
