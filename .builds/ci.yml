@@ -25,7 +25,8 @@ tasks:
       poetry run coverage run -m pytest tests
       poetry run coverage report
       poetry run coverage html
-      tar czf ~/coverage.tar.gz htmlcov/
+      cd htmlcov
+      tar czf ~/coverage.tar.gz .
   - lint: |
       cd $PROJECT
       poetry run ruff $PROJECT

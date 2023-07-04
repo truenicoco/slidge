@@ -8,6 +8,7 @@
 [Chat](xmpp:slidge@conference.nicoco.fr?join)
 
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidge/commits/master/ci.yml?)
+[![coverage](https://slidge.im/coverage.svg)](https://slidge.im/coverage)
 [![pypi](https://badge.fury.io/py/slidge.svg)](https://pypi.org/project/slidge/)
 
 Slidge is an XMPP (puppeteer) gateway library in python.
