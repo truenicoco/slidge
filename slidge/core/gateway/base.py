@@ -691,7 +691,7 @@ class BaseGateway(
             self.send_presence(ptype="unavailable", pto=user.jid)
 
 
-KICKABLE_ERRORS = [
+KICKABLE_ERRORS = {
     "gone",
     "internal-server-error",
     "item-not-found",
@@ -702,7 +702,7 @@ KICKABLE_ERRORS = [
     "remote-server-timeout",
     "service-unavailable",
     "malformed error",
-]
+}
 
 
 SLIXMPP_PLUGINS = [
