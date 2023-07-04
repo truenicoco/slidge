@@ -1,3 +1,4 @@
+import datetime
 import logging
 import warnings
 from datetime import date
@@ -64,6 +65,7 @@ class LegacyContact(
     A full JID, including a resource part is required for chat states (and maybe other stuff)
     to work properly. This is the name of the resource the contacts will use.
     """
+    PROPAGATE_PRESENCE_TO_GROUPS = True
 
     mtype = "chat"
     _can_send_carbon = True
@@ -72,6 +74,7 @@ class LegacyContact(
     _ONLY_SEND_PRESENCE_CHANGES = True
 
     STRIP_SHORT_DELAY = True
+    _NON_FRIEND_PRESENCES_FILTER = {"subscribe", "unsubscribed"}
 
     def __init__(
         self,
@@ -113,6 +116,36 @@ class LegacyContact(
             return "both"
         return "none"
 
+    def __propagate_to_participants(self, stanza: Presence):
+        if not self.PROPAGATE_PRESENCE_TO_GROUPS:
+            return
+
+        ptype = stanza["type"]
+        if ptype in ("available", "chat"):
+            func_name = "online"
+        elif ptype in ("xa", "unavailable"):
+            # we map unavailable to extended_away, because offline is
+            # "participant leaves the MUC"
+            # TODO: improve this with a clear distinction between participant
+            #       and member list
+            func_name = "extended_away"
+        elif ptype == "busy":
+            func_name = "busy"
+        elif ptype == "away":
+            func_name = "away"
+        else:
+            return
+
+        last_seen: Optional[datetime.datetime] = (
+            stanza["idle"]["since"] if stanza.get_plugin("idle", check=True) else None
+        )
+
+        kw = dict(status=stanza["status"], last_seen=last_seen)
+
+        for part in self.participants:
+            func = getattr(part, func_name)
+            func(**kw)
+
     def _send(
         self, stanza: Union[Message, Presence], carbon=False, nick=False, **send_kwargs
     ):
@@ -120,21 +153,23 @@ class LegacyContact(
             stanza["to"] = self.jid.bare
             stanza["from"] = self.user.jid
             self._privileged_send(stanza)
-        else:
+            return
+
+        if isinstance(stanza, Presence):
+            self.__propagate_to_participants(stanza)
             if (
-                isinstance(stanza, Presence)
-                and not self.is_friend
-                and stanza["type"] not in ("subscribe", "unsubscribed")
+                not self.is_friend
+                and stanza["type"] not in self._NON_FRIEND_PRESENCES_FILTER
             ):
                 return
-            if self.name and (nick or not self.is_friend):
-                n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
-                n["nick"] = self.name
-                stanza.append(n)
-            if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
-                self._sent_order.append(stanza["id"])
-            stanza["to"] = self.user.jid
-            stanza.send()
+        if self.name and (nick or not self.is_friend):
+            n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
+            n["nick"] = self.name
+            stanza.append(n)
+        if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
+            self._sent_order.append(stanza["id"])
+        stanza["to"] = self.user.jid
+        stanza.send()
 
     def get_msg_xmpp_id_up_to(self, horizon_xmpp_id: str):
         """

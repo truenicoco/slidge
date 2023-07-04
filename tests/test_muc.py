@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Any, Dict, Hashable, Optional
 
 import pytest
+import slixmpp
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins import xep_0082
 
 import slidge.core.mixins.message_maker
 import slidge.core.muc.room
@@ -1839,6 +1841,38 @@ class TestMuc(SlidgeTest):
                 """,
                 use_values=False,
             )
+
+    def test_presence_propagation(self):
+        participants_before = self.__get_participants()
+        contact = participants_before[0].contact
+        last_seen = datetime.datetime.now(tz=datetime.timezone.utc)
+        contact.is_friend = True
+        contact.away(last_seen=last_seen, status="blabla")
+        dt = xep_0082.format_datetime(last_seen)
+
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/firstwitch" to="romeo@montague.lit/movim">
+             <show>away</show>
+             <status>blabla</status>
+             <idle xmlns="urn:xmpp:idle:1" since="{dt}"/>
+             <x xmlns="http://jabber.org/protocol/muc#user">
+              <item affiliation="owner" role="moderator" jid="firstwitch@aim.shakespeare.lit/slidge"/>
+             </x>
+            </presence>
+            """
+        )
+        self.send(
+            f"""
+            <presence xmlns="jabber:component:accept" from="firstwitch@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
+             <show>away</show>
+             <status>blabla</status>
+             <idle xmlns="urn:xmpp:idle:1" since="{dt}"/>
+             <c xmlns="http://jabber.org/protocol/caps" node="http://slixmpp.com/ver/{slixmpp.__version__}" hash="sha-1" ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
+            </presence>
+            """
+        )
+        assert self.next_sent() is None
 
     def test_add_to_bookmarks(self):
         muc = self.get_private_muc()
