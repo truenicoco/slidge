@@ -77,3 +77,14 @@ exclude_lines = [
     "if .*TYPE_CHECKING:",
     "raise NotImplementedError"
 ]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_level = "DEBUG"
+asyncio_mode = "strict"
+filterwarnings = [
+    "ignore:The object should be created within an async function:DeprecationWarning:aiohttp",
+    "ignore:.*pkg_resources.*:DeprecationWarning",
+    "ignore::UserWarning:slidge",
+    "ignore:coroutine 'XMLStream._end_stream_wait' was never awaited.*:RuntimeWarning"
+]
