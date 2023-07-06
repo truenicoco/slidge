@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING, Optional
 
 from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.plugins.base import BasePlugin, register_plugin
+from slixmpp.plugins.xep_0292.stanza import NS, VCard4
 from slixmpp.types import JidStr
 
 from slidge.core.contact.contact import LegacyContact
-
-from .stanza import NS, VCard4
 
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway

@@ -1072,6 +1072,46 @@ class TestMuc(SlidgeTest):
             use_values=False,
         )
 
+    def test_mam_bare_jid(self):
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2' />
+            </iq>
+            """
+        )
+        # language=XML
+        self.send(
+            """
+            <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error"
+                id="iq-id1" to="romeo@montague.lit/gajim">
+                <error type="cancel">
+                    <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                    <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
+                </error>
+            </iq>
+            """
+        )
+        self.recv(
+            """
+            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2' queryid='query-id' />
+            </iq>
+            """
+        )
+        # language=XML
+        self.send(
+            """
+            <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error"
+                id="iq-id1" to="romeo@montague.lit/gajim">
+                <error type="cancel">
+                    <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                    <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
+                </error>
+            </iq>
+            """
+        )
+
     def test_mam_form_fields(self):
         muc = self.get_private_muc()
         muc.user_resources.add("gajim")
@@ -1754,6 +1794,39 @@ class TestMuc(SlidgeTest):
             """
         )
         assert not muc.user_resources
+
+    def test_recv_non_kickable_error(self):
+        muc = self.get_private_muc("coven")
+        muc.user_resources.add("gajim")
+        self.recv(
+            """
+            <message
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='coven@aim.shakespeare.lit/thirdwitch'
+                type="error">
+                <error type="cancel" />
+            </message>
+            """
+        )
+        assert muc.user_resources.pop() == "gajim"
+        assert self.next_sent() is None
+
+    def test_recv_error_non_existing_muc(self):
+        self.recv(
+            """
+            <message
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='non-existing@aim.shakespeare.lit/thirdwitch'
+                type="error">
+                <error type="cancel">
+                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                </error>
+            </message>
+            """
+        )
+        assert self.next_sent() is None
 
     def test_archive_cleanup(self):
         m = Message()

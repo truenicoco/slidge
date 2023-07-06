@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
+from slixmpp.plugins.xep_0292.stanza import VCard4
 
-from ...slixfix.xep_0292.stanza import VCard4
 from ...util import SubclassableOnce
 from ...util.types import AvatarType, LegacyUserIdType
 from .. import config

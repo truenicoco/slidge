@@ -22,9 +22,9 @@ from slixmpp.plugins.xep_0060.stanza import Event, EventItem, EventItems, Item
 from slixmpp.plugins.xep_0084 import Data as AvatarData
 from slixmpp.plugins.xep_0084 import MetaData as AvatarMetadata
 from slixmpp.plugins.xep_0172 import UserNick
+from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
-from ..slixfix.xep_0292.stanza import VCard4
 from ..util.db import user_store
 from ..util.types import AvatarType, PepItemType
 from .cache import CachedAvatar, avatar_cache

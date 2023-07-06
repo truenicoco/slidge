@@ -881,6 +881,22 @@ class TestAimShakespeareBase(SlidgeTest):
         self.loop(self.juliet.send_files([a], legacy_msg_id="leg"))
         assert ids.pop(-1) == "leg"
 
+    def test_gateway_message(self):
+        session = self.get_romeo_session()
+        session.send_gateway_message("Hello!")
+        # language=XML
+        self.send(
+            """
+            <message xmlns="jabber:component:accept" to="romeo@montague.lit"
+                     from="aim.shakespeare.lit" type="chat">
+                <body>Hello!</body>
+                <active xmlns="http://jabber.org/protocol/chatstates"/>
+                <store xmlns="urn:xmpp:hints"/>
+                <markable xmlns="urn:xmpp:chat-markers:0"/>
+            </message>
+            """
+        )
+
 
 class TestPrivilegeOld(SlidgeTest):
     plugin = globals()
