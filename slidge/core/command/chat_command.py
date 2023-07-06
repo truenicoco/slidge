@@ -2,18 +2,18 @@
 Handle slidge commands by exchanging chat messages with the gateway components.
 
 Ad-hoc methods should provide a better UX, but some clients do not support them,
-so this is mostly a fallback. 
+so this is mostly a fallback.
 """
 
 import asyncio
 import functools
 import logging
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable, Literal, Optional, Union, overload
 from urllib.parse import quote as url_quote
 
 from slixmpp import JID, CoroutineCallback, Message, StanzaPath
 from slixmpp.exceptions import XMPPError
-from slixmpp.types import MessageTypes
+from slixmpp.types import JidStr, MessageTypes
 
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
@@ -51,14 +51,31 @@ class ChatCommandProvider:
             raise RuntimeError("There is already a command triggered by '%s'", t)
         self._commands[t] = command
 
+    @overload
+    async def input(
+        self, jid: JidStr, text: Optional[str], blocking: Literal[False]
+    ) -> asyncio.Future[str]:
+        ...
+
+    @overload
     async def input(
         self,
-        jid: JID,
-        text=None,
-        mtype: MessageTypes = "chat",
-        timeout=60,
-        **msg_kwargs,
+        jid: JidStr,
+        text: Optional[str],
+        mtype: MessageTypes = ...,
+        blocking: Literal[True] = ...,
     ) -> str:
+        ...
+
+    async def input(
+        self,
+        jid,
+        text=None,
+        mtype="chat",
+        timeout=60,
+        blocking=True,
+        **msg_kwargs,
+    ):
         """
         Request arbitrary user input using a simple chat message, and await the result.
 
@@ -73,8 +90,11 @@ class ChatCommandProvider:
         :param text: A prompt to display for the user
         :param mtype: Message type
         :param timeout:
+        :param blocking: If set to False, timeout has no effect and an :class:`asyncio.Future`
+            is returned instead of a str
         :return: The user's reply
         """
+        jid = JID(jid)
         if text is not None:
             self.xmpp.send_message(
                 mto=jid,
@@ -85,6 +105,8 @@ class ChatCommandProvider:
             )
         f = asyncio.get_event_loop().create_future()
         self._input_futures[jid.bare] = f
+        if not blocking:
+            return f
         try:
             await asyncio.wait_for(f, timeout)
         except asyncio.TimeoutError:
@@ -178,7 +200,7 @@ class ChatCommandProvider:
             return await self._handle_result(result, msg, session)
 
         if isinstance(result, Confirmation):
-            yes_or_no = await self.xmpp.input(msg.get_from(), result.prompt)
+            yes_or_no = await self.input(msg.get_from(), result.prompt)
             if not yes_or_no.lower().startswith("y"):
                 reply = msg.reply()
                 reply["body"] = "Canceled"

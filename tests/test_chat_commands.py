@@ -1,10 +1,11 @@
 import pytest
-
 import slixmpp.test
+from slixmpp import JID
 
 import slidge.core.command.chat_command
-from slidge.util.test import SlixTestPlus
 from slidge.core.command import Command, Confirmation
+from slidge.core.gateway.delivery_receipt import DeliveryReceipt
+from slidge.util.test import SlixTestPlus
 
 
 class MockSession:
@@ -33,13 +34,15 @@ class CommandAdmin(Command):
     NAME = "Command number one"
     CHAT_COMMAND = "command1"
 
+    test_results = []
+
     async def run(self, _session, _ifrom):
         return Confirmation(
             prompt="Confirm?", handler=self.finish, success="It worked!"
         )
 
     async def finish(self, _session, _ifrom):
-        pass
+        self.test_results.append("yup")
 
 
 class CommandAdminConfirmFail(CommandAdmin):
@@ -66,6 +69,7 @@ class TestChatCommands(SlixTestPlus):
         self.commands = slidge.core.command.chat_command.ChatCommandProvider(self.xmpp)
         self.commands.register(CommandAdmin(self.xmpp))
         self.commands.register(CommandAdminConfirmFail(self.xmpp))
+        self.xmpp.delivery_receipt = DeliveryReceipt(self.xmpp)
         super().setUp()
 
     def test_non_existing(self):
@@ -85,7 +89,7 @@ class TestChatCommands(SlixTestPlus):
             <message xmlns="jabber:component:accept"
               from="slidge.whatever.ass"
               to="admin@whatever.ass/cheogram"
-              type="chat">     
+              type="chat">
                 <body>{t}</body>
             </message>
             """
@@ -96,7 +100,7 @@ class TestChatCommands(SlixTestPlus):
               from="slidge.whatever.ass"
               to="admin@whatever.ass/cheogram"
               type="error"
-              id='not-found'>     
+              id='not-found'>
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">{t}</text>
@@ -135,8 +139,131 @@ class TestChatCommands(SlixTestPlus):
             <message xmlns="jabber:component:accept"
               from="slidge.whatever.ass"
               to="admin@whatever.ass/cheogram"
-              type="chat">     
+              type="chat">
               <body>Available commands:\ncommand1 -- Command number one\ncommand2 -- Command number two</body>
             </message>
             """
         )
+
+    def test_input(self):
+        fut = self.run_coro(
+            self.commands.input(JID("user@whatever.ass/x"), "blabla", blocking=False)
+        )
+
+        # language=XML
+        self.send(
+            """
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     to="user@whatever.ass/x"
+                     from="slidge.whatever.ass">
+                <body>blabla</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.recv(
+            """
+            <message from='user@whatever.ass/y'
+                     to='slidge.whatever.ass'>
+                <body>reply</body>
+            </message>
+            """
+        )
+
+        assert fut.result() == "reply"
+
+    def test_confirm_no(self):
+        # language=XML
+        self.recv(
+            f"""
+            <message from='admin@whatever.ass/cheogram'
+                     to='{self.xmpp.boundjid.bare}'
+                     type='chat'
+                     id='help'>
+              <body>command1</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     to="admin@whatever.ass/cheogram"
+                     from="{self.xmpp.boundjid.bare}">
+                <body>Confirm?</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.recv(
+            f"""
+            <message from='admin@whatever.ass/cheogram'
+                     to='{self.xmpp.boundjid.bare}'
+                     type='chat'
+                     id='help'>
+              <body>no</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     to="admin@whatever.ass/cheogram"
+                     from="{self.xmpp.boundjid.bare}">
+                <body>Canceled</body>
+            </message>
+            """
+        )
+        assert len(CommandAdmin.test_results) == 0
+
+    def test_confirm_yes(self):
+        # language=XML
+        self.recv(
+            f"""
+            <message from='admin@whatever.ass/cheogram'
+                     to='{self.xmpp.boundjid.bare}'
+                     type='chat'
+                     id='help'>
+              <body>command1</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     to="admin@whatever.ass/cheogram"
+                     from="{self.xmpp.boundjid.bare}">
+                <body>Confirm?</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.recv(
+            f"""
+            <message from='admin@whatever.ass/cheogram'
+                     to='{self.xmpp.boundjid.bare}'
+                     type='chat'
+                     id='help'>
+              <body>yes</body>
+            </message>
+            """
+        )
+        # language=XML
+        self.send(
+            f"""
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     to="admin@whatever.ass/cheogram"
+                     from="{self.xmpp.boundjid.bare}">
+                <body>End of command.</body>
+            </message>
+            """
+        )
+        assert CommandAdmin.test_results.pop() == "yup"
+        assert len(CommandAdmin.test_results) == 0
