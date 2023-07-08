@@ -461,6 +461,9 @@ class LegacyMUC(
 
         user_nick = self.user_nick_non_none
         user_participant = await self.get_user_participant()
+        if not user_participant.is_user:  # type:ignore
+            self.log.warning("is_user flag not set participant on user_participant")
+            user_participant.is_user = True  # type:ignore
         user_participant.send_initial_presence(
             user_full_jid,
             presence_id=join_presence["id"],
