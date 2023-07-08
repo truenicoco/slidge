@@ -216,8 +216,7 @@ class Bookmarks(LegacyBookmarks):
         await self.by_legacy_id("coven")
 
 
-@pytest.mark.usefixtures("avatar")
-class TestMuc(SlidgeTest):
+class Base(SlidgeTest):
     plugin = globals()
 
     def setUp(self):
@@ -246,6 +245,9 @@ class TestMuc(SlidgeTest):
             )
         )
 
+
+@pytest.mark.usefixtures("avatar")
+class TestMuc(Base):
     def test_disco_non_existing_room(self):
         self.recv(
             f"""
@@ -628,6 +630,7 @@ class TestMuc(SlidgeTest):
             </message>
             """
         )
+        assert self.next_sent() is None
 
     def test_join_channel(self):
         self.recv(
@@ -2061,3 +2064,69 @@ class TestMuc(SlidgeTest):
         old_nick = p.nickname
         p.contact.name = "new-nick"
         self.__test_rename_common(old_nick, participants_before)
+
+
+class TestLazyLoad(Base):
+    def test_lazy_load_participants(self):
+        muc = self.get_private_muc()
+        muc.LAZY_LOAD_PARTICIPANTS = True
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        muc.session.contacts.ready.set_result(True)
+        muc.subject_date = now
+        self.recv(  # language=XML
+            """
+            <presence
+                from='romeo@montague.lit/gajim'
+                id='n13mt3l'
+                to='room-private@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc'/>
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence
+                id='n13mt3l'
+                from='room-private@aim.shakespeare.lit/thirdwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member' role='participant' jid='romeo@montague.lit/gajim'/>
+                <status code='100'/>
+                <status code='110'/>
+              </x>
+            </presence>
+            """,
+        )
+        now_fmt = now.isoformat().replace("+00:00", "Z")
+        self.send(  # language=XML
+            f"""
+            <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
+                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
+                <subject>Private Subject</subject>
+            </message>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence
+                from='room-private@aim.shakespeare.lit/firstwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='owner' role='moderator' jid="firstwitch@aim.shakespeare.lit/slidge"/>
+              </x>
+            </presence>
+            """,
+        )
+        self.send(  # language=XML
+            """
+            <presence
+                from='room-private@aim.shakespeare.lit/secondwitch'
+                to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='admin' role='moderator' jid="secondwitch@aim.shakespeare.lit/slidge"/>
+              </x>
+            </presence>
+            """,
+        )
+        assert self.next_sent() is None
