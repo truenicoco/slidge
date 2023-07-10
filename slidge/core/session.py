@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import logging
-from typing import TYPE_CHECKING, Generic, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, Union, cast
 
 import aiohttp
 from slixmpp import JID, Message, Presence
@@ -37,6 +37,12 @@ def ignore_sent_carbons(func):
             return await func(self, msg)
 
     return wrapped
+
+
+class CachedPresence(NamedTuple):
+    status: Optional[str]
+    show: Optional[str]
+    kwargs: dict[str, Any]
 
 
 class BaseSession(
@@ -97,6 +103,8 @@ class BaseSession(
 
         self.threads = BiDict[str, LegacyThreadType]()  # type:ignore
         self.__thread_creation_lock = asyncio.Lock()
+
+        self.__cached_presence: Optional[CachedPresence] = None
 
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
@@ -587,8 +595,20 @@ class BaseSession(
         :param show: Presence stanza 'show' element. I suggest using "dnd" to show
             that the gateway is not fully functional
         """
+        self.__cached_presence = CachedPresence(status, show, kwargs)
         self.xmpp.send_presence(
             pto=self.user.bare_jid, pstatus=status, pshow=show, **kwargs
+        )
+
+    def send_cached_presence(self, to: JID):
+        if not self.__cached_presence:
+            self.xmpp.send_presence(pto=to, ptype="unavailable")
+            return
+        self.xmpp.send_presence(
+            pto=to,
+            pstatus=self.__cached_presence.status,
+            pshow=self.__cached_presence.show,
+            **self.__cached_presence.kwargs,
         )
 
     def send_gateway_message(self, text: str, **msg_kwargs):

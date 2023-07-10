@@ -73,7 +73,8 @@ class PresenceHandlerMixin(ComponentXMPP):
         try:
             contact = await self.__get_contact(pres)
         except _IsDirectedAtComponent:
-            pres.reply().send()
+            session = await self.__get_session(pres)
+            session.send_cached_presence(pres.get_from())
             return
         if contact.is_friend:
             contact.send_last_presence(force=True)
