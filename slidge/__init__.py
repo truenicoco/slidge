@@ -5,9 +5,10 @@ from .core import config as global_config
 from .core.command import FormField, SearchResult
 from .core.contact import LegacyContact, LegacyRoster
 from .core.gateway import BaseGateway
-from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant
 from .core.session import BaseSession
 from .util.db import GatewayUser, user_store
+from .util.types import MucType
 from .util.util import addLoggingLevel
 
 

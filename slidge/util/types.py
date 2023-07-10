@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import (
     IO,
@@ -104,3 +105,8 @@ class LegacyAttachment:
             x is not None for x in (self.path, self.stream, self.data, self.url)
         ):
             raise TypeError("There is not data in this attachment", self)
+
+
+class MucType(int, Enum):
+    GROUP = 0
+    CHANNEL = 1

@@ -5,7 +5,6 @@ import logging
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Optional, Union
 from uuid import uuid4
@@ -25,6 +24,7 @@ from ...util.types import (
     LegacyMessageType,
     LegacyParticipantType,
     LegacyUserIdType,
+    MucType,
 )
 from .. import config
 from ..cache import avatar_cache
@@ -38,12 +38,6 @@ if TYPE_CHECKING:
     from ..contact import LegacyContact
     from ..gateway import BaseGateway
     from ..session import BaseSession
-
-
-class MucType(int, Enum):
-    GROUP = 0
-    CHANNEL = 1
-
 
 ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
@@ -426,7 +420,7 @@ class LegacyMUC(
         msg["stanza_id"]["by"] = self.jid
         msg["occupant-id"]["id"] = "slidge-user"
 
-        self.archive.add(msg)
+        self.archive.add(msg, await self.get_user_participant())
 
         for user_full_jid in self.user_full_jids():
             self.log.debug("Echoing to %s", user_full_jid)
@@ -502,7 +496,7 @@ class LegacyMUC(
         if equals_zero(maxchars) or equals_zero(maxstanzas):
             log.debug("Joining client does not want any old-school MUC history-on-join")
         else:
-            log.debug("Filling history %s")
+            self.log.debug("Old school history fill")
             await self._fill_history(
                 user_full_jid,
                 maxchars=maxchars,

@@ -15,10 +15,14 @@ import slidge.core.mixins.message_maker
 import slidge.core.muc.room
 from slidge import *
 from slidge.core.cache import avatar_cache
-from slidge.core.muc import MucType
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
-from slidge.util.types import LegacyContactType, LegacyMessageType, MessageReference
+from slidge.util.types import (
+    LegacyContactType,
+    LegacyMessageType,
+    MessageReference,
+    MucType,
+)
 
 
 class Gateway(BaseGateway):
@@ -629,6 +633,9 @@ class TestMuc(Base):
                 <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
                 <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
                 <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                <x xmlns="http://jabber.org/protocol/muc#user">
+               		<item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
+   	            </x>
             </message>
             """,
             use_values=False,
@@ -1177,7 +1184,7 @@ class TestMuc(Base):
             """
         )
         for i in range(10):
-            self.send(
+            self.send(  # language=XML
                 f"""
                 <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
                   <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
@@ -1190,6 +1197,11 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns='http://jabber.org/protocol/muc#user'>
+                          <item affiliation='member'
+                                jid='uuid@aim.shakespeare.lit'
+                                role='participant' />
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1244,6 +1256,9 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1299,6 +1314,9 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1369,22 +1387,27 @@ class TestMuc(Base):
             """
         )
         for i in range(7, 10):
-            self.send(
+            self.send(  # language=XML
                 f"""
                 <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                      </message>
-                    </forwarded>
-                  </result>
+                    <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
+                        <forwarded xmlns='urn:xmpp:forward:0'>
+                            <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
+                            <message xmlns='jabber:client'
+                                     from="room-private@aim.shakespeare.lit/history-man-{i}"
+                                     type='groupchat'
+                                     id='{i}'>
+                                <body>Body #{i}</body>
+                                <stanza-id xmlns="urn:xmpp:sid:0" id="{i}"
+                                           by="room-private@aim.shakespeare.lit"/>
+                                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                                <x xmlns="http://jabber.org/protocol/muc#user">
+                                    <item role="participant" affiliation="member"
+                                          jid="uuid@aim.shakespeare.lit"/>
+                                </x>
+                            </message>
+                        </forwarded>
+                    </result>
                 </message>
                 """
             )
@@ -1421,7 +1444,7 @@ class TestMuc(Base):
             """
         )
         for i in range(9, 6, -1):
-            self.send(
+            self.send(  # language=XML
                 f"""
                 <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
                   <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
@@ -1434,6 +1457,10 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member"
+                                  jid="uuid@aim.shakespeare.lit"/>
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1478,6 +1505,10 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member"
+                                  jid="uuid@aim.shakespeare.lit"/>
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1566,6 +1597,9 @@ class TestMuc(Base):
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
+                        </x>
                       </message>
                     </forwarded>
                   </result>
@@ -1633,6 +1667,10 @@ class TestMuc(Base):
                         <body>blabla</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="666" by="room-private@aim.shakespeare.lit"/>
                         <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
+                        <x xmlns="http://jabber.org/protocol/muc#user">
+                            <item role="participant" affiliation="member"
+                                  jid="romeo@montague.lit"/>
+                        </x>
                     </message>
                 </forwarded>
             </result>

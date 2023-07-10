@@ -12,10 +12,9 @@ from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
 from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce, strip_illegal_chars
-from ...util.types import LegacyMessageType, MucAffiliation, MucRole
+from ...util.types import LegacyMessageType, MucAffiliation, MucRole, MucType
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
-from .room import MucType
 
 if TYPE_CHECKING:
     from .room import LegacyMUC
@@ -208,7 +207,7 @@ class LegacyParticipant(
                 stanza.send()
         else:
             if isinstance(stanza, Message):
-                self.muc.archive.add(stanza, archive_only)
+                self.muc.archive.add(stanza, self, archive_only)
             if archive_only:
                 return
             for user_full_jid in self.muc.user_full_jids():
@@ -312,7 +311,7 @@ class LegacyParticipant(
             when = datetime.now().astimezone()
 
         if update_muc:
-            self.muc._subject = subject
+            self.muc._subject = subject  # type: ignore
             self.muc.subject_setter = self
             self.muc.subject_date = when
 

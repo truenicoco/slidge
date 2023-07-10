@@ -1,14 +1,19 @@
 import logging
+import uuid
 from bisect import bisect
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from typing import Collection, Optional
+from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 
+from ...util.types import MucType
 from .. import config
+
+if TYPE_CHECKING:
+    from .participant import LegacyParticipant
 
 
 class MessageArchive:
@@ -17,17 +22,38 @@ class MessageArchive:
         self._msgs = list[HistoryMessage]()
         self._retention = retention_days
 
-    def add(self, msg: Message, archive_only=False):
+    def add(
+        self,
+        msg: Message,
+        participant: Optional["LegacyParticipant"] = None,
+        archive_only=False,
+    ):
         """
         Add a message to the archive if it is deemed archivable
 
         :param msg:
+        :param participant:
         :param archive_only:
         """
         if not archivable(msg):
             return
+        new_msg = copy(msg)
+        if participant and participant.muc.type == MucType.GROUP:
+            new_msg["muc"]["role"] = participant.role
+            new_msg["muc"]["affiliation"] = participant.affiliation
+            if participant.contact:
+                new_msg["muc"]["jid"] = participant.contact.jid.bare
+            elif participant.is_user:
+                new_msg["muc"]["jid"] = participant.user.jid.bare
+            elif participant.is_system:
+                new_msg["muc"]["jid"] = participant.muc.jid
+            else:
+                log.warning("No real JID for participant in this group")
+                new_msg["muc"][
+                    "jid"
+                ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        to_archive = HistoryMessage(msg)
+        to_archive = HistoryMessage(new_msg)
 
         if archive_only and len(self._msgs) != 0:
             # archive_only is for muc.backfill()
@@ -136,8 +162,6 @@ class MessageArchive:
 
 class HistoryMessage:
     def __init__(self, stanza: Message):
-        stanza = copy(stanza)
-
         self.id = stanza["stanza_id"]["id"]
         self.when = stanza["delay"]["stamp"] or datetime.now(tz=timezone.utc)
 
