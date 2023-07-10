@@ -152,14 +152,9 @@ class AttachmentMixin(MessageMaker):
 
         if file_name and len(file_name) > config.ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH:
             log.debug("Trimming long filename: %s", file_name)
-            if "." in file_name:
-                base, suffix = file_name.split(".")
-                suffix = "." + suffix
-            else:
-                base = file_name
-                suffix = "."
+            base, ext = os.path.splitext(file_name)
             file_name = (
-                base[: config.ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH] + "." + suffix
+                base[: config.ATTACHMENT_MAXIMUM_FILE_NAME_LENGTH - len(ext)] + ext
             )
 
         if file_path is None:
