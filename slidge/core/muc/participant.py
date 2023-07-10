@@ -201,7 +201,11 @@ class LegacyParticipant(
         if full_jid:
             stanza["to"] = full_jid
             self.__send_presence_if_needed(stanza, full_jid, archive_only)
-            stanza.send()
+            if self.is_user:
+                assert stanza.stream is not None
+                stanza.stream.send(stanza, use_filters=False)
+            else:
+                stanza.send()
         else:
             if isinstance(stanza, Message):
                 self.muc.archive.add(stanza, archive_only)
@@ -252,15 +256,22 @@ class LegacyParticipant(
         codes = set()
         if nick_change:
             codes.add(210)
-        cache = getattr(self, "_last_presence", None)
-        if cache:
-            last_seen = cache.last_seen
-            kwargs = cache.presence_kwargs
-            if kwargs.get("ptype") == "unavailable":
-                return
-        else:
-            last_seen = None
+
+        if self.is_user:
+            # the "initial presence" of the user has to be vanilla, as it is
+            # a crucial part of the MUC join sequence for XMPP clients.
             kwargs = {}
+            last_seen = None
+        else:
+            cache = getattr(self, "_last_presence", None)
+            if cache:
+                last_seen = cache.last_seen
+                kwargs = cache.presence_kwargs
+                if kwargs.get("ptype") == "unavailable":
+                    return
+            else:
+                last_seen = None
+                kwargs = {}
         p = self._make_presence(
             last_seen=last_seen, status_codes=codes, user_full_jid=full_jid, **kwargs
         )
