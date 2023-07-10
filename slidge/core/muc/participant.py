@@ -4,6 +4,7 @@ import uuid
 import warnings
 from copy import copy
 from datetime import datetime
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
@@ -166,11 +167,28 @@ class LegacyParticipant(
     def __send_presence_if_needed(
         self, stanza: Union[Message, Presence], full_jid: JID, archive_only: bool
     ):
-        if archive_only or self.is_system or self.is_user or self.__presence_sent:
+        if (
+            archive_only
+            or self.is_system
+            or self.is_user
+            or self.__presence_sent
+            or stanza["subject"]
+        ):
             return
         if isinstance(stanza, Message):
             self.__presence_sent = True
             self.send_initial_presence(full_jid)
+
+    @cached_property
+    def __occupant_id(self):
+        if self.contact:
+            return self.contact.jid
+        elif self.is_user:
+            return "slidge-user"
+        elif self.is_system:
+            return "room"
+        else:
+            return str(uuid.uuid4())
 
     def _send(
         self,
@@ -179,6 +197,7 @@ class LegacyParticipant(
         archive_only=False,
         **send_kwargs,
     ):
+        stanza["occupant-id"]["id"] = self.__occupant_id
         if full_jid:
             stanza["to"] = full_jid
             self.__send_presence_if_needed(stanza, full_jid, archive_only)
@@ -270,6 +289,26 @@ class LegacyParticipant(
         if reason:
             m["apply_to"]["moderated"]["reason"] = reason
         self._send(m)
+
+    def set_room_subject(
+        self,
+        subject: str,
+        full_jid: Optional[JID] = None,
+        when: Optional[datetime] = None,
+        update_muc=True,
+    ):
+        if when is None:
+            when = datetime.now().astimezone()
+
+        if update_muc:
+            self.muc._subject = subject
+            self.muc.subject_setter = self
+            self.muc.subject_date = when
+
+        msg = self._make_message()
+        msg["delay"].set_stamp(when)
+        msg["subject"] = subject or str(self.muc.name)
+        self._send(msg, full_jid)
 
 
 log = logging.getLogger(__name__)

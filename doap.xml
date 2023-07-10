@@ -406,8 +406,7 @@
     <implements>
         <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0421.html"/>
-            <xmpp:status>planned</xmpp:status>
-            <xmpp:note>Will implement if useful for a plugin.</xmpp:note>
+            <xmpp:status>complete</xmpp:status>
         </xmpp:SupportedXep>
     </implements>
     <implements>

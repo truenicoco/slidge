@@ -226,7 +226,7 @@ class Base(SlidgeTest):
         )
         slidge.core.muc.room.uuid4 = (
             slidge.core.mixins.message_maker.uuid4
-        ) = lambda: "uuid"
+        ) = uuid.uuid4 = lambda: "uuid"
         self.get_romeo_session().logged = True
 
     def tearDown(self):
@@ -238,12 +238,18 @@ class Base(SlidgeTest):
             JID("romeo@montague.lit")
         )
 
-    def get_private_muc(self, name="room-private") -> MUC:
-        return self.xmpp.loop.run_until_complete(
+    def get_private_muc(self, name="room-private", resources=()) -> MUC:
+        muc = self.xmpp.loop.run_until_complete(
             self.get_romeo_session().bookmarks.by_jid(
                 JID(f"{name}@aim.shakespeare.lit")
             )
         )
+        for resource in resources:
+            muc.user_resources.add(resource)
+            n = self.next_sent()
+            if n:
+                assert n["subject"]
+        return muc
 
 
 @pytest.mark.usefixtures("avatar")
@@ -572,6 +578,7 @@ class TestMuc(Base):
                 <item affiliation="member" role="participant"/>
             </x>
             <priority>0</priority>
+            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
            </presence>
             """
         )
@@ -583,6 +590,7 @@ class TestMuc(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='owner' role='moderator' jid="firstwitch@aim.shakespeare.lit/slidge"/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="firstwitch@aim.shakespeare.lit/slidge"/>
             </presence>
             """,
         )
@@ -594,6 +602,7 @@ class TestMuc(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='admin' role='moderator' jid="secondwitch@aim.shakespeare.lit/slidge"/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="secondwitch@aim.shakespeare.lit/slidge"/>
             </presence>
             """,
         )
@@ -608,6 +617,7 @@ class TestMuc(Base):
                 <status code='100'/>
                 <status code='110'/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
             </presence>
             """,
         )
@@ -618,6 +628,7 @@ class TestMuc(Base):
                 <body>Hey</body>
                 <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
                 <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
             </message>
             """,
             use_values=False,
@@ -627,6 +638,8 @@ class TestMuc(Base):
             <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
                 <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
                 <subject>Private Subject</subject>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
             </message>
             """
         )
@@ -643,6 +656,7 @@ class TestMuc(Base):
             </presence>
             """
         )
+        # language=XML
         self.send(
             """
             <presence
@@ -651,6 +665,7 @@ class TestMuc(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='owner' role='moderator'/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
             </presence>
             """,
         )
@@ -662,6 +677,7 @@ class TestMuc(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='admin' role='moderator'/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
             </presence>
             """,
         )
@@ -675,6 +691,7 @@ class TestMuc(Base):
                 <item affiliation='member' role='participant'/>
                 <status code='110'/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
             </presence>
             """,
         )
@@ -736,8 +753,7 @@ class TestMuc(Base):
         assert self.next_sent() is None
 
     def test_self_ping_connected(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        self.get_private_muc(resources={"gajim"})
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' id='s2c1' type='get'
@@ -786,8 +802,8 @@ class TestMuc(Base):
     #     )
 
     def test_msg_from_xmpp(self):
-        muc = self.get_private_muc()
-        muc.user_resources = ["gajim", "movim"]
+        muc = self.get_private_muc(resources={"gajim", "movim"})
+        # muc.user_resources = ["gajim", "movim"]
         self.recv(
             f"""
             <message from='romeo@montague.lit/gajim'
@@ -812,6 +828,7 @@ class TestMuc(Base):
                          by="room-private@aim.shakespeare.lit"/>
                     <origin-id xmlns="urn:xmpp:sid:0"
                          id="xmpp-id"/>
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
                 </message>
                 """,
                 use_values=False,
@@ -852,8 +869,7 @@ class TestMuc(Base):
         assert sent["text"] == stripped_body
 
     def test_msg_from_legacy(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -871,6 +887,7 @@ class TestMuc(Base):
                 <stanza-id xmlns="urn:xmpp:sid:0"
                      id="XXX"
                      by="room-private@aim.shakespeare.lit"/>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
             </message>
             """,
             use_values=False,
@@ -878,8 +895,7 @@ class TestMuc(Base):
 
     def test_msg_reply_self_from_legacy(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -902,6 +918,7 @@ class TestMuc(Base):
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                 </message>
                 """,
             use_values=False,
@@ -909,8 +926,7 @@ class TestMuc(Base):
 
     def test_msg_reply_to_user(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -935,6 +951,7 @@ class TestMuc(Base):
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                 </message>
                 """,
             use_values=False,
@@ -942,8 +959,7 @@ class TestMuc(Base):
 
     def test_msg_reply_from_legacy(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -972,6 +988,7 @@ class TestMuc(Base):
                     <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
                          by="room-private@aim.shakespeare.lit"/>
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                 </message>
                 """,
             use_values=False,
@@ -979,8 +996,7 @@ class TestMuc(Base):
 
     def test_msg_reply_from_legacy_fallback(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -1011,14 +1027,14 @@ class TestMuc(Base):
                   		<body start="0" end="24"/>
                    	</fallback>
                    	<active xmlns="http://jabber.org/protocol/chatstates"/>
+                   <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                 </message>
                 """,
             use_values=False,
         )
 
     def test_react_from_xmpp(self):
-        muc = self.get_private_muc()
-        muc.user_resources = ["gajim", "movim"]
+        muc = self.get_private_muc(resources=["gajim", "movim"])
         self.recv(
             f"""
             <message from='romeo@montague.lit/gajim'
@@ -1042,6 +1058,7 @@ class TestMuc(Base):
                       <reaction>👋</reaction>
                     </reactions>
                     <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
                 </message>
                 """,
                 use_values=False,
@@ -1053,8 +1070,8 @@ class TestMuc(Base):
         assert sent["legacy_msg_id"] == "legacy-SOME-ID"
 
     def test_react_from_legacy(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
+        # muc.user_resources.add("gajim")
         participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
             muc.get_participant("firstwitch")
         )
@@ -1070,6 +1087,7 @@ class TestMuc(Base):
                 <reaction>👋</reaction>
               </reactions>
               <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
             </message>
             """,
             use_values=False,
@@ -1117,7 +1135,7 @@ class TestMuc(Base):
 
     def test_mam_form_fields(self):
         muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        # muc.user_resources.add("gajim")
         self.recv(
             """
             <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
@@ -1171,6 +1189,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1224,6 +1243,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1278,6 +1298,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1360,6 +1381,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1411,6 +1433,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1454,6 +1477,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1541,6 +1565,7 @@ class TestMuc(Base):
                                id='{i}'>
                         <body>Body #{i}</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
                       </message>
                     </forwarded>
                   </result>
@@ -1562,8 +1587,7 @@ class TestMuc(Base):
             )
 
     def test_mam_from_user_carbon(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         user_participant: Participant = self.xmpp.loop.run_until_complete(
             muc.get_user_participant()
@@ -1578,6 +1602,7 @@ class TestMuc(Base):
             <markable xmlns="urn:xmpp:chat-markers:0"/>
             <stanza-id id="666" xmlns="urn:xmpp:sid:0" by="room-private@aim.shakespeare.lit"/>
             <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" from="aim.shakespeare.lit"/>
+            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
            </message>
             """,
             use_values=False,  # necessary because the third has origin-id
@@ -1607,6 +1632,7 @@ class TestMuc(Base):
                     <message xmlns="jabber:client" type="groupchat" from="room-private@aim.shakespeare.lit/thirdwitch" id="666">
                         <body>blabla</body>
                         <stanza-id xmlns="urn:xmpp:sid:0" id="666" by="room-private@aim.shakespeare.lit"/>
+                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
                     </message>
                 </forwarded>
             </result>
@@ -1615,8 +1641,7 @@ class TestMuc(Base):
         )
 
     def test_mam_echo(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc(resources=["gajim"])
         self.recv(
             """
             <message from="romeo@montague.lit/gajim"
@@ -1631,6 +1656,7 @@ class TestMuc(Base):
             <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/thirdwitch" to="romeo@montague.lit/gajim" type="groupchat">
              <body>HOY</body>
              <stanza-id xmlns="urn:xmpp:sid:0" id="id" by="room-private@aim.shakespeare.lit"/>
+             <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
             </message>
             """
         )
@@ -1639,7 +1665,7 @@ class TestMuc(Base):
 
     def test_get_members(self):
         muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        # muc.user_resources.add("gajim")
         muc.session.contacts.ready.set_result(True)
         self.recv(
             """
@@ -1862,8 +1888,7 @@ class TestMuc(Base):
         assert len(list(a.get_all())) == 2
 
     def test_moderate(self):
-        muc = self.get_private_muc("room")
-        muc.user_resources.add("gajim")
+        muc = self.get_private_muc("room", ["gajim"])
         p = muc.get_system_participant()
         p.moderate("legacy-666", "reason™")
         self.send(
@@ -1876,6 +1901,7 @@ class TestMuc(Base):
                   <reason>reason™</reason>
                 </moderated>
               </apply-to>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="room"/>
             </message>
             """
         )
@@ -1935,6 +1961,7 @@ class TestMuc(Base):
              <x xmlns="http://jabber.org/protocol/muc#user">
               <item affiliation="owner" role="moderator" jid="firstwitch@aim.shakespeare.lit/slidge"/>
              </x>
+             <occupant-id xmlns="urn:xmpp:occupant-id:0" id="firstwitch@aim.shakespeare.lit/slidge"/>
             </presence>
             """
         )
@@ -2006,8 +2033,8 @@ class TestMuc(Base):
         slidge.slixfix.xep_0356.privilege.uuid.uuid4 = o
 
     def __get_participants(self):
-        muc = self.get_private_muc()
-        muc.user_resources.add("movim")
+        muc = self.get_private_muc(resources=["movim"])
+        # muc.user_resources.add("movim")
         self.xmpp.loop.run_until_complete(muc.session.contacts.fill())
         muc.session.contacts.ready.set_result(True)
         participants_before: list[Participant] = self.xmpp.loop.run_until_complete(
@@ -2026,6 +2053,7 @@ class TestMuc(Base):
                 <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}" nick="new-nick" />
                 <status code="303"/>
             </x>
+            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="{p.contact.jid}"/>
            </presence>
            """
         )
@@ -2036,6 +2064,7 @@ class TestMuc(Base):
             <x xmlns="http://jabber.org/protocol/muc#user">
                 <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}"/>
             </x>
+            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="{p.contact.jid}"/>
            </presence>
            """
         )
@@ -2095,6 +2124,7 @@ class TestLazyLoad(Base):
                 <status code='100'/>
                 <status code='110'/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
             </presence>
             """,
         )
@@ -2104,6 +2134,8 @@ class TestLazyLoad(Base):
             <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
                 <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
                 <subject>Private Subject</subject>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
             </message>
             """
         )
@@ -2115,6 +2147,7 @@ class TestLazyLoad(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='owner' role='moderator' jid="firstwitch@aim.shakespeare.lit/slidge"/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="firstwitch@aim.shakespeare.lit/slidge"/>
             </presence>
             """,
         )
@@ -2126,6 +2159,7 @@ class TestLazyLoad(Base):
               <x xmlns='http://jabber.org/protocol/muc#user'>
                 <item affiliation='admin' role='moderator' jid="secondwitch@aim.shakespeare.lit/slidge"/>
               </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="secondwitch@aim.shakespeare.lit/slidge"/>
             </presence>
             """,
         )

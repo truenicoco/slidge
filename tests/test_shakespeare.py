@@ -652,6 +652,7 @@ class TestAimShakespeareBase(SlidgeTest):
             </iq>
             """
         )
+        # language=XML
         self.send(
             """
             <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
@@ -672,6 +673,7 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="urn:xmpp:mam:2"/>
            		<feature var="urn:xmpp:mam:2#extended"/>
            		<feature var="urn:xmpp:ping"/>
+           		<feature var="urn:xmpp:occupant-id:0"/>
               </query>
             </iq>
             """

@@ -7,7 +7,7 @@ from copy import copy
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Optional
+from typing import TYPE_CHECKING, Generic, Optional, Union
 from uuid import uuid4
 
 from PIL import Image
@@ -111,7 +111,9 @@ class LegacyMUC(
         )
 
         self._subject = ""
-        self.subject_setter = "unknown"
+        self.subject_setter: Union[
+            str, "LegacyContact", "LegacyParticipant"
+        ] = "unknown"
 
         self.archive: MessageArchive = MessageArchive()
         self._user_nick: Optional[str] = None
@@ -295,16 +297,29 @@ class LegacyMUC(
 
     @subject.setter
     def subject(self, s: str):
-        if s != self._subject:
-            self.update_subject(s)
+        if s == self._subject:
+            return
+        self.xmpp.loop.create_task(
+            self.__get_subject_setter_participant()
+        ).add_done_callback(
+            lambda task: task.result().set_room_subject(
+                s, None, self.subject_date, False
+            )
+        )
         self._subject = s
 
-    def update_subject(self, subject: Optional[str] = None):
-        self._subject = subject or ""
-        for r in self.user_resources:
-            to = copy(self.user.jid)
-            to.resource = r
-            self._make_subject_message(to).send()
+    async def __get_subject_setter_participant(self):
+        from ..contact import LegacyContact
+        from .participant import LegacyParticipant
+
+        who = self.subject_setter
+
+        if isinstance(who, LegacyParticipant):
+            return who
+        elif isinstance(who, str):
+            return await self.get_participant(who, store=False)
+        elif isinstance(self.subject_setter, LegacyContact):
+            return await self.get_participant_by_contact(who)
 
     def features(self):
         features = [
@@ -362,19 +377,6 @@ class LegacyMUC(
 
         return r
 
-    def _make_subject_message(self, user_full_jid: JID):
-        subject_setter = copy(self.jid)
-        log.debug("subject setter: %s", self.subject_setter)
-        subject_setter.resource = self.subject_setter
-        msg = self.xmpp.make_message(
-            mto=user_full_jid,
-            mfrom=subject_setter,
-            mtype="groupchat",
-        )
-        msg["delay"].set_stamp(self.subject_date or datetime.now().astimezone())
-        msg["subject"] = self.subject or str(self.DISCO_NAME)
-        return msg
-
     def shutdown(self):
         user_jid = copy(self.jid)
         user_jid.resource = self.user_nick_non_none
@@ -422,6 +424,7 @@ class LegacyMUC(
         else:
             msg["stanza_id"]["id"] = str(uuid4())
         msg["stanza_id"]["by"] = self.jid
+        msg["occupant-id"]["id"] = "slidge-user"
 
         self.archive.add(msg)
 
@@ -506,7 +509,10 @@ class LegacyMUC(
                 maxstanzas=maxstanzas,
                 since=since,
             )
-        self._make_subject_message(user_full_jid).send()
+        (await self.__get_subject_setter_participant()).set_room_subject(
+            self._subject, user_full_jid, self.subject_date
+        )
+        # self._make_subject_message(user_full_jid).send()
         self.user_resources.add(client_resource)
         if self.LAZY_LOAD_PARTICIPANTS:
             task = self.__participants_lazy_load_tasks.get(user_full_jid)
@@ -537,7 +543,12 @@ class LegacyMUC(
             self._participants_by_contacts[p.contact] = p
 
     async def get_participant(
-        self, nickname: str, raise_if_not_found=False, fill_first=False, **kwargs
+        self,
+        nickname: str,
+        raise_if_not_found=False,
+        fill_first=False,
+        store=True,
+        **kwargs,
     ) -> "LegacyParticipantType":
         """
         Get a participant by their nickname.
@@ -551,6 +562,7 @@ class LegacyMUC(
             need that)
         :param fill_first: Ensure :meth:`.LegacyMUC.fill_participants()` has been called first
              (internal use by slidge, plugins should not need that)
+        :param store: persistently store the user in the list of MUC participants
         :param kwargs: additional parameters for the :class:`.Participant`
             construction (optional)
         :return:
@@ -562,7 +574,8 @@ class LegacyMUC(
             if raise_if_not_found:
                 raise XMPPError("item-not-found")
             p = self.Participant(self, nickname, **kwargs)
-            self.__store_participant(p)
+            if store:
+                self.__store_participant(p)
         return p
 
     def get_system_participant(self):

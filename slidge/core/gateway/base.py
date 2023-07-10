@@ -233,6 +233,7 @@ class BaseGateway(
             self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2#extended")
+            self.plugin["xep_0030"].add_feature(self.plugin["xep_0421"].namespace)
             self.plugin["xep_0030"].add_identity(
                 category="conference",
                 name="Slidged rooms",
@@ -738,6 +739,7 @@ SLIXMPP_PLUGINS = [
     "xep_0363",  # HTTP file upload
     "xep_0385",  # Stateless in-line media sharing
     "xep_0402",  # PEP Native Bookmarks
+    "xep_0421",  # Anonymous unique occupant identifiers for MUCs
     "xep_0424",  # Message retraction
     "xep_0425",  # Message moderation
     "xep_0444",  # Message reactions
