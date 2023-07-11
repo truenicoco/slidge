@@ -129,15 +129,15 @@ class LegacyMUC(
 
     @property
     def user_nick(self):
-        return self._user_nick
+        return (
+            self._user_nick
+            or self.session.bookmarks.user_nick
+            or self.session.user.jid.node
+        )
 
     @user_nick.setter
     def user_nick(self, nick: str):
         self._user_nick = nick
-
-    @property
-    def user_nick_non_none(self):
-        return self._user_nick or self.session.user.jid.node
 
     async def __fill_participants(self):
         async with self.lock("fill participants"):
@@ -373,7 +373,7 @@ class LegacyMUC(
 
     def shutdown(self):
         user_jid = copy(self.jid)
-        user_jid.resource = self.user_nick_non_none
+        user_jid.resource = self.user_nick
         for user_full_jid in self.user_full_jids():
             presence = self.xmpp.make_presence(
                 pfrom=user_jid, pto=user_full_jid, ptype="unavailable"
@@ -392,7 +392,7 @@ class LegacyMUC(
     @property
     def user_muc_jid(self):
         user_muc_jid = copy(self.jid)
-        user_muc_jid.resource = self.user_nick_non_none
+        user_muc_jid.resource = self.user_nick
         return user_muc_jid
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
@@ -447,6 +447,11 @@ class LegacyMUC(
         requested_nickname = join_presence.get_to().resource
         client_resource = user_full_jid.resource
 
+        if client_resource in self.user_resources:
+            self.log.debug("Received join from a resource that is already joined.")
+
+        self.user_resources.add(client_resource)
+
         if not requested_nickname or not client_resource:
             raise XMPPError("jid-malformed", by=self.jid)
 
@@ -472,7 +477,7 @@ class LegacyMUC(
                 continue
             participant.send_initial_presence(full_jid=user_full_jid)
 
-        user_nick = self.user_nick_non_none
+        user_nick = self.user_nick
         user_participant = await self.get_user_participant()
         if not user_participant.is_user:  # type:ignore
             self.log.warning("is_user flag not set participant on user_participant")
@@ -852,7 +857,7 @@ class LegacyMUC(
             item["conference"]["name"] = self.name
             item["conference"]["autojoin"] = auto_join
 
-        item["conference"]["nick"] = self.user_nick_non_none
+        item["conference"]["nick"] = self.user_nick
         iq = Iq(stype="set", sfrom=self.user.jid, sto=self.user.jid)
         iq["pubsub"]["publish"]["node"] = self.xmpp["xep_0402"].stanza.NS
         iq["pubsub"]["publish"].append(item)
