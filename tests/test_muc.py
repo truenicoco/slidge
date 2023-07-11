@@ -103,7 +103,14 @@ class Session(BaseSession):
         self.REACTED.append(locals())
 
 
-jids = {123: "juliet", 111: "firstwitch", 222: "secondwitch", 333: "not-in-roster"}
+jids = {
+    123: "juliet",
+    111: "firstwitch",
+    222: "secondwitch",
+    333: "not-in-roster",
+    666: "imposter",
+    667: "imposter2",
+}
 legacy = {v: k for k, v in jids.items()}
 
 
@@ -123,6 +130,9 @@ class Roster(LegacyRoster):
 
 class Contact(LegacyContact):
     async def update_info(self):
+        if self.legacy_id in (666, 667):
+            self.name = "firstwitch"
+            return
         self.name = self.jid.local
 
 
@@ -2131,6 +2141,86 @@ class TestMuc(Base):
         old_nick = p.nickname
         p.contact.name = "new-nick"
         self.__test_rename_common(old_nick, participants_before)
+
+    def test_non_anonymous_participants_with_same_nickname(self):
+        muc = self.get_private_muc(resources=["movim"])
+        participants = self.__get_participants()
+        for p in participants:
+            if p.contact.name == "firstwitch":
+                real_witch = p
+                break
+        else:
+            raise AssertionError
+        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        p = self.run_coro(muc.get_participant_by_legacy_id(666))
+        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        p.send_text("Je suis un canaillou")
+        self.send(  # language=XML
+            """
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/firstwitch (imposter)"
+                      to="romeo@montague.lit/movim">
+                <x xmlns="http://jabber.org/protocol/muc#user">
+                    <item affiliation="member"
+                          role="participant"
+                          jid="imposter@aim.shakespeare.lit/slidge"/>
+                </x>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                             id="imposter@aim.shakespeare.lit/slidge"/>
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <message xmlns="jabber:component:accept" type="groupchat"
+                     from="room-private@aim.shakespeare.lit/firstwitch (imposter)"
+                     to="romeo@montague.lit/movim">
+                <body>Je suis un canaillou</body>
+                <active xmlns="http://jabber.org/protocol/chatstates"/>
+                <markable xmlns="urn:xmpp:chat-markers:0"/>
+                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid"
+                           by="room-private@aim.shakespeare.lit"/>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                             id="imposter@aim.shakespeare.lit/slidge"/>
+            </message>
+            """
+        )
+        assert self.next_sent() is None
+        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        p = self.run_coro(muc.get_participant_by_legacy_id(667))
+        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        p.send_text("Je suis un canaillou")
+        self.send(  # language=XML
+            """
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/firstwitch (imposter2)"
+                      to="romeo@montague.lit/movim">
+                <x xmlns="http://jabber.org/protocol/muc#user">
+                    <item affiliation="member"
+                          role="participant"
+                          jid="imposter2@aim.shakespeare.lit/slidge"/>
+                </x>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                             id="imposter2@aim.shakespeare.lit/slidge"/>
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <message xmlns="jabber:component:accept" type="groupchat"
+                     from="room-private@aim.shakespeare.lit/firstwitch (imposter2)"
+                     to="romeo@montague.lit/movim">
+                <body>Je suis un canaillou</body>
+                <active xmlns="http://jabber.org/protocol/chatstates"/>
+                <markable xmlns="urn:xmpp:chat-markers:0"/>
+                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid"
+                           by="room-private@aim.shakespeare.lit"/>
+                <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                             id="imposter2@aim.shakespeare.lit/slidge"/>
+            </message>
+            """
+        )
+        assert self.next_sent() is None
 
 
 class TestLazyLoad(Base):

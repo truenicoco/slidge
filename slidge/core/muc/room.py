@@ -600,7 +600,11 @@ class LegacyMUC(
         await self.session.contacts.ready
         p = self._participants_by_contacts.get(c)
         if p is None:
-            p = self.Participant(self, c.name or c.jid_username, **kwargs)
+            nickname = c.name or c.jid_username
+            if nickname in self._participants_by_nicknames:
+                self.log.debug("Nickname conflict")
+                nickname = f"{nickname} ({c.jid_username})"
+            p = self.Participant(self, nickname, **kwargs)
             p.contact = c
             c.participants.add(p)
             self.__store_participant(p)
