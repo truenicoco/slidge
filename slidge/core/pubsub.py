@@ -438,7 +438,12 @@ class PubSubComponent(BasePlugin):
         """
         a = self._avatars.get(from_)
         if a:
-            await self._broadcast(a.metadata, from_, to)
+            if a.metadata:
+                await self._broadcast(
+                    a.metadata, from_, to, id=a.metadata["info"]["id"]
+                )
+            else:
+                log.warning("No metadata associated to this cached avatar?!")
         n = self._nicks.get(from_)
         if n:
             await self._broadcast(n.nick, from_, to)
