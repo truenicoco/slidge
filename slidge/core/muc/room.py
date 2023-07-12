@@ -448,7 +448,6 @@ class LegacyMUC(
             requested_nickname,
         )
 
-        await self.__fill_history()
         await self.__fill_participants()
 
         if self._avatar_hash:
@@ -486,6 +485,7 @@ class LegacyMUC(
             log.debug("Joining client does not want any old-school MUC history-on-join")
         else:
             self.log.debug("Old school history fill")
+            await self.__fill_history()
             await self._fill_history(
                 user_full_jid,
                 maxchars=maxchars,
