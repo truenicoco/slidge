@@ -486,7 +486,7 @@ class LegacyMUC(
         else:
             self.log.debug("Old school history fill")
             await self.__fill_history()
-            await self._fill_history(
+            await self.__old_school_history(
                 user_full_jid,
                 maxchars=maxchars,
                 maxstanzas=maxstanzas,
@@ -648,7 +648,7 @@ class LegacyMUC(
         """
         pass
 
-    async def _fill_history(
+    async def __old_school_history(
         self,
         full_jid: JID,
         maxchars: Optional[int] = None,
