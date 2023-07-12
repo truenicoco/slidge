@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import io
 import logging
@@ -64,8 +63,6 @@ class LegacyMUC(
     DISCO_CATEGORY = "conference"
     DISCO_NAME = "unnamed-room"
 
-    LAZY_LOAD_PARTICIPANTS = False
-
     STABLE_ARCHIVE = False
     """
     Because legacy events like reactions, editions, etc. don't all map to a stanza
@@ -121,7 +118,6 @@ class LegacyMUC(
         self._avatar_type: Optional[str] = None
 
         self.__participants_filled = False
-        self.__participants_lazy_load_tasks = dict[JID, asyncio.Task]()
         self.__history_filled = False
 
     def __repr__(self):
@@ -168,15 +164,6 @@ class LegacyMUC(
                 # oldest = self.archive.get_oldest_message()
             await self.backfill(legacy_id, oldest_date)
             self.__history_filled = True
-
-    async def __lazy_load_participants(self, user_full_jid: JID):
-        await self.__fill_participants()
-        for participant in self._participants_by_nicknames.values():
-            if participant.is_user:  # type:ignore
-                continue
-            if participant.is_system:  # type:ignore
-                continue
-            participant.send_initial_presence(full_jid=user_full_jid)
 
     @property
     def avatar(self):
@@ -251,8 +238,6 @@ class LegacyMUC(
                     "Received 'leave group' request but with wrong nickname. %s", p
                 )
             resources.remove(resource)
-            if t := self.__participants_lazy_load_tasks.pop(pfrom, None):
-                t.cancel()
         else:
             self.log.debug(
                 "Received 'leave group' request but resource was not listed. %s", p
@@ -464,8 +449,7 @@ class LegacyMUC(
         )
 
         await self.__fill_history()
-        if not self.LAZY_LOAD_PARTICIPANTS:
-            await self.__fill_participants()
+        await self.__fill_participants()
 
         if self._avatar_hash:
             self._send_room_presence(user_full_jid)
@@ -513,13 +497,6 @@ class LegacyMUC(
         )
         # self._make_subject_message(user_full_jid).send()
         self.user_resources.add(client_resource)
-        if self.LAZY_LOAD_PARTICIPANTS:
-            task = self.__participants_lazy_load_tasks.get(user_full_jid)
-            if task is not None:
-                task.cancel()
-            self.__participants_lazy_load_tasks[
-                user_full_jid
-            ] = self.xmpp.loop.create_task(self.__lazy_load_participants(user_full_jid))
 
     async def get_user_participant(self, **kwargs) -> "LegacyParticipantType":
         """
