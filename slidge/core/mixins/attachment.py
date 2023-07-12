@@ -93,12 +93,13 @@ class AttachmentMixin(MessageMaker):
                 log.warning(
                     (
                         "There are several or zero files in %s, "
-                        "slidge doesn't know which one to pick among %s"
+                        "slidge doesn't know which one to pick among %s. "
+                        "Removing the dir."
                     ),
                     destination_dir,
                     files,
                 )
-                return None, None
+                shutil.rmtree(destination_dir)
 
         log.debug("Did not find a file in: %s", destination_dir)
         # let's use a UUID to avoid URLs being too obvious
