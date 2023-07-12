@@ -618,9 +618,18 @@ class LegacyMUC(
         :return:
         """
         if p.contact is not None:
-            del self._participants_by_contacts[p.contact]
-            p.contact.participants.remove(p)
-        del self._participants_by_nicknames[p.nickname]  # type:ignore
+            try:
+                del self._participants_by_contacts[p.contact]
+            except KeyError:
+                self.log.warning(
+                    "Removed a participant we didn't know was here?, %s", p
+                )
+            else:
+                p.contact.participants.remove(p)
+        try:
+            del self._participants_by_nicknames[p.nickname]  # type:ignore
+        except KeyError:
+            self.log.warning("Removed a participant we didn't know was here?, %s", p)
         p.leave()
 
     def rename_participant(self, old_nickname: str, new_nickname: str):
