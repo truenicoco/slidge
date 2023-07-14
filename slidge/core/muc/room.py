@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import io
 import logging
@@ -116,6 +117,7 @@ class LegacyMUC(
         self._avatar_bytes: Optional[bytes] = None
         self._avatar_hash: Optional[str] = None
         self._avatar_type: Optional[str] = None
+        self.__set_avatar_task: Optional[asyncio.Task] = None
 
         self.__participants_filled = False
         self.__history_filled = False
@@ -172,7 +174,9 @@ class LegacyMUC(
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
         if a != self._avatar:
-            self.xmpp.loop.create_task(self.__set_avatar(a))
+            if self.__set_avatar_task:
+                self.__set_avatar_task.cancel()
+            self.__set_avatar_task = self.xmpp.loop.create_task(self.__set_avatar(a))
 
     async def __set_avatar(self, a: Optional[AvatarType]):
         if isinstance(a, str):
@@ -343,6 +347,13 @@ class LegacyMUC(
 
         if s := self.subject:
             form.add_field("muc#roominfo_subject", value=s)
+
+        if self.__set_avatar_task:
+            await self.__set_avatar_task
+        if h := self._avatar_hash:
+            form.add_field(
+                "{http://modules.prosody.im/mod_vcard_muc}avatar#sha1", value=h
+            )
 
         form.add_field("muc#roomconfig_membersonly", "boolean", value=is_group)
         form.add_field("muc#roomconfig_whois", "boolean", value=is_group)

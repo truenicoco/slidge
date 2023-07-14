@@ -374,6 +374,86 @@ class TestMuc(Base):
             """,
         )
 
+    def test_disco_room_avatar(self):
+        self.next_sent()
+        self.recv(  # language=XML
+            f"""
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="coven@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                from="coven@aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="conference"
+                          type="text"
+                          name="The coven" />
+                <feature var="http://jabber.org/protocol/muc" />
+                <feature var="http://jabber.org/protocol/muc#stable_id" />
+                <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
+                <feature var="urn:xmpp:mam:2" />
+                <feature var="urn:xmpp:mam:2#extended" />
+                <feature var="urn:xmpp:sid:0" />
+                <feature var="muc_persistent" />
+                <feature var="vcard-temp" />
+                <feature var="urn:xmpp:ping" />
+                <feature var="muc_open" />
+                <feature var="muc_semianonymous" />
+                <feature var="muc_public" />
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roominfo</value>
+                  </field>
+                  <field var="muc#roomconfig_persistentroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_changesubject"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#maxhistoryfetch">
+                    <value>100</value>
+                  </field>
+                  <field var="muc#roominfo_subjectmod"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="{http://modules.prosody.im/mod_vcard_muc}avatar#sha1">
+                    <value>e6f9170123620949a6821e25ea2861d22b0dff66</value>
+                  </field>
+                  <field var="muc#roomconfig_membersonly"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_whois"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_publicroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_allowpm"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+        )
+
     def test_disco_group_emoji_restricted(self):
         self.recv(  # language=XML
             f"""
