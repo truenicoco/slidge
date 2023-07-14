@@ -29,17 +29,23 @@ class TestPermissions(SlidgeTest):
         self.xmpp.add_event_handler(
             "privileges_advertised", lambda msg: results.__setitem__("event", True)
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message from='capulet.lit' to='pubsub.capulet.lit' id='54321'>
-                <privilege xmlns='urn:xmpp:privilege:2'>
-                    <perm access='roster' type='both'/>
-                    <perm access='message' type='outgoing'/>
-                    <perm access='iq'>
-                      <namespace ns='some_ns' type='get' />
-                      <namespace ns='some_other_ns' type='both' />
-                    </perm>
-                </privilege>
+            <message from='capulet.lit'
+                     to='pubsub.capulet.lit'
+                     id='54321'>
+              <privilege xmlns='urn:xmpp:privilege:2'>
+                <perm access='roster'
+                      type='both' />
+                <perm access='message'
+                      type='outgoing' />
+                <perm access='iq'>
+                  <namespace ns='some_ns'
+                             type='get' />
+                  <namespace ns='some_other_ns'
+                             type='both' />
+                </perm>
+              </privilege>
             </message>
             """
         )
@@ -68,14 +74,14 @@ class TestPermissions(SlidgeTest):
     def testGetRosterIq(self):
         iq = self.xmpp["xep_0356"]._make_get_roster("juliet@example.com")
         xmlstring = """
-        <iq xmlns="jabber:component:accept"
-            id='1'
-            from='pubsub.capulet.lit'
-            to='juliet@example.com'
-            type='get'>
-                <query xmlns='jabber:iq:roster'/>
-        </iq>
-        """
+            <iq xmlns="jabber:component:accept"
+                id='1'
+                from='pubsub.capulet.lit'
+                to='juliet@example.com'
+                type='get'>
+              <query xmlns='jabber:iq:roster' />
+            </iq>
+            """
         self.check(iq, xmlstring, use_values=False)
 
     def testSetRosterIq(self):
@@ -94,36 +100,44 @@ class TestPermissions(SlidgeTest):
         }
         iq = self.xmpp["xep_0356"]._make_set_roster(jid, items)
         xmlstring = f"""
-        <iq xmlns="jabber:component:accept"
-            id='1'
-            from='pubsub.capulet.lit'
-            to='{jid}'
-            type='set'>
-                <query xmlns='jabber:iq:roster'>
-                    <item name='Friend 1' jid='friend1@example.com' subscription='both'>
-                        <group>group1</group>
-                        <group>group2</group>
-                    </item>
-                    <item name='Friend 2' jid='friend2@example.com' subscription='from'>
-                        <group>group3</group>
-                    </item>
-                </query>
-        </iq>
-        """
+            <iq xmlns="jabber:component:accept"
+                id='1'
+                from='pubsub.capulet.lit'
+                to='{jid}'
+                type='set'>
+              <query xmlns='jabber:iq:roster'>
+                <item name='Friend 1'
+                      jid='friend1@example.com'
+                      subscription='both'>
+                  <group>group1</group>
+                  <group>group2</group>
+                </item>
+                <item name='Friend 2'
+                      jid='friend2@example.com'
+                      subscription='from'>
+                  <group>group3</group>
+                </item>
+              </query>
+            </iq>
+            """
         self.check(iq, xmlstring, use_values=False)
 
     def testMakeOutgoingMessage(self):
         xmlstring = """
-        <message xmlns="jabber:component:accept" from='pubsub.capulet.lit' to='capulet.lit'>
-            <privilege xmlns='urn:xmpp:privilege:2'>
+            <message xmlns="jabber:component:accept"
+                     from='pubsub.capulet.lit'
+                     to='capulet.lit'>
+              <privilege xmlns='urn:xmpp:privilege:2'>
                 <forwarded xmlns='urn:xmpp:forward:0'>
-                    <message from="juliet@capulet.lit" to="romeo@montague.lit" xmlns="jabber:client">
-                        <body>I do not hate you</body>
-                    </message>
+                  <message from="juliet@capulet.lit"
+                           to="romeo@montague.lit"
+                           xmlns="jabber:client">
+                    <body>I do not hate you</body>
+                  </message>
                 </forwarded>
-            </privilege>
-        </message>
-        """
+              </privilege>
+            </message>
+            """
         msg = Message()
         msg["from"] = "juliet@capulet.lit"
         msg["to"] = "romeo@montague.lit"
@@ -164,23 +178,24 @@ class TestPermissions(SlidgeTest):
         self.xmpp.loop.create_task(
             self.xmpp["xep_0356"].send_privileged_iq(iq, iq_id="0")
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq from="pubsub.capulet.lit"
                 to="juliet@xxx"
                 xmlns="jabber:component:accept"
-                type="get" id="0">
-                <privileged_iq xmlns='urn:xmpp:privilege:2'>
-                    <iq xmlns='jabber:client'
-                        type='get'
-                        to='somemuc@conf'
-                        from='juliet@xxx'
-                         id="0">
-                          <query xmlns='http://jabber.org/protocol/muc#admin'>
-                            <item affiliation='member'/>
-                          </query>
-                    </iq>
-                </privileged_iq>
+                type="get"
+                id="0">
+              <privileged_iq xmlns='urn:xmpp:privilege:2'>
+                <iq xmlns='jabber:client'
+                    type='get'
+                    to='somemuc@conf'
+                    from='juliet@xxx'
+                    id="0">
+                  <query xmlns='http://jabber.org/protocol/muc#admin'>
+                    <item affiliation='member' />
+                  </query>
+                </iq>
+              </privileged_iq>
             </iq>
             """,
             use_values=False,

@@ -80,7 +80,7 @@ class TestCommandsResults(SlixTestPlus):
         self.adhoc.register(Command1(self.xmpp))
 
     def test_form_ok(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -88,45 +88,50 @@ class TestCommandsResults(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="1">
-            <command xmlns="http://jabber.org/protocol/commands"
-                node="command1"
-                sessionid="session-id"
-                status="executing">
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command1"
+                       sessionid="session-id"
+                       status="executing">
                 <actions>
-                    <next />
+                  <next />
                 </actions>
-                <x xmlns="jabber:x:data" type="form">
-                    <title>A title</title>
-                    <instructions>Some instructions</instructions>
-                    <field var="jid" type="jid-single" label="Enter a JID">
-                        <value>user@host</value>
-                        <required />
-                    </field>
-                    <field var="option" type="list-single">
-                        <value />
-                        <option label="Option 1">
-                            <value>option1</value>
-                        </option>
-                        <option label="Option 2">
-                            <value>option2</value>
-                        </option>
-                    </field>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>A title</title>
+                  <instructions>Some instructions</instructions>
+                  <field var="jid"
+                         type="jid-single"
+                         label="Enter a JID">
+                    <value>user@host</value>
+                    <required />
+                  </field>
+                  <field var="option"
+                         type="list-single">
+                    <value />
+                    <option label="Option 1">
+                      <value>option1</value>
+                    </option>
+                    <option label="Option 2">
+                      <value>option2</value>
+                    </option>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -135,19 +140,20 @@ class TestCommandsResults(SlixTestPlus):
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
                        sessionid="session-id">
-                <x xmlns='jabber:x:data' type='submit'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
                   <field var='jid'>
                     <value>value@value</value>
                   </field>
                   <field var='option'>
                     <value>option1</value>
                   </field>
-            </x>
-            </command>
+                </x>
+              </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -165,7 +171,7 @@ class TestCommandsResults(SlixTestPlus):
         )
 
     def test_form_bad_option(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -173,45 +179,50 @@ class TestCommandsResults(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="1">
-            <command xmlns="http://jabber.org/protocol/commands"
-                node="command1"
-                sessionid="session-id"
-                status="executing">
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command1"
+                       sessionid="session-id"
+                       status="executing">
                 <actions>
-                    <next />
+                  <next />
                 </actions>
-                <x xmlns="jabber:x:data" type="form">
-                    <title>A title</title>
-                    <instructions>Some instructions</instructions>
-                    <field var="jid" type="jid-single" label="Enter a JID">
-                        <value>user@host</value>
-                        <required />
-                    </field>
-                    <field var="option" type="list-single">
-                        <value />
-                        <option label="Option 1">
-                            <value>option1</value>
-                        </option>
-                        <option label="Option 2">
-                            <value>option2</value>
-                        </option>
-                    </field>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>A title</title>
+                  <instructions>Some instructions</instructions>
+                  <field var="jid"
+                         type="jid-single"
+                         label="Enter a JID">
+                    <value>user@host</value>
+                    <required />
+                  </field>
+                  <field var="option"
+                         type="list-single">
+                    <value />
+                    <option label="Option 1">
+                      <value>option1</value>
+                    </option>
+                    <option label="Option 2">
+                      <value>option2</value>
+                    </option>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -220,19 +231,20 @@ class TestCommandsResults(SlixTestPlus):
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
                        sessionid="session-id">
-                <x xmlns='jabber:x:data' type='submit'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
                   <field var='jid'>
                     <value>value@value</value>
                   </field>
                   <field var='option'>
                     <value>option3</value>
                   </field>
-            </x>
-            </command>
+                </x>
+              </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="error"
@@ -241,16 +253,15 @@ class TestCommandsResults(SlixTestPlus):
                 id="2">
               <error type="modify">
                 <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">
-                  Not a valid option: 'option3'
-            </text></error>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Not a valid option: 'option3'</text>
+              </error>
             </iq>
             """,
             use_values=False,
         )
 
     def test_form_exc(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -258,45 +269,50 @@ class TestCommandsResults(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="1">
-            <command xmlns="http://jabber.org/protocol/commands"
-                node="command1"
-                sessionid="session-id"
-                status="executing">
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command1"
+                       sessionid="session-id"
+                       status="executing">
                 <actions>
-                    <next />
+                  <next />
                 </actions>
-                <x xmlns="jabber:x:data" type="form">
-                    <title>A title</title>
-                    <instructions>Some instructions</instructions>
-                    <field var="jid" type="jid-single" label="Enter a JID">
-                        <value>user@host</value>
-                        <required />
-                    </field>
-                    <field var="option" type="list-single">
-                        <value />
-                        <option label="Option 1">
-                            <value>option1</value>
-                        </option>
-                        <option label="Option 2">
-                            <value>option2</value>
-                        </option>
-                    </field>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>A title</title>
+                  <instructions>Some instructions</instructions>
+                  <field var="jid"
+                         type="jid-single"
+                         label="Enter a JID">
+                    <value>user@host</value>
+                    <required />
+                  </field>
+                  <field var="option"
+                         type="list-single">
+                    <value />
+                    <option label="Option 1">
+                      <value>option1</value>
+                    </option>
+                    <option label="Option 2">
+                      <value>option2</value>
+                    </option>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -305,30 +321,34 @@ class TestCommandsResults(SlixTestPlus):
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
                        sessionid="session-id">
-                <x xmlns='jabber:x:data' type='submit'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
                   <field var='jid'>
                     <value>bad@bad</value>
                   </field>
-            </x>
-            </command>
+                </x>
+              </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="error" from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="2">
-                <error type="wait">
-                    <internal-server-error xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                    <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">IT&apos;S BAD, WE&apos;RE FUCKED</text>
-                </error>
+            <iq xmlns="jabber:component:accept"
+                type="error"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="2">
+              <error type="wait">
+                <internal-server-error xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">IT'S BAD, WE'RE FUCKED</text>
+              </error>
             </iq>
             """,
             use_values=False,
         )
 
     def test_form_bad_jid(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -336,45 +356,50 @@ class TestCommandsResults(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="1">
-            <command xmlns="http://jabber.org/protocol/commands"
-                node="command1"
-                sessionid="session-id"
-                status="executing">
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command1"
+                       sessionid="session-id"
+                       status="executing">
                 <actions>
-                    <next />
+                  <next />
                 </actions>
-                <x xmlns="jabber:x:data" type="form">
-                    <title>A title</title>
-                    <instructions>Some instructions</instructions>
-                    <field var="jid" type="jid-single" label="Enter a JID">
-                        <value>user@host</value>
-                        <required />
-                    </field>
-                    <field var="option" type="list-single">
-                        <value />
-                        <option label="Option 1">
-                            <value>option1</value>
-                        </option>
-                        <option label="Option 2">
-                            <value>option2</value>
-                        </option>
-                    </field>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>A title</title>
+                  <instructions>Some instructions</instructions>
+                  <field var="jid"
+                         type="jid-single"
+                         label="Enter a JID">
+                    <value>user@host</value>
+                    <required />
+                  </field>
+                  <field var="option"
+                         type="list-single">
+                    <value />
+                    <option label="Option 1">
+                      <value>option1</value>
+                    </option>
+                    <option label="Option 2">
+                      <value>option2</value>
+                    </option>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -383,23 +408,27 @@ class TestCommandsResults(SlixTestPlus):
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
                        sessionid="session-id">
-                <x xmlns='jabber:x:data' type='submit'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
                   <field var='jid'>
                     <value>bad@bad@bad</value>
                   </field>
-            </x>
-            </command>
+                </x>
+              </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="error" from="slidge.whatever.ass"
-                to="admin@whatever.ass/cheogram" id="2">
-                <error type="modify">
+            <iq xmlns="jabber:component:accept"
+                type="error"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="2">
+              <error type="modify">
                 <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Not a valid JID: &apos;bad@bad@bad&apos;</text>
-            </error>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Not a valid JID: 'bad@bad@bad'</text>
+              </error>
             </iq>
             """,
             use_values=False,

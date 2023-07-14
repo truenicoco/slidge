@@ -11,15 +11,20 @@ class TestPermissions(SlixTest):
 
     def testAdvertisePermission(self):
         xmlstring = """
-            <message from='capulet.lit' to='pubsub.capulet.lit'>
-                <privilege xmlns='urn:xmpp:privilege:2'>
-                    <perm access='roster' type='both'/>
-                    <perm access='message' type='outgoing'/>
-                    <perm access='presence' type='managed_entity'/>
-                    <perm access='iq' type='both'/>
-                </privilege>
+            <message from='capulet.lit'
+                     to='pubsub.capulet.lit'>
+              <privilege xmlns='urn:xmpp:privilege:2'>
+                <perm access='roster'
+                      type='both' />
+                <perm access='message'
+                      type='outgoing' />
+                <perm access='presence'
+                      type='managed_entity' />
+                <perm access='iq'
+                      type='both' />
+              </privilege>
             </message>
-        """
+            """
         msg = self.Message()
         msg["from"] = "capulet.lit"
         msg["to"] = "pubsub.capulet.lit"
@@ -49,12 +54,14 @@ class TestPermissions(SlixTest):
         self.check(
             x,
             """
-              <privilege xmlns='urn:xmpp:privilege:2'>
-                <perm access='iq'>
-                  <namespace ns='some_ns' type='get' />
-                  <namespace ns='some_other_ns' type='both' />
-                </perm>
-              </privilege>
+            <privilege xmlns='urn:xmpp:privilege:2'>
+              <perm access='iq'>
+                <namespace ns='some_ns'
+                           type='get' />
+                <namespace ns='some_other_ns'
+                           type='both' />
+              </perm>
+            </privilege>
             """,
         )
         nss = set()

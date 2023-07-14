@@ -23,17 +23,17 @@ class TestPubSubDisco(SlixTest):
         Error.namespace = "jabber:component:accept"
 
     def test_disco(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq type='get'
                 from='stan@south.park/phone'
                 to='pubsub.south.park'
                 id='disco'>
-               <query xmlns="http://jabber.org/protocol/disco#info" />
+              <query xmlns="http://jabber.org/protocol/disco#info" />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -41,8 +41,10 @@ class TestPubSubDisco(SlixTest):
                 to="stan@south.park/phone"
                 id="disco">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="account" type="registered" />
-                <identity category="pubsub" type="pep" />
+                <identity category="account"
+                          type="registered" />
+                <identity category="pubsub"
+                          type="pep" />
                 <feature var="http://jabber.org/protocol/shim" />
                 <feature var="http://jabber.org/protocol/shim#SubID" />
                 <feature var="jabber:x:data" />
@@ -50,7 +52,8 @@ class TestPubSubDisco(SlixTest):
                 <feature var="http://jabber.org/protocol/pubsub#event" />
                 <feature var="http://jabber.org/protocol/pubsub#retrieve-items" />
                 <feature var="http://jabber.org/protocol/pubsub#persistent-items" />
-            </query></iq>
+              </query>
+            </iq>
             """
         )
 
@@ -77,34 +80,40 @@ class TestPubSubNickname(SlixTest):
 
     def test_new_nick(self):
         self.pubsub.set_nick("stan@pubsub.south.park", "BUBU", "kenny@south.park")
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
-                type="headline"
-                from="stan@pubsub.south.park"
-                to="kenny@south.park">
+                     type="headline"
+                     from="stan@pubsub.south.park"
+                     to="kenny@south.park">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="http://jabber.org/protocol/nick">
                   <item>
                     <nick xmlns="http://jabber.org/protocol/nick">BUBU</nick>
-            </item></items></event></message>
+                  </item>
+                </items>
+              </event>
+            </message>
             """,
             use_values=False,
         )
 
     def test_no_nick(self):
         self.pubsub.set_nick("stan@pubsub.south.park", None, "kenny@south.park")
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
-                type="headline"
-                from="stan@pubsub.south.park"
-                to="kenny@south.park">
+                     type="headline"
+                     from="stan@pubsub.south.park"
+                     to="kenny@south.park">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="http://jabber.org/protocol/nick">
                   <item>
                     <nick xmlns="http://jabber.org/protocol/nick" />
-            </item></items></event></message>
+                  </item>
+                </items>
+              </event>
+            </message>
             """
         )
 
@@ -132,21 +141,26 @@ class TestPubSubAvatar(SlixTestPlus):
                 "kenny@south.park",
             )
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
-                type="headline"
-                from="stan@pubsub.south.park"
-                to="kenny@south.park">
+                     type="headline"
+                     from="stan@pubsub.south.park"
+                     to="kenny@south.park">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="urn:xmpp:avatar:metadata">
                   <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
                       <info id="{self.avatar_sha1}"
-                          type="image/png"
-                          bytes="{len(self.avatar_bytes)}"
-                          height="5" width="5" />
-            </metadata></item></items></event></message>
+                            type="image/png"
+                            bytes="{len(self.avatar_bytes)}"
+                            height="5"
+                            width="5" />
+                    </metadata>
+                  </item>
+                </items>
+              </event>
+            </message>
             """,
             use_values=False,
         )
@@ -158,7 +172,7 @@ class TestPubSubAvatar(SlixTestPlus):
 
     def test_single_avatar_retrieval(self):
         v = self.advertise_avatar()
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='kenny@south.park'
@@ -166,13 +180,13 @@ class TestPubSubAvatar(SlixTestPlus):
                 id='retrieve1'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
-                  <item id='{self.avatar_sha1}'/>
+                  <item id='{self.avatar_sha1}' />
                 </items>
               </pubsub>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq xmlns="jabber:component:accept"
                 type='result'
@@ -182,9 +196,7 @@ class TestPubSubAvatar(SlixTestPlus):
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
                   <item id='{self.avatar_sha1}'>
-                    <data xmlns='urn:xmpp:avatar:data'>
-                      {v}
-                    </data>
+                    <data xmlns='urn:xmpp:avatar:data'>{v}</data>
                   </item>
                 </items>
               </pubsub>
@@ -195,7 +207,7 @@ class TestPubSubAvatar(SlixTestPlus):
 
     def test_all_avatars_retrieval(self):
         v = self.advertise_avatar()
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq type='get'
                 from='kenny@south.park'
@@ -207,7 +219,7 @@ class TestPubSubAvatar(SlixTestPlus):
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq xmlns="jabber:component:accept"
                 type='result'
@@ -217,9 +229,7 @@ class TestPubSubAvatar(SlixTestPlus):
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
                   <item id='{self.avatar_sha1}'>
-                    <data xmlns='urn:xmpp:avatar:data'>
-                      {v}
-                    </data>
+                    <data xmlns='urn:xmpp:avatar:data'>{v}</data>
                   </item>
                 </items>
               </pubsub>
@@ -230,7 +240,7 @@ class TestPubSubAvatar(SlixTestPlus):
 
     def test_unauthorized_retrieval(self):
         self.advertise_avatar()
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq type='get'
                 from='kyle@south.park'
@@ -238,13 +248,13 @@ class TestPubSubAvatar(SlixTestPlus):
                 id='retrieve2'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
-                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66'/>
+                  <item id='e6f9170123620949a6821e25ea2861d22b0dff66' />
                 </items>
               </pubsub>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="error"
@@ -253,14 +263,15 @@ class TestPubSubAvatar(SlixTestPlus):
                 id="retrieve2">
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-            </error></iq>
+              </error>
+            </iq>
             """,
             use_values=False,
         )
 
     def test_single_metadata_retrieval(self):
         self.advertise_avatar()
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='kenny@south.park'
@@ -268,13 +279,13 @@ class TestPubSubAvatar(SlixTestPlus):
                 id='retrieve4'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:metadata'>
-                  <item id='{self.avatar_sha1}'/>
+                  <item id='{self.avatar_sha1}' />
                 </items>
               </pubsub>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq xmlns="jabber:component:accept"
                 type='result'
@@ -286,9 +297,10 @@ class TestPubSubAvatar(SlixTestPlus):
                   <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
                       <info id="{self.avatar_sha1}"
-                          type="image/png"
-                          bytes="{len(self.avatar_bytes)}"
-                          height="5" width="5" />
+                            type="image/png"
+                            bytes="{len(self.avatar_bytes)}"
+                            height="5"
+                            width="5" />
                     </metadata>
                   </item>
                 </items>
@@ -299,7 +311,7 @@ class TestPubSubAvatar(SlixTestPlus):
 
     def test_all_metadata_retrieval(self):
         self.advertise_avatar()
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq type='get'
                 from='kenny@south.park'
@@ -311,7 +323,7 @@ class TestPubSubAvatar(SlixTestPlus):
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq xmlns="jabber:component:accept"
                 type='result'
@@ -323,9 +335,10 @@ class TestPubSubAvatar(SlixTestPlus):
                   <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
                       <info id="{self.avatar_sha1}"
-                          type="image/png"
-                          bytes="{len(self.avatar_bytes)}"
-                          height="5" width="5" />
+                            type="image/png"
+                            bytes="{len(self.avatar_bytes)}"
+                            height="5"
+                            width="5" />
                     </metadata>
                   </item>
                 </items>
@@ -342,16 +355,19 @@ class TestPubSubAvatar(SlixTestPlus):
                 "kenny@south.park",
             )
         )
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
-                type="headline"
-                from="stan@pubsub.south.park"
-                to="kenny@south.park">
+                     type="headline"
+                     from="stan@pubsub.south.park"
+                     to="kenny@south.park">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="urn:xmpp:avatar:metadata">
                   <item>
                     <metadata xmlns="urn:xmpp:avatar:metadata" />
-            </item></items></event></message>
+                  </item>
+                </items>
+              </event>
+            </message>
             """
         )

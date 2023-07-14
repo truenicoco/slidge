@@ -73,7 +73,7 @@ class TestChatCommands(SlixTestPlus):
         super().setUp()
 
     def test_non_existing(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -84,25 +84,25 @@ class TestChatCommands(SlixTestPlus):
             """
         )
         t = self.commands.UNKNOWN.format("non-existing")
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
-              from="slidge.whatever.ass"
-              to="admin@whatever.ass/cheogram"
-              type="chat">
-                <body>{t}</body>
+                     from="slidge.whatever.ass"
+                     to="admin@whatever.ass/cheogram"
+                     type="chat">
+              <body>{t}</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
-              from="slidge.whatever.ass"
-              to="admin@whatever.ass/cheogram"
-              type="error"
-              id='not-found'>
+                     from="slidge.whatever.ass"
+                     to="admin@whatever.ass/cheogram"
+                     type="error"
+                     id='not-found'>
               <error type="cancel">
-                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">{t}</text>
               </error>
             </message>
@@ -111,7 +111,7 @@ class TestChatCommands(SlixTestPlus):
         )
 
     def test_other_destination(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='something@{self.xmpp.boundjid.bare}'
@@ -124,7 +124,7 @@ class TestChatCommands(SlixTestPlus):
         assert self.next_sent() is None
 
     def test_command_help(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -134,12 +134,12 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
-              from="slidge.whatever.ass"
-              to="admin@whatever.ass/cheogram"
-              type="chat">
+                     from="slidge.whatever.ass"
+                     to="admin@whatever.ass/cheogram"
+                     type="chat">
               <body>Available commands:\ncommand1 -- Command number one\ncommand2 -- Command number two</body>
             </message>
             """
@@ -150,23 +150,21 @@ class TestChatCommands(SlixTestPlus):
             self.commands.input(JID("user@whatever.ass/x"), "blabla", blocking=False)
         )
 
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
                      type="chat"
                      to="user@whatever.ass/x"
                      from="slidge.whatever.ass">
-                <body>blabla</body>
+              <body>blabla</body>
             </message>
             """
         )
-        # language=XML
-        self.recv(
+        self.recv(  # language=XML
             """
             <message from='user@whatever.ass/y'
                      to='slidge.whatever.ass'>
-                <body>reply</body>
+              <body>reply</body>
             </message>
             """
         )
@@ -174,8 +172,7 @@ class TestChatCommands(SlixTestPlus):
         assert fut.result() == "reply"
 
     def test_confirm_no(self):
-        # language=XML
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -185,19 +182,17 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
                      type="chat"
                      to="admin@whatever.ass/cheogram"
                      from="{self.xmpp.boundjid.bare}">
-                <body>Confirm?</body>
+              <body>Confirm?</body>
             </message>
             """
         )
-        # language=XML
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -207,22 +202,20 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
                      type="chat"
                      to="admin@whatever.ass/cheogram"
                      from="{self.xmpp.boundjid.bare}">
-                <body>Canceled</body>
+              <body>Canceled</body>
             </message>
             """
         )
         assert len(CommandAdmin.test_results) == 0
 
     def test_confirm_yes(self):
-        # language=XML
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -232,19 +225,17 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
                      type="chat"
                      to="admin@whatever.ass/cheogram"
                      from="{self.xmpp.boundjid.bare}">
-                <body>Confirm?</body>
+              <body>Confirm?</body>
             </message>
             """
         )
-        # language=XML
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='admin@whatever.ass/cheogram'
                      to='{self.xmpp.boundjid.bare}'
@@ -254,14 +245,13 @@ class TestChatCommands(SlixTestPlus):
             </message>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             f"""
             <message xmlns="jabber:component:accept"
                      type="chat"
                      to="admin@whatever.ass/cheogram"
                      from="{self.xmpp.boundjid.bare}">
-                <body>End of command.</body>
+              <body>End of command.</body>
             </message>
             """
         )

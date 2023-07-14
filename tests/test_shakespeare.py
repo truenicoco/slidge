@@ -178,55 +178,73 @@ class TestAimShakespeareBase(SlidgeTest):
         self.xmpp.loop.run_until_complete(x)
 
     def test_jabber_iq_gateway(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq type='get' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
-              <query xmlns='jabber:iq:gateway'/>
+            <iq type='get'
+                to='aim.shakespeare.lit'
+                from='romeo@montague.lit'
+                id='gate1'>
+              <query xmlns='jabber:iq:gateway' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
-                <query xmlns='jabber:iq:gateway'>
-                  <desc>{Gateway.SEARCH_TITLE}</desc>
-                  <prompt>{Gateway.SEARCH_FIELDS[0].label}</prompt>
-                </query>
+            <iq type='result'
+                from='aim.shakespeare.lit'
+                to='romeo@montague.lit'
+                id='gate1'>
+              <query xmlns='jabber:iq:gateway'>
+                <desc>{Gateway.SEARCH_TITLE}</desc>
+                <prompt>{Gateway.SEARCH_FIELDS[0].label}</prompt>
+              </query>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq type='set' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
+            <iq type='set'
+                to='aim.shakespeare.lit'
+                from='romeo@montague.lit'
+                id='gate1'>
               <query xmlns='jabber:iq:gateway'>
                 <prompt>exists</prompt>
               </query>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='result' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+            <iq type='result'
+                from='aim.shakespeare.lit'
+                to='romeo@montague.lit'
+                id='gate1'>
               <query xmlns='jabber:iq:gateway'>
                 <jid>exists@example.com</jid>
               </query>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq type='set' to='aim.shakespeare.lit' from='romeo@montague.lit' id='gate1'>
+            <iq type='set'
+                to='aim.shakespeare.lit'
+                from='romeo@montague.lit'
+                id='gate1'>
               <query xmlns='jabber:iq:gateway'>
                 <prompt>not-exists</prompt>
               </query>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='error' from='aim.shakespeare.lit' to='romeo@montague.lit' id='gate1'>
+            <iq type='error'
+                from='aim.shakespeare.lit'
+                to='romeo@montague.lit'
+                id='gate1'>
               <error type="cancel">
-                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No contact was found with the info you provided.</text>
               </error>
             </iq>
@@ -235,32 +253,36 @@ class TestAimShakespeareBase(SlidgeTest):
         )
 
     def test_from_romeo_to_eve(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='eve@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-                <body>Art thou not Romeo, and a Montague?</body>
+              <body>Art thou not Romeo, and a Montague?</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <message type="error" to="romeo@montague.lit" from="eve@aim.shakespeare.lit">
-                <error type="cancel"><item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet
-            </text></error></message>
+            <message type="error"
+                     to="romeo@montague.lit"
+                     from="eve@aim.shakespeare.lit">
+              <error type="cancel">
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet</text>
+              </error>
+            </message>
             """,
             use_values=False,
         )
 
     def test_from_romeo_to_juliet(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-                <body>Art thou not Romeo, and a Montague?</body>
+              <body>Art thou not Romeo, and a Montague?</body>
             </message>
             """
         )
@@ -279,14 +301,14 @@ class TestAimShakespeareBase(SlidgeTest):
 
     def test_delivery_receipt(self):
         self.xmpp.PROPER_RECEIPTS = True
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit/slidge'
                      from='romeo@montague.lit/prout'
                      id="123">
-                <body>Art thou not Romeo, and a Montague?</body>
-                <request xmlns='urn:xmpp:receipts'/>
+              <body>Art thou not Romeo, and a Montague?</body>
+              <request xmlns='urn:xmpp:receipts' />
             </message>
             """
         )
@@ -298,35 +320,37 @@ class TestAimShakespeareBase(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.received("123")
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
-                    type="chat"
-                    to="romeo@montague.lit"
-                    from="juliet@aim.shakespeare.lit/slidge">
-   	            <received xmlns="urn:xmpp:receipts" id="123"/>
+                     type="chat"
+                     to="romeo@montague.lit"
+                     from="juliet@aim.shakespeare.lit/slidge">
+              <received xmlns="urn:xmpp:receipts"
+                        id="123" />
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
-                    type="chat"
-                    to="romeo@montague.lit"
-                    from="juliet@aim.shakespeare.lit/slidge">
-   	            <received xmlns="urn:xmpp:chat-markers:0" id="123"/>
+                     type="chat"
+                     to="romeo@montague.lit"
+                     from="juliet@aim.shakespeare.lit/slidge">
+              <received xmlns="urn:xmpp:chat-markers:0"
+                        id="123" />
             </message>
             """
         )
         assert self.next_sent() is None
 
     def test_romeo_composing(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-                <composing xmlns='http://jabber.org/protocol/chatstates'/>
+              <composing xmlns='http://jabber.org/protocol/chatstates' />
             </message>
             """
         )
@@ -335,22 +359,25 @@ class TestAimShakespeareBase(SlidgeTest):
 
     def test_from_eve_to_juliet(self):
         # just ignore messages from unregistered users
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      from='eve@aim.shakespeare.lit'
                      to='juliet@montague.lit'>
-                <body>Art thou not Romeo, and a Montague?</body>
+              <body>Art thou not Romeo, and a Montague?</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <message type="error" from="juliet@montague.lit" to="eve@aim.shakespeare.lit">
-                <error type="auth">
+            <message type="error"
+                     from="juliet@montague.lit"
+                     to="eve@aim.shakespeare.lit">
+              <error type="auth">
                 <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not registered to this gateway
-            </text></error></message>
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not registered to this gateway</text>
+              </error>
+            </message>
             """
         )
 
@@ -371,18 +398,20 @@ class TestAimShakespeareBase(SlidgeTest):
 
     def test_unregister(self):
         assert len(unregistered) == 0
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-                <composing xmlns='http://jabber.org/protocol/chatstates'/>
+              <composing xmlns='http://jabber.org/protocol/chatstates' />
             </message>
             """
         )  # this creates a session
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit' type='set' to='aim.shakespeare.lit'>
+            <iq from='romeo@montague.lit'
+                type='set'
+                to='aim.shakespeare.lit'>
               <query xmlns='jabber:iq:register'>
                 <remove />
               </query>
@@ -394,55 +423,69 @@ class TestAimShakespeareBase(SlidgeTest):
 
     def test_jid_validator(self):
         self.xmpp.jid_validator = re.compile(".*@noteverybody")
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='eve@nothingshakespearian' type='get' to='aim.shakespeare.lit' id="0">
+            <iq from='eve@nothingshakespearian'
+                type='get'
+                to='aim.shakespeare.lit'
+                id="0">
+              <query xmlns='jabber:iq:register'></query>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                from="aim.shakespeare.lit"
+                type="error"
+                to="eve@nothingshakespearian"
+                id="0">
+              <error type="cancel">
+                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Your account is not allowed to use this gateway.</text>
+              </error>
+            </iq>
+            """,
+            use_values=False,
+        )
+        self.recv(  # language=XML
+            """
+            <iq from='eve@nothingshakespearian'
+                type='set'
+                to='aim.shakespeare.lit'
+                id='1'>
               <query xmlns='jabber:iq:register'>
+                <username>bill</username>
+                <password>Calliope</password>
               </query>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error" to="eve@nothingshakespearian" id="0">
-            <error type="cancel">
-                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+            <iq xmlns="jabber:component:accept"
+                from="aim.shakespeare.lit"
+                type="error"
+                to="eve@nothingshakespearian"
+                id="1">
+              <error type="cancel">
+                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Your account is not allowed to use this gateway.</text>
-            </error>
-           </iq>
-            """,
-            use_values=False,
-        )
-        self.recv(
-            """
-            <iq from='eve@nothingshakespearian' type='set' to='aim.shakespeare.lit' id='1'>
-              <query xmlns='jabber:iq:register'>
-                <username>bill</username>
-                <password>Calliope</password>
-               </query>
+              </error>
             </iq>
-            """
-        )
-        self.send(
-            """
-           <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error" to="eve@nothingshakespearian" id="1">
-            <error type="cancel">
-                <not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Your account is not allowed to use this gateway.</text>
-            </error>
-           </iq>
             """,
             use_values=False,
         )
         self.xmpp.jid_validator = re.compile(".*")
 
     def test_reactions(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-              <reactions id='xmpp-id1' xmlns='urn:xmpp:reactions:0'>
+              <reactions id='xmpp-id1'
+                         xmlns='urn:xmpp:reactions:0'>
                 <reaction>👋</reaction>
                 <reaction>🐢</reaction>
               </reactions>
@@ -471,27 +514,34 @@ class TestAimShakespeareBase(SlidgeTest):
         reactions_received_by_juliet.clear()
 
     def test_reactions_fallback(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-                <body>&gt; huuuuu\n👍</body>
-                <request xmlns="urn:xmpp:receipts" />
-                <markable xmlns="urn:xmpp:chat-markers:0" />
-                <origin-id xmlns="urn:xmpp:sid:0" id="e05cadc7-b752-4ed9-b47e-5ad862a4430d" />
-                <reply xmlns="urn:xmpp:reply:0" to="5308963142@telegram.slidge.im/slidge" id="4940890112" />
-                <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
-                    <body end="9" start="0" />
-                </fallback>
-                <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reactions:0">
-                    <body />
-                </fallback>
-                <reactions xmlns="urn:xmpp:reactions:0" id="4940890112">
-                    <reaction>👍</reaction>
-                </reactions>
-                <thread>0516cd85-4d78-4d29-bc87-378e33d820b3</thread>
-                <active xmlns="http://jabber.org/protocol/chatstates" />
+              <body>&gt; huuuuu\n👍</body>
+              <request xmlns="urn:xmpp:receipts" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <origin-id xmlns="urn:xmpp:sid:0"
+                         id="e05cadc7-b752-4ed9-b47e-5ad862a4430d" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     to="5308963142@telegram.slidge.im/slidge"
+                     id="4940890112" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:reply:0">
+                <body end="9"
+                      start="0" />
+              </fallback>
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:reactions:0">
+                <body />
+              </fallback>
+              <reactions xmlns="urn:xmpp:reactions:0"
+                         id="4940890112">
+                <reaction>👍</reaction>
+              </reactions>
+              <thread>0516cd85-4d78-4d29-bc87-378e33d820b3</thread>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
             </message>
             """
         )
@@ -517,52 +567,66 @@ class TestAimShakespeareBase(SlidgeTest):
         assert sent["idle"]["since"] == now
 
     def test_disco_adhoc_commands_unregistered(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='requester@domain'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq type='result'
                 to='requester@domain'
-                from='{self.xmpp.boundjid.bare}' id='1'>
+                from='{self.xmpp.boundjid.bare}'
+                id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
-                <item jid="aim.shakespeare.lit" node="jabber:iq:register" name="Register to the gateway"/>
+                <item jid="aim.shakespeare.lit"
+                      node="jabber:iq:register"
+                      name="Register to the gateway" />
               </query>
             </iq>
             """
         )
 
     def test_disco_adhoc_commands_as_logged_user(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='romeo@montague.lit/gajim'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq type='result'
                 to='romeo@montague.lit/gajim'
-                from='{self.xmpp.boundjid.bare}' id='1'>
+                from='{self.xmpp.boundjid.bare}'
+                id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
-                <item jid="aim.shakespeare.lit" node="search" name="Search for contacts" />
-                <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
-                <item jid="aim.shakespeare.lit" node="sync-contacts" name="Sync XMPP roster"/>
-                <item jid="aim.shakespeare.lit" node="contacts" name="List your legacy contacts"/>
-                <item jid="aim.shakespeare.lit" node="groups" name="List your legacy groups"/>
+                <item jid="aim.shakespeare.lit"
+                      node="search"
+                      name="Search for contacts" />
+                <item jid="aim.shakespeare.lit"
+                      node="unregister"
+                      name="Unregister to the gateway" />
+                <item jid="aim.shakespeare.lit"
+                      node="sync-contacts"
+                      name="Sync XMPP roster" />
+                <item jid="aim.shakespeare.lit"
+                      node="contacts"
+                      name="List your legacy contacts" />
+                <item jid="aim.shakespeare.lit"
+                      node="groups"
+                      name="List your legacy groups" />
               </query>
             </iq>
             """
@@ -570,25 +634,30 @@ class TestAimShakespeareBase(SlidgeTest):
 
     def test_disco_adhoc_commands_as_non_logged_user(self):
         self.get_romeo_session().logged = False
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='romeo@montague.lit/gajim'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq type='result'
                 to='romeo@montague.lit/gajim'
-                from='{self.xmpp.boundjid.bare}' id='1'>
+                from='{self.xmpp.boundjid.bare}'
+                id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
-                <item jid="aim.shakespeare.lit" node="unregister" name="Unregister to the gateway"/>
-                <item jid="aim.shakespeare.lit" node="re-login" name="Re-login to the legacy network"/>
+                <item jid="aim.shakespeare.lit"
+                      node="unregister"
+                      name="Unregister to the gateway" />
+                <item jid="aim.shakespeare.lit"
+                      node="re-login"
+                      name="Re-login to the legacy network" />
               </query>
             </iq>
             """
@@ -598,27 +667,36 @@ class TestAimShakespeareBase(SlidgeTest):
     def test_disco_adhoc_commands_as_admin(self):
         # monkeypatch.setattr(config, "ADMINS", ("romeo@montague.lit",))
         config.ADMINS = (JID("admin@montague.lit"),)
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='admin@montague.lit/gajim'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq type='result'
                 to='admin@montague.lit/gajim'
-                from='{self.xmpp.boundjid.bare}' id='1'>
+                from='{self.xmpp.boundjid.bare}'
+                id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
-                <item jid="aim.shakespeare.lit" node="info" name="List registered users" />
-                <item jid="aim.shakespeare.lit" node="delete_user" name="Delete a user" />
-                <item jid="aim.shakespeare.lit" node="loglevel" name="Change the verbosity of the logs"/>
-                <item jid="aim.shakespeare.lit" node="jabber:iq:register" name="Register to the gateway"/>
+                <item jid="aim.shakespeare.lit"
+                      node="info"
+                      name="List registered users" />
+                <item jid="aim.shakespeare.lit"
+                      node="delete_user"
+                      name="Delete a user" />
+                <item jid="aim.shakespeare.lit"
+                      node="loglevel"
+                      name="Change the verbosity of the logs" />
+                <item jid="aim.shakespeare.lit"
+                      node="jabber:iq:register"
+                      name="Register to the gateway" />
               </query>
             </iq>
             """
@@ -626,41 +704,64 @@ class TestAimShakespeareBase(SlidgeTest):
         config.ADMINS = ()
 
     def test_adhoc_forbidden_non_admin(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="set" from="test@localhost/gajim" to="{self.xmpp.boundjid.bare}" id="123">
-                <command xmlns="http://jabber.org/protocol/commands" action="execute" node="delete_user" />
+            <iq type="set"
+                from="test@localhost/gajim"
+                to="{self.xmpp.boundjid.bare}"
+                id="123">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       action="execute"
+                       node="delete_user" />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="error" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="error"
+                from="aim.shakespeare.lit"
+                to="test@localhost/gajim"
+                id="123">
               <error type="auth">
                 <not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-            </error>
+              </error>
             </iq>
             """,
             use_values=False,
         )
 
     def test_disco_component(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="test@localhost/gajim" to="{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="test@localhost/gajim"
+                to="{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="aim.shakespeare.lit"
+                to="test@localhost/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="Slidged rooms" />
-                <identity category="account" type="registered" name="SLIDGE TEST" />
-                <identity category="pubsub" type="pep" name="SLIDGE TEST" />
-                <identity category="gateway" type="" name="SLIDGE TEST" />
+                <identity category="conference"
+                          type="text"
+                          name="Slidged rooms" />
+                <identity category="account"
+                          type="registered"
+                          name="SLIDGE TEST" />
+                <identity category="pubsub"
+                          type="pep"
+                          name="SLIDGE TEST" />
+                <identity category="gateway"
+                          type=""
+                          name="SLIDGE TEST" />
                 <feature var="jabber:iq:search" />
                 <feature var="jabber:iq:register" />
                 <feature var="jabber:iq:gateway" />
@@ -670,26 +771,33 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="http://jabber.org/protocol/pubsub#persistent-items" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/commands" />
-                <feature var="urn:xmpp:mam:2"/>
-           		<feature var="urn:xmpp:mam:2#extended"/>
-           		<feature var="urn:xmpp:ping"/>
-           		<feature var="urn:xmpp:occupant-id:0"/>
+                <feature var="urn:xmpp:mam:2" />
+                <feature var="urn:xmpp:mam:2#extended" />
+                <feature var="urn:xmpp:ping" />
+                <feature var="urn:xmpp:occupant-id:0" />
               </query>
             </iq>
             """
         )
 
     def test_disco_local_part_unregistered(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="test@localhost/gajim" to="juliet@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="test@localhost/gajim"
+                to="juliet@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="error" from="juliet@aim.shakespeare.lit" to="test@localhost/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="error"
+                from="juliet@aim.shakespeare.lit"
+                to="test@localhost/gajim"
+                id="123">
               <error type="auth">
                 <registration-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
               </error>
@@ -699,19 +807,26 @@ class TestAimShakespeareBase(SlidgeTest):
         )
 
     def test_disco_registered_existing_contact(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}/slidge" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="juliet@{self.xmpp.boundjid.bare}/slidge"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="result"
-                from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="juliet@aim.shakespeare.lit/slidge"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-              <identity category="client" type="pc" />
+                <identity category="client"
+                          type="pc" />
                 <feature var="http://jabber.org/protocol/chatstates" />
                 <feature var="urn:xmpp:receipts" />
                 <feature var="urn:xmpp:message-correct:0" />
@@ -731,18 +846,25 @@ class TestAimShakespeareBase(SlidgeTest):
             JID("romeo@montague.lit")
         )
         self.xmpp.loop.run_until_complete(session.bookmarks.fill())
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#items' node="http://jabber.org/protocol/commands"/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="juliet@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#items'
+                     node="http://jabber.org/protocol/commands" />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <iq xmlns="jabber:component:accept" type="result" from="juliet@aim.shakespeare.lit"
-                to="romeo@montague.lit/gajim" id="123">
-               	<query xmlns="http://jabber.org/protocol/disco#items"/>
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                id="123">
+              <query xmlns="http://jabber.org/protocol/disco#items" />
             </iq>
             """,
         )
@@ -755,19 +877,26 @@ class TestAimShakespeareBase(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.REACTIONS_SINGLE_EMOJI = True
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="juliet@{self.xmpp.boundjid.bare}/slidge" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="juliet@{self.xmpp.boundjid.bare}/slidge"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="result"
-                from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="juliet@aim.shakespeare.lit/slidge"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-              <identity category="client" type="pc" />
+                <identity category="client"
+                          type="pc" />
                 <feature var="http://jabber.org/protocol/chatstates" />
                 <feature var="urn:xmpp:receipts" />
                 <feature var="urn:xmpp:message-correct:0" />
@@ -777,8 +906,10 @@ class TestAimShakespeareBase(SlidgeTest):
                 <feature var="urn:xmpp:message-retract:0" />
                 <feature var="urn:xmpp:reply:0" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
-                <x xmlns='jabber:x:data' type='result'>
-                  <field var='FORM_TYPE' type='hidden'>
+                <x xmlns='jabber:x:data'
+                   type='result'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
                     <value>urn:xmpp:reactions:0:restrictions</value>
                   </field>
                   <field var='max_reactions_per_user'>
@@ -792,16 +923,22 @@ class TestAimShakespeareBase(SlidgeTest):
         juliet.REACTIONS_SINGLE_EMOJI = False
 
     def test_non_existing_contact(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <message from="romeo@montague.lit/gajim" to="nope@{self.xmpp.boundjid.bare}/slidge" id="123">
+            <message from="romeo@montague.lit/gajim"
+                     to="nope@{self.xmpp.boundjid.bare}/slidge"
+                     id="123">
               <body>DSAD</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <message xmlns="jabber:component:accept" type="error" from="nope@aim.shakespeare.lit/slidge" to="romeo@montague.lit/gajim" id="123">
+            <message xmlns="jabber:component:accept"
+                     type="error"
+                     from="nope@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit/gajim"
+                     id="123">
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Only juliet</text>
@@ -886,15 +1023,16 @@ class TestAimShakespeareBase(SlidgeTest):
     def test_gateway_message(self):
         session = self.get_romeo_session()
         session.send_gateway_message("Hello!")
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
-            <message xmlns="jabber:component:accept" to="romeo@montague.lit"
-                     from="aim.shakespeare.lit" type="chat">
-                <body>Hello!</body>
-                <active xmlns="http://jabber.org/protocol/chatstates"/>
-                <store xmlns="urn:xmpp:hints"/>
-                <markable xmlns="urn:xmpp:chat-markers:0"/>
+            <message xmlns="jabber:component:accept"
+                     to="romeo@montague.lit"
+                     from="aim.shakespeare.lit"
+                     type="chat">
+              <body>Hello!</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <store xmlns="urn:xmpp:hints" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
             </message>
             """
         )
@@ -917,12 +1055,15 @@ class TestPrivilegeOld(SlidgeTest):
             self.xmpp["xep_0356_old"].granted_privileges["shakespeare.lit"]
             == Permissions()
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message to="aim.shakespeare.lit" from="shakespeare.lit">
+            <message to="aim.shakespeare.lit"
+                     from="shakespeare.lit">
               <privilege xmlns="urn:xmpp:privilege:1">
-                <perm access="roster" type="both" />
-                <perm access="message" type="outgoing" />
+                <perm access="roster"
+                      type="both" />
+                <perm access="message"
+                      type="outgoing" />
               </privilege>
             </message>
             """
@@ -947,16 +1088,20 @@ class TestPrivilegeOld(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.send_text("body", carbon=True)
-        self.send(
+        self.send(  # language=XML
             """
-            <message to="shakespeare.lit" from="aim.shakespeare.lit">
+            <message to="shakespeare.lit"
+                     from="aim.shakespeare.lit">
               <privilege xmlns="urn:xmpp:privilege:1">
                 <forwarded xmlns="urn:xmpp:forward:0">
-                  <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@shakespeare.lit">
+                  <message xmlns="jabber:client"
+                           to="juliet@aim.shakespeare.lit"
+                           type="chat"
+                           from="romeo@shakespeare.lit">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
-                    <active xmlns="http://jabber.org/protocol/chatstates"/>
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
+                    <active xmlns="http://jabber.org/protocol/chatstates" />
+                    <markable xmlns="urn:xmpp:chat-markers:0" />
                   </message>
                 </forwarded>
               </privilege>
@@ -965,11 +1110,16 @@ class TestPrivilegeOld(SlidgeTest):
         )
         juliet.is_friend = True
         self.xmpp.loop.create_task(juliet.add_to_roster())
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="set" to="romeo@shakespeare.lit" from="aim.shakespeare.lit" id="1">
+            <iq xmlns="jabber:component:accept"
+                type="set"
+                to="romeo@shakespeare.lit"
+                from="aim.shakespeare.lit"
+                id="1">
               <query xmlns="jabber:iq:roster">
-                <item subscription="both" jid="juliet@aim.shakespeare.lit">
+                <item subscription="both"
+                      jid="juliet@aim.shakespeare.lit">
                   <group>slidge</group>
                 </item>
               </query>
@@ -995,12 +1145,15 @@ class TestPrivilege(SlidgeTest):
             self.xmpp["xep_0356_old"].granted_privileges["shakespeare.lit"]
             == Permissions()
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message to="aim.shakespeare.lit" from="shakespeare.lit">
+            <message to="aim.shakespeare.lit"
+                     from="shakespeare.lit">
               <privilege xmlns="urn:xmpp:privilege:2">
-                <perm access="roster" type="both" />
-                <perm access="message" type="outgoing" />
+                <perm access="roster"
+                      type="both" />
+                <perm access="message"
+                      type="outgoing" />
               </privilege>
             </message>
             """
@@ -1025,16 +1178,20 @@ class TestPrivilege(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.send_text("body", carbon=True)
-        self.send(
+        self.send(  # language=XML
             """
-            <message to="shakespeare.lit" from="aim.shakespeare.lit">
+            <message to="shakespeare.lit"
+                     from="aim.shakespeare.lit">
               <privilege xmlns="urn:xmpp:privilege:2">
                 <forwarded xmlns="urn:xmpp:forward:0">
-                  <message xmlns="jabber:client" to="juliet@aim.shakespeare.lit" type="chat" from="romeo@shakespeare.lit">
+                  <message xmlns="jabber:client"
+                           to="juliet@aim.shakespeare.lit"
+                           type="chat"
+                           from="romeo@shakespeare.lit">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
-                    <active xmlns="http://jabber.org/protocol/chatstates"/>
+                    <markable xmlns="urn:xmpp:chat-markers:0" />
+                    <active xmlns="http://jabber.org/protocol/chatstates" />
                   </message>
                 </forwarded>
               </privilege>
@@ -1043,11 +1200,16 @@ class TestPrivilege(SlidgeTest):
         )
         juliet.is_friend = True
         self.xmpp.loop.create_task(juliet.add_to_roster())
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="set" to="romeo@shakespeare.lit" from="aim.shakespeare.lit" id="1">
+            <iq xmlns="jabber:component:accept"
+                type="set"
+                to="romeo@shakespeare.lit"
+                from="aim.shakespeare.lit"
+                id="1">
               <query xmlns="jabber:iq:roster">
-                <item subscription="both" jid="juliet@aim.shakespeare.lit">
+                <item subscription="both"
+                      jid="juliet@aim.shakespeare.lit">
                   <group>slidge</group>
                 </item>
               </query>
@@ -1076,11 +1238,9 @@ class TestContact(SlidgeTest):
     @staticmethod
     def get_presence(ptype: str):
         return f"""
-            <presence
-                from="romeo@montague.lit"
-                to="juliet@aim.shakespeare.lit"
-                type="{ptype}"
-            />
+            <presence from="romeo@montague.lit"
+                      to="juliet@aim.shakespeare.lit"
+                      type="{ptype}" />
             """
 
     def get_contact(self, legacy_id: int):
@@ -1099,14 +1259,16 @@ class TestContact(SlidgeTest):
         juliet = self.get_juliet()
         juliet.is_friend = True
         juliet.online()
-        self.send(
+        self.send(  # language=XML
             f"""
-            <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
-                <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/{slix_version}"
-                   hash="sha-1"
-                   ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
-                <priority>0</priority>
+            <presence xmlns="jabber:component:accept"
+                      from="juliet@aim.shakespeare.lit/slidge"
+                      to="romeo@montague.lit">
+              <c xmlns="http://jabber.org/protocol/caps"
+                 node="http://slixmpp.com/ver/{slix_version}"
+                 hash="sha-1"
+                 ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ=" />
+              <priority>0</priority>
             </presence>
             """
         )
@@ -1118,14 +1280,16 @@ class TestContact(SlidgeTest):
         juliet.reset_caps_cache()
         juliet.is_friend = True
         juliet.online()
-        self.send(
+        self.send(  # language=XML
             f"""
-            <presence xmlns="jabber:component:accept" from="juliet@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
-                <c xmlns="http://jabber.org/protocol/caps"
-                   node="http://slixmpp.com/ver/{slix_version}"
-                   hash="sha-1"
-                   ver="g+W+C4Is6LMMAXwPpjeg2QE1p90="/>
-                <priority>0</priority>
+            <presence xmlns="jabber:component:accept"
+                      from="juliet@aim.shakespeare.lit/slidge"
+                      to="romeo@montague.lit">
+              <c xmlns="http://jabber.org/protocol/caps"
+                 node="http://slixmpp.com/ver/{slix_version}"
+                 hash="sha-1"
+                 ver="g+W+C4Is6LMMAXwPpjeg2QE1p90=" />
+              <priority>0</priority>
             </presence>
             """
         )
@@ -1233,10 +1397,12 @@ class TestContact(SlidgeTest):
         with unittest.mock.patch(
             "slidge.core.contact.LegacyContact.on_friend_accept"
         ) as mock:
-            self.recv(
+            self.recv(  # language=XML
                 f"""
-                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="subscribed" />
-                """
+            <presence from='romeo@montague.lit/movim'
+                      to='{juliet.jid.bare}'
+                      type="subscribed" />
+            """
             )
             mock.assert_awaited_once()
         assert self.next_sent() is None
@@ -1257,10 +1423,12 @@ class TestContact(SlidgeTest):
         with unittest.mock.patch(
             "slidge.core.contact.LegacyContact.on_friend_delete"
         ) as mock:
-            self.recv(
+            self.recv(  # language=XML
                 f"""
-                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="unsubscribed" />
-                """
+            <presence from='romeo@montague.lit/movim'
+                      to='{juliet.jid.bare}'
+                      type="unsubscribed" />
+            """
             )
             mock.assert_not_awaited()
 
@@ -1270,10 +1438,12 @@ class TestContact(SlidgeTest):
         with unittest.mock.patch(
             "slidge.core.contact.LegacyContact.on_friend_delete"
         ) as mock:
-            self.recv(
+            self.recv(  # language=XML
                 f"""
-                <presence from='romeo@montague.lit/movim' to='{juliet.jid.bare}' type="unsubscribed" />
-                """
+            <presence from='romeo@montague.lit/movim'
+                      to='{juliet.jid.bare}'
+                      type="unsubscribed" />
+            """
             )
             mock.assert_awaited_once()
         assert self.next_sent() is None
@@ -1315,12 +1485,15 @@ class TestCarbon(SlidgeTest):
 
         AttachmentMixin._AttachmentMixin__get_url = get_url
 
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message to="aim.shakespeare.lit" from="shakespeare.lit">
+            <message to="aim.shakespeare.lit"
+                     from="shakespeare.lit">
               <privilege xmlns="urn:xmpp:privilege:2">
-                <perm access="roster" type="both" />
-                <perm access="message" type="outgoing" />
+                <perm access="roster"
+                      type="both" />
+                <perm access="message"
+                      type="outgoing" />
               </privilege>
             </message>
             """
@@ -1328,20 +1501,26 @@ class TestCarbon(SlidgeTest):
 
         juliet = self.get_juliet()
         juliet.send_text("TEXT", carbon=True)
-        self.send(
+        self.send(  # language=XML
             """
-   <message xmlns="jabber:component:accept" to="shakespeare.lit" from="aim.shakespeare.lit" type="normal">
-   	<privilege xmlns="urn:xmpp:privilege:2">
-   		<forwarded xmlns="urn:xmpp:forward:0">
-   			<message xmlns="jabber:client" type="chat" from="romeo@shakespeare.lit" to="juliet@aim.shakespeare.lit">
-   				<body>TEXT</body>
-   				<active xmlns="http://jabber.org/protocol/chatstates"/>
-   				<store xmlns="urn:xmpp:hints"/>
-   				<markable xmlns="urn:xmpp:chat-markers:0"/>
-   			</message>
-   		</forwarded>
-   	</privilege>
-   </message>
+            <message xmlns="jabber:component:accept"
+                     to="shakespeare.lit"
+                     from="aim.shakespeare.lit"
+                     type="normal">
+              <privilege xmlns="urn:xmpp:privilege:2">
+                <forwarded xmlns="urn:xmpp:forward:0">
+                  <message xmlns="jabber:client"
+                           type="chat"
+                           from="romeo@shakespeare.lit"
+                           to="juliet@aim.shakespeare.lit">
+                    <body>TEXT</body>
+                    <active xmlns="http://jabber.org/protocol/chatstates" />
+                    <store xmlns="urn:xmpp:hints" />
+                    <markable xmlns="urn:xmpp:chat-markers:0" />
+                  </message>
+                </forwarded>
+              </privilege>
+            </message>
             """
         )
         with tempfile.NamedTemporaryFile("w+") as f:
@@ -1353,45 +1532,58 @@ class TestCarbon(SlidgeTest):
             stamp = format_datetime(
                 datetime.datetime.fromtimestamp(Path(f.name).stat().st_mtime)
             )
-            self.send(
+            self.send(  # language=XML
                 f"""
-       <message xmlns="jabber:component:accept" to="shakespeare.lit" from="aim.shakespeare.lit" type="normal">
-        <privilege xmlns="urn:xmpp:privilege:2">
-            <forwarded xmlns="urn:xmpp:forward:0">
-                <message xmlns="jabber:client" type="chat" from="romeo@shakespeare.lit" to="juliet@aim.shakespeare.lit">
-                    <reference xmlns="urn:xmpp:reference:0" type="data">
-                        <media-sharing xmlns="urn:xmpp:sims:1">
-                            <sources>
-                                <reference xmlns="urn:xmpp:reference:0" uri="URL" type="data"/>
-                            </sources>
-                            <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
-                                <name>{Path(f.name).name}</name>
-                                <size>4</size>
-                                <date>{stamp}</date>
-                                <hash xmlns="urn:xmpp:hashes:2" algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
-                            </file>
-                        </media-sharing>
-                    </reference>
-                    <file-sharing xmlns="urn:xmpp:sfs:0" disposition="inline">
+            <message xmlns="jabber:component:accept"
+                     to="shakespeare.lit"
+                     from="aim.shakespeare.lit"
+                     type="normal">
+              <privilege xmlns="urn:xmpp:privilege:2">
+                <forwarded xmlns="urn:xmpp:forward:0">
+                  <message xmlns="jabber:client"
+                           type="chat"
+                           from="romeo@shakespeare.lit"
+                           to="juliet@aim.shakespeare.lit">
+                    <reference xmlns="urn:xmpp:reference:0"
+                               type="data">
+                      <media-sharing xmlns="urn:xmpp:sims:1">
                         <sources>
-                            <url-data xmlns="http://jabber.org/protocol/url-data" target="URL"/>
+                          <reference xmlns="urn:xmpp:reference:0"
+                                     uri="URL"
+                                     type="data" />
                         </sources>
-                        <file xmlns="urn:xmpp:file:metadata:0">
-                            <name>{Path(f.name).name}</name>
-                            <size>4</size>
-                            <date>{stamp}</date>
-                            <hash xmlns="urn:xmpp:hashes:2" algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
+                        <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
+                          <name>{Path(f.name).name}</name>
+                          <size>4</size>
+                          <date>{stamp}</date>
+                          <hash xmlns="urn:xmpp:hashes:2"
+                                algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
                         </file>
+                      </media-sharing>
+                    </reference>
+                    <file-sharing xmlns="urn:xmpp:sfs:0"
+                                  disposition="inline">
+                      <sources>
+                        <url-data xmlns="http://jabber.org/protocol/url-data"
+                                  target="URL" />
+                      </sources>
+                      <file xmlns="urn:xmpp:file:metadata:0">
+                        <name>{Path(f.name).name}</name>
+                        <size>4</size>
+                        <date>{stamp}</date>
+                        <hash xmlns="urn:xmpp:hashes:2"
+                              algo="sha-256">n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=</hash>
+                      </file>
                     </file-sharing>
                     <x xmlns="jabber:x:oob">
-                        <url>URL</url>
+                      <url>URL</url>
                     </x>
                     <body>URL</body>
-                </message>
-            </forwarded>
-        </privilege>
-       </message>
-                """
+                  </message>
+                </forwarded>
+              </privilege>
+            </message>
+            """
             )
         AttachmentMixin._AttachmentMixin__get_url = orig
 

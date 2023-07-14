@@ -59,7 +59,7 @@ class TestCommandsResults(SlixTest):
         self.adhoc.register(Command1(self.xmpp))
 
     def test_table_result(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -67,37 +67,50 @@ class TestCommandsResults(SlixTest):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
                 from="slidge.whatever.ass"
                 to="admin@whatever.ass/cheogram"
                 id="1">
-                <command xmlns="http://jabber.org/protocol/commands"
-                         node="command1"
-                         sessionid="session-id"
-                         status="completed">
-                    <x xmlns="jabber:x:data" type="result">
-                        <title>A description</title>
-                        <reported>
-                            <field var="name" type="text-single" label="JID" />
-                            <field var="jid" type="jid-single" label="JID" />
-                        </reported>
-                        <item>
-                            <field var="name"><value>Some dude2</value></field>
-                            <field var="jid"><value>test2@test</value></field>
-                        </item>
-                        <item>
-                            <field var="name"><value>Some dude</value></field>
-                            <field var="jid"><value>test@test</value></field>
-                        </item>
-                    </x>
-                </command>
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command1"
+                       sessionid="session-id"
+                       status="completed">
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <title>A description</title>
+                  <reported>
+                    <field var="name"
+                           type="text-single"
+                           label="JID" />
+                    <field var="jid"
+                           type="jid-single"
+                           label="JID" />
+                  </reported>
+                  <item>
+                    <field var="name">
+                      <value>Some dude2</value>
+                    </field>
+                    <field var="jid">
+                      <value>test2@test</value>
+                    </field>
+                  </item>
+                  <item>
+                    <field var="name">
+                      <value>Some dude</value>
+                    </field>
+                    <field var="jid">
+                      <value>test@test</value>
+                    </field>
+                  </item>
+                </x>
+              </command>
             </iq>
             """,
             use_values=False,

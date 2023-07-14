@@ -13,24 +13,24 @@ class TestVcard(SlixTest):
         )
 
     def testNoVcard(self):
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq from='samizzi@cisco.com/foo'
                 id='bx81v356'
                 to='stpeter@vcard.jabber.org'
                 type='get'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-              <iq from='stpeter@vcard.jabber.org'
-                  id='bx81v356'
-                  to='samizzi@cisco.com/foo'
-                  type='result'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
-              </iq>
+            <iq from='stpeter@vcard.jabber.org'
+                id='bx81v356'
+                to='samizzi@cisco.com/foo'
+                type='result'>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
+            </iq>
             """,
             use_values=False,
         )
@@ -43,32 +43,39 @@ class TestVcard(SlixTest):
         vcard.add_tel("+1-303-308-3282", "work")
 
         self.xmpp["xep_0292_provider"].set_vcard("stpeter@vcard.jabber.org", vcard)
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq from='samizzi@cisco.com/foo'
                 id='bx81v356'
                 to='stpeter@vcard.jabber.org'
                 type='get'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq from='stpeter@vcard.jabber.org'
-              id='bx81v356'
-              to='samizzi@cisco.com/foo'
-              type='result'>
-            <vcard xmlns="urn:ietf:params:xml:ns:vcard-4.0">
-              <fn><text>Peter Saint-Andre</text></fn>
-              <n><surname>Saint-Andre</surname><given>Peter</given></n>
-              <tel>
-                <parameters>
-                  <type><text>work</text></type>
-                </parameters>
-                <uri>tel:+1-303-308-3282</uri>
-              </tel>
-            </vcard>
+                id='bx81v356'
+                to='samizzi@cisco.com/foo'
+                type='result'>
+              <vcard xmlns="urn:ietf:params:xml:ns:vcard-4.0">
+                <fn>
+                  <text>Peter Saint-Andre</text>
+                </fn>
+                <n>
+                  <surname>Saint-Andre</surname>
+                  <given>Peter</given>
+                </n>
+                <tel>
+                  <parameters>
+                    <type>
+                      <text>work</text>
+                    </type>
+                  </parameters>
+                  <uri>tel:+1-303-308-3282</uri>
+                </tel>
+              </vcard>
             </iq>
             """,
             use_values=False,
@@ -84,54 +91,61 @@ class TestVcard(SlixTest):
         self.xmpp["xep_0292_provider"].set_vcard(
             "stpeter@vcard.jabber.org", vcard, authorized_jids={"samizzi@cisco.com"}
         )
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq from='prout@cisco.com/foo'
                 id='xx'
                 to='stpeter@vcard.jabber.org'
                 type='get'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-              <iq from='stpeter@vcard.jabber.org'
-                  id='xx'
-                  to='prout@cisco.com/foo'
-                  type='result'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
-              </iq>
+            <iq from='stpeter@vcard.jabber.org'
+                id='xx'
+                to='prout@cisco.com/foo'
+                type='result'>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
+            </iq>
             """,
             use_values=False,
         )
 
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq from='samizzi@cisco.com/foo'
                 id='bx81v356'
                 to='stpeter@vcard.jabber.org'
                 type='get'>
-                <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0'/>
+              <vcard xmlns='urn:ietf:params:xml:ns:vcard-4.0' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq from='stpeter@vcard.jabber.org'
-              id='bx81v356'
-              to='samizzi@cisco.com/foo'
-              type='result'>
-            <vcard xmlns="urn:ietf:params:xml:ns:vcard-4.0">
-              <fn><text>Peter Saint-Andre</text></fn>
-              <n><surname>Saint-Andre</surname><given>Peter</given></n>
-              <tel>
-                <parameters>
-                  <type><text>work</text></type>
-                </parameters>
-                <uri>tel:+1-303-308-3282</uri>
-              </tel>
-            </vcard>
+                id='bx81v356'
+                to='samizzi@cisco.com/foo'
+                type='result'>
+              <vcard xmlns="urn:ietf:params:xml:ns:vcard-4.0">
+                <fn>
+                  <text>Peter Saint-Andre</text>
+                </fn>
+                <n>
+                  <surname>Saint-Andre</surname>
+                  <given>Peter</given>
+                </n>
+                <tel>
+                  <parameters>
+                    <type>
+                      <text>work</text>
+                    </type>
+                  </parameters>
+                  <uri>tel:+1-303-308-3282</uri>
+                </tel>
+              </vcard>
             </iq>
             """,
             use_values=False,

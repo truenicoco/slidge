@@ -55,47 +55,61 @@ class TestCommandsDisco(SlixTestPlus):
         super().setUp()
 
     def test_disco_admin(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='admin@whatever.ass/cheogram'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="result" from="slidge.whatever.ass" to="admin@whatever.ass/cheogram" id="1">
-              <query xmlns="http://jabber.org/protocol/disco#items" node="http://jabber.org/protocol/commands">
-                <item jid="slidge.whatever.ass" node="command1" name="Command number one" />
-                <item jid="slidge.whatever.ass" node="command2" name="Command number two" />
-            </query>
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <query xmlns="http://jabber.org/protocol/disco#items"
+                     node="http://jabber.org/protocol/commands">
+                <item jid="slidge.whatever.ass"
+                      node="command1"
+                      name="Command number one" />
+                <item jid="slidge.whatever.ass"
+                      node="command2"
+                      name="Command number two" />
+              </query>
             </iq>
             """
         )
 
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='get'
                 from='user@whatever.ass/cheogram'
                 to='{self.xmpp.boundjid.bare}'>
               <query xmlns='http://jabber.org/protocol/disco#items'
-                     node='http://jabber.org/protocol/commands'/>
+                     node='http://jabber.org/protocol/commands' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" type="result" from="slidge.whatever.ass" to="user@whatever.ass/cheogram" id="2">
-              <query xmlns="http://jabber.org/protocol/disco#items" node="http://jabber.org/protocol/commands" />
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="slidge.whatever.ass"
+                to="user@whatever.ass/cheogram"
+                id="2">
+              <query xmlns="http://jabber.org/protocol/disco#items"
+                     node="http://jabber.org/protocol/commands" />
             </iq>
             """
         )
 
     def test_non_existing_command(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -103,11 +117,11 @@ class TestCommandsDisco(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='non-existing'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="error"

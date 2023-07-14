@@ -76,7 +76,7 @@ class TestCommandsConfirmation(SlixTestPlus):
         self.adhoc.register(CommandAdminConfirmFail(self.xmpp))
 
     def test_confirmation_cancel(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -84,11 +84,11 @@ class TestCommandsConfirmation(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -99,18 +99,23 @@ class TestCommandsConfirmation(SlixTestPlus):
                        node="command1"
                        sessionid="session-id"
                        status="executing">
-                <actions><next /></actions>
-                <x xmlns="jabber:x:data" type="form">
-                 <title>Confirm?</title>
-                 <field var="confirm" label="Confirm" type="boolean">
-                  <value>1</value>
-                 </field>
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>Confirm?</title>
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -119,11 +124,11 @@ class TestCommandsConfirmation(SlixTestPlus):
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
                        sessionid="session-id"
-                       action='cancel'/>
+                       action='cancel' />
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -139,7 +144,7 @@ class TestCommandsConfirmation(SlixTestPlus):
         )
 
     def test_confirmation_do_it(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -147,11 +152,11 @@ class TestCommandsConfirmation(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command1'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -162,18 +167,23 @@ class TestCommandsConfirmation(SlixTestPlus):
                        node="command1"
                        sessionid="session-id"
                        status="executing">
-                <actions><next /></actions>
-                <x xmlns="jabber:x:data" type="form">
-                 <title>Confirm?</title>
-                 <field var="confirm" label="Confirm" type="boolean">
-                  <value>1</value>
-                 </field>
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>Confirm?</title>
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -183,16 +193,19 @@ class TestCommandsConfirmation(SlixTestPlus):
                        node='command1'
                        sessionid="session-id"
                        action='next'>
-                <x xmlns="jabber:x:data" type="submit">
-                 <field var="confirm" label="Confirm" type="boolean">
-                  <value>1</value>
-                 </field>
+                <x xmlns="jabber:x:data"
+                   type="submit">
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
                 </x>
               </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -210,7 +223,7 @@ class TestCommandsConfirmation(SlixTestPlus):
         )
 
     def test_confirmation_fail(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -218,11 +231,11 @@ class TestCommandsConfirmation(SlixTestPlus):
                 id="1">
               <command xmlns='http://jabber.org/protocol/commands'
                        node='command2'
-                       action='execute'/>
+                       action='execute' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="result"
@@ -233,18 +246,23 @@ class TestCommandsConfirmation(SlixTestPlus):
                        node="command2"
                        sessionid="session-id"
                        status="executing">
-                <actions><next /></actions>
-                <x xmlns="jabber:x:data" type="form">
-                 <title>Confirm?</title>
-                 <field var="confirm" label="Confirm" type="boolean">
-                  <value>1</value>
-                 </field>
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>Confirm?</title>
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
                 </x>
-            </command>
+              </command>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <iq type='set'
                 from='admin@whatever.ass/cheogram'
@@ -254,16 +272,19 @@ class TestCommandsConfirmation(SlixTestPlus):
                        node='command2'
                        sessionid="session-id"
                        action='complete'>
-                <x xmlns="jabber:x:data" type="submit">
-                 <field var="confirm" label="Confirm" type="boolean">
-                  <value>1</value>
-                 </field>
+                <x xmlns="jabber:x:data"
+                   type="submit">
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
                 </x>
               </command>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 type="error"
@@ -271,9 +292,10 @@ class TestCommandsConfirmation(SlixTestPlus):
                 to="admin@whatever.ass/cheogram"
                 id="2">
               <error type="wait">
-               <internal-server-error xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-               <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Ploup</text>
-            </error></iq>
+                <internal-server-error xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Ploup</text>
+              </error>
+            </iq>
             """,
             use_values=False,
         )

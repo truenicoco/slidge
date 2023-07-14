@@ -269,83 +269,105 @@ class Base(SlidgeTest):
 @pytest.mark.usefixtures("avatar")
 class TestMuc(Base):
     def test_disco_non_existing_room(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="non-room@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="non-room@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
-                type="error" from="non-room@aim.shakespeare.lit"
+                type="error"
+                from="non-room@aim.shakespeare.lit"
                 to="romeo@montague.lit/gajim"
                 id="123">
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-            </error></iq>
+              </error>
+            </iq>
             """,
             use_values=False,
         )
 
     def test_disco_group(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="room-private@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="room-private@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <iq xmlns="jabber:component:accept" type="result"
-                from="room-private@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="room-private@{self.xmpp.boundjid.bare}"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="Private Room" />
+                <identity category="conference"
+                          type="text"
+                          name="Private Room" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/muc#stable_id" />
                 <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
-                <feature var="muc_persistent"/>
-                <feature var="muc_membersonly"/>
-                <feature var="muc_nonanonymous"/>
-                <feature var="muc_hidden"/>
+                <feature var="muc_persistent" />
+                <feature var="muc_membersonly" />
+                <feature var="muc_nonanonymous" />
+                <feature var="muc_hidden" />
                 <feature var="urn:xmpp:sid:0" />
-                <feature var="urn:xmpp:mam:2"/>
-           		<feature var="urn:xmpp:mam:2#extended"/>
-           		<feature var="vcard-temp"/>
-           		<feature var="urn:xmpp:ping"/>
-                <x xmlns="jabber:x:data" type="result">
-                    <field var="FORM_TYPE" type="hidden">
-                        <value>http://jabber.org/protocol/muc#roominfo</value>
-                    </field>
-                    <field var="muc#maxhistoryfetch">
-                        <value>100</value>
-                    </field>
-                    <field var="muc#roominfo_subjectmod" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roominfo_subject">
-   		    		 <value>Private Subject</value>
-           			</field>
-                    <field var="muc#roomconfig_persistentroom" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_changesubject" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_membersonly" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_whois" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_publicroom" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_allowpm" type="boolean">
-                        <value>0</value>
-                    </field>
+                <feature var="urn:xmpp:mam:2" />
+                <feature var="urn:xmpp:mam:2#extended" />
+                <feature var="vcard-temp" />
+                <feature var="urn:xmpp:ping" />
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roominfo</value>
+                  </field>
+                  <field var="muc#maxhistoryfetch">
+                    <value>100</value>
+                  </field>
+                  <field var="muc#roominfo_subjectmod"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roominfo_subject">
+                    <value>Private Subject</value>
+                  </field>
+                  <field var="muc#roomconfig_persistentroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_changesubject"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_membersonly"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_whois"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_publicroom"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_allowpm"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
                 </x>
               </query>
             </iq>
@@ -353,65 +375,84 @@ class TestMuc(Base):
         )
 
     def test_disco_group_emoji_restricted(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="room-private-emoji-restricted@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="room-private-emoji-restricted@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <iq xmlns="jabber:component:accept" type="result"
-                from="room-private-emoji-restricted@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="room-private-emoji-restricted@{self.xmpp.boundjid.bare}"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="Private Room" />
+                <identity category="conference"
+                          type="text"
+                          name="Private Room" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/muc#stable_id" />
                 <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
-                <feature var="muc_persistent"/>
-                <feature var="muc_membersonly"/>
-                <feature var="muc_nonanonymous"/>
-                <feature var="muc_hidden"/>
+                <feature var="muc_persistent" />
+                <feature var="muc_membersonly" />
+                <feature var="muc_nonanonymous" />
+                <feature var="muc_hidden" />
                 <feature var="urn:xmpp:sid:0" />
-                <feature var="urn:xmpp:mam:2"/>
-                <feature var="urn:xmpp:mam:2#extended"/>
-                <feature var="vcard-temp"/>
-                <feature var="urn:xmpp:ping"/>
-                <x xmlns="jabber:x:data" type="result">
-                    <field var="FORM_TYPE" type="hidden">
-                        <value>http://jabber.org/protocol/muc#roominfo</value>
-                    </field>
-                    <field var="muc#maxhistoryfetch">
-                        <value>100</value>
-                    </field>
-                    <field var="muc#roominfo_subjectmod" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roominfo_subject">
-                     <value>Private Subject</value>
-                    </field>
-                    <field var="muc#roomconfig_persistentroom" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_changesubject" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_membersonly" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_whois" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_publicroom" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_allowpm" type="boolean">
-                        <value>0</value>
-                    </field>
+                <feature var="urn:xmpp:mam:2" />
+                <feature var="urn:xmpp:mam:2#extended" />
+                <feature var="vcard-temp" />
+                <feature var="urn:xmpp:ping" />
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roominfo</value>
+                  </field>
+                  <field var="muc#maxhistoryfetch">
+                    <value>100</value>
+                  </field>
+                  <field var="muc#roominfo_subjectmod"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roominfo_subject">
+                    <value>Private Subject</value>
+                  </field>
+                  <field var="muc#roomconfig_persistentroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_changesubject"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_membersonly"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_whois"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_publicroom"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_allowpm"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
                 </x>
-                <x xmlns='jabber:x:data' type='result'>
-                  <field var='FORM_TYPE' type='hidden'>
+                <x xmlns='jabber:x:data'
+                   type='result'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
                     <value>urn:xmpp:reactions:0:restrictions</value>
                   </field>
                   <field var='max_reactions_per_user'>
@@ -431,83 +472,111 @@ class TestMuc(Base):
     def test_disco_items(self):
         session = self.get_romeo_session()
         self.xmpp.loop.run_until_complete(session.bookmarks.fill())
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq type="get" from="romeo@montague.lit/gajim" to="aim.shakespeare.lit" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#items'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="aim.shakespeare.lit"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#items' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <iq xmlns="jabber:component:accept" type="result" from="aim.shakespeare.lit" to="romeo@montague.lit/gajim" id="123">
-            <query xmlns="http://jabber.org/protocol/disco#items">
-                <item jid="room-private@aim.shakespeare.lit" name="Private Room"/>
-                <item jid="room-public@aim.shakespeare.lit" name="Public Room"/>
-                <item jid="coven@aim.shakespeare.lit" name="The coven"/>
-                <item jid="room-private-emoji-restricted@aim.shakespeare.lit" name="Private Room"/>
-            </query>
-           </iq>
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                id="123">
+              <query xmlns="http://jabber.org/protocol/disco#items">
+                <item jid="room-private@aim.shakespeare.lit"
+                      name="Private Room" />
+                <item jid="room-public@aim.shakespeare.lit"
+                      name="Public Room" />
+                <item jid="coven@aim.shakespeare.lit"
+                      name="The coven" />
+                <item jid="room-private-emoji-restricted@aim.shakespeare.lit"
+                      name="Private Room" />
+              </query>
+            </iq>
             """
         )
 
     def test_disco_channel(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="room-public@{self.xmpp.boundjid.bare}" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="room-public@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <iq xmlns="jabber:component:accept" type="result"
-                from="room-public@{self.xmpp.boundjid.bare}" to="romeo@montague.lit/gajim" id="123">
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="room-public@{self.xmpp.boundjid.bare}"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
-                <identity category="conference" type="text" name="Public Room" />
+                <identity category="conference"
+                          type="text"
+                          name="Public Room" />
                 <feature var="http://jabber.org/protocol/muc" />
                 <feature var="http://jabber.org/protocol/muc#stable_id" />
                 <feature var="urn:xmpp:sid:0" />
                 <feature var="http://jabber.org/protocol/muc#self-ping-optimization" />
-                <feature var="muc_persistent"/>
-                <feature var="muc_public"/>
-                <feature var="muc_open"/>
-                <feature var="muc_semianonymous"/>
-        		<feature var="urn:xmpp:mam:2"/>
-           		<feature var="urn:xmpp:mam:2#extended"/>
-           		<feature var="vcard-temp"/>
-           		<feature var="urn:xmpp:ping"/>
-                <x xmlns="jabber:x:data" type="result">
-                    <field var="FORM_TYPE" type="hidden">
-                        <value>http://jabber.org/protocol/muc#roominfo</value>
-                    </field>
-                    <field var="muc#maxhistoryfetch">
-                        <value>100</value>
-                    </field>
-                    <field var="muc#roominfo_subjectmod" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_persistentroom" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roominfo_subject">
-   		    		 <value>Public Subject</value>
-           			</field>
-                    <field var="muc#roomconfig_changesubject" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_membersonly" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_whois" type="boolean">
-                        <value>0</value>
-                    </field>
-                    <field var="muc#roomconfig_publicroom" type="boolean">
-                        <value>1</value>
-                    </field>
-                    <field var="muc#roomconfig_allowpm" type="boolean">
-                        <value>0</value>
-                    </field>
+                <feature var="muc_persistent" />
+                <feature var="muc_public" />
+                <feature var="muc_open" />
+                <feature var="muc_semianonymous" />
+                <feature var="urn:xmpp:mam:2" />
+                <feature var="urn:xmpp:mam:2#extended" />
+                <feature var="vcard-temp" />
+                <feature var="urn:xmpp:ping" />
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roominfo</value>
+                  </field>
+                  <field var="muc#maxhistoryfetch">
+                    <value>100</value>
+                  </field>
+                  <field var="muc#roominfo_subjectmod"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_persistentroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roominfo_subject">
+                    <value>Public Subject</value>
+                  </field>
+                  <field var="muc#roomconfig_changesubject"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_membersonly"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_whois"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
+                  <field var="muc#roomconfig_publicroom"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                  <field var="muc#roomconfig_allowpm"
+                         type="boolean">
+                    <value>0</value>
+                  </field>
                 </x>
               </query>
             </iq>
@@ -515,53 +584,59 @@ class TestMuc(Base):
         )
 
     def test_disco_participant(self):
-        self.recv(
+        self.recv(  # language=XML
             f"""
-            <iq type="get" from="romeo@montague.lit/gajim" to="room-public@{self.xmpp.boundjid.bare}/firstwitch" id="123">
-                <query xmlns='http://jabber.org/protocol/disco#info'/>
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="room-public@{self.xmpp.boundjid.bare}/firstwitch"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type="result" from="room-public@aim.shakespeare.lit/firstwitch"
-                to="romeo@montague.lit/gajim" id="123">
+            <iq type="result"
+                from="room-public@aim.shakespeare.lit/firstwitch"
+                to="romeo@montague.lit/gajim"
+                id="123">
               <query xmlns='http://jabber.org/protocol/disco#info'>
-                <identity category="client" type="pc" name="firstwitch"/>
-                <feature var="http://jabber.org/protocol/chatstates"/>
-           		<feature var="urn:xmpp:receipts"/>
-           		<feature var="urn:xmpp:message-correct:0"/>
-           		<feature var="urn:xmpp:chat-markers:0"/>
-           		<feature var="jabber:x:oob"/>
-           		<feature var="urn:xmpp:reactions:0"/>
-          		<feature var="urn:xmpp:message-retract:0"/>
-           		<feature var="urn:xmpp:reply:0"/>
-           		<feature var="urn:ietf:params:xml:ns:vcard-4.0"/>
+                <identity category="client"
+                          type="pc"
+                          name="firstwitch" />
+                <feature var="http://jabber.org/protocol/chatstates" />
+                <feature var="urn:xmpp:receipts" />
+                <feature var="urn:xmpp:message-correct:0" />
+                <feature var="urn:xmpp:chat-markers:0" />
+                <feature var="jabber:x:oob" />
+                <feature var="urn:xmpp:reactions:0" />
+                <feature var="urn:xmpp:message-retract:0" />
+                <feature var="urn:xmpp:reply:0" />
+                <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
               </query>
             </iq>
             """
         )
 
     def test_join_muc_no_nick(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <presence
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit'>
-              <x xmlns='http://jabber.org/protocol/muc'/>
+            <presence from='romeo@montague.lit/gajim'
+                      id='n13mt3l'
+                      to='coven@aim.shakespeare.lit'>
+              <x xmlns='http://jabber.org/protocol/muc' />
             </presence>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <presence
-                from='coven@aim.shakespeare.lit'
-                id='n13mt3l'
-                to='romeo@montague.lit/gajim'
-                type='error'>
-              <error by='coven@aim.shakespeare.lit' type='modify'>
-                <jid-malformed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+            <presence from='coven@aim.shakespeare.lit'
+                      id='n13mt3l'
+                      to='romeo@montague.lit/gajim'
+                      type='error'>
+              <error by='coven@aim.shakespeare.lit'
+                     type='modify'>
+                <jid-malformed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
               </error>
             </presence>
             """,
@@ -575,158 +650,187 @@ class TestMuc(Base):
         participant = self.xmpp.loop.run_until_complete(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
-        self.recv(
+        self.recv(  # language=XML
             """
-            <presence
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='room-private@aim.shakespeare.lit/thirdwitch'>
-              <x xmlns='http://jabber.org/protocol/muc'/>
+            <presence from='romeo@montague.lit/gajim'
+                      id='n13mt3l'
+                      to='room-private@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc' />
             </presence>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
-            <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="member" role="participant"/>
-            </x>
-            <priority>0</priority>
-            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-           </presence>
-            """
-        )
-        self.send(
-            """
-            <presence
-                from='room-private@aim.shakespeare.lit/firstwitch'
-                to='romeo@montague.lit/gajim'>
-              <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='owner' role='moderator' jid="firstwitch@aim.shakespeare.lit/slidge"/>
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/stan"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
               </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="firstwitch@aim.shakespeare.lit/slidge"/>
+              <priority>0</priority>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
             </presence>
-            """,
-        )
-        self.send(
             """
-            <presence
-                from='room-private@aim.shakespeare.lit/secondwitch'
-                to='romeo@montague.lit/gajim'>
+        )
+        self.send(  # language=XML
+            """
+            <presence from='room-private@aim.shakespeare.lit/firstwitch'
+                      to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='admin' role='moderator' jid="secondwitch@aim.shakespeare.lit/slidge"/>
+                <item affiliation='owner'
+                      role='moderator'
+                      jid="firstwitch@aim.shakespeare.lit/slidge" />
               </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="secondwitch@aim.shakespeare.lit/slidge"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="firstwitch@aim.shakespeare.lit/slidge" />
             </presence>
             """,
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <presence
-                id='n13mt3l'
-                from='room-private@aim.shakespeare.lit/thirdwitch'
-                to='romeo@montague.lit/gajim'>
+            <presence from='room-private@aim.shakespeare.lit/secondwitch'
+                      to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='member' role='participant' jid='romeo@montague.lit/gajim'/>
-                <status code='100'/>
-                <status code='110'/>
+                <item affiliation='admin'
+                      role='moderator'
+                      jid="secondwitch@aim.shakespeare.lit/slidge" />
               </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="secondwitch@aim.shakespeare.lit/slidge" />
+            </presence>
+            """,
+        )
+        self.send(  # language=XML
+            """
+            <presence id='n13mt3l'
+                      from='room-private@aim.shakespeare.lit/thirdwitch'
+                      to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member'
+                      role='participant'
+                      jid='romeo@montague.lit/gajim' />
+                <status code='100' />
+                <status code='110' />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
             </presence>
             """,
         )
         now_fmt = now.isoformat().replace("+00:00", "Z")
-        self.send(
+        self.send(  # language=XML
             f"""
-            <message type="groupchat" from="room-private@aim.shakespeare.lit/stan" to="romeo@montague.lit/gajim">
-                <body>Hey</body>
-                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
-                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                <x xmlns="http://jabber.org/protocol/muc#user">
-               		<item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
-   	            </x>
+            <message type="groupchat"
+                     from="room-private@aim.shakespeare.lit/stan"
+                     to="romeo@montague.lit/gajim">
+              <body>Hey</body>
+              <delay xmlns="urn:xmpp:delay"
+                     stamp="{now_fmt}" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item role="participant"
+                      affiliation="member"
+                      jid="uuid@aim.shakespeare.lit" />
+              </x>
             </message>
             """,
             use_values=False,
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <message type="groupchat" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/unknown">
-                <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" />
-                <subject>Private Subject</subject>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
+            <message type="groupchat"
+                     to="romeo@montague.lit/gajim"
+                     from="room-private@aim.shakespeare.lit/unknown">
+              <delay xmlns="urn:xmpp:delay"
+                     stamp="{now_fmt}" />
+              <subject>Private Subject</subject>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
             </message>
             """
         )
         assert self.next_sent() is None
 
     def test_join_channel(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <presence
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='room-public@aim.shakespeare.lit/thirdwitch'>
-              <x xmlns='http://jabber.org/protocol/muc'/>
+            <presence from='romeo@montague.lit/gajim'
+                      id='n13mt3l'
+                      to='room-public@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc' />
             </presence>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
-            <presence
-                from='room-public@aim.shakespeare.lit/firstwitch'
-                to='romeo@montague.lit/gajim'>
+            <presence from='room-public@aim.shakespeare.lit/firstwitch'
+                      to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='owner' role='moderator'/>
+                <item affiliation='owner'
+                      role='moderator' />
               </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-            </presence>
-            """,
-        )
-        self.send(
-            """
-            <presence
-                from='room-public@aim.shakespeare.lit/secondwitch'
-                to='romeo@montague.lit/gajim'>
-              <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='admin' role='moderator'/>
-              </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
             </presence>
             """,
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <presence
-                id='n13mt3l'
-                from='room-public@aim.shakespeare.lit/thirdwitch'
-                to='romeo@montague.lit/gajim'>
+            <presence from='room-public@aim.shakespeare.lit/secondwitch'
+                      to='romeo@montague.lit/gajim'>
               <x xmlns='http://jabber.org/protocol/muc#user'>
-                <item affiliation='member' role='participant'/>
-                <status code='110'/>
+                <item affiliation='admin'
+                      role='moderator' />
               </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """,
+        )
+        self.send(  # language=XML
+            """
+            <presence id='n13mt3l'
+                      from='room-public@aim.shakespeare.lit/thirdwitch'
+                      to='romeo@montague.lit/gajim'>
+              <x xmlns='http://jabber.org/protocol/muc#user'>
+                <item affiliation='member'
+                      role='participant' />
+                <status code='110' />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
             </presence>
             """,
         )
 
     def test_self_ping_disconnected(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' id='s2c1' type='get'
+            <iq from='romeo@montague.lit/gajim'
+                id='s2c1'
+                type='get'
                 to='room-private@aim.shakespeare.lit/SlidgeUser'>
-                <ping xmlns='urn:xmpp:ping'/>
+              <ping xmlns='urn:xmpp:ping' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq from='room-private@aim.shakespeare.lit/SlidgeUser' id='s2c1' type='error'
-                  to='romeo@montague.lit/gajim' >
-              <error type="cancel" by="room-private@aim.shakespeare.lit">
+            <iq from='room-private@aim.shakespeare.lit/SlidgeUser'
+                id='s2c1'
+                type='error'
+                to='romeo@montague.lit/gajim'>
+              <error type="cancel"
+                     by="room-private@aim.shakespeare.lit">
                 <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
               </error>
             </iq>
@@ -737,56 +841,64 @@ class TestMuc(Base):
     def test_resource_not_joined(self):
         session = self.get_romeo_session()
         session.contacts.ready.set_result(True)
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message from='romeo@montague.lit/gajim' type='groupchat'
-                to='room-private@aim.shakespeare.lit'>
-                <body>am I here?</body>
+            <message from='romeo@montague.lit/gajim'
+                     type='groupchat'
+                     to='room-private@aim.shakespeare.lit'>
+              <body>am I here?</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit" type="error" to="romeo@montague.lit/gajim">
-            <error type="modify">
-                <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+            <message xmlns="jabber:component:accept"
+                     from="room-private@aim.shakespeare.lit"
+                     type="error"
+                     to="romeo@montague.lit/gajim">
+              <error type="modify">
+                <not-acceptable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
                 <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">You are not connected to this chat</text>
-            </error>
-           </message>
+              </error>
+            </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-           <presence xmlns="jabber:component:accept" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit/thirdwitch">
-            <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="none" role="none"/>
-                <status code="333"/>
-                <status code="110"/>
-            </x>
-            <priority>0</priority>
-           </presence>
+            <presence xmlns="jabber:component:accept"
+                      to="romeo@montague.lit/gajim"
+                      from="room-private@aim.shakespeare.lit/thirdwitch">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="none"
+                      role="none" />
+                <status code="333" />
+                <status code="110" />
+              </x>
+              <priority>0</priority>
+            </presence>
             """
         )
         assert self.next_sent() is None
 
     def test_self_ping_connected(self):
         self.get_private_muc(resources={"gajim"})
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' id='s2c1' type='get'
+            <iq from='romeo@montague.lit/gajim'
+                id='s2c1'
+                type='get'
                 to='room-private@aim.shakespeare.lit/SlidgeUser'>
-                <ping xmlns='urn:xmpp:ping'/>
+              <ping xmlns='urn:xmpp:ping' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq xmlns="jabber:component:accept"
                 from="room-private@aim.shakespeare.lit/SlidgeUser"
                 id="s2c1"
                 type="result"
-                to="romeo@montague.lit/gajim">
-            </iq>
+                to="romeo@montague.lit/gajim"></iq>
             """,
             use_values=False,
         )
@@ -821,33 +933,35 @@ class TestMuc(Base):
     def test_msg_from_xmpp(self):
         muc = self.get_private_muc(resources={"gajim", "movim"})
         # muc.user_resources = ["gajim", "movim"]
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='romeo@montague.lit/gajim'
                      id='origin'
                      to='{muc.jid}'
                      type='groupchat'>
-                <body>BODY</body>
-                <origin-id xmlns="urn:xmpp:sid:0" id="xmpp-id"/>
+              <body>BODY</body>
+              <origin-id xmlns="urn:xmpp:sid:0"
+                         id="xmpp-id" />
             </message>
             """
         )
         for r in muc.user_resources:
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message from='{muc.jid}/{muc.user_nick}'
-                         id='origin'
-                         to='romeo@montague.lit/{r}'
-                         type='groupchat'>
-                    <body>BODY</body>
-                    <stanza-id xmlns="urn:xmpp:sid:0"
+            <message from='{muc.jid}/{muc.user_nick}'
+                     id='origin'
+                     to='romeo@montague.lit/{r}'
+                     type='groupchat'>
+              <body>BODY</body>
+              <stanza-id xmlns="urn:xmpp:sid:0"
                          id="id"
-                         by="room-private@aim.shakespeare.lit"/>
-                    <origin-id xmlns="urn:xmpp:sid:0"
-                         id="xmpp-id"/>
-                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
-                </message>
-                """,
+                         by="room-private@aim.shakespeare.lit" />
+              <origin-id xmlns="urn:xmpp:sid:0"
+                         id="xmpp-id" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </message>
+            """,
                 use_values=False,
             )
         assert self.next_sent() is None
@@ -864,17 +978,21 @@ class TestMuc(Base):
         muc.user_resources.add("gajim")
         fallback = "> Anna wrote:\n> We should bake a cake\n"
         stripped_body = "Great idea!"
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='romeo@montague.lit/gajim'
                      id='origin'
                      to='{muc.jid}'
                      type='groupchat'>
-                <body>{fallback}{stripped_body}</body>
-                <reply to='room-private@aim.shakespeare.lit/Anna' id='message-id1' xmlns='urn:xmpp:reply:0' />
-                <fallback xmlns='urn:xmpp:fallback:0' for='urn:xmpp:reply:0'>
-                  <body start="0" end="{len(fallback)}" />
-                </fallback>
+              <body>{fallback}{stripped_body}</body>
+              <reply to='room-private@aim.shakespeare.lit/Anna'
+                     id='message-id1'
+                     xmlns='urn:xmpp:reply:0' />
+              <fallback xmlns='urn:xmpp:fallback:0'
+                        for='urn:xmpp:reply:0'>
+                <body start="0"
+                      end="{len(fallback)}" />
+              </fallback>
             </message>
             """
         )
@@ -892,19 +1010,20 @@ class TestMuc(Base):
         )
         participant._LegacyParticipant__presence_sent = True
         participant.send_text("the body", legacy_msg_id="legacy-XXX")
-        self.send(
+        self.send(  # language=XML
             f"""
             <message from='{muc.jid}/firstwitch'
                      id='XXX'
                      to='romeo@montague.lit/gajim'
                      type='groupchat'>
-                <body>the body</body>
-                <active xmlns="http://jabber.org/protocol/chatstates"/>
-                <markable xmlns="urn:xmpp:chat-markers:0"/>
-                <stanza-id xmlns="urn:xmpp:sid:0"
-                     id="XXX"
-                     by="room-private@aim.shakespeare.lit"/>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+              <body>the body</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="XXX"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
             </message>
             """,
             use_values=False,
@@ -922,22 +1041,25 @@ class TestMuc(Base):
             legacy_msg_id="legacy-XXX",
             reply_to=MessageReference(legacy_id="legacy-REPLY-TO", author=participant),
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-                <message from='{muc.jid}/firstwitch'
-                         id='XXX'
-                         to='romeo@montague.lit/gajim'
-                         type='groupchat'>
-                    <body>the body</body>
-                    <active xmlns="http://jabber.org/protocol/chatstates"/>
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
-                    <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/firstwitch"/>
-                    <stanza-id xmlns="urn:xmpp:sid:0"
+            <message from='{muc.jid}/firstwitch'
+                     id='XXX'
+                     to='romeo@montague.lit/gajim'
+                     type='groupchat'>
+              <body>the body</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     id="REPLY-TO"
+                     to="room-private@aim.shakespeare.lit/firstwitch" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
-                         by="room-private@aim.shakespeare.lit"/>
-                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                </message>
-                """,
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </message>
+            """,
             use_values=False,
         )
 
@@ -955,22 +1077,25 @@ class TestMuc(Base):
                 legacy_id="legacy-REPLY-TO", author=muc.session.user
             ),
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-                <message from='{muc.jid}/firstwitch'
-                         id='XXX'
-                         to='romeo@montague.lit/gajim'
-                         type='groupchat'>
-                    <body>the body</body>
-                    <active xmlns="http://jabber.org/protocol/chatstates"/>
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
-                    <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/{muc.user_nick}"/>
-                    <stanza-id xmlns="urn:xmpp:sid:0"
+            <message from='{muc.jid}/firstwitch'
+                     id='XXX'
+                     to='romeo@montague.lit/gajim'
+                     type='groupchat'>
+              <body>the body</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     id="REPLY-TO"
+                     to="room-private@aim.shakespeare.lit/{muc.user_nick}" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
-                         by="room-private@aim.shakespeare.lit"/>
-                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                </message>
-                """,
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </message>
+            """,
             use_values=False,
         )
 
@@ -992,22 +1117,25 @@ class TestMuc(Base):
                 legacy_id="legacy-REPLY-TO",
             ),
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-                <message from='{muc.jid}/firstwitch'
-                         id='XXX'
-                         to='romeo@montague.lit/gajim'
-                         type='groupchat'>
-                    <body>the body</body>
-                    <active xmlns="http://jabber.org/protocol/chatstates"/>
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
-                    <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/secondwitch"/>
-                    <stanza-id xmlns="urn:xmpp:sid:0"
+            <message from='{muc.jid}/firstwitch'
+                     id='XXX'
+                     to='romeo@montague.lit/gajim'
+                     type='groupchat'>
+              <body>the body</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     id="REPLY-TO"
+                     to="room-private@aim.shakespeare.lit/secondwitch" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
-                         by="room-private@aim.shakespeare.lit"/>
-                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                </message>
-                """,
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </message>
+            """,
             use_values=False,
         )
 
@@ -1028,56 +1156,66 @@ class TestMuc(Base):
                 legacy_id="legacy-REPLY-TO", author=second_witch, body="Blabla"
             ),
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-                <message from='{muc.jid}/firstwitch'
-                         id='XXX'
-                         to='romeo@montague.lit/gajim'
-                         type='groupchat'>
-                    <body>&gt; secondwitch:\n&gt; Blabla\nthe body</body>
-                    <markable xmlns="urn:xmpp:chat-markers:0"/>
-                    <reply xmlns="urn:xmpp:reply:0" id="REPLY-TO" to="room-private@aim.shakespeare.lit/secondwitch"/>
-                    <stanza-id xmlns="urn:xmpp:sid:0"
+            <message from='{muc.jid}/firstwitch'
+                     id='XXX'
+                     to='romeo@montague.lit/gajim'
+                     type='groupchat'>
+              <body>&gt; secondwitch:\n&gt; Blabla\nthe body</body>
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     id="REPLY-TO"
+                     to="room-private@aim.shakespeare.lit/secondwitch" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
                          id="XXX"
-                         by="room-private@aim.shakespeare.lit"/>
-                    <fallback xmlns="urn:xmpp:fallback:0" for="urn:xmpp:reply:0">
-                  		<body start="0" end="24"/>
-                   	</fallback>
-                   	<active xmlns="http://jabber.org/protocol/chatstates"/>
-                   <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                </message>
-                """,
+                         by="room-private@aim.shakespeare.lit" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:reply:0">
+                <body start="0"
+                      end="24" />
+              </fallback>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </message>
+            """,
             use_values=False,
         )
 
     def test_react_from_xmpp(self):
         muc = self.get_private_muc(resources=["gajim", "movim"])
-        self.recv(
+        self.recv(  # language=XML
             f"""
             <message from='romeo@montague.lit/gajim'
                      id='origin'
                      to='{muc.jid}'
                      type='groupchat'>
-              <reactions id='SOME-ID' xmlns='urn:xmpp:reactions:0'>
+              <reactions id='SOME-ID'
+                         xmlns='urn:xmpp:reactions:0'>
                 <reaction>👋</reaction>
               </reactions>
             </message>
             """
         )
         for r in muc.user_resources:
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message from='{muc.jid}/{muc.user_nick}'
-                         id='origin'
-                         to='romeo@montague.lit/{r}'
-                         type='groupchat'>
-                    <reactions id='SOME-ID' xmlns='urn:xmpp:reactions:0'>
-                      <reaction>👋</reaction>
-                    </reactions>
-                    <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
-                    <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
-                </message>
-                """,
+            <message from='{muc.jid}/{muc.user_nick}'
+                     id='origin'
+                     to='romeo@montague.lit/{r}'
+                     type='groupchat'>
+              <reactions id='SOME-ID'
+                         xmlns='urn:xmpp:reactions:0'>
+                <reaction>👋</reaction>
+              </reactions>
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </message>
+            """,
                 use_values=False,
             )
         assert self.next_sent() is None
@@ -1094,58 +1232,73 @@ class TestMuc(Base):
         )
         participant._LegacyParticipant__presence_sent = True
         participant.react(legacy_msg_id="legacy-XXX", emojis="👋")
-        self.send(
+        self.send(  # language=XML
             f"""
             <message from='{muc.jid}/firstwitch'
                      to='romeo@montague.lit/gajim'
                      type='groupchat'>
-              <store xmlns="urn:xmpp:hints"/>
-              <reactions id='XXX' xmlns='urn:xmpp:reactions:0'>
+              <store xmlns="urn:xmpp:hints" />
+              <reactions id='XXX'
+                         xmlns='urn:xmpp:reactions:0'>
                 <reaction>👋</reaction>
               </reactions>
-              <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room-private@aim.shakespeare.lit"/>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
             </message>
             """,
             use_values=False,
         )
 
     def test_mam_bare_jid(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='aim.shakespeare.lit'>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='aim.shakespeare.lit'>
               <query xmlns='urn:xmpp:mam:2' />
             </iq>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error"
-                id="iq-id1" to="romeo@montague.lit/gajim">
-                <error type="cancel">
-                    <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
-                    <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
-                </error>
+            <iq xmlns="jabber:component:accept"
+                from="aim.shakespeare.lit"
+                type="error"
+                id="iq-id1"
+                to="romeo@montague.lit/gajim">
+              <error type="cancel">
+                <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
+              </error>
             </iq>
             """
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id' />
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id' />
             </iq>
             """
         )
-        # language=XML
-        self.send(
+        self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept" from="aim.shakespeare.lit" type="error"
-                id="iq-id1" to="romeo@montague.lit/gajim">
-                <error type="cancel">
-                    <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
-                    <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
-                </error>
+            <iq xmlns="jabber:component:accept"
+                from="aim.shakespeare.lit"
+                type="error"
+                id="iq-id1"
+                to="romeo@montague.lit/gajim">
+              <error type="cancel">
+                <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
+              </error>
             </iq>
             """
         )
@@ -1153,32 +1306,48 @@ class TestMuc(Base):
     def test_mam_form_fields(self):
         muc = self.get_private_muc()
         # muc.user_resources.add("gajim")
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
               <query xmlns='urn:xmpp:mam:2' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
               <query xmlns='urn:xmpp:mam:2'>
-                <x xmlns='jabber:x:data' type='form'>
-                  <field type='hidden' var='FORM_TYPE'>
+                <x xmlns='jabber:x:data'
+                   type='form'>
+                  <field type='hidden'
+                         var='FORM_TYPE'>
                     <value>urn:xmpp:mam:2</value>
                   </field>
-                  <field type='jid-single' var='with'/>
-                  <field type='text-single' var='start'/>
-                  <field type='text-single' var='end'/>
-                  <field type='text-single' var='before-id'/>
-                  <field type='text-single' var='after-id'/>
-                  <field type='list-multi' var='ids'>
-                    <validate xmlns="http://jabber.org/protocol/xdata-validate" datatype="xs:string">
-                      <open/>
+                  <field type='jid-single'
+                         var='with' />
+                  <field type='text-single'
+                         var='start' />
+                  <field type='text-single'
+                         var='end' />
+                  <field type='text-single'
+                         var='before-id' />
+                  <field type='text-single'
+                         var='after-id' />
+                  <field type='list-multi'
+                         var='ids'>
+                    <validate xmlns="http://jabber.org/protocol/xdata-validate"
+                              datatype="xs:string">
+                      <open />
                     </validate>
                   </field>
-                  <field type='boolean' var='include-groupchat'/>
+                  <field type='boolean'
+                         var='include-groupchat' />
                 </x>
               </query>
             </iq>
@@ -1186,42 +1355,58 @@ class TestMuc(Base):
         )
 
     def test_mam_all(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id' />
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id' />
             </iq>
             """
         )
         for i in range(10):
             self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns='http://jabber.org/protocol/muc#user'>
-                          <item affiliation='member'
-                                jid='uuid@aim.shakespeare.lit'
-                                role='participant' />
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns='http://jabber.org/protocol/muc#user'>
+                      <item affiliation='member'
+                            jid='uuid@aim.shakespeare.lit'
+                            role='participant' />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin stable="false" xmlns='urn:xmpp:mam:2' complete='true'>
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin stable="false"
+                   xmlns='urn:xmpp:mam:2'
+                   complete='true'>
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>0</first>
                   <last>9</last>
@@ -1233,12 +1418,18 @@ class TestMuc(Base):
         )
 
     def test_mam_page_limit(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                <x xmlns='jabber:x:data' type='submit'>
-                  <field var='FORM_TYPE' type='hidden'>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
                     <value>urn:xmpp:mam:2</value>
                   </field>
                   <field var='start'>
@@ -1253,32 +1444,45 @@ class TestMuc(Base):
             """
         )
         for i in range(3, 5):
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin xmlns='urn:xmpp:mam:2' stable="false">
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin xmlns='urn:xmpp:mam:2'
+                   stable="false">
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>3</first>
                   <last>4</last>
@@ -1290,12 +1494,18 @@ class TestMuc(Base):
         )
 
     def test_mam_page_after(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                <x xmlns='jabber:x:data' type='submit'>
-                  <field var='FORM_TYPE' type='hidden'>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
                     <value>urn:xmpp:mam:2</value>
                   </field>
                   <field var='start'>
@@ -1311,32 +1521,45 @@ class TestMuc(Base):
             """
         )
         for i in range(6, 8):
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin xmlns='urn:xmpp:mam:2' stable="false">
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin xmlns='urn:xmpp:mam:2'
+                   stable="false">
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>6</first>
                   <last>7</last>
@@ -1348,12 +1571,18 @@ class TestMuc(Base):
         )
 
     def test_mam_page_after_not_found(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                <x xmlns='jabber:x:data' type='submit'>
-                  <field var='FORM_TYPE' type='hidden'>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
                     <value>urn:xmpp:mam:2</value>
                   </field>
                   <field var='start'>
@@ -1368,11 +1597,14 @@ class TestMuc(Base):
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='error' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+            <iq type='error'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
               <error type='cancel'>
-                <item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+                <item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
               </error>
             </iq>
             """,
@@ -1380,18 +1612,28 @@ class TestMuc(Base):
         )
 
     def test_last_page(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                  <x xmlns='jabber:x:data' type='submit'>
-                    <field var='FORM_TYPE' type='hidden'><value>urn:xmpp:mam:2</value></field>
-                    <field var='start'><value>2000-01-01T03:00:00Z</value></field>
-                  </x>
-                  <set xmlns='http://jabber.org/protocol/rsm'>
-                     <max>3</max>
-                     <before/>
-                  </set>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='start'>
+                    <value>2000-01-01T03:00:00Z</value>
+                  </field>
+                </x>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <max>3</max>
+                  <before />
+                </set>
               </query>
             </iq>
             """
@@ -1399,32 +1641,44 @@ class TestMuc(Base):
         for i in range(7, 10):
             self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                    <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                        <forwarded xmlns='urn:xmpp:forward:0'>
-                            <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                            <message xmlns='jabber:client'
-                                     from="room-private@aim.shakespeare.lit/history-man-{i}"
-                                     type='groupchat'
-                                     id='{i}'>
-                                <body>Body #{i}</body>
-                                <stanza-id xmlns="urn:xmpp:sid:0" id="{i}"
-                                           by="room-private@aim.shakespeare.lit"/>
-                                <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                                <x xmlns="http://jabber.org/protocol/muc#user">
-                                    <item role="participant" affiliation="member"
-                                          jid="uuid@aim.shakespeare.lit"/>
-                                </x>
-                            </message>
-                        </forwarded>
-                    </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin xmlns='urn:xmpp:mam:2' stable="false" complete='true'>
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin xmlns='urn:xmpp:mam:2'
+                   stable="false"
+                   complete='true'>
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>7</first>
                   <last>9</last>
@@ -1436,19 +1690,29 @@ class TestMuc(Base):
         )
 
     def test_mam_flip(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                  <x xmlns='jabber:x:data' type='submit'>
-                    <field var='FORM_TYPE' type='hidden'><value>urn:xmpp:mam:2</value></field>
-                    <field var='start'><value>2000-01-01T03:00:00Z</value></field>
-                  </x>
-                  <set xmlns='http://jabber.org/protocol/rsm'>
-                     <max>3</max>
-                     <after>5</after>
-                  </set>
-                  <flip-page/>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='start'>
+                    <value>2000-01-01T03:00:00Z</value>
+                  </field>
+                </x>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <max>3</max>
+                  <after>5</after>
+                </set>
+                <flip-page />
               </query>
             </iq>
             """
@@ -1456,31 +1720,43 @@ class TestMuc(Base):
         for i in range(9, 6, -1):
             self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member"
-                                  jid="uuid@aim.shakespeare.lit"/>
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin xmlns='urn:xmpp:mam:2' stable="false">
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin xmlns='urn:xmpp:mam:2'
+                   stable="false">
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>9</first>
                   <last>7</last>
@@ -1492,43 +1768,60 @@ class TestMuc(Base):
         )
 
     def test_mam_flip_no_max(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                  <flip-page/>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <flip-page />
               </query>
             </iq>
             """
         )
         for i in range(9, -1, -1):
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member"
-                                  jid="uuid@aim.shakespeare.lit"/>
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-        self.send(
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-              <fin xmlns='urn:xmpp:mam:2' stable="false" complete="true">
+            )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin xmlns='urn:xmpp:mam:2'
+                   stable="false"
+                   complete="true">
                 <set xmlns='http://jabber.org/protocol/rsm'>
                   <first>9</first>
                   <last>0</last>
@@ -1540,19 +1833,27 @@ class TestMuc(Base):
         )
 
     def test_mam_metadata(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <metadata xmlns='urn:xmpp:mam:2'/>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <metadata xmlns='urn:xmpp:mam:2' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
               <metadata xmlns='urn:xmpp:mam:2'>
-                <start id='0' timestamp='2000-01-01T00:00:00Z' />
-                <end id='9' timestamp='2000-01-01T09:00:00Z' />
+                <start id='0'
+                       timestamp='2000-01-01T00:00:00Z' />
+                <end id='9'
+                     timestamp='2000-01-01T09:00:00Z' />
               </metadata>
             </iq>
             """
@@ -1561,73 +1862,99 @@ class TestMuc(Base):
     def test_mam_metadata_empty(self):
         muc = self.get_private_muc()
         muc._LegacyMUC__history_filled = True
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <metadata xmlns='urn:xmpp:mam:2'/>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <metadata xmlns='urn:xmpp:mam:2' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-                <metadata xmlns='urn:xmpp:mam:2'/>
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <metadata xmlns='urn:xmpp:mam:2' />
             </iq>
             """
         )
 
     def test_mam_with(self):
         for i in range(10):
-            self.recv(
+            self.recv(  # language=XML
                 f"""
-                <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-                  <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                      <x xmlns='jabber:x:data' type='submit'>
-                      <field var='FORM_TYPE' type='hidden'>
-                        <value>urn:xmpp:mam:2</value>
-                      </field>
-                      <field var='with'>
-                        <value>room-private@aim.shakespeare.lit/history-man-{i}</value>
-                      </field>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='with'>
+                    <value>room-private@aim.shakespeare.lit/history-man-{i}</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+            )
+            self.send(  # language=XML
+                f"""
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
                     </x>
-                  </query>
-                </iq>
-                """
+                  </message>
+                </forwarded>
+              </result>
+            </message>
+            """
             )
-            self.send(
+            self.send(  # language=XML
                 f"""
-                <message to='romeo@montague.lit/gajim' from='room-private@aim.shakespeare.lit'>
-                  <result xmlns='urn:xmpp:mam:2' queryid='query-id' id='{i}'>
-                    <forwarded xmlns='urn:xmpp:forward:0'>
-                      <delay xmlns='urn:xmpp:delay' stamp='2000-01-01T{i:02d}:00:00Z'/>
-                      <message xmlns='jabber:client'
-                               from="room-private@aim.shakespeare.lit/history-man-{i}"
-                               type='groupchat'
-                               id='{i}'>
-                        <body>Body #{i}</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="{i}" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="uuid"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member" jid="uuid@aim.shakespeare.lit"/>
-                        </x>
-                      </message>
-                    </forwarded>
-                  </result>
-                </message>
-                """
-            )
-            self.send(
-                f"""
-                <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-                  <fin stable="false" xmlns='urn:xmpp:mam:2' complete='true'>
-                    <set xmlns='http://jabber.org/protocol/rsm'>
-                      <first>{i}</first>
-                      <last>{i}</last>
-                      <count>1</count>
-                    </set>
-                  </fin>
-                </iq>
-                """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin stable="false"
+                   xmlns='urn:xmpp:mam:2'
+                   complete='true'>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <first>{i}</first>
+                  <last>{i}</last>
+                  <count>1</count>
+                </set>
+              </fin>
+            </iq>
+            """
             )
 
     def test_mam_from_user_carbon(self):
@@ -1638,73 +1965,109 @@ class TestMuc(Base):
         )
         user_participant.send_text("blabla", "legacy-666", when=now)
         now_fmt = now.isoformat().replace("+00:00", "Z")
-        self.send(
+        self.send(  # language=XML
             f"""
-           <message id="666" xmlns="jabber:component:accept" type="groupchat" from="room-private@aim.shakespeare.lit/thirdwitch" to="romeo@montague.lit/gajim">
-            <body>blabla</body>
-            <active xmlns="http://jabber.org/protocol/chatstates"/>
-            <markable xmlns="urn:xmpp:chat-markers:0"/>
-            <stanza-id id="666" xmlns="urn:xmpp:sid:0" by="room-private@aim.shakespeare.lit"/>
-            <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}" from="aim.shakespeare.lit"/>
-            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
-           </message>
+            <message id="666"
+                     xmlns="jabber:component:accept"
+                     type="groupchat"
+                     from="room-private@aim.shakespeare.lit/thirdwitch"
+                     to="romeo@montague.lit/gajim">
+              <body>blabla</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <stanza-id id="666"
+                         xmlns="urn:xmpp:sid:0"
+                         by="room-private@aim.shakespeare.lit" />
+              <delay xmlns="urn:xmpp:delay"
+                     stamp="{now_fmt}"
+                     from="aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </message>
             """,
             use_values=False,  # necessary because the third has origin-id
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='set' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-              <query xmlns='urn:xmpp:mam:2' queryid='query-id'>
-                    <x xmlns='jabber:x:data' type='submit'>
-                        <field var='FORM_TYPE' type='hidden'><value>urn:xmpp:mam:2</value></field>
-                      </x>
-                  <set xmlns='http://jabber.org/protocol/rsm'>
-                     <max>1</max>
-                     <before />
-                  </set>
-                  <flip-page/>
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                </x>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <max>1</max>
+                  <before />
+                </set>
+                <flip-page />
               </query>
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <message xmlns="jabber:component:accept" to="romeo@montague.lit/gajim" from="room-private@aim.shakespeare.lit" type="normal">
-            <result xmlns="urn:xmpp:mam:2" queryid="query-id" id="666">
+            <message xmlns="jabber:component:accept"
+                     to="romeo@montague.lit/gajim"
+                     from="room-private@aim.shakespeare.lit"
+                     type="normal">
+              <result xmlns="urn:xmpp:mam:2"
+                      queryid="query-id"
+                      id="666">
                 <forwarded xmlns="urn:xmpp:forward:0">
-                    <delay xmlns="urn:xmpp:delay" stamp="{now_fmt}"/>
-                    <message xmlns="jabber:client" type="groupchat" from="room-private@aim.shakespeare.lit/thirdwitch" id="666">
-                        <body>blabla</body>
-                        <stanza-id xmlns="urn:xmpp:sid:0" id="666" by="room-private@aim.shakespeare.lit"/>
-                        <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
-                        <x xmlns="http://jabber.org/protocol/muc#user">
-                            <item role="participant" affiliation="member"
-                                  jid="romeo@montague.lit"/>
-                        </x>
-                    </message>
+                  <delay xmlns="urn:xmpp:delay"
+                         stamp="{now_fmt}" />
+                  <message xmlns="jabber:client"
+                           type="groupchat"
+                           from="room-private@aim.shakespeare.lit/thirdwitch"
+                           id="666">
+                    <body>blabla</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="666"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="slidge-user" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="romeo@montague.lit" />
+                    </x>
+                  </message>
                 </forwarded>
-            </result>
+              </result>
             </message>
             """
         )
 
     def test_mam_echo(self):
         muc = self.get_private_muc(resources=["gajim"])
-        self.recv(
+        self.recv(  # language=XML
             """
             <message from="romeo@montague.lit/gajim"
                      to="room-private@aim.shakespeare.lit"
                      type="groupchat">
-                <body>HOY</body>
+              <body>HOY</body>
             </message>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
-            <message xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/thirdwitch" to="romeo@montague.lit/gajim" type="groupchat">
-             <body>HOY</body>
-             <stanza-id xmlns="urn:xmpp:sid:0" id="id" by="room-private@aim.shakespeare.lit"/>
-             <occupant-id xmlns="urn:xmpp:occupant-id:0" id="slidge-user"/>
+            <message xmlns="jabber:component:accept"
+                     from="room-private@aim.shakespeare.lit/thirdwitch"
+                     to="romeo@montague.lit/gajim"
+                     type="groupchat">
+              <body>HOY</body>
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="id"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
             </message>
             """
         )
@@ -1715,57 +2078,84 @@ class TestMuc(Base):
         muc = self.get_private_muc()
         # muc.user_resources.add("gajim")
         muc.session.contacts.ready.set_result(True)
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-                <query xmlns='http://jabber.org/protocol/muc#admin'>
-                    <item affiliation='admin' />
-                </query>
-            </iq>
-            """
-        )
-        self.send(
-            """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
               <query xmlns='http://jabber.org/protocol/muc#admin'>
-                <item nick="secondwitch" affiliation="admin" role="moderator" jid="secondwitch@aim.shakespeare.lit"/>
+                <item affiliation='admin' />
               </query>
             </iq>
             """
         )
-        self.recv(
+        self.send(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-                <query xmlns='http://jabber.org/protocol/muc#admin'>
-                    <item affiliation='owner' />
-                </query>
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item nick="secondwitch"
+                      affiliation="admin"
+                      role="moderator"
+                      jid="secondwitch@aim.shakespeare.lit" />
+              </query>
             </iq>
             """
         )
-        self.send(
+        self.recv(  # language=XML
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-                <query xmlns="http://jabber.org/protocol/muc#admin">
-                    <item nick="firstwitch" affiliation="owner" role="moderator" jid="firstwitch@aim.shakespeare.lit"/>
-                </query>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item affiliation='owner' />
+              </query>
             </iq>
             """
         )
-        self.recv(
+        self.send(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='iq-id1' to='room-private@aim.shakespeare.lit'>
-                <query xmlns='http://jabber.org/protocol/muc#admin'>
-                    <item affiliation='member' />
-                </query>
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <query xmlns="http://jabber.org/protocol/muc#admin">
+                <item nick="firstwitch"
+                      affiliation="owner"
+                      role="moderator"
+                      jid="firstwitch@aim.shakespeare.lit" />
+              </query>
             </iq>
             """
         )
-        self.send(
+        self.recv(  # language=XML
             """
-            <iq type='result' id='iq-id1' from='room-private@aim.shakespeare.lit' to='romeo@montague.lit/gajim'>
-                <query xmlns='http://jabber.org/protocol/muc#admin'>
-           	    	<item nick="thirdwitch" affiliation="member" role="participant" jid="romeo@montague.lit"/>
-                </query>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item affiliation='member' />
+              </query>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item nick="thirdwitch"
+                      affiliation="member"
+                      role="participant"
+                      jid="romeo@montague.lit" />
+              </query>
             </iq>
             """
         )
@@ -1773,69 +2163,73 @@ class TestMuc(Base):
     def test_room_avatar(self):
         v = b64encode(self.avatar_path.read_bytes()).decode()
         self.xmpp.loop.run_until_complete(self.get_romeo_session().bookmarks.fill())
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='get1' to='room-private@aim.shakespeare.lit'>
-                <vCard xmlns='vcard-temp'/>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='get1'
+                to='room-private@aim.shakespeare.lit'>
+              <vCard xmlns='vcard-temp' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             """
             <iq from="room-private@aim.shakespeare.lit"
                 type="error"
                 to="romeo@montague.lit/gajim"
                 id="get1">
-             	<error type="cancel">
-               		<item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
-               	</error>
+              <error type="cancel">
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
             </iq>
             """,
             use_values=False,
         )
-        self.recv(
+        self.recv(  # language=XML
             """
-            <iq from='romeo@montague.lit/gajim' type='get' id='get1' to='coven@aim.shakespeare.lit'>
-                <vCard xmlns='vcard-temp'/>
+            <iq from='romeo@montague.lit/gajim'
+                type='get'
+                id='get1'
+                to='coven@aim.shakespeare.lit'>
+              <vCard xmlns='vcard-temp' />
             </iq>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
             <iq from="coven@aim.shakespeare.lit"
                 type="result"
                 to="romeo@montague.lit/gajim"
                 id="get1">
-             <vCard xmlns="vcard-temp">
+              <vCard xmlns="vcard-temp">
                 <PHOTO>
                   <TYPE>image/png</TYPE>
                   <BINVAL>{v}</BINVAL>
                 </PHOTO>
-             </vCard>
+              </vCard>
             </iq>
             """
         )
 
     def test_join_room_avatar(self):
         self.get_private_muc("coven")
-        self.recv(
+        self.recv(  # language=XML
             """
-            <presence
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit/thirdwitch'>
-              <x xmlns='http://jabber.org/protocol/muc'/>
+            <presence from='romeo@montague.lit/gajim'
+                      id='n13mt3l'
+                      to='coven@aim.shakespeare.lit/thirdwitch'>
+              <x xmlns='http://jabber.org/protocol/muc' />
             </presence>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <presence
-                from='coven@aim.shakespeare.lit'
-                to='romeo@montague.lit/gajim'>
-                <x xmlns='vcard-temp:x:update'>
-                    <photo>{self.avatar_original_sha1}</photo>
-                  </x>
+            <presence from='coven@aim.shakespeare.lit'
+                      to='romeo@montague.lit/gajim'>
+              <x xmlns='vcard-temp:x:update'>
+                <photo>{self.avatar_original_sha1}</photo>
+              </x>
             </presence>
             """,
         )
@@ -1843,30 +2237,28 @@ class TestMuc(Base):
     def test_send_to_bad_resource(self):
         muc = self.get_private_muc("coven")
         muc.user_resources.add("gajim")
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit/thirdwitch'
-                type="error">
-                <error type="cancel">
-                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                </error>
+            <message from='romeo@montague.lit/gajim'
+                     id='n13mt3l'
+                     to='coven@aim.shakespeare.lit/thirdwitch'
+                     type="error">
+              <error type="cancel">
+                <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
             </message>
             """
         )
         assert not muc.user_resources
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit/thirdwitch'
-                type="error">
-                <error type="cancel">
-                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                </error>
+            <message from='romeo@montague.lit/gajim'
+                     id='n13mt3l'
+                     to='coven@aim.shakespeare.lit/thirdwitch'
+                     type="error">
+              <error type="cancel">
+                <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
             </message>
             """
         )
@@ -1875,14 +2267,13 @@ class TestMuc(Base):
     def test_recv_non_kickable_error(self):
         muc = self.get_private_muc("coven")
         muc.user_resources.add("gajim")
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='coven@aim.shakespeare.lit/thirdwitch'
-                type="error">
-                <error type="cancel" />
+            <message from='romeo@montague.lit/gajim'
+                     id='n13mt3l'
+                     to='coven@aim.shakespeare.lit/thirdwitch'
+                     type="error">
+              <error type="cancel" />
             </message>
             """
         )
@@ -1890,16 +2281,15 @@ class TestMuc(Base):
         assert self.next_sent() is None
 
     def test_recv_error_non_existing_muc(self):
-        self.recv(
+        self.recv(  # language=XML
             """
-            <message
-                from='romeo@montague.lit/gajim'
-                id='n13mt3l'
-                to='non-existing@aim.shakespeare.lit/thirdwitch'
-                type="error">
-                <error type="cancel">
-                    <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                </error>
+            <message from='romeo@montague.lit/gajim'
+                     id='n13mt3l'
+                     to='non-existing@aim.shakespeare.lit/thirdwitch'
+                     type="error">
+              <error type="cancel">
+                <gone xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              </error>
             </message>
             """
         )
@@ -1939,17 +2329,24 @@ class TestMuc(Base):
         muc = self.get_private_muc("room", ["gajim"])
         p = muc.get_system_participant()
         p.moderate("legacy-666", "reason™")
-        self.send(
+        self.send(  # language=XML
             """
-            <message type="groupchat" from='room@aim.shakespeare.lit' to="romeo@montague.lit/gajim">
-              <stanza-id xmlns="urn:xmpp:sid:0" id="uuid" by="room@aim.shakespeare.lit"/>
-              <apply-to id="666" xmlns="urn:xmpp:fasten:0">
-                <moderated by='room@aim.shakespeare.lit' xmlns='urn:xmpp:message-moderate:0'>
+            <message type="groupchat"
+                     from='room@aim.shakespeare.lit'
+                     to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room@aim.shakespeare.lit" />
+              <apply-to id="666"
+                        xmlns="urn:xmpp:fasten:0">
+                <moderated by='room@aim.shakespeare.lit'
+                           xmlns='urn:xmpp:message-moderate:0'>
                   <retract xmlns='urn:xmpp:message-retract:0' />
                   <reason>reason™</reason>
                 </moderated>
               </apply-to>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0" id="room"/>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="room" />
             </message>
             """
         )
@@ -1969,26 +2366,32 @@ class TestMuc(Base):
             )
             contact.avatar = self.avatar_path
             self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
-            self.recv(
+            self.recv(  # language=XML
                 f"""
-                <iq from="romeo@montague.lit/gajim"
-                    to="{muc.jid}/not-in-roster"
-                    type="get" xml:lang="en">
-                  <vCard xmlns="vcard-temp" />
-                </iq>
-                """
+            <iq from="romeo@montague.lit/gajim"
+                to="{muc.jid}/not-in-roster"
+                type="get"
+                xml:lang="en">
+              <vCard xmlns="vcard-temp" />
+            </iq>
+            """
             )
-            self.send(
+            self.send(  # language=XML
                 f"""
-               <iq xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/not-in-roster" to="romeo@montague.lit/gajim" type="result" xml:lang="en" id="1">
-                <vCard xmlns="vcard-temp">
-                    <PHOTO>
-                        <BINVAL>{v}</BINVAL>
-                        <TYPE>image/png</TYPE>
-                    </PHOTO>
-                </vCard>
-               </iq>
-                """,
+            <iq xmlns="jabber:component:accept"
+                from="room-private@aim.shakespeare.lit/not-in-roster"
+                to="romeo@montague.lit/gajim"
+                type="result"
+                xml:lang="en"
+                id="1">
+              <vCard xmlns="vcard-temp">
+                <PHOTO>
+                  <BINVAL>{v}</BINVAL>
+                  <TYPE>image/png</TYPE>
+                </PHOTO>
+              </vCard>
+            </iq>
+            """,
                 use_values=False,
             )
 
@@ -2000,26 +2403,38 @@ class TestMuc(Base):
         contact.away(last_seen=last_seen, status="blabla")
         dt = xep_0082.format_datetime(last_seen)
 
-        self.send(
+        self.send(  # language=XML
             f"""
-            <presence xmlns="jabber:component:accept" from="room-private@aim.shakespeare.lit/firstwitch" to="romeo@montague.lit/movim">
-             <show>away</show>
-             <status>blabla</status>
-             <idle xmlns="urn:xmpp:idle:1" since="{dt}"/>
-             <x xmlns="http://jabber.org/protocol/muc#user">
-              <item affiliation="owner" role="moderator" jid="firstwitch@aim.shakespeare.lit/slidge"/>
-             </x>
-             <occupant-id xmlns="urn:xmpp:occupant-id:0" id="firstwitch@aim.shakespeare.lit/slidge"/>
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/firstwitch"
+                      to="romeo@montague.lit/movim">
+              <show>away</show>
+              <status>blabla</status>
+              <idle xmlns="urn:xmpp:idle:1"
+                    since="{dt}" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="owner"
+                      role="moderator"
+                      jid="firstwitch@aim.shakespeare.lit/slidge" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="firstwitch@aim.shakespeare.lit/slidge" />
             </presence>
             """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-            <presence xmlns="jabber:component:accept" from="firstwitch@aim.shakespeare.lit/slidge" to="romeo@montague.lit">
-             <show>away</show>
-             <status>blabla</status>
-             <idle xmlns="urn:xmpp:idle:1" since="{dt}"/>
-             <c xmlns="http://jabber.org/protocol/caps" node="http://slixmpp.com/ver/{slixmpp.__version__}" hash="sha-1" ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ="/>
+            <presence xmlns="jabber:component:accept"
+                      from="firstwitch@aim.shakespeare.lit/slidge"
+                      to="romeo@montague.lit">
+              <show>away</show>
+              <status>blabla</status>
+              <idle xmlns="urn:xmpp:idle:1"
+                    since="{dt}" />
+              <c xmlns="http://jabber.org/protocol/caps"
+                 node="http://slixmpp.com/ver/{slixmpp.__version__}"
+                 hash="sha-1"
+                 ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ=" />
             </presence>
             """
         )
@@ -2035,14 +2450,19 @@ class TestMuc(Base):
 
         o = slidge.slixfix.xep_0356.privilege.uuid.uuid4
         slidge.slixfix.xep_0356.privilege.uuid.uuid4 = lambda: "0"
-        self.send(
+        self.send(  # language=XML
             """
             <iq from="aim.shakespeare.lit"
                 to="romeo@montague.lit"
                 xmlns="jabber:component:accept"
-                type="set" id="0">
+                type="set"
+                id="0">
               <privileged_iq xmlns='urn:xmpp:privilege:2'>
-                <iq xmlns="jabber:client" from='romeo@montague.lit' to='romeo@montague.lit' type='set' id='0'>
+                <iq xmlns="jabber:client"
+                    from='romeo@montague.lit'
+                    to='romeo@montague.lit'
+                    type='set'
+                    id='0'>
                   <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                     <publish node='urn:xmpp:bookmarks:1'>
                       <item id='room-private@aim.shakespeare.lit'>
@@ -2054,8 +2474,10 @@ class TestMuc(Base):
                       </item>
                     </publish>
                     <publish-options>
-                      <x xmlns='jabber:x:data' type='submit'>
-                        <field var='FORM_TYPE' type='hidden'>
+                      <x xmlns='jabber:x:data'
+                         type='submit'>
+                        <field var='FORM_TYPE'
+                               type='hidden'>
                           <value>http://jabber.org/protocol/pubsub#publish-options</value>
                         </field>
                         <field var='pubsub#persist_items'>
@@ -2074,7 +2496,8 @@ class TestMuc(Base):
                     </publish-options>
                   </pubsub>
                 </iq>
-            </privileged_iq></iq>
+              </privileged_iq>
+            </iq>
             """,
             use_values=False,
         )
@@ -2093,28 +2516,38 @@ class TestMuc(Base):
     def __test_rename_common(self, old_nick, participants_before):
         muc = self.get_private_muc()
         p = participants_before[0]
-        self.send(
+        self.send(  # language=XML
             f"""
-           <presence xmlns="jabber:component:accept" type="unavailable"
-           from="room-private@aim.shakespeare.lit/{old_nick}" to="romeo@montague.lit/movim">
-            <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}" nick="new-nick" />
-                <status code="303"/>
-            </x>
-            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="{p.contact.jid}"/>
-           </presence>
-           """
+            <presence xmlns="jabber:component:accept"
+                      type="unavailable"
+                      from="room-private@aim.shakespeare.lit/{old_nick}"
+                      to="romeo@montague.lit/movim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}"
+                      role="{p.role}"
+                      jid="{p.contact.jid}"
+                      nick="new-nick" />
+                <status code="303" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="{p.contact.jid}" />
+            </presence>
+            """
         )
-        self.send(
+        self.send(  # language=XML
             f"""
-           <presence xmlns="jabber:component:accept"
-            from="room-private@aim.shakespeare.lit/new-nick" to="romeo@montague.lit/movim">
-            <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="{p.affiliation}" role="{p.role}" jid="{p.contact.jid}"/>
-            </x>
-            <occupant-id xmlns="urn:xmpp:occupant-id:0" id="{p.contact.jid}"/>
-           </presence>
-           """
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/new-nick"
+                      to="romeo@montague.lit/movim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}"
+                      role="{p.role}"
+                      jid="{p.contact.jid}" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="{p.contact.jid}" />
+            </presence>
+            """
         )
 
         participants_after = self.xmpp.loop.run_until_complete(muc.get_participants())
@@ -2160,28 +2593,30 @@ class TestMuc(Base):
             <presence xmlns="jabber:component:accept"
                       from="room-private@aim.shakespeare.lit/firstwitch (imposter)"
                       to="romeo@montague.lit/movim">
-                <x xmlns="http://jabber.org/protocol/muc#user">
-                    <item affiliation="member"
-                          role="participant"
-                          jid="imposter@aim.shakespeare.lit/slidge"/>
-                </x>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                             id="imposter@aim.shakespeare.lit/slidge"/>
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="imposter@aim.shakespeare.lit/slidge" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="imposter@aim.shakespeare.lit/slidge" />
             </presence>
             """
         )
         self.send(  # language=XML
             """
-            <message xmlns="jabber:component:accept" type="groupchat"
+            <message xmlns="jabber:component:accept"
+                     type="groupchat"
                      from="room-private@aim.shakespeare.lit/firstwitch (imposter)"
                      to="romeo@montague.lit/movim">
-                <body>Je suis un canaillou</body>
-                <active xmlns="http://jabber.org/protocol/chatstates"/>
-                <markable xmlns="urn:xmpp:chat-markers:0"/>
-                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid"
-                           by="room-private@aim.shakespeare.lit"/>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                             id="imposter@aim.shakespeare.lit/slidge"/>
+              <body>Je suis un canaillou</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="imposter@aim.shakespeare.lit/slidge" />
             </message>
             """
         )
@@ -2195,28 +2630,30 @@ class TestMuc(Base):
             <presence xmlns="jabber:component:accept"
                       from="room-private@aim.shakespeare.lit/firstwitch (imposter2)"
                       to="romeo@montague.lit/movim">
-                <x xmlns="http://jabber.org/protocol/muc#user">
-                    <item affiliation="member"
-                          role="participant"
-                          jid="imposter2@aim.shakespeare.lit/slidge"/>
-                </x>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                             id="imposter2@aim.shakespeare.lit/slidge"/>
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="imposter2@aim.shakespeare.lit/slidge" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="imposter2@aim.shakespeare.lit/slidge" />
             </presence>
             """
         )
         self.send(  # language=XML
             """
-            <message xmlns="jabber:component:accept" type="groupchat"
+            <message xmlns="jabber:component:accept"
+                     type="groupchat"
                      from="room-private@aim.shakespeare.lit/firstwitch (imposter2)"
                      to="romeo@montague.lit/movim">
-                <body>Je suis un canaillou</body>
-                <active xmlns="http://jabber.org/protocol/chatstates"/>
-                <markable xmlns="urn:xmpp:chat-markers:0"/>
-                <stanza-id xmlns="urn:xmpp:sid:0" id="uuid"
-                           by="room-private@aim.shakespeare.lit"/>
-                <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                             id="imposter2@aim.shakespeare.lit/slidge"/>
+              <body>Je suis un canaillou</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="imposter2@aim.shakespeare.lit/slidge" />
             </message>
             """
         )

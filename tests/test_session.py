@@ -48,8 +48,8 @@ class TestSession(SlidgeTest):
             f"""
             <presence to='romeo@montague.lit/dino'
                       from="{self.xmpp.boundjid.bare}">
-                <status>YUP</status>
-                <show>chat</show>
+              <status>YUP</status>
+              <show>chat</show>
             </presence>
             """
         )
