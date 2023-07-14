@@ -32,6 +32,7 @@ want to install gateways on your server, you are looking for one of these projec
 - [sleamdge](https://git.sr.ht/~nicoco/sleamdge) ([Steam](https://steamcommunity.com/))
 - [skidge](https://git.sr.ht/~nicoco/skidge) ([Skype](https://skype.com/))
 - [messlidger](https://git.sr.ht/~nicoco/messlidger) ([Facebook Messenger](https://messenger.com/))
+- [matridge](https://git.sr.ht/~nicoco/matridge) ([Matrix](https://matrix.org/))
 
 If you use debian, you might also be interested in the
 [slidge-debian](https://git.sr.ht/~nicoco/slidge-debian)
