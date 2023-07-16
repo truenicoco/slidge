@@ -303,6 +303,8 @@ class LegacyMUC(
             return await self.get_participant(who, store=False)
         elif isinstance(self.subject_setter, LegacyContact):
             return await self.get_participant_by_contact(who)
+        else:
+            return await self.get_system_participant()
 
     def features(self):
         features = [
