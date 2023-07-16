@@ -67,6 +67,35 @@ class Command1(Command):
         return f"all good mate, {arg1}"
 
 
+class Command2(Command):
+    NAME = "Command number two"
+    NODE = "command2"
+
+    async def run(self, session, ifrom):
+        return Form(
+            title="A title",
+            instructions="Some instructions",
+            fields=[
+                FormField(
+                    "str",
+                    type="list-multi",
+                    options=[
+                        {"label": "Option 1", "value": "option1"},
+                        {"label": "Option 2", "value": "option2"},
+                    ],
+                ),
+            ],
+            handler=self.finish,
+            handler_kwargs={"arg1": "argument 1"},
+        )
+
+    @staticmethod
+    async def finish(form_values, _session, ifrom, arg1):
+        assert isinstance(form_values["str"], list)
+        assert all(isinstance(f, str) for f in form_values["str"])
+        return f"all good mate, {arg1}"
+
+
 class TestCommandsResults(SlixTestPlus):
     def setUp(self):
         super().setUp()
@@ -78,6 +107,7 @@ class TestCommandsResults(SlixTestPlus):
         )
         self.adhoc = AdhocProvider(self.xmpp)
         self.adhoc.register(Command1(self.xmpp))
+        self.adhoc.register(Command2(self.xmpp))
 
     def test_form_ok(self):
         self.recv(  # language=XML
@@ -432,4 +462,87 @@ class TestCommandsResults(SlixTestPlus):
             </iq>
             """,
             use_values=False,
+        )
+
+    def test_multi(self):
+        self.recv(  # language=XML
+            f"""
+            <iq type='set'
+                from='admin@whatever.ass/cheogram'
+                to='{self.xmpp.boundjid.bare}'
+                id="1">
+              <command xmlns='http://jabber.org/protocol/commands'
+                       node='command2'
+                       action='execute' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command2"
+                       sessionid="session-id"
+                       status="executing">
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>A title</title>
+                  <instructions>Some instructions</instructions>
+                  <field var="str"
+                         type="list-multi">
+                    <value />
+                    <option label="Option 1">
+                      <value>option1</value>
+                    </option>
+                    <option label="Option 2">
+                      <value>option2</value>
+                    </option>
+                  </field>
+                </x>
+              </command>
+            </iq>
+            """
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq type='set'
+                from='admin@whatever.ass/cheogram'
+                to='{self.xmpp.boundjid.bare}'
+                id="2">
+              <command xmlns='http://jabber.org/protocol/commands'
+                       node='command1'
+                       sessionid="session-id">
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='str'>
+                    <value>option1</value>
+                    <value>option2</value>
+                  </field>
+                </x>
+              </command>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="2">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="command2"
+                       sessionid="session-id"
+                       status="completed">
+                <note type="info">all good mate, argument 1</note>
+              </command>
+            </iq>
+            """
         )

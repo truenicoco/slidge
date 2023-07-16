@@ -153,7 +153,9 @@ class Form:
     handler_args: Iterable[Any] = field(default_factory=list)
     handler_kwargs: dict[str, Any] = field(default_factory=dict)
 
-    def get_values(self, slix_form: SlixForm) -> dict[str, Union[str, JID, bool, None]]:
+    def get_values(
+        self, slix_form: SlixForm
+    ) -> dict[str, Union[list[str], list[JID], str, JID, bool, None]]:
         """
         Parse form submission
 
@@ -243,13 +245,28 @@ class FormField:
             raise RuntimeError
         return [x["value"] for x in self.options]
 
-    def validate(self, value: Optional[str]) -> Union[str, JID, bool, None]:
+    def validate(
+        self, value: Optional[Union[str, list[str]]]
+    ) -> Union[list[str], list[JID], str, JID, bool, None]:
         """
         Raise appropriate XMPPError if a given value is valid for this field
 
         :param value: The value to test
         :return: The same value OR a JID if ``self.type=jid-single``
         """
+        if isinstance(value, list) and not self.type.endswith("multi"):
+            raise XMPPError("not-acceptable", "A single value was expected")
+
+        if self.type == "list-multi":
+            if not value:
+                value = []
+            if isinstance(value, list):
+                return self.__validate_list_multi(value)
+            else:
+                raise XMPPError("not-acceptable", "Multiple values was expected")
+
+        assert isinstance(value, (str, bool, JID)) or value is None
+
         if self.required and value is None:
             raise XMPPError("not-acceptable", f"Missing field: '{self.label}'")
 
@@ -269,6 +286,12 @@ class FormField:
         elif self.type == "boolean":
             return value.lower() in ("1", "true") if isinstance(value, str) else value
 
+        return value
+
+    def __validate_list_multi(self, value: list[str]) -> Union[list[str], list[JID]]:
+        for v in value:
+            if v not in self.__acceptable_options():
+                raise XMPPError("not-acceptable", f"Not a valid option: '{v}'")
         return value
 
     def get_xml(self) -> SlixFormField:

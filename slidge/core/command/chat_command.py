@@ -173,8 +173,11 @@ class ChatCommandProvider:
                 if f.type == "fixed":
                     msg.reply(f"{f.label or f.var}: {f.value}").send()
                 else:
-                    if f.type == "list-single":
-                        assert f.options is not None
+                    if f.type == "list-multi":
+                        msg.reply(
+                            "Multiple selection allowed, use a single space as a separator"
+                        ).send()
+                    if f.options:
                         for o in f.options:
                             msg.reply(f"{o['value']} -- {o['label']}").send()
                     if f.value:
@@ -187,7 +190,10 @@ class ChatCommandProvider:
                         return await self._handle_result(
                             "Command aborted", msg, session
                         )
-                    form_values[f.var] = f.validate(ans)
+                    if f.type.endswith("multi"):
+                        form_values[f.var] = f.validate(ans.split(" "))
+                    else:
+                        form_values[f.var] = f.validate(ans)
             result = await self.__wrap_handler(
                 msg,
                 result.handler,
