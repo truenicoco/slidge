@@ -2446,6 +2446,8 @@ class TestMuc(Base):
             )
             contact.avatar = self.avatar_path
             self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
+            pres = self.next_sent()
+            assert pres["vcard_temp_update"]["photo"] == self.avatar_sha1
             self.recv(  # language=XML
                 f"""
             <iq from="romeo@montague.lit/gajim"

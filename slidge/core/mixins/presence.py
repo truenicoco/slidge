@@ -58,10 +58,13 @@ class PresenceMixin(BaseSender):
             p["idle"]["since"] = last_seen
         return p
 
-    def send_last_presence(self, force=False):
+    def send_last_presence(self, force=False, no_cache_online=False):
         if (cache := self._last_presence) is None:
             if force:
-                self.offline()
+                if no_cache_online:
+                    self.online()
+                else:
+                    self.offline()
             return
         self._send(
             self._make_presence(

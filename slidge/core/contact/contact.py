@@ -228,6 +228,19 @@ class LegacyContact(
         """
         self.xmpp.loop.create_task(self.set_avatar(a))
 
+    async def __set_avatar_and_propagate_to_mucs(
+        self, a: Optional[AvatarType], avatar_unique_id: Optional[Union[int, str]]
+    ):
+        await self.xmpp.pubsub.set_avatar(
+            jid=self.jid.bare,
+            avatar=a,
+            unique_id=avatar_unique_id,
+            restrict_to=self.user.jid.bare,
+        )
+        for p in self.participants:
+            self.log.debug("Propagating new avatar to %s", p.muc)
+            p.send_last_presence(force=True, no_cache_online=True)
+
     async def set_avatar(
         self,
         a: Optional[AvatarType],
@@ -246,12 +259,7 @@ class LegacyContact(
         :param blocking: if True, will await setting the avatar, if False, launch in a task
         :return:
         """
-        awaitable = self.xmpp.pubsub.set_avatar(
-            jid=self.jid.bare,
-            avatar=a,
-            unique_id=avatar_unique_id,
-            restrict_to=self.user.jid.bare,
-        )
+        awaitable = self.__set_avatar_and_propagate_to_mucs(a, avatar_unique_id)
         if blocking:
             await awaitable
         else:
