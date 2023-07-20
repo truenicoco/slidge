@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
-from slixmpp.types import MessageTypes
+from slixmpp.types import MessageTypes, OptJid
 
 from ...util import SubclassableOnce, strip_illegal_chars
 from ...util.types import LegacyMessageType, MucAffiliation, MucRole, MucType
@@ -286,7 +286,7 @@ class LegacyParticipant(
         p = self._make_presence(ptype="unavailable")
         self._send(p)
 
-    def get_disco_info(self):
+    def get_disco_info(self, jid: OptJid = None, node: Optional[str] = None):
         if self.contact is not None:
             return self.contact.get_disco_info()
         return super().get_disco_info()

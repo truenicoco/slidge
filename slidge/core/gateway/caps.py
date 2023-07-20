@@ -47,7 +47,7 @@ class Caps:
             entity = await session.get_contact_or_group_or_participant(pfrom)
             if not isinstance(entity, LegacyContact):
                 return stanza
-            ver = await entity.get_caps_ver()
+            ver = await entity.get_caps_ver(pfrom)
         else:
             ver = await caps.get_verstring(pfrom)
 

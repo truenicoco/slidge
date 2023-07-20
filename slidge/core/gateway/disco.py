@@ -52,7 +52,7 @@ class Disco:
         if entity is None:
             raise XMPPError("item-not-found")
 
-        return await entity.get_disco_info()
+        return await entity.get_disco_info(jid, node)
 
     async def get_items(
         self, jid: OptJid, node: Optional[str], ifrom: OptJid, data: Any

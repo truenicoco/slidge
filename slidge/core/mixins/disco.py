@@ -2,6 +2,7 @@ from typing import Optional
 
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0030.stanza.info import DiscoInfo
+from slixmpp.types import OptJid
 
 from .base import Base
 
@@ -16,13 +17,16 @@ class BaseDiscoMixin(Base):
         super().__init__()
         self.__caps_cache: Optional[str] = None
 
+    def _get_disco_name(self):
+        return self.DISCO_NAME or self.xmpp.COMPONENT_NAME
+
     def features(self):
         return []
 
     async def extended_features(self) -> Optional[list[Form]]:
         return None
 
-    async def get_disco_info(self):
+    async def get_disco_info(self, jid: OptJid = None, node: Optional[str] = None):
         info = DiscoInfo()
         for feature in self.features():
             info.add_feature(feature)
@@ -37,10 +41,10 @@ class BaseDiscoMixin(Base):
                 info.append(form)
         return info
 
-    async def get_caps_ver(self):
+    async def get_caps_ver(self, jid: OptJid = None, node: Optional[str] = None):
         if self.__caps_cache:
             return self.__caps_cache
-        info = await self.get_disco_info()
+        info = await self.get_disco_info(jid, node)
         caps = self.xmpp.plugin["xep_0115"]
         ver = caps.generate_verstring(info, caps.hash)
         self.__caps_cache = ver
@@ -96,3 +100,26 @@ class ChatterDiscoMixin(BaseDiscoMixin):
             return
 
         return [e]
+
+
+class ContactAccountDiscoMixin(BaseDiscoMixin):
+    async def get_disco_info(self, jid: OptJid = None, node: Optional[str] = None):
+        if jid and jid.resource:
+            return await super().get_disco_info()
+        info = DiscoInfo()
+        info.add_feature("http://jabber.org/protocol/pubsub")
+        info.add_feature("http://jabber.org/protocol/pubsub#retrieve-items")
+        info.add_feature("http://jabber.org/protocol/pubsub#subscribe")
+        info.add_identity(
+            category="account",
+            itype="registered",
+            name=self._get_disco_name(),
+            lang=self.DISCO_LANG,
+        )
+        info.add_identity(
+            category="pubsub",
+            itype="pep",
+            name=self._get_disco_name(),
+            lang=self.DISCO_LANG,
+        )
+        return info

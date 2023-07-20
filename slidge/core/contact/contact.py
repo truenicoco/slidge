@@ -12,6 +12,7 @@ from ...util import SubclassableOnce
 from ...util.types import AvatarType, LegacyUserIdType
 from .. import config
 from ..mixins import FullCarbonMixin
+from ..mixins.disco import ContactAccountDiscoMixin
 from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
 class LegacyContact(
     Generic[LegacyUserIdType],
+    ContactAccountDiscoMixin,
     FullCarbonMixin,
     ReactionRecipientMixin,
     ThreadRecipientMixin,

@@ -841,6 +841,39 @@ class TestAimShakespeareBase(SlidgeTest):
             """,
         )
 
+    def test_disco_registered_existing_contact_bare_jid(self):
+        self.recv(  # language=XML
+            f"""
+            <iq type="get"
+                from="romeo@montague.lit/gajim"
+                to="juliet@{self.xmpp.boundjid.bare}"
+                id="123">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                type="result"
+                from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                id="123">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="account"
+                          type="registered"
+                          name="SLIDGE TEST" />
+                <identity category="pubsub"
+                          type="pep"
+                          name="SLIDGE TEST" />
+                <feature var="http://jabber.org/protocol/pubsub" />
+                <feature var="http://jabber.org/protocol/pubsub#retrieve-items" />
+                <feature var="http://jabber.org/protocol/pubsub#subscribe" />
+              </query>
+            </iq>
+            """,
+        )
+
     def test_disco_items_registered_existing_contact(self):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
