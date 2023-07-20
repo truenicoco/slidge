@@ -2516,7 +2516,7 @@ class TestMuc(Base):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/{slixmpp.__version__}"
                  hash="sha-1"
-                 ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ=" />
+                 ver="aefnNdzUD10Q7P37iH9fxDgg4Co=" />
             </presence>
             """
         )

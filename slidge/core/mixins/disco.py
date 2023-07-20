@@ -33,7 +33,7 @@ class BaseDiscoMixin(Base):
         info.add_identity(
             category=self.DISCO_CATEGORY,
             itype=self.DISCO_TYPE,
-            name=self.DISCO_NAME,
+            name=self._get_disco_name(),
             lang=self.DISCO_LANG,
         )
         if forms := await self.extended_features():

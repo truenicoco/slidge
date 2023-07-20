@@ -826,7 +826,8 @@ class TestAimShakespeareBase(SlidgeTest):
                 id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
                 <identity category="client"
-                          type="pc" />
+                          type="pc"
+                          name="SLIDGE TEST" />
                 <feature var="http://jabber.org/protocol/chatstates" />
                 <feature var="urn:xmpp:receipts" />
                 <feature var="urn:xmpp:message-correct:0" />
@@ -929,7 +930,8 @@ class TestAimShakespeareBase(SlidgeTest):
                 id="123">
               <query xmlns="http://jabber.org/protocol/disco#info">
                 <identity category="client"
-                          type="pc" />
+                          type="pc"
+                          name="SLIDGE TEST" />
                 <feature var="http://jabber.org/protocol/chatstates" />
                 <feature var="urn:xmpp:receipts" />
                 <feature var="urn:xmpp:message-correct:0" />
@@ -1300,7 +1302,7 @@ class TestContact(SlidgeTest):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/{slix_version}"
                  hash="sha-1"
-                 ver="nX+H2K5ZqWS5nDTwmCHz6bln5KQ=" />
+                 ver="aefnNdzUD10Q7P37iH9fxDgg4Co=" />
               <priority>0</priority>
             </presence>
             """
@@ -1321,7 +1323,7 @@ class TestContact(SlidgeTest):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/{slix_version}"
                  hash="sha-1"
-                 ver="g+W+C4Is6LMMAXwPpjeg2QE1p90=" />
+                 ver="/7DLGo7MgQHSwLw/uRa96BDb/N0=" />
               <priority>0</priority>
             </presence>
             """
