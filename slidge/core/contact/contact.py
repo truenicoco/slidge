@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0292.stanza import VCard4
+from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce
 from ...util.types import AvatarType, LegacyUserIdType
@@ -69,7 +70,7 @@ class LegacyContact(
     """
     PROPAGATE_PRESENCE_TO_GROUPS = True
 
-    mtype = "chat"
+    mtype: MessageTypes = "chat"
     _can_send_carbon = True
     is_group = False
 
