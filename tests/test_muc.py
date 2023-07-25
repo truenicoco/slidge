@@ -2491,7 +2491,7 @@ class TestMuc(Base):
                       from="room-private@aim.shakespeare.lit/firstwitch"
                       to="romeo@montague.lit/movim">
               <show>away</show>
-              <status>blabla</status>
+              <status>blabla -- Last seen {last_seen:%A %H:%M GMT}</status>
               <idle xmlns="urn:xmpp:idle:1"
                     since="{dt}" />
               <x xmlns="http://jabber.org/protocol/muc#user">
@@ -2510,7 +2510,7 @@ class TestMuc(Base):
                       from="firstwitch@aim.shakespeare.lit/slidge"
                       to="romeo@montague.lit">
               <show>away</show>
-              <status>blabla</status>
+              <status>blabla -- Last seen {last_seen:%A %H:%M GMT}</status>
               <idle xmlns="urn:xmpp:idle:1"
                     since="{dt}" />
               <c xmlns="http://jabber.org/protocol/caps"

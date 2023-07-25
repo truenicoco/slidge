@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
@@ -51,10 +52,17 @@ class PresenceMixin(BaseSender):
             pfrom=self.jid.bare if bare else self.jid, **presence_kwargs
         )
         if last_seen:
-            if config.LAST_SEEN_FALLBACK and not presence_kwargs.get("pstatus"):
-                p["status"] = f"Last seen {last_seen:%A %H:%M GMT}"
             if last_seen.tzinfo is None:
                 last_seen = last_seen.astimezone(timezone.utc)
+            # it's ugly to check for the presence of this string, but a better fix is more work
+            if config.LAST_SEEN_FALLBACK and not re.match(
+                ".*Last seen .* GMT", p["status"]
+            ):
+                last_seen_fallback = f"Last seen {last_seen:%A %H:%M GMT}"
+                if p["status"]:
+                    p["status"] = p["status"] + " -- " + last_seen_fallback
+                else:
+                    p["status"] = last_seen_fallback
             p["idle"]["since"] = last_seen
         return p
 
