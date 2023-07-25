@@ -1491,6 +1491,21 @@ class TestContact(SlidgeTest):
         juliet.send_friend_request()
         assert self.next_sent()["type"] == "subscribe"
 
+    def test_correct(self):
+        juliet = self.get_juliet()
+
+        juliet.correct("old_msg_id", "new content")
+        msg = self.next_sent()
+        assert msg["replace"]["id"] == "old_msg_id"
+        assert msg["body"] == "new content"
+        assert msg["id"] == ""
+
+        juliet.correct("old_msg_id", "new content", correction_event_id="correction_id")
+        msg = self.next_sent()
+        assert msg["replace"]["id"] == "old_msg_id"
+        assert msg["body"] == "new content"
+        assert msg["id"] == "correction_id"
+
 
 class TestCarbon(SlidgeTest):
     plugin = globals()

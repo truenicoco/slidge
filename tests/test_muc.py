@@ -1116,6 +1116,48 @@ class TestMuc(Base):
             use_values=False,
         )
 
+    def test_correct_from_legacy(self):
+        participant = self.get_participant()
+
+        participant.send_text("body", "legacy-1")
+        msg = self.next_sent()
+        assert msg["body"] == "body"
+        assert msg["id"] == msg["stanza_id"]["id"] == "1"
+
+        participant.correct("legacy-1", "new")
+        msg = self.next_sent()
+        assert msg["body"] == "new"
+        assert msg["replace"]["id"] == "1"
+        assert msg["id"] == ""
+        assert msg["stanza_id"]["id"] != ""
+
+        participant.correct(
+            "legacy-1", "newnew", correction_event_id="legacy-correction"
+        )
+        msg = self.next_sent()
+        assert msg["body"] == "newnew"
+        assert msg["id"] == "correction"
+        assert msg["stanza_id"]["id"] == "correction"
+        assert msg["replace"]["id"] == "1"
+
+        participant.correct("legacy-willbeconverted", "new content")
+        msg = self.next_sent()
+        assert msg["replace"]["id"] == "willbeconverted"
+        assert msg["body"] == "new content"
+        assert msg["id"] == ""
+        assert msg["stanza_id"]["id"] != ""
+
+        participant.correct(
+            "legacy-willbeconverted",
+            "new content",
+            correction_event_id="legacy-correction_id",
+        )
+        msg = self.next_sent()
+        assert msg["replace"]["id"] == "willbeconverted"
+        assert msg["body"] == "new content"
+        assert msg["id"] == "correction_id"
+        assert msg["stanza_id"]["id"] == "correction_id"
+
     def test_msg_reply_self_from_legacy(self):
         Session.SENT_TEXT = []
         participant = self.get_participant()

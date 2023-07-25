@@ -358,6 +358,7 @@ class AttachmentMixin(MessageMaker):
         thread: Optional[LegacyThreadType] = None,
         body_first=False,
         correction=False,
+        correction_event_id: Optional[LegacyMessageType] = None,
         **kwargs,
     ):
         # TODO: once the epic XEP-0385 vs XEP-0447 battle is over, pick
@@ -377,6 +378,7 @@ class AttachmentMixin(MessageMaker):
             thread=thread,
             correction=correction,
             legacy_msg_id=legacy_msg_id,
+            correction_event_id=correction_event_id,
             **kwargs,
         )
         if body_first:

@@ -154,6 +154,7 @@ class ContentMessageMixin(AttachmentMixin):
         carbon=False,
         archive_only=False,
         correction=False,
+        correction_event_id: Optional[LegacyMessageType] = None,
         **send_kwargs,
     ):
         """
@@ -169,6 +170,9 @@ class ContentMessageMixin(AttachmentMixin):
         :param carbon: (only in 1:1) Reflect a message sent to this ``Contact`` by the user.
             Use this to synchronize outgoing history for legacy official apps.
         :param correction: whether this message is a correction or not
+        :param correction_event_id: in the case where an ID is associated with the legacy
+            'correction event', specify it here to use it on the XMPP side. If not specified,
+            a random ID will be used.
         :param archive_only: (only in groups) Do not send this message to user,
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
@@ -185,7 +189,7 @@ class ContentMessageMixin(AttachmentMixin):
         hints = self.__default_hints(hints)
         msg = self._make_message(
             mbody=body,
-            legacy_msg_id=None if correction else legacy_msg_id,
+            legacy_msg_id=correction_event_id if correction else legacy_msg_id,
             when=when,
             reply_to=reply_to,
             hints=hints or (),
@@ -207,6 +211,7 @@ class ContentMessageMixin(AttachmentMixin):
         hints: Optional[Iterable[ProcessingHint]] = None,
         carbon=False,
         archive_only=False,
+        correction_event_id: Optional[LegacyMessageType] = None,
         **send_kwargs,
     ):
         """
@@ -224,6 +229,9 @@ class ContentMessageMixin(AttachmentMixin):
             Use this to synchronize outgoing history for legacy official apps.
         :param archive_only: (only in groups) Do not send this message to user,
             but store it in the archive. Meant to be used during ``MUC.backfill()``
+        :param correction_event_id: in the case where an ID is associated with the legacy
+            'correction event', specify it here to use it on the XMPP side. If not specified,
+            a random ID will be used.
         """
         self.send_text(
             new_text,
@@ -235,6 +243,7 @@ class ContentMessageMixin(AttachmentMixin):
             thread=thread,
             correction=True,
             archive_only=archive_only,
+            correction_event_id=correction_event_id,
             **send_kwargs,
         )
 
