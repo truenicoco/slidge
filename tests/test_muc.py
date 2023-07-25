@@ -265,6 +265,16 @@ class Base(SlidgeTest):
                 assert n["subject"]
         return muc
 
+    def get_participant(
+        self, nickname="firstwitch", room="room=private", resources=("gajim",)
+    ):
+        muc = self.get_private_muc(resources=resources)
+        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
+            muc.get_participant(nickname)
+        )
+        participant._LegacyParticipant__presence_sent = True
+        return participant
+
 
 @pytest.mark.usefixtures("avatar")
 class TestMuc(Base):
@@ -1084,11 +1094,8 @@ class TestMuc(Base):
         assert sent["text"] == stripped_body
 
     def test_msg_from_legacy(self):
-        muc = self.get_private_muc(resources=["gajim"])
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
+        participant = self.get_participant()
+        muc = participant.muc
         participant.send_text("the body", legacy_msg_id="legacy-XXX")
         self.send(  # language=XML
             f"""
@@ -1111,11 +1118,8 @@ class TestMuc(Base):
 
     def test_msg_reply_self_from_legacy(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc(resources=["gajim"])
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
+        participant = self.get_participant()
+        muc = participant.muc
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -1145,11 +1149,8 @@ class TestMuc(Base):
 
     def test_msg_reply_to_user(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc(resources=["gajim"])
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
+        participant = self.get_participant()
+        muc = participant.muc
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -1181,14 +1182,9 @@ class TestMuc(Base):
 
     def test_msg_reply_from_legacy(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc(resources=["gajim"])
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        second_witch = self.xmpp.loop.run_until_complete(
-            muc.get_participant("secondwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
+        participant = self.get_participant()
+        muc = participant.muc
+        second_witch = self.get_participant("secondwitch")
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -1221,14 +1217,9 @@ class TestMuc(Base):
 
     def test_msg_reply_from_legacy_fallback(self):
         Session.SENT_TEXT = []
-        muc = self.get_private_muc(resources=["gajim"])
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
-        second_witch = self.xmpp.loop.run_until_complete(
-            muc.get_participant("secondwitch")
-        )
+        participant = self.get_participant()
+        muc = participant.muc
+        second_witch = self.get_participant("secondwitch")
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
@@ -1305,12 +1296,8 @@ class TestMuc(Base):
         assert sent["legacy_msg_id"] == "legacy-SOME-ID"
 
     def test_react_from_legacy(self):
-        muc = self.get_private_muc(resources=["gajim"])
-        # muc.user_resources.add("gajim")
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant("firstwitch")
-        )
-        participant._LegacyParticipant__presence_sent = True
+        participant = self.get_participant()
+        muc = participant.muc
         participant.react(legacy_msg_id="legacy-XXX", emojis="👋")
         self.send(  # language=XML
             f"""
