@@ -1,6 +1,5 @@
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, NamedTuple, Optional
 
 from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.plugins.base import BasePlugin, register_plugin
@@ -13,10 +12,9 @@ if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
 
 
-@dataclass
-class StoredVCard:
+class StoredVCard(NamedTuple):
     content: VCard4
-    authorized_jids: set[JidStr] = field(default_factory=set)
+    authorized_jids: set[JidStr]
 
 
 class VCard4Provider(BasePlugin):

@@ -1,7 +1,6 @@
 import re
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from .. import config
 from .base import BaseSender
@@ -11,8 +10,7 @@ class _NoChange(Exception):
     pass
 
 
-@dataclass
-class _CachedPresence:
+class _CachedPresence(NamedTuple):
     presence_kwargs: dict[str, str]
     last_seen: Optional[datetime] = None
 
