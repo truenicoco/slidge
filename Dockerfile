@@ -85,4 +85,5 @@ ENTRYPOINT ["watchmedo", "auto-restart", \
   "--jid", "slidge.localhost", \
   "--secret", "secret", \
   "--debug", \
-  "--upload-service", "upload.localhost"]
+  "--upload-service", "upload.localhost", \
+  "--admins", "test@localhost"]
