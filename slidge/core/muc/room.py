@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import IqError, XMPPError
+from slixmpp.jid import _unescape_node
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0060.stanza import Item
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
@@ -536,7 +537,7 @@ class LegacyMUC(
         await self.session.contacts.ready
         p = self._participants_by_contacts.get(c)
         if p is None:
-            nickname = c.name or c.jid_username
+            nickname = c.name or _unescape_node(c.jid_username)
             if nickname in self._participants_by_nicknames:
                 self.log.debug("Nickname conflict")
                 nickname = f"{nickname} ({c.jid_username})"
