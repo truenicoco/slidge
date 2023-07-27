@@ -85,16 +85,25 @@ class AvatarCache:
         unique_id: str,
         response_headers: Optional[CIMultiDictProxy[str]] = None,
     ):
-        if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
+        resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
+        if resize:
             img.thumbnail((size, size))
             log.debug("Resampled image to %s", img.size)
 
         filename = str(uuid.uuid1()) + ".png"
         file_path = self.dir / filename
 
-        with io.BytesIO() as f:
-            img.save(f, format="PNG")
-            img_bytes = f.getvalue()
+        if (
+            not resize
+            and img.format == "PNG"
+            and (path := Path(unique_id))
+            and path.exists()
+        ):
+            img_bytes = path.read_bytes()
+        else:
+            with io.BytesIO() as f:
+                img.save(f, format="PNG")
+                img_bytes = f.getvalue()
 
         with file_path.open("wb") as file:
             file.write(img_bytes)
