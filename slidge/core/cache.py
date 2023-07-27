@@ -4,6 +4,7 @@ import io
 import logging
 import shelve
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
@@ -39,6 +40,9 @@ class AvatarCache:
     _shelf: shelve.Shelf[CachedAvatar]
     dir: Path
 
+    def __init__(self):
+        self._thread_pool = ThreadPoolExecutor(config.AVATAR_RESAMPLING_THREADS)
+
     def set_dir(self, path: Path):
         self.dir = path
         self.dir.mkdir(exist_ok=True)
@@ -47,6 +51,7 @@ class AvatarCache:
     def close(self):
         self._shelf.sync()
         self._shelf.close()
+        self._thread_pool.shutdown(cancel_futures=True)
 
     async def get_avatar_from_url_alone(self, url: str):
         """
@@ -79,7 +84,7 @@ class AvatarCache:
     def get(self, unique_id: str):
         return self._shelf.get(unique_id)
 
-    def convert_and_store(
+    async def convert_and_store(
         self,
         img: Image.Image,
         unique_id: str,
@@ -87,7 +92,9 @@ class AvatarCache:
     ):
         resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
         if resize:
-            img.thumbnail((size, size))
+            await asyncio.get_event_loop().run_in_executor(
+                self._thread_pool, img.thumbnail, (size, size)
+            )
             log.debug("Resampled image to %s", img.size)
 
         filename = str(uuid.uuid1()) + ".png"

@@ -96,7 +96,7 @@ class PepAvatar(PepItem):
         cached_avatar = avatar_cache.get(unique_id)
         if not cached_avatar:
             img = await self._get_image(avatar)
-            cached_avatar = avatar_cache.convert_and_store(img, unique_id)
+            cached_avatar = await avatar_cache.convert_and_store(img, unique_id)
 
         await self._set_avatar_from_cache(cached_avatar)
 

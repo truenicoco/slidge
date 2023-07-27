@@ -192,3 +192,9 @@ ALWAYS_INVITE_WHEN_ADDING_BOOKMARKS__DOC = (
     "should not be necessary, it helps with clients that do not support :xep:`0402` "
     "or that do not respect the auto-join flag."
 )
+
+AVATAR_RESAMPLING_THREADS = 2
+AVATAR_RESAMPLING_THREADS__DOC = (
+    "Number of additional threads to use for avatar resampling. Even in a single-core "
+    "context, this makes avatar resampling non-blocking."
+)
