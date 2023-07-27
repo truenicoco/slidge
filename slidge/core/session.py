@@ -292,7 +292,9 @@ class BaseSession(
                     pass
                 else:
                     if nick != muc.user_nick:
-                        reply_to = await muc.get_participant(reply_to_jid.resource)
+                        reply_to = await muc.get_participant(
+                            reply_to_jid.resource, store=False
+                        )
         else:
             reply_to_msg_xmpp_id = None
             reply_to = None
