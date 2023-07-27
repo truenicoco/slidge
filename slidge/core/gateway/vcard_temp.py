@@ -32,15 +32,14 @@ class VCardTemp:
             if not (contact := participant.contact):
                 raise XMPPError("item-not-found", "This participant has no contact")
             avatar = contact.get_avatar()
-            if avatar is None:
-                raise XMPPError("item-not-found", "This participant has no avatar")
-            data = avatar.data
-            v = self.xmpp.plugin["xep_0054"].make_vcard()
-            v["PHOTO"]["BINVAL"] = data.get_value()
-            v["PHOTO"]["TYPE"] = "image/png"
-            reply = iq.reply()
-            reply.append(v)
-            reply.send()
-            return
-
-        return await muc.send_avatar(iq)
+        else:
+            avatar = muc.get_avatar()
+        if avatar is None:
+            raise XMPPError("item-not-found")
+        data = avatar.data
+        v = self.xmpp.plugin["xep_0054"].make_vcard()
+        v["PHOTO"]["BINVAL"] = data.get_value()
+        v["PHOTO"]["TYPE"] = "image/png"
+        reply = iq.reply()
+        reply.append(v)
+        reply.send()

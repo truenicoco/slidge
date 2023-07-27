@@ -10,9 +10,10 @@ from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce
-from ...util.types import AvatarType, LegacyUserIdType
+from ...util.types import LegacyUserIdType
 from .. import config
 from ..mixins import FullCarbonMixin
+from ..mixins.avatar import AvatarMixin
 from ..mixins.disco import ContactAccountDiscoMixin
 from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 class LegacyContact(
     Generic[LegacyUserIdType],
+    AvatarMixin,
     ContactAccountDiscoMixin,
     FullCarbonMixin,
     ReactionRecipientMixin,
@@ -79,6 +81,9 @@ class LegacyContact(
     STRIP_SHORT_DELAY = True
     _NON_FRIEND_PRESENCES_FILTER = {"subscribe", "unsubscribed"}
 
+    _avatar_pubsub_broadcast = True
+    _avatar_bare_jid = True
+
     def __init__(
         self,
         session: "BaseSession",
@@ -98,7 +103,6 @@ class LegacyContact(
         self.jid_username = jid_username
 
         self._name: Optional[str] = None
-        self._avatar: Optional[Union[AvatarType, bool]] = None
 
         if self.xmpp.MARK_ALL_MESSAGES:
             self._sent_order = list[str]()
@@ -216,64 +220,10 @@ class LegacyContact(
             jid=self.jid.bare, nick=n, restrict_to=self.user.jid.bare
         )
 
-    @property
-    def avatar(self):
-        """
-        An image that represents this contact
-        """
-        return self._avatar
-
-    @avatar.setter
-    def avatar(self, a: Optional[AvatarType]):
-        """
-        Set the avatar. self.set_avatar() should be preferred because you can provide
-        a unique ID for the avatar, to help caching.
-        """
-        self.xmpp.loop.create_task(self.set_avatar(a))
-
-    async def __set_avatar_and_propagate_to_mucs(
-        self, a: Optional[AvatarType], avatar_unique_id: Optional[Union[int, str]]
-    ):
-        await self.xmpp.pubsub.set_avatar(
-            jid=self.jid.bare,
-            avatar=a,
-            unique_id=avatar_unique_id,
-            restrict_to=self.user.jid.bare,
-        )
+    def _post_avatar_update(self):
         for p in self.participants:
             self.log.debug("Propagating new avatar to %s", p.muc)
             p.send_last_presence(force=True, no_cache_online=True)
-
-    async def set_avatar(
-        self,
-        a: Optional[AvatarType],
-        avatar_unique_id: Optional[Union[int, str]] = None,
-        blocking=False,
-    ):
-        """
-        Set the avatar for this contact
-
-        :param a: Any avatar format supported by slidge
-        :param avatar_unique_id: If possible, provide a unique ID to cache the avatar.
-            If it is not provided, the SHA-1 of the avatar will be used,
-            unless it is an HTTP url. In this case, the url will be used,
-            along with etag or last modified HTTP headers, to avoid fetching
-            uselessly. Beware of legacy plugin where URLs are not stable.
-        :param blocking: if True, will await setting the avatar, if False, launch in a task
-        :return:
-        """
-        awaitable = self.__set_avatar_and_propagate_to_mucs(a, avatar_unique_id)
-        if blocking:
-            await awaitable
-        else:
-            self.xmpp.loop.create_task(awaitable)
-        # if it's bytes, we don't want to cache it in RAM, so just a bool to know it has been set
-        self._avatar = isinstance(a, bytes) or a
-
-    def get_avatar(self):
-        if not self._avatar:
-            return
-        return self.xmpp.pubsub.get_avatar(jid=self.jid.bare)
 
     def set_vcard(
         self,

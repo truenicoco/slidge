@@ -47,7 +47,6 @@ class PepAvatar(PepItem):
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
         self._avatar_data_path: Optional[Path] = None
-        self._cache_dir = avatar_cache.dir
 
     @property
     def data(self) -> Optional[AvatarData]:
@@ -388,6 +387,7 @@ class PubSubComponent(BasePlugin):
         avatar: Optional[AvatarType] = None,
         restrict_to: OptJidStr = None,
         unique_id=None,
+        broadcast=True,
     ):
         jid = JID(jid)
         if avatar is None:
@@ -410,6 +410,8 @@ class PubSubComponent(BasePlugin):
             _add_or_extend_allowed_jids(jid, self._avatars, pep_avatar)
             if pep_avatar.metadata is None:
                 raise RuntimeError
+            if not broadcast:
+                return
             await self._broadcast(
                 pep_avatar.metadata,
                 jid,

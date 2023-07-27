@@ -1,5 +1,4 @@
 import datetime
-import tempfile
 import uuid
 from base64 import b64encode
 from pathlib import Path
@@ -7,14 +6,13 @@ from typing import Any, Dict, Hashable, Optional
 
 import pytest
 import slixmpp
-from slixmpp import JID, Message
+from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import xep_0082
 
 import slidge.core.mixins.message_maker
 import slidge.core.muc.room
 from slidge import *
-from slidge.core.cache import avatar_cache
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
@@ -2322,7 +2320,7 @@ class TestMuc(Base):
         )
 
     def test_join_room_avatar(self):
-        self.get_private_muc("coven")
+        muc = self.get_private_muc("coven")
         self.recv(  # language=XML
             """
             <presence from='romeo@montague.lit/gajim'
@@ -2332,6 +2330,11 @@ class TestMuc(Base):
             </presence>
             """
         )
+        for _ in range(len(muc._participants_by_nicknames)):
+            pres = self.next_sent()
+            assert isinstance(pres, Presence)
+        subject = self.next_sent()
+        assert isinstance(subject, Message)
         self.send(  # language=XML
             f"""
             <presence from='coven@aim.shakespeare.lit'
@@ -2462,23 +2465,18 @@ class TestMuc(Base):
 
     def test_participant_avatar(self):
         self.test_join_group()
-        v = b64encode(self.avatar_bytes).decode()
-        with tempfile.TemporaryDirectory() as d:
-            avatar_cache.dir = Path(d)
-            session = self.get_romeo_session()
-            self.xmpp.loop.run_until_complete(session.bookmarks.fill())
-            muc = self.get_private_muc()
-            # self.xmpp.loop.run_until_complete(muc.fill_participants())
-            muc._LegacyMUC__participants_filled = True
-            contact = self.xmpp.loop.run_until_complete(
-                session.contacts.by_legacy_id(333)
-            )
-            contact.avatar = self.avatar_path
-            self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
-            pres = self.next_sent()
-            assert pres["vcard_temp_update"]["photo"] == self.avatar_sha1
-            self.recv(  # language=XML
-                f"""
+        v = b64encode(self.avatar_path.read_bytes()).decode()
+        session = self.get_romeo_session()
+        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        muc = self.get_private_muc()
+        muc._LegacyMUC__participants_filled = True
+        contact = self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(333))
+        contact.avatar = self.avatar_path
+        self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
+        pres = self.next_sent()
+        assert pres["vcard_temp_update"]["photo"] == self.avatar_original_sha1
+        self.recv(  # language=XML
+            f"""
             <iq from="romeo@montague.lit/gajim"
                 to="{muc.jid}/not-in-roster"
                 type="get"
@@ -2486,9 +2484,9 @@ class TestMuc(Base):
               <vCard xmlns="vcard-temp" />
             </iq>
             """
-            )
-            self.send(  # language=XML
-                f"""
+        )
+        self.send(  # language=XML
+            f"""
             <iq xmlns="jabber:component:accept"
                 from="room-private@aim.shakespeare.lit/not-in-roster"
                 to="romeo@montague.lit/gajim"
@@ -2503,8 +2501,8 @@ class TestMuc(Base):
               </vCard>
             </iq>
             """,
-                use_values=False,
-            )
+            use_values=False,
+        )
 
     def test_presence_propagation(self):
         participants_before = self.__get_participants()

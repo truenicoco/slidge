@@ -149,7 +149,7 @@ class Bookmarks(LegacyBookmarks):
         await self.by_legacy_id("room2")
 
 
-class TestAimShakespeareBase(SlidgeTest):
+class Base(SlidgeTest):
     plugin = globals()
 
     def setUp(self):
@@ -174,6 +174,8 @@ class TestAimShakespeareBase(SlidgeTest):
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
 
+
+class TestAimShakespeareBase(Base):
     def loop(self, x):
         self.xmpp.loop.run_until_complete(x)
 

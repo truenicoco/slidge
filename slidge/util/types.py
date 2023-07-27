@@ -40,6 +40,7 @@ Recipient = Union["LegacyMUC", "LegacyContact"]
 RecipientType = TypeVar("RecipientType", bound=Recipient)
 Sender = Union["LegacyContact", "LegacyParticipant"]
 AvatarType = Union[bytes, str, Path]
+LegacyFileIdType = Union[int, str]
 
 ChatState = Literal["active", "composing", "gone", "inactive", "paused"]
 ProcessingHint = Literal["no-store", "markable", "store"]

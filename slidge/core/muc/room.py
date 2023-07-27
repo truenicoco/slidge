@@ -1,15 +1,10 @@
-import asyncio
-import hashlib
-import io
 import logging
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Optional, Union
 from uuid import uuid4
 
-from PIL import Image
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import IqError, XMPPError
 from slixmpp.plugins.xep_0004 import Form
@@ -19,7 +14,6 @@ from slixmpp.xmlstream import ET
 
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import (
-    AvatarType,
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
@@ -27,8 +21,8 @@ from ...util.types import (
     MucType,
 )
 from .. import config
-from ..cache import avatar_cache
 from ..contact.roster import ContactIsUser
+from ..mixins.avatar import AvatarMixin
 from ..mixins.disco import ChatterDiscoMixin
 from ..mixins.lock import NamedLockMixin
 from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
@@ -46,6 +40,7 @@ class LegacyMUC(
     Generic[
         LegacyGroupIdType, LegacyMessageType, LegacyParticipantType, LegacyUserIdType
     ],
+    AvatarMixin,
     NamedLockMixin,
     ChatterDiscoMixin,
     ReactionRecipientMixin,
@@ -82,8 +77,10 @@ class LegacyMUC(
     fit the legacy API, ie, no lazy loading of the participant list and history.
     """
 
+    _avatar_pubsub_broadcast = False
+    _avatar_bare_jid = True
+
     def __init__(self, session: "BaseSession", legacy_id: LegacyGroupIdType, jid: JID):
-        super().__init__()
         from .participant import LegacyParticipant
 
         self.session = session
@@ -113,14 +110,9 @@ class LegacyMUC(
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
         self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
 
-        self._avatar: Optional[AvatarType] = None
-        self._avatar_bytes: Optional[bytes] = None
-        self._avatar_hash: Optional[str] = None
-        self._avatar_type: Optional[str] = None
-        self.__set_avatar_task: Optional[asyncio.Task] = None
-
         self.__participants_filled = False
         self.__history_filled = False
+        super().__init__()
 
     def __repr__(self):
         return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
@@ -166,59 +158,6 @@ class LegacyMUC(
                 # oldest = self.archive.get_oldest_message()
             await self.backfill(legacy_id, oldest_date)
             self.__history_filled = True
-
-    @property
-    def avatar(self):
-        return self._avatar
-
-    @avatar.setter
-    def avatar(self, a: Optional[AvatarType]):
-        if a != self._avatar:
-            if self.__set_avatar_task:
-                self.__set_avatar_task.cancel()
-            self.__set_avatar_task = self.xmpp.loop.create_task(self.__set_avatar(a))
-
-    async def __set_avatar(self, a: Optional[AvatarType]):
-        if isinstance(a, str):
-            b = (await avatar_cache.get_avatar_from_url_alone(a)).path.read_bytes()
-        elif isinstance(a, bytes):
-            b = a
-        elif isinstance(a, Path):
-            b = a.read_bytes()
-        elif a is None:
-            self._avatar = None
-            self._avatar_hash = None
-            self._send_room_presence()
-            return
-        else:
-            raise TypeError("Avatar must be bytes, a Path or a str (URL)", a)
-
-        img = Image.open(io.BytesIO(b))
-        if (size := config.AVATAR_SIZE) and any(x > size for x in img.size):
-            img.thumbnail((size, size))
-            log.debug("Resampled image to %s", img.size)
-            with io.BytesIO() as f:
-                img.save(f, format="PNG")
-                b = f.getvalue()
-        self._avatar = a
-        self._avatar_bytes = b
-        self._avatar_type = "image/" + img.format.lower() if img.format else "unknown"
-        self._avatar_hash = hashlib.sha1(b).hexdigest()
-        self._send_room_presence()
-
-    def __get_vcard(self):
-        if not self._avatar_bytes:
-            raise XMPPError("item-not-found")
-        vcard = self.xmpp.plugin["xep_0054"].make_vcard()
-        vcard["PHOTO"]["BINVAL"] = self._avatar_bytes
-        vcard["PHOTO"]["TYPE"] = self._avatar_type
-        return vcard
-
-    async def send_avatar(self, iq: Iq):
-        vcard = self.__get_vcard()
-        r = iq.reply()
-        r.append(vcard)
-        r.send()
 
     @property
     def name(self):
@@ -350,12 +289,13 @@ class LegacyMUC(
         if s := self.subject:
             form.add_field("muc#roominfo_subject", value=s)
 
-        if self.__set_avatar_task:
-            await self.__set_avatar_task
-        if h := self._avatar_hash:
-            form.add_field(
-                "{http://modules.prosody.im/mod_vcard_muc}avatar#sha1", value=h
-            )
+        if self._set_avatar_task:
+            await self._set_avatar_task
+            avatar = self.get_avatar()
+            if avatar and (h := avatar.id):
+                form.add_field(
+                    "{http://modules.prosody.im/mod_vcard_muc}avatar#sha1", value=h
+                )
 
         form.add_field("muc#roomconfig_membersonly", "boolean", value=is_group)
         form.add_field("muc#roomconfig_whois", "boolean", value=is_group)
@@ -427,6 +367,9 @@ class LegacyMUC(
 
             msg.send()
 
+    def _post_avatar_update(self) -> None:
+        self._send_room_presence()
+
     def _send_room_presence(self, user_full_jid: Optional[JID] = None):
         if user_full_jid is None:
             tos = self.user_full_jids()
@@ -434,8 +377,8 @@ class LegacyMUC(
             tos = [user_full_jid]
         for to in tos:
             p = self.xmpp.make_presence(pfrom=self.jid, pto=to)
-            if self._avatar_hash:
-                p["vcard_temp_update"]["photo"] = self._avatar_hash
+            if (avatar := self.get_avatar()) and (h := avatar.id):
+                p["vcard_temp_update"]["photo"] = h
             else:
                 p["vcard_temp_update"]["photo"] = ""
             p.send()
@@ -600,6 +543,15 @@ class LegacyMUC(
             p = self.Participant(self, nickname, **kwargs)
             p.contact = c
             c.participants.add(p)
+            # FIXME: this is not great but given the current design,
+            #        during participants fill and history backfill we do not
+            #        want to send presence, because we might update affiliation
+            #        and role afterwards.
+            # We need a refactor of the MUC class… later™
+            if not self.get_lock("fill participants") and not self.get_lock(
+                "fill history"
+            ):
+                p.send_last_presence(force=True, no_cache_online=True)
             self.__store_participant(p)
         return p
 
