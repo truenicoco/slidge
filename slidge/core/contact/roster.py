@@ -92,8 +92,8 @@ class LegacyRoster(
             bare = contact_jid.bare
             c = self._contacts_by_bare_jid.get(bare)
             if c is None:
-                log.debug("Contact %s not found", contact_jid)
                 legacy_id = await self.jid_username_to_legacy_id(username)
+                log.debug("Contact %s not found", contact_jid)
                 if self.get_lock(("legacy_id", legacy_id)):
                     log.debug("Already updating %s", contact_jid)
                     return await self.by_legacy_id(legacy_id)
@@ -123,8 +123,8 @@ class LegacyRoster(
         async with self.lock(("legacy_id", legacy_id)):
             c = self._contacts_by_legacy_id.get(legacy_id)
             if c is None:
-                log.debug("Contact %s not found", legacy_id)
                 username = await self.legacy_id_to_jid_username(legacy_id)
+                log.debug("Contact %s not found", legacy_id)
                 if self.get_lock(("username", username)):
                     log.debug("Already updating %s", username)
                     jid = JID()
