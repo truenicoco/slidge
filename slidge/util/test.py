@@ -33,6 +33,7 @@ from slidge import (
 
 from ..core import config
 from ..core.command import Command
+from ..core.config import _TimedeltaSeconds
 
 
 class SlixTestPlus(SlixTest):
@@ -184,7 +185,7 @@ class SlidgeTest(SlixTestPlus):
         admins: list[str] = []
         no_roster_push = False
         upload_requester = None
-        ignore_delay_threshold = 300
+        ignore_delay_threshold = _TimedeltaSeconds("300")
 
     @classmethod
     def setUpClass(cls):
