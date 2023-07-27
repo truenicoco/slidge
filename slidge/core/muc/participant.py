@@ -175,7 +175,6 @@ class LegacyParticipant(
         ):
             return
         if isinstance(stanza, Message):
-            self.__presence_sent = True
             self.send_initial_presence(full_jid)
 
     @cached_property
@@ -197,6 +196,8 @@ class LegacyParticipant(
         **send_kwargs,
     ):
         stanza["occupant-id"]["id"] = self.__occupant_id
+        if isinstance(stanza, Presence):
+            self.__presence_sent = True
         if full_jid:
             stanza["to"] = full_jid
             self.__send_presence_if_needed(stanza, full_jid, archive_only)
