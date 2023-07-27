@@ -72,6 +72,17 @@ class LegacyMUC(
     This is just a flag on archive responses that most clients ignore anyway.
     """
 
+    KEEP_BACKFILLED_PARTICIPANTS = False
+    """
+    Set this to ``True`` if the participant list is not full after calling
+    ``fill_participants()``. This is a workaround for networks with huge
+    participant lists which do not map really well the MUCs where all presences
+    are sent on join.
+    It allows to ensure that the participants that last spoke (within the
+    ``fill_history()`` method are effectively participants, thus making possible
+    for XMPP clients to fetch their avatars.
+    """
+
     _ALL_INFO_FILLED_ON_STARTUP = False
     """
     Set this to true if the fill_participants() / fill_participants() design does not
@@ -467,7 +478,7 @@ class LegacyMUC(
 
     def __store_participant(self, p: "LegacyParticipantType"):
         # we don't want to update the participant list when we're filling history
-        if self.get_lock("fill history"):
+        if not self.KEEP_BACKFILLED_PARTICIPANTS and self.get_lock("fill history"):
             return
         self._participants_by_nicknames[p.nickname] = p  # type:ignore
         if p.contact:
