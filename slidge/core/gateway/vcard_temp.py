@@ -28,7 +28,7 @@ class VCardTemp:
         to = iq.get_to()
 
         if nick := to.resource:
-            participant = await muc.get_participant(nick, raise_if_not_found=False)
+            participant = await muc.get_participant(nick, raise_if_not_found=True)
             if not (contact := participant.contact):
                 raise XMPPError("item-not-found", "This participant has no contact")
             avatar = contact.get_avatar()
