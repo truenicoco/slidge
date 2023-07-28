@@ -4,7 +4,8 @@ import pytest
 from PIL.Image import Image
 from test_shakespeare import Base as BaseNoMUC
 
-from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from slidge import LegacyMUC, MucType
+from slidge.core.cache import avatar_cache
 
 
 # just to have typings for the fixture which pycharm does not understand
@@ -115,9 +116,11 @@ class TestContactAvatar(BaseNoMUC, Avatar):
         self.__assert_not_found()
 
         juliet.avatar = self.avatar_path
+        self.run_coro(juliet._set_avatar_task)
         self.__assert_publish()
 
         juliet.avatar = self.avatar_path
+        self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
         self.run_coro(juliet.set_avatar(self.avatar_path))
@@ -127,9 +130,11 @@ class TestContactAvatar(BaseNoMUC, Avatar):
         assert self.next_sent() is None
 
         juliet.avatar = self.avatar_path
+        self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
         juliet.avatar = None
+        self.run_coro(juliet._set_avatar_task)
         self.__assert_publish_empty()
 
         self.run_coro(juliet.set_avatar(None))
@@ -139,6 +144,7 @@ class TestContactAvatar(BaseNoMUC, Avatar):
         self.__assert_publish()
 
         juliet.avatar = None
+        self.run_coro(juliet._set_avatar_task)
         self.__assert_publish_empty()
 
     def test_avatar_path_with_id(self):
@@ -148,11 +154,32 @@ class TestContactAvatar(BaseNoMUC, Avatar):
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         self.__assert_publish(rewritten=True)
 
+        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == 123
+
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         assert self.next_sent() is None
 
+        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == 123
+
+        self.run_coro(juliet.set_avatar(self.avatar_path, "123"))
+        self.__assert_publish(rewritten=True)
+        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == "123"
+
         self.run_coro(juliet.set_avatar(None))
         self.__assert_publish_empty()
+
+        assert avatar_cache.get_cached_id_for(juliet.jid.bare) is None
+
+    def test_avatar_with_url(self):
+        juliet = self.juliet
+        assert juliet.avatar is None
+        juliet.avatar = "https://nicoco.fr/5x5.png"
+        self.run_coro(juliet._set_avatar_task)
+        self.__assert_publish(rewritten=True)
+
+        juliet.avatar = "https://nicoco.fr/5x5.png"
+        self.run_coro(juliet._set_avatar_task)
+        assert self.next_sent() is None
 
 
 class MUC(LegacyMUC):
@@ -162,6 +189,21 @@ class MUC(LegacyMUC):
 
 class BaseMUC(BaseNoMUC):
     plugin = BaseNoMUC.plugin | {"MUC": MUC}
+
+    def _assert_send_room_avatar(self, empty=False, url=False):
+        if empty:
+            photo = "<photo />"
+        else:
+            photo = f"<photo>{self.avatar_sha1 if url else self.avatar_original_sha1}</photo>"
+        self.send(  # language=XML
+            f"""
+            <presence to="romeo@montague.lit/gajim"
+                      from="room@aim.shakespeare.lit">
+              <x xmlns="vcard-temp:x:update">{photo}</x>
+            </presence>
+            """,
+            use_values=not empty,
+        )
 
     def romeo_joins(self, muc: MUC):
         session = self.get_romeo_session()
@@ -190,6 +232,7 @@ class BaseMUC(BaseNoMUC):
             """
         )
         assert self.next_sent()["subject"] != ""
+        # assert self.next_sent()["from"] == "room@aim.shakespeare.lit"
 
     def get_muc(self, joined=True) -> MUC:
         session = self.get_romeo_session()
@@ -201,6 +244,10 @@ class BaseMUC(BaseNoMUC):
 
 @pytest.mark.usefixtures("avatar")
 class TestParticipantAvatar(BaseMUC, Avatar):
+    def romeo_joins(self, muc: MUC):
+        super().romeo_joins(muc)
+        self._assert_send_room_avatar(empty=True)
+
     def _assert_juliet_presence_no_avatar(self):
         self.send(  # language=XML
             """
@@ -217,7 +264,7 @@ class TestParticipantAvatar(BaseMUC, Avatar):
             """
         )
 
-    def _assert_juliet_presence_avatar(self):
+    def _assert_juliet_presence_avatar(self, sha=None, url=False):
         self.send(  # language=XML
             f"""
             <presence from="room@aim.shakespeare.lit/juliet"
@@ -228,7 +275,7 @@ class TestParticipantAvatar(BaseMUC, Avatar):
                       jid="juliet@aim.shakespeare.lit/slidge" />
               </x>
               <x xmlns="vcard-temp:x:update">
-                <photo>{self.avatar_original_sha1}</photo>
+                <photo>{self.avatar_sha1 if url else self.avatar_original_sha1}</photo>
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="juliet@aim.shakespeare.lit/slidge" />
@@ -249,6 +296,7 @@ class TestParticipantAvatar(BaseMUC, Avatar):
         juliet.avatar = self.avatar_path
         # no broadcast of the contact avatar because not added to roster,
         # only the participant
+        self.run_coro(juliet._set_avatar_task)
         self._assert_juliet_presence_avatar()
         assert self.next_sent() is None
 
@@ -256,27 +304,44 @@ class TestParticipantAvatar(BaseMUC, Avatar):
         assert self.next_sent() is None
 
         juliet.avatar = None
+        self.run_coro(juliet._set_avatar_task)
+        self._assert_juliet_presence_no_avatar()
+        assert self.next_sent() is None
+
+    def test_romeo_join_empty_room_then_juliet_joins_then_set_avatar_with_url(self):
+        muc = self.get_muc(joined=True)
+        session = self.get_romeo_session()
+
+        session.contacts.ready.set_result(True)
+        juliet = self.juliet
+        self.run_coro(muc.get_participant_by_contact(juliet))
+        self._assert_juliet_presence_no_avatar()
+        assert self.next_sent() is None
+
+        juliet.avatar = "https://nicoco.fr/5x5.png"
+        # no broadcast of the contact avatar because not added to roster,
+        # only the participant
+        self.run_coro(juliet._set_avatar_task)
+        self._assert_juliet_presence_avatar(url=True)
+        assert self.next_sent() is None
+
+        juliet.avatar = "https://nicoco.fr/5x5.png"
+        self.run_coro(juliet._set_avatar_task)
+        assert self.next_sent() is None
+
+        juliet.avatar = None
+        self.run_coro(juliet._set_avatar_task)
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
 
 
 @pytest.mark.usefixtures("avatar")
 class TestRoomAvatar(BaseMUC, Avatar):
-    def _assert_send_room_avatar(self):
-        self.send(  # language=XML
-            f"""
-            <presence to="romeo@montague.lit/gajim"
-                      from="room@aim.shakespeare.lit">
-              <x xmlns="vcard-temp:x:update">
-                <photo>{self.avatar_original_sha1}</photo>
-              </x>
-            </presence>
-            """
-        )
-
     def test_room_avatar_change_after_join(self):
         muc = self.get_muc(joined=True)
+        self._assert_send_room_avatar(empty=True)
         muc.avatar = self.avatar_path
+        self.run_coro(muc._set_avatar_task)
         self._assert_send_room_avatar()
 
     def test_room_avatar_on_join(self):
@@ -284,3 +349,10 @@ class TestRoomAvatar(BaseMUC, Avatar):
         muc.avatar = self.avatar_path
         self.romeo_joins(muc)
         self._assert_send_room_avatar()
+
+    def test_room_avatar_with_url(self):
+        muc = self.get_muc(joined=False)
+        muc.avatar = "https://nicoco.fr/5x5.png"
+        self.run_coro(muc._set_avatar_task)
+        self.romeo_joins(muc)
+        self._assert_send_room_avatar(url=True)

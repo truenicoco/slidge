@@ -203,7 +203,10 @@ class MUC(LegacyMUC):
             return
 
         if self.jid.local == "coven":
-            self.avatar = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
+            await self.set_avatar(
+                Path(__file__).parent.parent / "dev" / "assets" / "5x5.png",
+                blocking=True,
+            )
             self.name = "The coven"
 
 
@@ -2472,6 +2475,7 @@ class TestMuc(Base):
         muc._LegacyMUC__participants_filled = True
         contact = self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(333))
         contact.avatar = self.avatar_path
+        self.run_coro(contact._set_avatar_task)
         self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
         pres = self.next_sent()
         assert pres["vcard_temp_update"]["photo"] == self.avatar_original_sha1

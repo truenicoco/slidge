@@ -25,6 +25,11 @@ if TYPE_CHECKING:
 else:
     AnyBaseSession = None
 
+
+class URL(str):
+    pass
+
+
 LegacyGroupIdType = TypeVar("LegacyGroupIdType", bound=Hashable)
 LegacyMessageType = TypeVar("LegacyMessageType", bound=Hashable)
 LegacyThreadType = TypeVar("LegacyThreadType", bound=Hashable)
@@ -41,6 +46,7 @@ RecipientType = TypeVar("RecipientType", bound=Recipient)
 Sender = Union["LegacyContact", "LegacyParticipant"]
 AvatarType = Union[bytes, str, Path]
 LegacyFileIdType = Union[int, str]
+AvatarIdType = Union[LegacyFileIdType, URL]
 
 ChatState = Literal["active", "composing", "gone", "inactive", "paused"]
 ProcessingHint = Literal["no-store", "markable", "store"]

@@ -13,7 +13,9 @@ from typing import Optional
 import aiohttp
 from multidict import CIMultiDictProxy
 from PIL import Image
+from slixmpp import JID
 
+from ..util.types import URL, LegacyFileIdType
 from . import config
 
 
@@ -38,6 +40,7 @@ class CachedAvatar:
 
 class AvatarCache:
     _shelf: shelve.Shelf[CachedAvatar]
+    _jid_to_legacy: shelve.Shelf[LegacyFileIdType]
     dir: Path
 
     def __init__(self):
@@ -47,29 +50,40 @@ class AvatarCache:
         self.dir = path
         self.dir.mkdir(exist_ok=True)
         self._shelf = shelve.open(str(path / "slidge_avatar_cache.shelf"))  # type: ignore
+        self._jid_to_legacy = shelve.open(str(path / "jid_to_avatar_unique_id.shelf"))
 
     def close(self):
         self._shelf.sync()
         self._shelf.close()
+        self._jid_to_legacy.sync()
+        self._jid_to_legacy.close()
         self._thread_pool.shutdown(cancel_futures=True)
 
-    async def get_avatar_from_url_alone(self, url: str):
-        """
-        Used when no avatar unique ID is passed. Store and use http headers
-        to avoid fetching ut
-        """
-        cached = self._shelf.get(url)
+    def __get_http_headers(self, cached: Optional[CachedAvatar]):
         headers = {}
         if cached and (self.dir / cached.filename).exists():
             if last_modified := cached.last_modified:
                 headers["If-Modified-Since"] = last_modified
             if etag := cached.etag:
                 headers["If-None-Match"] = etag
+        return headers
+
+    async def get_avatar_from_url_alone(self, url: str, jid: JID):
+        """
+        Used when no avatar unique ID is passed. Store and use http headers
+        to avoid fetching ut
+        """
+        cached = self._shelf.get(url)
+        headers = self.__get_http_headers(cached)
         async with _download_lock:
-            return await self.__download(cached, url, headers)
+            return await self.__download(cached, url, headers, jid)
 
     async def __download(
-        self, cached: Optional[CachedAvatar], url: str, headers: dict[str, str]
+        self,
+        cached: Optional[CachedAvatar],
+        url: str,
+        headers: dict[str, str],
+        jid: JID,
     ):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as response:
@@ -78,18 +92,46 @@ class AvatarCache:
                     return cached
                 log.debug("Download avatar")
                 return self.convert_and_store(
-                    Image.open(io.BytesIO(await response.read())), url, response.headers
+                    Image.open(io.BytesIO(await response.read())),
+                    url,
+                    jid,
+                    response.headers,
                 )
 
-    def get(self, unique_id: str):
-        return self._shelf.get(unique_id)
+    async def url_has_changed(self, url: URL):
+        cached = self._shelf.get(url)
+        if cached is None:
+            return True
+        headers = self.__get_http_headers(cached)
+        async with self.http.head(url, headers=headers) as response:
+            return response.status != HTTPStatus.NOT_MODIFIED
+
+    def get(self, unique_id: LegacyFileIdType) -> Optional[CachedAvatar]:
+        return self._shelf.get(str(unique_id))
+
+    def get_cached_id_for(self, jid: JID) -> Optional[LegacyFileIdType]:
+        c = self._jid_to_legacy.get(str(jid))
+        if c is None:
+            return None
+        return c
+
+    def store_jid(self, jid: JID, uid: LegacyFileIdType):
+        self._jid_to_legacy[str(jid)] = uid
+        self._jid_to_legacy.sync()
+
+    def delete_jid(self, jid: JID):
+        try:
+            del self._jid_to_legacy[str(jid)]
+        except KeyError:
+            pass
 
     async def convert_and_store(
         self,
         img: Image.Image,
-        unique_id: str,
+        unique_id: LegacyFileIdType,
+        jid: JID,
         response_headers: Optional[CIMultiDictProxy[str]] = None,
-    ):
+    ) -> CachedAvatar:
         resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
         if resize:
             await asyncio.get_event_loop().run_in_executor(
@@ -103,6 +145,7 @@ class AvatarCache:
         if (
             not resize
             and img.format == "PNG"
+            and isinstance(unique_id, str)
             and (path := Path(unique_id))
             and path.exists()
         ):
@@ -127,8 +170,9 @@ class AvatarCache:
         if response_headers:
             avatar.etag = response_headers.get("etag")
             avatar.last_modified = response_headers.get("last-modified")
-        self._shelf[unique_id] = avatar
+        self._shelf[str(unique_id)] = avatar
         self._shelf.sync()
+        self.store_jid(jid, unique_id)
         return avatar
 
 

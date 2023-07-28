@@ -53,7 +53,7 @@ class LegacyBookmarks(
 
     async def __finish_init_muc(self, legacy_id: LegacyGroupIdType, jid: JID):
         muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)
-        await muc.update_info()
+        await muc.avatar_wrap_update_info()
         if not muc.user_nick:
             muc.user_nick = self._user_nick
         self.log.debug("MUC created: %r", muc)

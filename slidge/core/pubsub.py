@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import aiohttp
 from PIL import Image, UnidentifiedImageError
+from PIL.Image import Image as PILImage
 from slixmpp import (
     JID,
     CoroutineCallback,
@@ -26,7 +27,7 @@ from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
 from ..util.db import user_store
-from ..util.types import AvatarType, PepItemType
+from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
 from .contact import LegacyContact
 
@@ -42,10 +43,11 @@ class PepItem:
 
 
 class PepAvatar(PepItem):
-    def __init__(self, authorized_jids: Optional[set[JidStr]] = None):
+    def __init__(self, jid: JID, authorized_jids: Optional[set[JidStr]] = None):
         super().__init__(authorized_jids)
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
+        self.jid = jid
         self._avatar_data_path: Optional[Path] = None
 
     @property
@@ -69,7 +71,7 @@ class PepAvatar(PepItem):
             return self._sha(avatar.read_bytes())
 
     @staticmethod
-    async def _get_image(avatar: AvatarType):
+    async def _get_image(avatar: AvatarType) -> PILImage:
         if isinstance(avatar, str):
             async with aiohttp.ClientSession() as session:
                 async with session.get(avatar) as response:
@@ -82,26 +84,34 @@ class PepAvatar(PepItem):
             raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
 
     async def set_avatar(
-        self, avatar: AvatarType, unique_id: Optional[Union[int, str]] = None
+        self, avatar: AvatarType, unique_id: Optional[LegacyFileIdType] = None
     ):
-        if not unique_id:
+        if unique_id is None:
             if isinstance(avatar, str):
                 await self._set_avatar_from_url_alone(avatar)
                 return
             unique_id = self._get_weak_unique_id(avatar)
 
-        await self._set_avatar_from_unique_id(avatar, str(unique_id))
+        await self._set_avatar_from_unique_id(avatar, unique_id)
 
-    async def _set_avatar_from_unique_id(self, avatar: AvatarType, unique_id: str):
+    async def _set_avatar_from_unique_id(
+        self, avatar: AvatarType, unique_id: LegacyFileIdType
+    ):
         cached_avatar = avatar_cache.get(unique_id)
-        if not cached_avatar:
+        if cached_avatar:
+            # this shouldn't be necessary but here to re-use avatars downloaded
+            # before the change introducing the JID to unique ID mapping
+            avatar_cache.store_jid(self.jid, unique_id)
+        else:
             img = await self._get_image(avatar)
-            cached_avatar = await avatar_cache.convert_and_store(img, unique_id)
+            cached_avatar = await avatar_cache.convert_and_store(
+                img, unique_id, self.jid
+            )
 
         await self._set_avatar_from_cache(cached_avatar)
 
     async def _set_avatar_from_url_alone(self, url: str):
-        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url)
+        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url, self.jid)
         await self._set_avatar_from_cache(cached_avatar)
 
     async def _set_avatar_from_cache(self, cached_avatar: CachedAvatar):
@@ -396,11 +406,12 @@ class PubSubComponent(BasePlugin):
             except KeyError:
                 pass
             await self._broadcast(AvatarMetadata(), jid, restrict_to)
+            avatar_cache.delete_jid(jid)
         else:
             if restrict_to:
-                pep_avatar = PepAvatar({restrict_to})
+                pep_avatar = PepAvatar(jid, {restrict_to})
             else:
-                pep_avatar = PepAvatar()
+                pep_avatar = PepAvatar(jid)
             try:
                 await pep_avatar.set_avatar(avatar, unique_id)
             except (UnidentifiedImageError, FileNotFoundError) as e:
@@ -418,6 +429,30 @@ class PubSubComponent(BasePlugin):
                 restrict_to,
                 id=pep_avatar.metadata["info"]["id"],
             )
+
+    async def set_avatar_from_cache(
+        self, jid: JID, send_empty: bool, restrict_to: OptJidStr = None, broadcast=True
+    ):
+        uid = avatar_cache.get_cached_id_for(jid)
+        if uid is None:
+            if not send_empty:
+                return
+            self.xmpp.loop.create_task(
+                self.set_avatar(jid, None, restrict_to, uid, broadcast)
+            )
+            return
+        cached_avatar = avatar_cache.get(str(uid))
+        if cached_avatar is None:
+            # should not happen but well…
+            log.warning(
+                "Something is wrong with the avatar, %s won't have an "
+                "avatar because avatar not found in cache",
+                jid,
+            )
+            return
+        self.xmpp.loop.create_task(
+            self.set_avatar(jid, cached_avatar.path, restrict_to, uid, broadcast)
+        )
 
     def set_nick(
         self,

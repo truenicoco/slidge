@@ -222,6 +222,11 @@ class LegacyMUC(
         This is awaited on MUC instantiation, and should be overridden to
         update the attributes of the group chat, like title, subject, number
         of participants etc.
+
+        To take advantage of the slidge avatar cache, you can check the .avatar
+        property to retrieve the "legacy file ID" of the cached avatar. If there
+        is no change, you should not call ``set_avatar()`` or attempt to modify
+        the ``.avatar`` property.
         """
         pass
 
