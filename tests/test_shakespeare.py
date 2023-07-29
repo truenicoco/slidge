@@ -170,14 +170,12 @@ class Base(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        return self.xmpp.loop.run_until_complete(
-            session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
-        )
+        return self.run_coro(session.contacts.by_jid(JID("juliet@aim.shakespeare.lit")))
 
 
 class TestAimShakespeareBase(Base):
     def loop(self, x):
-        self.xmpp.loop.run_until_complete(x)
+        self.run_coro(x)
 
     def test_jabber_iq_gateway(self):
         self.recv(  # language=XML
@@ -318,7 +316,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.received("123")
@@ -387,7 +385,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.send_text(body="What what?")
@@ -505,7 +503,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.react("legacy1", "👋")
@@ -559,7 +557,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.is_friend = True
@@ -881,7 +879,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        self.run_coro(session.bookmarks.fill())
         self.recv(  # language=XML
             f"""
             <iq type="get"
@@ -909,7 +907,7 @@ class TestAimShakespeareBase(Base):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
-        juliet: LegacyContact = self.xmpp.loop.run_until_complete(
+        juliet: LegacyContact = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.REACTIONS_SINGLE_EMOJI = True
@@ -1121,7 +1119,7 @@ class TestPrivilegeOld(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@shakespeare.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.send_text("body", carbon=True)
@@ -1211,7 +1209,7 @@ class TestPrivilege(SlidgeTest):
         session = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@shakespeare.lit")
         )
-        juliet = self.xmpp.loop.run_until_complete(
+        juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
         juliet.send_text("body", carbon=True)
@@ -1282,9 +1280,7 @@ class TestContact(SlidgeTest):
 
     def get_contact(self, legacy_id: int):
         session = self.get_romeo_session()
-        return self.xmpp.loop.run_until_complete(
-            session.contacts.by_legacy_id(legacy_id)
-        )
+        return self.run_coro(session.contacts.by_legacy_id(legacy_id))
 
     def get_juliet(self) -> LegacyContact:
         return self.get_contact(123)
@@ -1386,7 +1382,7 @@ class TestContact(SlidgeTest):
 
         juliet.name = "JULIET"
         assert self.next_sent() is None
-        self.xmpp.loop.run_until_complete(juliet.accept_friend_request())
+        self.run_coro(juliet.accept_friend_request())
         p = self.next_sent()
         assert p["type"] == "subscribed"
         assert p["from"] == juliet.jid.bare
@@ -1527,7 +1523,7 @@ class TestCarbon(SlidgeTest):
 
     def get_juliet(self) -> LegacyContact:
         session = self.get_romeo_session()
-        return self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(123))
+        return self.run_coro(session.contacts.by_legacy_id(123))
 
     def test_carbon_send(self):
         orig = AttachmentMixin._AttachmentMixin__get_url
@@ -1578,9 +1574,7 @@ class TestCarbon(SlidgeTest):
         with tempfile.NamedTemporaryFile("w+") as f:
             f.write("test")
             f.seek(0)
-            self.xmpp.loop.run_until_complete(
-                juliet.send_file(file_path=f.name, carbon=True)
-            )
+            self.run_coro(juliet.send_file(file_path=f.name, carbon=True))
             stamp = format_datetime(
                 datetime.datetime.fromtimestamp(Path(f.name).stat().st_mtime)
             )

@@ -254,7 +254,7 @@ class Base(SlidgeTest):
         )
 
     def get_private_muc(self, name="room-private", resources=()) -> MUC:
-        muc = self.xmpp.loop.run_until_complete(
+        muc = self.run_coro(
             self.get_romeo_session().bookmarks.by_jid(
                 JID(f"{name}@aim.shakespeare.lit")
             )
@@ -270,9 +270,7 @@ class Base(SlidgeTest):
         self, nickname="firstwitch", room="room=private", resources=("gajim",)
     ):
         muc = self.get_private_muc(resources=resources)
-        participant: LegacyParticipant = self.xmpp.loop.run_until_complete(
-            muc.get_participant(nickname)
-        )
+        participant: LegacyParticipant = self.run_coro(muc.get_participant(nickname))
         participant._LegacyParticipant__presence_sent = True
         return participant
 
@@ -562,7 +560,7 @@ class TestMuc(Base):
 
     def test_disco_items(self):
         session = self.get_romeo_session()
-        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        self.run_coro(session.bookmarks.fill())
         self.recv(  # language=XML
             """
             <iq type="get"
@@ -738,7 +736,7 @@ class TestMuc(Base):
         muc = self.get_private_muc("room-private")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         muc.session.contacts.ready.set_result(True)
-        participant = self.xmpp.loop.run_until_complete(muc.get_participant("stan"))
+        participant = self.run_coro(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
         self.recv(  # language=XML
@@ -2071,9 +2069,7 @@ class TestMuc(Base):
     def test_mam_from_user_carbon(self):
         muc = self.get_private_muc(resources=["gajim"])
         now = datetime.datetime.now(tz=datetime.timezone.utc)
-        user_participant: Participant = self.xmpp.loop.run_until_complete(
-            muc.get_user_participant()
-        )
+        user_participant: Participant = self.run_coro(muc.get_user_participant())
         user_participant.send_text("blabla", "legacy-666", when=now)
         now_fmt = now.isoformat().replace("+00:00", "Z")
         self.send(  # language=XML
@@ -2273,7 +2269,7 @@ class TestMuc(Base):
 
     def test_room_avatar(self):
         v = b64encode(self.avatar_path.read_bytes()).decode()
-        self.xmpp.loop.run_until_complete(self.get_romeo_session().bookmarks.fill())
+        self.run_coro(self.get_romeo_session().bookmarks.fill())
         self.recv(  # language=XML
             """
             <iq from='romeo@montague.lit/gajim'
@@ -2471,13 +2467,13 @@ class TestMuc(Base):
         self.test_join_group()
         v = b64encode(self.avatar_path.read_bytes()).decode()
         session = self.get_romeo_session()
-        self.xmpp.loop.run_until_complete(session.bookmarks.fill())
+        self.run_coro(session.bookmarks.fill())
         muc = self.get_private_muc()
         muc._LegacyMUC__participants_filled = True
-        contact = self.xmpp.loop.run_until_complete(session.contacts.by_legacy_id(333))
+        contact = self.run_coro(session.contacts.by_legacy_id(333))
         contact.avatar = self.avatar_path
         self.run_coro(contact._set_avatar_task)
-        self.xmpp.loop.run_until_complete(muc.get_participant_by_contact(contact))
+        self.run_coro(muc.get_participant_by_contact(contact))
         pres = self.next_sent()
         assert pres["vcard_temp_update"]["photo"] == self.avatar_original_sha1
         self.recv(  # language=XML
@@ -2620,11 +2616,9 @@ class TestMuc(Base):
     def __get_participants(self):
         muc = self.get_private_muc(resources=["movim"])
         # muc.user_resources.add("movim")
-        self.xmpp.loop.run_until_complete(muc.session.contacts.fill())
+        self.run_coro(muc.session.contacts.fill())
         muc.session.contacts.ready.set_result(True)
-        participants_before: list[Participant] = self.xmpp.loop.run_until_complete(
-            muc.get_participants()
-        )
+        participants_before: list[Participant] = self.run_coro(muc.get_participants())
         return participants_before
 
     def __test_rename_common(self, old_nick, participants_before):
@@ -2664,7 +2658,7 @@ class TestMuc(Base):
             """
         )
 
-        participants_after = self.xmpp.loop.run_until_complete(muc.get_participants())
+        participants_after = self.run_coro(muc.get_participants())
         assert len(participants_after) == len(participants_before)
         assert self.next_sent() is None
 

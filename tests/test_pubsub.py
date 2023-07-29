@@ -134,7 +134,7 @@ class TestPubSubAvatar(SlixTestPlus):
 
     def advertise_avatar(self):
         # img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"
-        self.xmpp.loop.run_until_complete(
+        self.run_coro(
             self.pubsub.set_avatar(
                 "stan@pubsub.south.park",
                 self.avatar_path,
@@ -348,7 +348,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
 
     def test_no_avatar(self):
-        self.xmpp.loop.run_until_complete(
+        self.run_coro(
             self.pubsub.set_avatar(
                 "stan@pubsub.south.park",
                 None,
