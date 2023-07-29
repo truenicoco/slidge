@@ -88,7 +88,7 @@ class AvatarCache:
     ):
         async with self.http.get(url, headers=headers) as response:
             if response.status == HTTPStatus.NOT_MODIFIED:
-                log.debug("Using avatar cache")
+                log.debug("Using avatar cache for %s", jid)
                 return cached
             log.debug("Download avatar")
             return await self.convert_and_store(

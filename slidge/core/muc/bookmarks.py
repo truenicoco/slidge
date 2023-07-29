@@ -81,7 +81,7 @@ class LegacyBookmarks(
                 self.log.debug("%r is group %r", local_part, legacy_id)
                 muc = await self.__finish_init_muc(legacy_id, JID(bare))
             else:
-                self.log.debug("Found an existing MUC instance: %s", muc)
+                self.log.trace("Found an existing MUC instance: %s", muc)  # type:ignore
             return muc
 
     async def by_legacy_id(self, legacy_id: LegacyGroupIdType) -> LegacyMUCType:
@@ -97,7 +97,7 @@ class LegacyBookmarks(
                     return await self.by_jid(jid)
                 muc = await self.__finish_init_muc(legacy_id, jid)
             else:
-                self.log.debug("Found an existing MUC instance: %s", muc)
+                self.log.trace("Found an existing MUC instance: %s", muc)  # type:ignore
 
             return muc
 

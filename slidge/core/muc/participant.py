@@ -50,7 +50,7 @@ class LegacyParticipant(
 
         self._nickname = nickname
 
-        log.debug("Instantiation of: %r", nickname)
+        log.debug("Instantiation of: %r", self)
 
         self.__update_jid(nickname)
 
@@ -139,7 +139,6 @@ class LegacyParticipant(
         p = super()._make_presence(last_seen=last_seen, **presence_kwargs)
         p["muc"]["affiliation"] = self.affiliation
         p["muc"]["role"] = self.role
-        self.log.debug("Presence - contact: %r", self.contact)
         codes = status_codes or set()
         if self.is_user:
             codes.add(110)
