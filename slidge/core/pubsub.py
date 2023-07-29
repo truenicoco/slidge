@@ -6,7 +6,6 @@ from copy import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
-import aiohttp
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
 from slixmpp import (
@@ -72,11 +71,7 @@ class PepAvatar(PepItem):
 
     @staticmethod
     async def _get_image(avatar: AvatarType) -> PILImage:
-        if isinstance(avatar, str):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(avatar) as response:
-                    return Image.open(io.BytesIO(await response.read()))
-        elif isinstance(avatar, bytes):
+        if isinstance(avatar, bytes):
             return Image.open(io.BytesIO(avatar))
         elif isinstance(avatar, Path):
             return Image.open(avatar)
