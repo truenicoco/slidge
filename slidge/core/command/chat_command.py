@@ -133,8 +133,9 @@ class ChatCommandProvider:
             f.set_result(msg["body"])
             return
 
-        c = msg["body"].lower()
+        c = msg["body"]
         first_word, *rest = c.split(" ")
+        first_word = first_word.lower()
 
         if first_word == "help":
             return self._handle_help(msg, *rest)
