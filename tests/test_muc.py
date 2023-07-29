@@ -849,7 +849,8 @@ class TestMuc(Base):
             </message>
             """
         )
-        assert self.next_sent() is None
+        # empty avatar
+        assert self.next_sent()["from"] == "room-private@aim.shakespeare.lit"
 
     def test_join_channel(self):
         self.recv(  # language=XML

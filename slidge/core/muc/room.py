@@ -465,8 +465,9 @@ class LegacyMUC(
         (await self.__get_subject_setter_participant()).set_room_subject(
             self._subject, user_full_jid, self.subject_date
         )
-        if self.get_avatar():
-            self._send_room_presence(user_full_jid)
+        if t := self._set_avatar_task:
+            await t
+        self._send_room_presence(user_full_jid)
         self.user_resources.add(client_resource)
 
     async def get_user_participant(self, **kwargs) -> "LegacyParticipantType":
