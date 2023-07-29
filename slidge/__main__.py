@@ -145,6 +145,7 @@ def main():
     migrate()
 
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
+    avatar_cache.http = gateway.http
     gateway.connect()
 
     return_code = 0

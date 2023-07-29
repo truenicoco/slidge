@@ -42,6 +42,7 @@ class AvatarCache:
     _shelf: shelve.Shelf[CachedAvatar]
     _jid_to_legacy: shelve.Shelf[LegacyFileIdType]
     dir: Path
+    http: aiohttp.ClientSession
 
     def __init__(self):
         self._thread_pool = ThreadPoolExecutor(config.AVATAR_RESAMPLING_THREADS)
@@ -85,18 +86,17 @@ class AvatarCache:
         headers: dict[str, str],
         jid: JID,
     ):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status == HTTPStatus.NOT_MODIFIED:
-                    log.debug("Using avatar cache")
-                    return cached
-                log.debug("Download avatar")
-                return self.convert_and_store(
-                    Image.open(io.BytesIO(await response.read())),
-                    url,
-                    jid,
-                    response.headers,
-                )
+        async with self.http.get(url, headers=headers) as response:
+            if response.status == HTTPStatus.NOT_MODIFIED:
+                log.debug("Using avatar cache")
+                return cached
+            log.debug("Download avatar")
+            return await self.convert_and_store(
+                Image.open(io.BytesIO(await response.read())),
+                url,
+                jid,
+                response.headers,
+            )
 
     async def url_has_changed(self, url: URL):
         cached = self._shelf.get(url)

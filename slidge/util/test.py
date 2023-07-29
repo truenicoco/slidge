@@ -32,6 +32,7 @@ from slidge import (
 )
 
 from ..core import config
+from ..core.cache import avatar_cache
 from ..core.command import Command
 from ..core.config import _TimedeltaSeconds
 
@@ -209,6 +210,7 @@ class SlidgeTest(SlixTestPlus):
             )
 
         self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+        avatar_cache.http = self.xmpp.http
 
         self.xmpp._always_send_everything = True
 
