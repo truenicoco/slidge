@@ -50,9 +50,8 @@ class LegacyParticipant(
 
         self._nickname = nickname
 
-        log.debug("Instantiation of: %r", self)
-
         self.__update_jid(nickname)
+        log.debug("Instantiation of: %r", self)
 
         self.contact: Optional["LegacyContact"] = None
         # we track if we already sent a presence for this participant.
