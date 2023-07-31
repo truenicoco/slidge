@@ -129,7 +129,7 @@ class TemporaryDB:
             query += " AND sender_jid = ?"
             params.append(sender)
         if ids:
-            query += f" message_id IN ({','.join('?' * len(ids))})"
+            query += f" AND message_id IN ({','.join('?' * len(ids))})"
             params.extend(ids)
         if last_page_n:
             # TODO: optimize query further when <flip> and last page are
@@ -141,6 +141,18 @@ class TemporaryDB:
             query += " DESC"
 
         res = self.cur.execute(query, params)
+
+        if ids:
+            rows = res.fetchall()
+            if len(rows) != len(ids):
+                raise XMPPError(
+                    "item-not-found",
+                    "One of the requested messages IDs could not be found "
+                    "with the given constraints.",
+                )
+            for row in rows:
+                yield row
+
         while row := res.fetchone():
             yield row
 

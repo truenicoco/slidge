@@ -2049,6 +2049,118 @@ class TestMuc(Base):
             """
             )
 
+    def test_mam_specific_id(self):
+        self.recv(  # language=XML
+            f"""
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='ids'>
+                    <value>2</value>
+                    <value>4</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+        )
+        for i in 2, 4:
+            self.send(  # language=XML
+                f"""
+            <message to='romeo@montague.lit/gajim'
+                     from='room-private@aim.shakespeare.lit'>
+              <result xmlns='urn:xmpp:mam:2'
+                      queryid='query-id'
+                      id='{i}'>
+                <forwarded xmlns='urn:xmpp:forward:0'>
+                  <delay xmlns='urn:xmpp:delay'
+                         stamp='2000-01-01T{i:02d}:00:00Z' />
+                  <message xmlns='jabber:client'
+                           from="room-private@aim.shakespeare.lit/history-man-{i}"
+                           type='groupchat'
+                           id='{i}'>
+                    <body>Body #{i}</body>
+                    <stanza-id xmlns="urn:xmpp:sid:0"
+                               id="{i}"
+                               by="room-private@aim.shakespeare.lit" />
+                    <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                                 id="uuid" />
+                    <x xmlns="http://jabber.org/protocol/muc#user">
+                      <item role="participant"
+                            affiliation="member"
+                            jid="uuid@aim.shakespeare.lit" />
+                    </x>
+                  </message>
+                </forwarded>
+              </result>
+            </message>
+            """
+            )
+        self.send(  # language=XML
+            f"""
+            <iq type='result'
+                id='iq-id1'
+                from='room-private@aim.shakespeare.lit'
+                to='romeo@montague.lit/gajim'>
+              <fin stable="false"
+                   xmlns='urn:xmpp:mam:2'
+                   complete='true'>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <first>2</first>
+                  <last>4</last>
+                  <count>2</count>
+                </set>
+              </fin>
+            </iq>
+            """
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='ids'>
+                    <value>2</value>
+                    <value>14</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                from="room-private@aim.shakespeare.lit"
+                type="error"
+                id="iq-id1"
+                to="romeo@montague.lit/gajim">
+              <error type="cancel">
+                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">One of the requested messages IDs could not be found with the given constraints.</text>
+              </error>
+            </iq>
+            """
+        )
+
     def test_mam_from_user_carbon(self):
         muc = self.get_private_muc(resources=["gajim"])
         now = datetime.datetime.now(tz=datetime.timezone.utc)

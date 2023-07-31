@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Collection, Optional, Union
 from xml.etree import ElementTree as ET
 
 from slixmpp import Iq, Message
-from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 
 from ...util.sql import db
@@ -69,7 +68,6 @@ class MessageArchive:
         sender: Optional[str] = None,
         flip=False,
     ):
-        yielded_one = False
         for row in db.mam_get_messages(
             self.db_id,
             before_id=before_id,
@@ -81,15 +79,8 @@ class MessageArchive:
             end_date=end_date,
             flip=flip,
         ):
-            yielded_one = True
             yield HistoryMessage(
                 row[0], when=datetime.fromtimestamp(row[1], tz=timezone.utc)
-            )
-        if not yielded_one and ids:
-            raise XMPPError(
-                "item-not-found",
-                "One of the requested messages IDs could not be found "
-                "with the given constraints.",
             )
 
     async def send_metadata(self, iq: Iq):
