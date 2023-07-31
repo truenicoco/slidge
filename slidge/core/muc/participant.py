@@ -45,8 +45,8 @@ class LegacyParticipant(
         self.xmpp = session.xmpp
         self.role: MucRole = "participant"
         self.affiliation: MucAffiliation = "member"
-        self.is_user = is_user
-        self.is_system = is_system
+        self.is_user: bool = is_user
+        self.is_system: bool = is_system
 
         self._nickname = nickname
 
