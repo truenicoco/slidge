@@ -86,4 +86,5 @@ ENTRYPOINT ["watchmedo", "auto-restart", \
   "--secret", "secret", \
   "--debug", \
   "--upload-service", "upload.localhost", \
-  "--admins", "test@localhost"]
+  "--admins", "test@localhost", \
+  "--dev-mode"]

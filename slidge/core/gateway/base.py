@@ -22,6 +22,7 @@ from ...util.db import GatewayUser, user_store
 from ...util.types import AvatarType
 from .. import config
 from ..command.adhoc import AdhocProvider
+from ..command.admin import Exec
 from ..command.base import Command, FormField
 from ..command.chat_command import ChatCommandProvider
 from ..command.register import RegistrationType
@@ -262,6 +263,11 @@ class BaseGateway(
             if any(x is NotImplemented for x in [cls.CHAT_COMMAND, cls.NODE, cls.NAME]):
                 log.debug("Not adding command '%s' because it looks abstract", cls)
                 continue
+            if cls is Exec:
+                if config.DEV_MODE:
+                    log.warning("/!\ DEV MODE ENABLED /!\\")
+                else:
+                    continue
             c = cls(self)
             self.__adhoc_handler.register(c)
             self.__chat_commands_handler.register(c)

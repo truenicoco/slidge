@@ -198,3 +198,9 @@ AVATAR_RESAMPLING_THREADS__DOC = (
     "Number of additional threads to use for avatar resampling. Even in a single-core "
     "context, this makes avatar resampling non-blocking."
 )
+
+DEV_MODE = False
+DEV_MODE__DOC = (
+    "Enables an interactive python shell via chat commands, for admins."
+    "Not safe to use in prod, but great during dev."
+)

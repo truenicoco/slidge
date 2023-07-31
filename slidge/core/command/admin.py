@@ -3,7 +3,7 @@ Commands only accessible for slidge admins
 """
 import functools
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -114,3 +114,31 @@ class ChangeLoglevel(AdminCommand):
         form_values: FormValues, _session: AnyBaseSession, _ifrom: JID
     ) -> None:
         logging.getLogger().setLevel(int(form_values["level"]))  # type:ignore
+
+
+class Exec(AdminCommand):
+    NAME = HELP = "Exec arbitrary python code. SHOULD NEVER BE AVAILABLE IN PROD."
+    CHAT_COMMAND = "!"
+    NODE = "exec"
+    ACCESS = CommandAccess.ADMIN_ONLY
+
+    prev_snapshot = None
+
+    context = dict[str, Any]()
+
+    def __init__(self, xmpp):
+        super().__init__(xmpp)
+
+    async def run(self, session, ifrom: JID, *args):
+        from contextlib import redirect_stdout
+        from io import StringIO
+
+        f = StringIO()
+        with redirect_stdout(f):
+            exec(" ".join(args), self.context)
+
+        out = f.getvalue()
+        if out:
+            return f"```\n{out}\n```"
+        else:
+            return "No output"
