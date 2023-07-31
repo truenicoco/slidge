@@ -116,7 +116,7 @@ class LegacyMUC(
             str, "LegacyContact", "LegacyParticipant"
         ] = "unknown"
 
-        self.archive: MessageArchive = MessageArchive()
+        self.archive: MessageArchive = MessageArchive(str(self.jid))
         self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
@@ -167,7 +167,6 @@ class LegacyMUC(
             else:
                 legacy_id = None
                 oldest_date = None
-                # oldest = self.archive.get_oldest_message()
             await self.backfill(legacy_id, oldest_date)
             self.__history_filled = True
 
@@ -656,18 +655,13 @@ class LegacyMUC(
         else:
             start_date = since or datetime.now(tz=timezone.utc) - timedelta(days=1)
 
-        history_messages = list(
-            self.archive.get_all(start_date=start_date, end_date=None)
-        )
-
-        if maxstanzas:
-            history_messages = history_messages[-maxstanzas:]
-
-        for h_msg in history_messages:
+        for h_msg in self.archive.get_all(
+            start_date=start_date, end_date=None, last_page_n=maxstanzas
+        ):
             msg = h_msg.stanza_component_ns
             msg["delay"]["stamp"] = h_msg.when
             msg.set_to(full_jid)
-            msg.send()
+            self.xmpp.send(msg, False)
 
     async def send_mam(self, iq: Iq):
         await self.__fill_history()
@@ -709,6 +703,7 @@ class LegacyMUC(
             start_date, end_date, before_id, after_id, ids, last_page_n, sender
         )
 
+        # TODO: optimize flipped page query at the SQL level
         if iq["mam"]["flip_page"]:
             it = reversed(list(it))
 

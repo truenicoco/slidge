@@ -1,39 +1,37 @@
 import logging
 import uuid
-from bisect import bisect
 from copy import copy
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Collection, Optional
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Collection, Optional, Union
+from xml.etree import ElementTree as ET
 
 from slixmpp import Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 
+from ...util.sql import db
 from ...util.types import MucType
-from .. import config
 
 if TYPE_CHECKING:
     from .participant import LegacyParticipant
 
 
 class MessageArchive:
-    def __init__(self, retention_days: Optional[float] = None):
-        self._msg_by_ids = dict[str, HistoryMessage]()
-        self._msgs = list[HistoryMessage]()
+    def __init__(self, db_id: str, retention_days: Optional[int] = None):
+        self.db_id = db_id
+        db.mam_add_muc(db_id)
         self._retention = retention_days
 
     def add(
         self,
         msg: Message,
         participant: Optional["LegacyParticipant"] = None,
-        archive_only=False,
     ):
         """
         Add a message to the archive if it is deemed archivable
 
         :param msg:
         :param participant:
-        :param archive_only:
         """
         if not archivable(msg):
             return
@@ -53,43 +51,12 @@ class MessageArchive:
                     "jid"
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        to_archive = HistoryMessage(new_msg)
-
-        if archive_only and len(self._msgs) != 0:
-            # archive_only is for muc.backfill()
-            # since live messages may have arrived before we backfill (lazy, on group first join)
-            # we must make sure we store them in the right order, and without
-            # duplicated messages
-            # TODO: use insort(key=) when we bump python minimal version
-            # insort(self._msgs, to_archive, key=lambda m: m.when)
-            if to_archive.id in self._msg_by_ids:
-                log.debug("Not archiving %s because it's already here", to_archive.id)
-                return
-            i = bisect([m.when for m in self._msgs], to_archive.when)
-            self._msgs.insert(i, to_archive)
-        else:
-            # we assume 'live' messages are in the right order
-            self._msgs.append(to_archive)
-        self._msg_by_ids[to_archive.id] = to_archive
-        self.__cleanup()
+        db.mam_add_msg(self.db_id, HistoryMessage(new_msg))
+        if self._retention:
+            db.mam_clean_history(self.db_id, self._retention)
 
     def __iter__(self):
-        return iter(self._msgs)
-
-    def __cleanup(self):
-        now = datetime.now(tz=timezone.utc)
-        delta = timedelta(days=self._retention or config.MAM_MAX_DAYS)
-        i = 0
-        for msg in self._msgs:
-            if now - msg.when > delta:
-                i += 1
-                del self._msg_by_ids[msg.id]
-            else:
-                break
-        if i == 0:
-            return
-        self._msgs = self._msgs[i:]
-        log.debug("Removed %s messages from the archive", i)
+        return iter(self.get_all())
 
     def get_all(
         self,
@@ -101,47 +68,27 @@ class MessageArchive:
         last_page_n: Optional[int] = None,
         sender: Optional[str] = None,
     ):
-        """
-        Very unoptimized archive fetching
-
-        :param start_date:
-        :param end_date:
-        :param before_id:
-        :param after_id:
-        :param ids:
-        :param last_page_n:
-        :param sender:
-        :return:
-        """
-        for i in [before_id, after_id] + list(ids):
-            if i is not None and i not in self._msg_by_ids:
-                raise XMPPError("item-not-found")
-
-        if last_page_n:
-            messages = self._msgs[-last_page_n:]
-        else:
-            messages = self._msgs
-
-        found_after_id = False
-        for history_msg in messages:
-            if sender and history_msg.stanza.get_from() != sender:
-                continue
-            if start_date and history_msg.when < start_date:
-                continue
-            if end_date and history_msg.when > end_date:
-                continue
-            if before_id and before_id == history_msg.id:
-                break
-            if after_id:
-                if history_msg.id == after_id:
-                    found_after_id = True
-                    continue
-                elif not found_after_id:
-                    continue
-            if ids and history_msg.id not in ids:
-                continue
-
-            yield history_msg
+        yielded_one = False
+        for row in db.mam_get_messages(
+            self.db_id,
+            before_id=before_id,
+            after_id=after_id,
+            ids=ids,
+            last_page_n=last_page_n,
+            sender=sender,
+            start_date=start_date,
+            end_date=end_date,
+        ):
+            yielded_one = True
+            yield HistoryMessage(
+                row[0], when=datetime.fromtimestamp(row[1], tz=timezone.utc)
+            )
+        if not yielded_one and ids:
+            raise XMPPError(
+                "item-not-found",
+                "One of the requested messages IDs could not be found "
+                "with the given constraints.",
+            )
 
     async def send_metadata(self, iq: Iq):
         """
@@ -151,8 +98,9 @@ class MessageArchive:
         :return:
         """
         reply = iq.reply()
-        if self._msgs:
-            for x, m in [("start", self._msgs[0]), ("end", self._msgs[-1])]:
+        messages = list(self.get_all())
+        if messages:
+            for x, m in [("start", messages[0]), ("end", messages[-1])]:
                 reply["mam_metadata"][x]["id"] = m.id
                 reply["mam_metadata"][x]["timestamp"] = m.when
         else:
@@ -161,21 +109,36 @@ class MessageArchive:
 
 
 class HistoryMessage:
-    def __init__(self, stanza: Message):
+    def __init__(self, stanza: Union[Message, str], when: Optional[datetime] = None):
+        if isinstance(stanza, str):
+            from_db = True
+            stanza = Message(xml=ET.fromstring(stanza))
+        else:
+            from_db = False
+
         self.id = stanza["stanza_id"]["id"]
-        self.when = stanza["delay"]["stamp"] or datetime.now(tz=timezone.utc)
+        self.when: datetime = (
+            when or stanza["delay"]["stamp"] or datetime.now(tz=timezone.utc)
+        )
 
-        del stanza["delay"]
-        del stanza["markable"]
-        del stanza["hint"]
-        del stanza["chat_state"]
-        if not stanza["body"]:
-            del stanza["body"]
+        if not from_db:
+            del stanza["delay"]
+            del stanza["markable"]
+            del stanza["hint"]
+            del stanza["chat_state"]
+            if not stanza["body"]:
+                del stanza["body"]
+            fix_namespaces(stanza.xml)
 
-        self.stanza_component_ns = stanza
-        stanza = copy(stanza)
-        fix_namespaces(stanza.xml)
-        self.stanza = stanza
+        self.stanza: Message = stanza
+
+    @property
+    def stanza_component_ns(self):
+        stanza = copy(self.stanza)
+        fix_namespaces(
+            stanza.xml, old="{jabber:client}", new="{jabber:component:accept}"
+        )
+        return stanza
 
     def forwarded(self):
         forwarded = Forwarded()

@@ -12,6 +12,7 @@ from slixmpp.plugins import xep_0082
 
 import slidge.core.mixins.message_maker
 import slidge.core.muc.room
+import slidge.util.sql
 from slidge import *
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
@@ -143,7 +144,7 @@ class MUC(LegacyMUC):
         super().__init__(*a, **k)
         self.history = []
         self.user_nick = "thirdwitch"
-        self.archive = MessageArchive(10e7)
+        self.archive = MessageArchive(self.legacy_id, 10e7)
 
     async def available_emojis(self, legacy_msg_id=None):
         if self.jid.local != "room-private-emoji-restricted":
@@ -277,6 +278,9 @@ class Base(SlidgeTest):
 
 @pytest.mark.usefixtures("avatar")
 class TestMuc(Base):
+    def tearDown(self):
+        slidge.util.sql.db.mam_nuke()
+
     def test_disco_non_existing_room(self):
         self.recv(  # language=XML
             f"""
@@ -809,28 +813,6 @@ class TestMuc(Base):
             """,
         )
         now_fmt = now.isoformat().replace("+00:00", "Z")
-        self.send(  # language=XML
-            f"""
-            <message type="groupchat"
-                     from="room-private@aim.shakespeare.lit/stan"
-                     to="romeo@montague.lit/gajim">
-              <body>Hey</body>
-              <delay xmlns="urn:xmpp:delay"
-                     stamp="{now_fmt}" />
-              <stanza-id xmlns="urn:xmpp:sid:0"
-                         id="uuid"
-                         by="room-private@aim.shakespeare.lit" />
-              <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                           id="uuid" />
-              <x xmlns="http://jabber.org/protocol/muc#user">
-                <item role="participant"
-                      affiliation="member"
-                      jid="uuid@aim.shakespeare.lit" />
-              </x>
-            </message>
-            """,
-            use_values=False,
-        )
         self.send(  # language=XML
             f"""
             <message type="groupchat"
@@ -1714,6 +1696,7 @@ class TestMuc(Base):
                 to='romeo@montague.lit/gajim'>
               <error type='cancel'>
                 <item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Message 12 not found</text>
               </error>
             </iq>
             """,
@@ -2178,7 +2161,7 @@ class TestMuc(Base):
             </message>
             """
         )
-        archived = muc.archive._msgs[-1]
+        archived = list(muc.archive.get_all())[-1]
         assert archived.id == "id"
 
     def test_get_members(self):
@@ -2412,7 +2395,7 @@ class TestMuc(Base):
         m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
         m["body"] = "something"
 
-        a = MessageArchive(1)
+        a = MessageArchive("blop", 1)
         assert len(list(a.get_all())) == 0
         a.add(m)
         assert len(list(a.get_all())) == 1
@@ -2423,7 +2406,7 @@ class TestMuc(Base):
         ) - datetime.timedelta(days=2)
         m["body"] = "something"
 
-        a = MessageArchive(1)
+        a = MessageArchive("blip", 1)
         assert len(list(a.get_all())) == 0
         a.add(m)
         assert len(list(a.get_all())) == 0

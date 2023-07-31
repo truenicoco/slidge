@@ -26,22 +26,22 @@ def stanzas():
 
 
 def test_insertion(stanzas):
-    x = MessageArchive()
+    x = MessageArchive("1")
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive()
+    x = MessageArchive("2")
     assert len(list(x.get_all())) == 0
-    x.add(stanzas[0], archive_only=True)
+    x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive()
+    x = MessageArchive("3")
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
     while stanzas:
-        x.add(stanzas.pop(), archive_only=True)
+        x.add(stanzas.pop())
 
     msgs = list(x.get_all())
 
