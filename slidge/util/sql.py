@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Collection, Optional, Union
@@ -80,6 +80,25 @@ class TemporaryDB:
             raise XMPPError("item-not-found", f"Message {mid} not found")
         return row[0]
 
+    def __mam_bound(
+        self,
+        muc_jid: str,
+        date: Optional[datetime] = None,
+        id_: Optional[str] = None,
+        comparator=min,
+    ):
+        if id_ is not None:
+            after_id_sent_on = self.__mam_get_sent_on(muc_jid, id_)
+            if date:
+                timestamp = comparator(after_id_sent_on, date.timestamp())
+            else:
+                timestamp = after_id_sent_on
+            return " AND sent_on > ?", timestamp
+        elif date is None:
+            raise TypeError
+        else:
+            return " AND sent_on >= ?", date.timestamp()
+
     def mam_get_messages(
         self,
         muc_jid: str,
@@ -92,43 +111,20 @@ class TemporaryDB:
         sender: Optional[str] = None,
         flip=False,
     ):
-        if before_id:
-            end_inclusive = False
-            before_id_sent_on = datetime.fromtimestamp(
-                self.__mam_get_sent_on(muc_jid, before_id), tz=timezone.utc
-            )
-            if end_date:
-                end_date = min(before_id_sent_on, end_date)
-            else:
-                end_date = before_id_sent_on
-        else:
-            end_inclusive = True
-
-        if after_id:
-            start_inclusive = False
-            after_id_sent_on = datetime.fromtimestamp(
-                self.__mam_get_sent_on(muc_jid, after_id), tz=timezone.utc
-            )
-            if start_date:
-                start_date = max(after_id_sent_on, start_date)
-            else:
-                start_date = after_id_sent_on
-
-        else:
-            start_inclusive = True
-
         query = (
             "SELECT xml, sent_on FROM mam_message "
             "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?)"
         )
         params: list[Union[str, float, int]] = [muc_jid]
 
-        if start_date:
-            query += f" AND sent_on >{'=' if start_inclusive else ''} ?"
-            params.append(start_date.timestamp())
-        if end_date:
-            query += f" AND sent_on <{'=' if end_inclusive else ''} ?"
-            params.append(end_date.timestamp())
+        if start_date or after_id:
+            subquery, timestamp = self.__mam_bound(muc_jid, start_date, after_id, max)
+            query += subquery
+            params.append(timestamp)
+        if end_date or before_id:
+            subquery, timestamp = self.__mam_bound(muc_jid, end_date, before_id, min)
+            query += subquery
+            params.append(timestamp)
         if sender:
             query += " AND sender_jid = ?"
             params.append(sender)
