@@ -67,6 +67,7 @@ class MessageArchive:
         ids: Collection[str] = (),
         last_page_n: Optional[int] = None,
         sender: Optional[str] = None,
+        flip=False,
     ):
         yielded_one = False
         for row in db.mam_get_messages(
@@ -78,6 +79,7 @@ class MessageArchive:
             sender=sender,
             start_date=start_date,
             end_date=end_date,
+            flip=flip,
         ):
             yielded_one = True
             yield HistoryMessage(

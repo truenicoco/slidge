@@ -700,12 +700,15 @@ class LegacyMUC(
         count = 0
 
         it = self.archive.get_all(
-            start_date, end_date, before_id, after_id, ids, last_page_n, sender
+            start_date,
+            end_date,
+            before_id,
+            after_id,
+            ids,
+            last_page_n,
+            sender,
+            bool(iq["mam"]["flip_page"]),
         )
-
-        # TODO: optimize flipped page query at the SQL level
-        if iq["mam"]["flip_page"]:
-            it = reversed(list(it))
 
         for history_msg in it:
             last = xmpp_id = history_msg.id

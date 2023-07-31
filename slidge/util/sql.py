@@ -90,6 +90,7 @@ class TemporaryDB:
         ids: Collection[str] = (),
         last_page_n: Optional[int] = None,
         sender: Optional[str] = None,
+        flip=False,
     ):
         if before_id:
             end_inclusive = False
@@ -135,10 +136,15 @@ class TemporaryDB:
             query += f" message_id IN ({','.join('?' * len(ids))})"
             params.extend(ids)
         if last_page_n:
+            # TODO: optimize query further when <flip> and last page are
+            #       combined.
             query = f"SELECT * FROM ({query} ORDER BY sent_on DESC LIMIT ?)"
             params.append(last_page_n)
+        query += " ORDER BY sent_on"
+        if flip:
+            query += " DESC"
 
-        res = self.cur.execute(query + " ORDER BY sent_on", params)
+        res = self.cur.execute(query, params)
         while row := res.fetchone():
             yield row
 
