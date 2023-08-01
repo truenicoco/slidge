@@ -16,10 +16,9 @@ if TYPE_CHECKING:
 
 
 class MessageArchive:
-    def __init__(self, db_id: str, retention_days: Optional[int] = None):
+    def __init__(self, db_id: str):
         self.db_id = db_id
         db.mam_add_muc(db_id)
-        self._retention = retention_days
 
     def add(
         self,
@@ -51,8 +50,6 @@ class MessageArchive:
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
         db.mam_add_msg(self.db_id, HistoryMessage(new_msg))
-        if self._retention:
-            db.mam_clean_history(self.db_id, self._retention)
 
     def __iter__(self):
         return iter(self.get_all())

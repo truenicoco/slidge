@@ -19,6 +19,7 @@ from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.db import GatewayUser, user_store
+from ...util.sql import db
 from ...util.types import AvatarType
 from .. import config
 from ..command.adhoc import AdhocProvider
@@ -257,6 +258,8 @@ class BaseGateway(
         self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()
+
+        db.mam_launch_cleanup_task(self.loop)
 
     def __register_commands(self):
         for cls in Command.subclasses:

@@ -144,7 +144,7 @@ class MUC(LegacyMUC):
         super().__init__(*a, **k)
         self.history = []
         self.user_nick = "thirdwitch"
-        self.archive = MessageArchive(self.legacy_id, 10e7)
+        self.archive = MessageArchive(self.legacy_id)
 
     async def available_emojis(self, legacy_msg_id=None):
         if self.jid.local != "room-private-emoji-restricted":
@@ -2503,13 +2503,20 @@ class TestMuc(Base):
         assert self.next_sent() is None
 
     def test_archive_cleanup(self):
+        from slidge import global_config
+
+        orig = global_config.MAM_MAX_DAYS
+        global_config.MAM_MAX_DAYS = 1
+
         m = Message()
         m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
         m["body"] = "something"
 
-        a = MessageArchive("blop", 1)
+        a = MessageArchive("blop")
+        slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
+        slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 1
 
         m = Message()
@@ -2518,9 +2525,11 @@ class TestMuc(Base):
         ) - datetime.timedelta(days=2)
         m["body"] = "something"
 
-        a = MessageArchive("blip", 1)
+        a = MessageArchive("blip")
+        slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
+        slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
 
         m = Message()
@@ -2530,7 +2539,10 @@ class TestMuc(Base):
         m["body"] = "something"
         a.add(m)
         a.add(m)
+        slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 2
+
+        global_config.MAM_MAX_DAYS = orig
 
     def test_moderate(self):
         muc = self.get_private_muc("room", ["gajim"])

@@ -1,12 +1,15 @@
 import os
 import sqlite3
 import tempfile
+from asyncio import AbstractEventLoop, Task, sleep
 from datetime import datetime
 from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Collection, Optional, Union
 
 from slixmpp.exceptions import XMPPError
+
+from ..core import config
 
 if TYPE_CHECKING:
     from slidge.core.muc.archive import HistoryMessage
@@ -22,6 +25,8 @@ class TemporaryDB:
         self.con = sqlite3.connect(filename)
         self.cur = self.con.cursor()
         self.cur.executescript((Path(__file__).parent / "schema.sql").read_text())
+
+        self.__mam_cleanup_task: Optional[Task] = None
 
     def __del__(self):
         self.con.close()
@@ -54,16 +59,17 @@ class TemporaryDB:
         )
         self.con.commit()
 
-    def mam_clean_history(self, muc_jid: str, retention_days: int):
+    def mam_launch_cleanup_task(self, loop: AbstractEventLoop):
+        self.__mam_cleanup_task = loop.create_task(self.__mam_cleanup())
+
+    async def __mam_cleanup(self):
+        await sleep(6 * 24 * 3600)
+        self.mam_cleanup()
+
+    def mam_cleanup(self):
         self.cur.execute(
-            """
-            DELETE FROM
-                mam_message
-            WHERE
-                muc_id = (SELECT id FROM muc WHERE jid = ?)
-                AND sent_on < ?
-            """,
-            (muc_jid, time() - retention_days * 24 * 3600),
+            "DELETE FROM mam_message WHERE sent_on < ?",
+            (time() - config.MAM_MAX_DAYS * 24 * 3600,),
         )
         self.con.commit()
 
