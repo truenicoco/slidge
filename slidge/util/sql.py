@@ -156,5 +156,17 @@ class TemporaryDB:
         while row := res.fetchone():
             yield row
 
+    def mam_get_first_and_last(self, muc_jid: str):
+        res = self.cur.execute(
+            "SELECT message_id, sent_on "
+            "FROM mam_message "
+            "JOIN muc ON muc.jid = ? "
+            "WHERE sent_on = (SELECT MIN(sent_on) FROM mam_message WHERE muc_id = muc.id) "
+            "   OR sent_on = (SELECT MAX(sent_on) FROM mam_message WHERE muc_id = muc.id) "
+            " ORDER BY sent_on",
+            (muc_jid,),
+        )
+        return res.fetchall()
+
 
 db = TemporaryDB()

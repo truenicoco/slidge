@@ -14,3 +14,4 @@ CREATE TABLE mam_message(
 );
 
 CREATE INDEX mam_sent_on ON mam_message(sent_on);
+CREATE INDEX muc_jid ON muc(jid);

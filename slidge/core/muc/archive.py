@@ -91,11 +91,13 @@ class MessageArchive:
         :return:
         """
         reply = iq.reply()
-        messages = list(self.get_all())
+        messages = db.mam_get_first_and_last(self.db_id)
         if messages:
             for x, m in [("start", messages[0]), ("end", messages[-1])]:
-                reply["mam_metadata"][x]["id"] = m.id
-                reply["mam_metadata"][x]["timestamp"] = m.when
+                reply["mam_metadata"][x]["id"] = m[0]
+                reply["mam_metadata"][x]["timestamp"] = datetime.fromtimestamp(
+                    m[1], tz=timezone.utc
+                )
         else:
             reply.enable("mam_metadata")
         reply.send()
