@@ -3,13 +3,15 @@ import sqlite3
 import tempfile
 from asyncio import AbstractEventLoop, Task, sleep
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Collection, Optional, Union
+from typing import TYPE_CHECKING, Collection, Generic, Optional, Union
 
 from slixmpp.exceptions import XMPPError
 
 from ..core import config
+from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
     from slidge.core.muc.archive import HistoryMessage
@@ -173,6 +175,75 @@ class TemporaryDB:
             (muc_jid,),
         )
         return res.fetchall()
+
+
+class SQLBiDict(Generic[KeyType, ValueType]):
+    def __init__(
+        self,
+        table: str,
+        key1: str,
+        key2: str,
+        extra_value: str,
+        extra_key="session_jid",
+        sql: Optional[TemporaryDB] = None,
+        create_table=False,
+        is_inverse=False,
+    ):
+        if sql is None:
+            sql = db
+        self.db = sql
+        self.table = table
+        self.key1 = key1
+        self.key2 = key2
+        self.extra_key = extra_key
+        self.extra_value = extra_value
+        if create_table:
+            sql.cur.execute(
+                f"CREATE TABLE {table} (id "
+                "INTEGER PRIMARY KEY, "
+                f"{extra_key} TEXT, "
+                f"{key1} UNIQUE, "
+                f"{key2} UNIQUE)",
+            )
+        if is_inverse:
+            return
+        self.inverse = SQLBiDict[ValueType, KeyType](
+            table, key2, key1, extra_value, sql=sql, is_inverse=True
+        )
+
+    def __setitem__(self, key: KeyType, value: ValueType):
+        self.db.cur.execute(
+            f"REPLACE INTO {self.table}"
+            f"({self.extra_key}, {self.key1}, {self.key2}) "
+            "VALUES (?, ?, ?)",
+            (self.extra_value, key, value),
+        )
+        self.db.con.commit()
+
+    def __getitem__(self, item: KeyType) -> ValueType:
+        v = self.get(item)
+        if v is None:
+            raise KeyError(item)
+        return v
+
+    def __contains__(self, item: KeyType) -> bool:
+        res = self.db.cur.execute(
+            f"SELECT {self.key1} FROM {self.table} "
+            f"WHERE {self.key1} = ? AND {self.extra_key} = ?",
+            (item, self.extra_value),
+        ).fetchone()
+        return res is not None
+
+    @lru_cache(100)
+    def get(self, item: KeyType) -> Optional[ValueType]:
+        res = self.db.cur.execute(
+            f"SELECT {self.key2} FROM {self.table} "
+            f"WHERE {self.key1} = ? AND {self.extra_key} = ?",
+            (item, self.extra_value),
+        ).fetchone()
+        if res is None:
+            return res
+        return res[0]
 
 
 db = TemporaryDB()
