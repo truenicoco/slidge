@@ -15,6 +15,7 @@ class Avatar:
     avatar_bytes: bytes
     avatar_sha1: str
     avatar_original_sha1: str
+    avatar_url: str
 
 
 @pytest.mark.usefixtures("avatar")
@@ -173,11 +174,11 @@ class TestContactAvatar(BaseNoMUC, Avatar):
     def test_avatar_with_url(self):
         juliet = self.juliet
         assert juliet.avatar is None
-        juliet.avatar = "https://nicoco.fr/5x5.png"
+        juliet.avatar = self.avatar_url
         self.run_coro(juliet._set_avatar_task)
         self.__assert_publish(rewritten=True)
 
-        juliet.avatar = "https://nicoco.fr/5x5.png"
+        juliet.avatar = self.avatar_url
         self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
@@ -318,14 +319,14 @@ class TestParticipantAvatar(BaseMUC, Avatar):
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
 
-        juliet.avatar = "https://nicoco.fr/5x5.png"
+        juliet.avatar = self.avatar_url
         # no broadcast of the contact avatar because not added to roster,
         # only the participant
         self.run_coro(juliet._set_avatar_task)
         self._assert_juliet_presence_avatar(url=True)
         assert self.next_sent() is None
 
-        juliet.avatar = "https://nicoco.fr/5x5.png"
+        juliet.avatar = self.avatar_url
         self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
@@ -352,7 +353,7 @@ class TestRoomAvatar(BaseMUC, Avatar):
 
     def test_room_avatar_with_url(self):
         muc = self.get_muc(joined=False)
-        muc.avatar = "https://nicoco.fr/5x5.png"
+        muc.avatar = self.avatar_url
         self.run_coro(muc._set_avatar_task)
         self.romeo_joins(muc)
         self._assert_send_room_avatar(url=True)

@@ -1,13 +1,15 @@
 import hashlib
 import io
-
-from PIL import Image
+from contextlib import asynccontextmanager
+from http import HTTPStatus
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+from PIL import Image
 
-from slidge.util import SubclassableOnce
 from slidge.core.cache import avatar_cache
+from slidge.util import SubclassableOnce
 
 SubclassableOnce.TEST_MODE = True
 
@@ -35,9 +37,37 @@ def avatar(request):
         img.save(f, format="PNG")
         img_bytes = f.getvalue()
 
+    class MockResponse:
+        def __init__(self, status):
+            self.status = status
+
+        @staticmethod
+        async def read():
+            return img_bytes
+
+        headers = {"etag": "etag", "last-modified": "last"}
+
+    @asynccontextmanager
+    async def mock_get(url, headers):
+        assert url == "AVATAR_URL"
+        if (
+            headers
+            and headers.get("If-None-Match") == "etag"
+            or headers.get("If-Modified-Since") == "last"
+        ):
+            yield MockResponse(HTTPStatus.NOT_MODIFIED)
+        else:
+            yield MockResponse(HTTPStatus.OK)
+
     request.cls.avatar_path = path
     request.cls.avatar_image = img
     request.cls.avatar_bytes = img_bytes
     request.cls.avatar_sha1 = hashlib.sha1(img_bytes).hexdigest()
+    request.cls.avatar_url = "AVATAR_URL"
 
     request.cls.avatar_original_sha1 = hashlib.sha1(path.read_bytes()).hexdigest()
+
+    with patch("slidge.core.cache.avatar_cache.http", create=True) as mock:
+        mock.get = mock_get
+        mock.head = mock_get
+        yield request
