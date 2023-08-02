@@ -12,6 +12,7 @@ from slidge.util import (
     is_valid_phone_number,
 )
 from slidge.util.db import EncryptedShelf
+from slidge.util.sql import SQLBiDict
 
 
 def test_subclass():
@@ -57,6 +58,26 @@ def test_bidict():
     assert d.inverse["c"] == 2
     assert "b" not in d
     assert len(d.inverse.values()) == 2
+
+
+def test_bidict_sql():
+    d = SQLBiDict("test", "key1", "key2", "test@test.fr", create_table=True)
+    d[1] = "a"
+    d[2] = "b"
+
+    assert d.inverse.get("a") == 1
+    assert d.inverse.get("b") == 2
+    assert 1 in d
+    assert 2 in d
+
+    d[2] = "c"
+    assert d[2] == "c"
+    assert d.inverse.get("c") == 2
+    assert "b" not in d
+
+    d2 = SQLBiDict("test", "key1", "key2", "test2@test.fr")
+    assert d2.get(1) is None
+    assert d2.inverse.get("a") is None
 
 
 def test_encrypted_shelf(tmp_path):

@@ -7,8 +7,9 @@ import aiohttp
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 
-from ..util import ABCSubclassableOnceAtMost, BiDict
+from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
+from ..util.sql import SQLBiDict
 from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,
@@ -57,7 +58,6 @@ class BaseSession(
     Must be subclassed for a functional slidge plugin.
     """
 
-    sent: BiDict[LegacyMessageType, str]
     """
     Since we cannot set the XMPP ID of messages sent by XMPP clients, we need to keep a mapping
     between XMPP IDs and legacy message IDs if we want to further refer to a message that was sent
@@ -85,9 +85,13 @@ class BaseSession(
         self.log = logging.getLogger(user.bare_jid)
 
         self.user = user
-        self.sent = BiDict[LegacyMessageType, str]()  # TODO: set a max size for this
+        self.sent = SQLBiDict[LegacyMessageType, str](
+            "session_message_sent", "legacy_id", "xmpp_id", str(self.user.jid)
+        )
         # message ids (*not* stanza-ids), needed for last msg correction
-        self.muc_sent_msg_ids = BiDict[LegacyMessageType, str]()
+        self.muc_sent_msg_ids = SQLBiDict[LegacyMessageType, str](
+            "session_message_sent_muc", "legacy_id", "xmpp_id", str(self.user.jid)
+        )
 
         self.ignore_messages = set[str]()
 
@@ -101,7 +105,9 @@ class BaseSession(
 
         self.http = self.xmpp.http
 
-        self.threads = BiDict[str, LegacyThreadType]()  # type:ignore
+        self.threads = SQLBiDict[str, LegacyThreadType](  # type:ignore
+            "session_thread_sent_muc", "legacy_id", "xmpp_id", str(self.user.jid)
+        )
         self.__thread_creation_lock = asyncio.Lock()
 
         self.__cached_presence: Optional[CachedPresence] = None

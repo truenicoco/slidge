@@ -15,3 +15,39 @@ CREATE TABLE mam_message(
 
 CREATE INDEX mam_sent_on ON mam_message(sent_on);
 CREATE INDEX muc_jid ON muc(jid);
+
+CREATE TABLE session_message_sent(
+  id INTEGER PRIMARY KEY,
+  session_jid TEXT,
+  legacy_id UNIQUE,
+  xmpp_id TEXT
+);
+
+CREATE INDEX session_message_sent_legacy_id
+    ON session_message_sent(legacy_id);
+CREATE INDEX session_message_sent_xmpp_id
+    ON session_message_sent(xmpp_id);
+
+CREATE TABLE session_message_sent_muc(
+  id INTEGER PRIMARY KEY,
+  session_jid TEXT,
+  legacy_id UNIQUE,
+  xmpp_id TEXT
+);
+
+CREATE INDEX session_message_sent_muc_legacy_id
+    ON session_message_sent_muc(legacy_id);
+CREATE INDEX session_message_sent_muc_xmpp_id
+    ON session_message_sent_muc(xmpp_id);
+
+CREATE TABLE session_thread_sent_muc(
+  id INTEGER PRIMARY KEY,
+  session_jid TEXT,
+  legacy_id UNIQUE,
+  xmpp_id TEXT
+);
+
+CREATE INDEX session_thread_sent_muc_legacy_id
+    ON session_thread_sent_muc(legacy_id);
+CREATE INDEX session_thread_sent_muc_xmpp_id
+    ON session_thread_sent_muc(xmpp_id);
