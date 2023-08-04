@@ -37,13 +37,11 @@ VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 
 class PepItem:
-    def __init__(self, authorized_jids: Optional[set[JidStr]] = None):
-        self.authorized_jids = authorized_jids
+    pass
 
 
 class PepAvatar(PepItem):
-    def __init__(self, jid: JID, authorized_jids: Optional[set[JidStr]] = None):
-        super().__init__(authorized_jids)
+    def __init__(self, jid: JID):
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
         self.jid = jid
@@ -124,10 +122,7 @@ class PepAvatar(PepItem):
 
 
 class PepNick(PepItem):
-    def __init__(
-        self, authorized_jids: Optional[set[JidStr]] = None, nick: Optional[str] = None
-    ):
-        super().__init__(authorized_jids)
+    def __init__(self, nick: Optional[str] = None):
         nickname = UserNick()
         if nick is not None:
             nickname["nick"] = nick
@@ -227,7 +222,7 @@ class PubSubComponent(BasePlugin):
         features = info["features"]
         if AvatarMetadata.namespace + "+notify" in features:
             try:
-                pep_avatar = self._get_authorized_avatar(p)
+                pep_avatar = await self._get_authorized_avatar(p)
             except XMPPError:
                 pass
             else:
@@ -239,7 +234,7 @@ class PubSubComponent(BasePlugin):
                 )
         if UserNick.namespace + "+notify" in features:
             try:
-                pep_nick = self._get_authorized_nick(p)
+                pep_nick = await self._get_authorized_nick(p)
             except XMPPError:
                 pass
             else:
@@ -266,28 +261,29 @@ class PubSubComponent(BasePlugin):
             node=VCARD4_NAMESPACE,
         )
 
-    @staticmethod
-    def _get_authorized_item(
-        store: dict[JID, PepItemType], stanza: Union[Iq, Presence]
+    async def _get_authorized_item(
+        self, store: dict[JID, PepItemType], stanza: Union[Iq, Presence]
     ) -> PepItemType:
-        item = store.get(stanza.get_to())
+        sto = stanza.get_to()
+
+        item = store.get(sto)
         if item is None:
             raise XMPPError("item-not-found")
 
-        if item.authorized_jids is not None:
-            if stanza.get_from().bare not in item.authorized_jids:
-                raise XMPPError("item-not-found")
+        if sto != self.xmpp.boundjid.bare:
+            session = self.xmpp.get_session_from_stanza(stanza)
+            await session.contacts.by_jid(sto)
 
         return item
 
-    def _get_authorized_avatar(self, stanza: Union[Iq, Presence]):
-        return self._get_authorized_item(self._avatars, stanza)
+    async def _get_authorized_avatar(self, stanza: Union[Iq, Presence]):
+        return await self._get_authorized_item(self._avatars, stanza)
 
-    def _get_authorized_nick(self, stanza: Union[Iq, Presence]):
-        return self._get_authorized_item(self._nicks, stanza)
+    async def _get_authorized_nick(self, stanza: Union[Iq, Presence]):
+        return await self._get_authorized_item(self._nicks, stanza)
 
     async def _get_avatar_data(self, iq: Iq):
-        pep_avatar = self._get_authorized_avatar(iq)
+        pep_avatar = await self._get_authorized_avatar(iq)
 
         requested_items = iq["pubsub"]["items"]
         if len(requested_items) == 0:
@@ -301,7 +297,7 @@ class PubSubComponent(BasePlugin):
                 raise XMPPError("item-not-found")
 
     async def _get_avatar_metadata(self, iq: Iq):
-        pep_avatar = self._get_authorized_avatar(iq)
+        pep_avatar = await self._get_authorized_avatar(iq)
 
         requested_items = iq["pubsub"]["items"]
         if len(requested_items) == 0:
@@ -390,7 +386,7 @@ class PubSubComponent(BasePlugin):
         self,
         jid: JidStr,
         avatar: Optional[AvatarType] = None,
-        restrict_to: OptJidStr = None,
+        broadcast_to: OptJidStr = None,
         unique_id=None,
         broadcast=True,
     ):
@@ -400,20 +396,16 @@ class PubSubComponent(BasePlugin):
                 del self._avatars[jid]
             except KeyError:
                 pass
-            await self._broadcast(AvatarMetadata(), jid, restrict_to)
+            await self._broadcast(AvatarMetadata(), jid, broadcast_to)
             avatar_cache.delete_jid(jid)
         else:
-            if restrict_to:
-                pep_avatar = PepAvatar(jid, {restrict_to})
-            else:
-                pep_avatar = PepAvatar(jid)
+            pep_avatar = PepAvatar(jid)
             try:
                 await pep_avatar.set_avatar(avatar, unique_id)
             except (UnidentifiedImageError, FileNotFoundError) as e:
                 log.warning("Failed to set avatar for %s: %r", self, e)
                 return
-
-            _add_or_extend_allowed_jids(jid, self._avatars, pep_avatar)
+            self._avatars[jid] = pep_avatar
             if pep_avatar.metadata is None:
                 raise RuntimeError
             if not broadcast:
@@ -421,19 +413,19 @@ class PubSubComponent(BasePlugin):
             await self._broadcast(
                 pep_avatar.metadata,
                 jid,
-                restrict_to,
+                broadcast_to,
                 id=pep_avatar.metadata["info"]["id"],
             )
 
     async def set_avatar_from_cache(
-        self, jid: JID, send_empty: bool, restrict_to: OptJidStr = None, broadcast=True
+        self, jid: JID, send_empty: bool, broadcast_to: OptJidStr = None, broadcast=True
     ):
         uid = avatar_cache.get_cached_id_for(jid)
         if uid is None:
             if not send_empty:
                 return
             self.xmpp.loop.create_task(
-                self.set_avatar(jid, None, restrict_to, uid, broadcast)
+                self.set_avatar(jid, None, broadcast_to, uid, broadcast)
             )
             return
         cached_avatar = avatar_cache.get(str(uid))
@@ -446,23 +438,20 @@ class PubSubComponent(BasePlugin):
             )
             return
         self.xmpp.loop.create_task(
-            self.set_avatar(jid, cached_avatar.path, restrict_to, uid, broadcast)
+            self.set_avatar(jid, cached_avatar.path, broadcast_to, uid, broadcast)
         )
 
     def set_nick(
         self,
         jid: JidStr,
         nick: Optional[str] = None,
-        restrict_to: OptJidStr = None,
+        broadcast_to: OptJidStr = None,
     ):
         jid = JID(jid)
-        if restrict_to:
-            nickname = PepNick({restrict_to}, nick)
-        else:
-            nickname = PepNick(None, nick)
-        _add_or_extend_allowed_jids(jid, self._nicks, nickname)
+        nickname = PepNick(nick)
+        self._nicks[jid] = nickname
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, restrict_to))
+        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, broadcast_to))
 
     async def broadcast_all(self, from_: JID, to: JID):
         """
@@ -479,32 +468,6 @@ class PubSubComponent(BasePlugin):
         n = self._nicks.get(from_)
         if n:
             await self._broadcast(n.nick, from_, to)
-
-
-def _add_or_extend_allowed_jids(
-    jid: JID, store: dict[JID, PepItemType], item: PepItemType
-):
-    already_here = store.get(jid)
-    if already_here is None:
-        store[jid] = item
-        return
-
-    before = already_here.authorized_jids
-    now = item.authorized_jids
-
-    if before is None and now is None:
-        store[jid] = item
-        return
-
-    if (before is None and now is not None) or (now is None and before is not None):
-        log.warning("Restriction status of %s changed changed. This is a bug.", item)
-        store[jid] = item
-        return
-
-    assert isinstance(now, set) and isinstance(before, set)
-    log.debug("Extending JID restrictions of %s from %s with %s", item, before, now)
-    now |= before
-    store[jid] = item
 
 
 log = logging.getLogger(__name__)

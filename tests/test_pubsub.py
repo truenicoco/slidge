@@ -4,6 +4,7 @@ from base64 import b64encode
 from pathlib import Path
 
 import pytest
+from slixmpp.exceptions import XMPPError
 from slixmpp.stanza import Error
 from slixmpp.test import SlixTest
 
@@ -67,6 +68,12 @@ class MockSession:
     async def get_contact_or_group_or_participant(j):
         return
 
+    class contacts:
+        @staticmethod
+        async def by_jid(sto):
+            if sto != "stan@pubsub.south.park":
+                raise XMPPError("item-not-found")
+
 
 class TestPubSubNickname(SlixTest):
     def setUp(self):
@@ -129,6 +136,7 @@ class TestPubSubAvatar(SlixTestPlus):
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
         self.xmpp.get_session_from_jid = lambda j: MockSession
+        self.xmpp.get_session_from_stanza = lambda j: MockSession
         self.temp_dir = tempfile.TemporaryDirectory()
         avatar_cache.dir = Path(self.temp_dir.name)
 
