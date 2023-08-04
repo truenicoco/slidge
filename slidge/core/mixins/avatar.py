@@ -77,7 +77,7 @@ class AvatarMixin:
             jid=self.__avatar_jid,
             avatar=a,
             unique_id=None if isinstance(uid, URL) else uid,
-            restrict_to=self.session.user.jid.bare,
+            broadcast_to=self.session.user.jid.bare,
             broadcast=self._avatar_pubsub_broadcast,
         )
         self._post_avatar_update()
