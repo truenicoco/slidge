@@ -71,3 +71,13 @@ def avatar(request):
         mock.get = mock_get
         mock.head = mock_get
         yield request
+
+
+# just to have typings for the fixture which pycharm does not understand
+class AvatarFixtureMixin:
+    avatar_path: Path
+    avatar_image: Image
+    avatar_bytes: bytes
+    avatar_sha1: str
+    avatar_original_sha1: str
+    avatar_url: str

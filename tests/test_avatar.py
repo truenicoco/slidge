@@ -1,31 +1,13 @@
-from pathlib import Path
-
 import pytest
-from PIL.Image import Image
+from conftest import AvatarFixtureMixin
 from test_shakespeare import Base as BaseNoMUC
 
 from slidge import LegacyMUC, MucType
 from slidge.core.cache import avatar_cache
 
 
-# just to have typings for the fixture which pycharm does not understand
-class Avatar:
-    avatar_path: Path
-    avatar_image: Image
-    avatar_bytes: bytes
-    avatar_sha1: str
-    avatar_original_sha1: str
-    avatar_url: str
-
-
 @pytest.mark.usefixtures("avatar")
-class TestContactAvatar(BaseNoMUC, Avatar):
-    avatar_path: Path
-    avatar_image: Image
-    avatar_bytes: bytes
-    avatar_sha1: str
-    avatar_original_sha1: str
-
+class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
     def setUp(self):
         super().setUp()
         self.juliet.is_friend = True
@@ -244,7 +226,7 @@ class BaseMUC(BaseNoMUC):
 
 
 @pytest.mark.usefixtures("avatar")
-class TestParticipantAvatar(BaseMUC, Avatar):
+class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
     def romeo_joins(self, muc: MUC):
         super().romeo_joins(muc)
         self._assert_send_room_avatar(empty=True)
@@ -337,7 +319,7 @@ class TestParticipantAvatar(BaseMUC, Avatar):
 
 
 @pytest.mark.usefixtures("avatar")
-class TestRoomAvatar(BaseMUC, Avatar):
+class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):
     def test_room_avatar_change_after_join(self):
         muc = self.get_muc(joined=True)
         self._assert_send_room_avatar(empty=True)
