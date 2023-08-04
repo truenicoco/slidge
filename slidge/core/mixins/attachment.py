@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Collection, Optional, Union
 from uuid import uuid4
+from xml.etree import ElementTree as ET
 
 from slixmpp import Message
 from slixmpp.exceptions import IqError
@@ -16,6 +17,7 @@ from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0385.stanza import Sims
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
+from ...util.sql import db
 from ...util.types import (
     LegacyAttachment,
     LegacyMessageType,
@@ -28,10 +30,6 @@ from .message_maker import MessageMaker
 
 
 class AttachmentMixin(MessageMaker):
-    __legacy_file_ids_to_urls = dict[Union[str, int], str]()
-    __uploaded_urls_to_sims = dict[Union[str, int], Sims]()
-    __uploaded_urls_to_sfs = dict[Union[str, int], StatelessFileSharing]()
-
     def send_text(self, *_, **k):
         raise NotImplementedError
 
@@ -140,13 +138,13 @@ class AttachmentMixin(MessageMaker):
         legacy_file_id: Optional[Union[str, int]] = None,
     ) -> tuple[bool, Optional[Path], str]:
         if legacy_file_id:
-            cache = self.__legacy_file_ids_to_urls.get(legacy_file_id)
+            cache = db.attachment_get_url(legacy_file_id)
             if cache is not None:
                 async with self.session.http.head(cache) as r:
                     if r.status < 400:
                         return False, None, cache
                     else:
-                        del self.__legacy_file_ids_to_urls[legacy_file_id]
+                        db.attachment_remove(legacy_file_id)
 
         if file_url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             return False, None, file_url
@@ -192,7 +190,7 @@ class AttachmentMixin(MessageMaker):
             new_url = await self.__upload(file_path, file_name, content_type)
 
         if legacy_file_id:
-            self.__legacy_file_ids_to_urls[legacy_file_id] = new_url
+            db.attachment_store_url(legacy_file_id, new_url)
 
         return is_temp, local_path, new_url
 
@@ -204,9 +202,9 @@ class AttachmentMixin(MessageMaker):
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
     ):
-        cache = self.__uploaded_urls_to_sims.get(uploaded_url)
+        cache = db.attachment_get_sims(uploaded_url)
         if cache:
-            msg.append(cache)
+            msg.append(Sims(xml=ET.fromstring(cache)))
             return
 
         if not path:
@@ -215,7 +213,7 @@ class AttachmentMixin(MessageMaker):
         sims = self.xmpp["xep_0385"].get_sims(
             path, [uploaded_url], content_type, caption
         )
-        self.__uploaded_urls_to_sims[uploaded_url] = sims
+        db.attachment_store_sims(uploaded_url, str(sims))
 
         msg.append(sims)
 
@@ -227,16 +225,16 @@ class AttachmentMixin(MessageMaker):
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
     ):
-        cache = self.__uploaded_urls_to_sfs.get(uploaded_url)
+        cache = db.attachment_get_sfs(uploaded_url)
         if cache:
-            msg.append(cache)
+            msg.append(StatelessFileSharing(xml=ET.fromstring(cache)))
             return
 
         if not path:
             return
 
         sfs = self.xmpp["xep_0447"].get_sfs(path, [uploaded_url], content_type, caption)
-        self.__uploaded_urls_to_sfs[uploaded_url] = sfs
+        db.attachment_store_sfs(uploaded_url, str(sfs))
 
         msg.append(sfs)
 
@@ -370,8 +368,9 @@ class AttachmentMixin(MessageMaker):
         #       one and stop sending several attachments this way
         # we attach the legacy_message ID to the last message we send, because
         # we don't want several messages with the same ID (especially for MUC MAM)
-        # TODO: add a correction argument to the signature, rename this to
-        #       send_rich_message and ditch send_text() and correct()
+        # TODO: refactor this so we limit the number of SQL calls, ie, if
+        #       the legacy file ID is known, only fetch the row once, and if it
+        #       is new, write it all in a single call
         if not attachments and not body:
             # ignoring empty message
             return

@@ -176,6 +176,44 @@ class TemporaryDB:
         )
         return res.fetchall()
 
+    def attachment_remove(self, legacy_id):
+        self.cur.execute("DELETE FROM attachment WHERE legacy_id = ?", legacy_id)
+        self.con.commit()
+
+    def attachment_store_url(self, legacy_id, url: str):
+        self.cur.execute(
+            "REPLACE INTO attachment(legacy_id, url) VALUES (?,?)", (legacy_id, url)
+        )
+        self.con.commit()
+
+    def attachment_store_sims(self, url: str, sims: str):
+        self.cur.execute("UPDATE attachment SET sims = ? WHERE url = ?", (sims, url))
+        self.con.commit()
+
+    def attachment_store_sfs(self, url: str, sfs: str):
+        self.cur.execute("UPDATE attachment SET sfs = ? WHERE url = ?", (sfs, url))
+        self.con.commit()
+
+    def attachment_get_url(self, legacy_id):
+        res = self.cur.execute(
+            "SELECT url FROM attachment WHERE legacy_id = ?", (legacy_id,)
+        )
+        return first_of_tuple_or_none(res.fetchone())
+
+    def attachment_get_sims(self, url: str):
+        res = self.cur.execute("SELECT sims FROM attachment WHERE url = ?", (url,))
+        return first_of_tuple_or_none(res.fetchone())
+
+    def attachment_get_sfs(self, url: str):
+        res = self.cur.execute("SELECT sfs FROM attachment WHERE url = ?", (url,))
+        return first_of_tuple_or_none(res.fetchone())
+
+
+def first_of_tuple_or_none(x: Optional[tuple]):
+    if x is None:
+        return None
+    return x[0]
+
 
 class SQLBiDict(Generic[KeyType, ValueType]):
     def __init__(
