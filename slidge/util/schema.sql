@@ -51,3 +51,15 @@ CREATE INDEX session_thread_sent_muc_legacy_id
     ON session_thread_sent_muc(legacy_id);
 CREATE INDEX session_thread_sent_muc_xmpp_id
     ON session_thread_sent_muc(xmpp_id);
+
+
+CREATE TABLE attachment(
+  id INTEGER PRIMARY KEY,
+  legacy_id UNIQUE,
+  url TEXT UNIQUE,
+  sims TEXT,
+  sfs TEXT
+);
+
+CREATE INDEX attachment_legacy_id ON attachment(legacy_id);
+CREATE INDEX attachment_url ON attachment(url);
