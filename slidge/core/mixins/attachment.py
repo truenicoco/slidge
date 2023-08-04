@@ -111,7 +111,7 @@ class AttachmentMixin(MessageMaker):
         destination = destination_dir / name
         method = config.NO_UPLOAD_METHOD
         if method == "copy":
-            shutil.copy(file_path, destination)
+            shutil.copy2(file_path, destination)
         elif method == "hardlink":
             os.link(file_path, destination)
         elif method == "symlink":
