@@ -209,6 +209,9 @@ class AttachmentMixin(MessageMaker):
             msg.append(cache)
             return
 
+        if not path:
+            return
+
         sims = self.xmpp["xep_0385"].get_sims(
             path, [uploaded_url], content_type, caption
         )
@@ -227,6 +230,9 @@ class AttachmentMixin(MessageMaker):
         cache = self.__uploaded_urls_to_sfs.get(uploaded_url)
         if cache:
             msg.append(cache)
+            return
+
+        if not path:
             return
 
         sfs = self.xmpp["xep_0447"].get_sfs(path, [uploaded_url], content_type, caption)
@@ -318,12 +324,11 @@ class AttachmentMixin(MessageMaker):
             self._send(msg, **kwargs)
             return
 
-        if local_path:
-            self.__set_sims(msg, new_url, local_path, content_type, caption)
-            self.__set_sfs(msg, new_url, local_path, content_type, caption)
-            if is_temp and isinstance(local_path, Path):
-                local_path.unlink()
-                local_path.parent.rmdir()
+        self.__set_sims(msg, new_url, local_path, content_type, caption)
+        self.__set_sfs(msg, new_url, local_path, content_type, caption)
+        if is_temp and isinstance(local_path, Path):
+            local_path.unlink()
+            local_path.parent.rmdir()
 
         self.__send_url(msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs)
         return new_url
