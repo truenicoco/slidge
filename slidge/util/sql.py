@@ -8,6 +8,7 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Collection, Generic, Optional, Union
 
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from ..core import config
@@ -177,7 +178,7 @@ class TemporaryDB:
         return res.fetchall()
 
     def attachment_remove(self, legacy_id):
-        self.cur.execute("DELETE FROM attachment WHERE legacy_id = ?", legacy_id)
+        self.cur.execute("DELETE FROM attachment WHERE legacy_id = ?", (legacy_id,))
         self.con.commit()
 
     def attachment_store_url(self, legacy_id, url: str):
@@ -207,6 +208,30 @@ class TemporaryDB:
     def attachment_get_sfs(self, url: str):
         res = self.cur.execute("SELECT sfs FROM attachment WHERE url = ?", (url,))
         return first_of_tuple_or_none(res.fetchone())
+
+    def nick_get(self, jid: JID):
+        res = self.cur.execute("SELECT nick FROM nick WHERE jid = ?", (str(jid),))
+        return first_of_tuple_or_none(res.fetchone())
+
+    def nick_store(self, jid: JID, nick: str):
+        self.cur.execute("REPLACE INTO nick(jid, nick) VALUES (?,?)", (str(jid), nick))
+        self.con.commit()
+
+    def avatar_get(self, jid: JID):
+        res = self.cur.execute(
+            "SELECT cached_id FROM avatar WHERE jid = ?", (str(jid),)
+        )
+        return first_of_tuple_or_none(res.fetchone())
+
+    def avatar_store(self, jid: JID, cached_id: Union[int, str]):
+        self.cur.execute(
+            "REPLACE INTO avatar(jid, cached_id) VALUES (?,?)", (str(jid), cached_id)
+        )
+        self.con.commit()
+
+    def avatar_delete(self, jid: JID):
+        self.cur.execute("DELETE FROM avatar WHERE jid = ?", (str(jid),))
+        self.con.commit()
 
 
 def first_of_tuple_or_none(x: Optional[tuple]):

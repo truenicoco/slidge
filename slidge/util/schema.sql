@@ -63,3 +63,21 @@ CREATE TABLE attachment(
 
 CREATE INDEX attachment_legacy_id ON attachment(legacy_id);
 CREATE INDEX attachment_url ON attachment(url);
+
+
+CREATE TABLE nick(
+  id INTEGER PRIMARY KEY,
+  jid TEXT UNIQUE,
+  nick TEXT
+);
+
+CREATE INDEX nick_jid ON nick(jid);
+
+
+CREATE TABLE avatar(
+  id INTEGER PRIMARY KEY,
+  jid TEXT UNIQUE,
+  cached_id TEXT
+);
+
+CREATE INDEX avatar_jid ON avatar(jid);

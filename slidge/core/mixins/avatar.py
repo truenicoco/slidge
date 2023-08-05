@@ -31,7 +31,7 @@ class AvatarMixin:
 
     @property
     def __avatar_jid(self):
-        return self.jid.bare if self._avatar_bare_jid else self.jid
+        return JID(self.jid.bare) if self._avatar_bare_jid else self.jid
 
     @property
     def avatar(self) -> Optional[AvatarIdType]:
@@ -118,7 +118,7 @@ class AvatarMixin:
     def get_avatar(self) -> Optional["PepAvatar"]:
         if not self.__avatar_unique_id:
             return None
-        return self.session.xmpp.pubsub.get_avatar(jid=self.jid.bare)
+        return self.session.xmpp.pubsub.get_avatar(self.__avatar_jid)
 
     def _post_avatar_update(self) -> None:
         return

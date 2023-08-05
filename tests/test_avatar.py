@@ -164,6 +164,14 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
         self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
+    def test_avatar_with_url_and_unique_id(self):
+        juliet = self.juliet
+        assert juliet.avatar is None
+        self.run_coro(juliet.set_avatar(self.avatar_url, "someid", blocking=True))
+        self.__assert_publish(rewritten=True)
+        self.run_coro(juliet.set_avatar(self.avatar_url, "someid", blocking=True))
+        assert self.next_sent() is None
+
 
 class MUC(LegacyMUC):
     type = MucType.GROUP

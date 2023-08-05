@@ -90,7 +90,7 @@ class AvatarCache:
             if response.status == HTTPStatus.NOT_MODIFIED:
                 log.debug("Using avatar cache for %s", jid)
                 return cached
-            log.debug("Download avatar")
+            log.debug("Download avatar for %s", jid)
             return await self.convert_and_store(
                 Image.open(io.BytesIO(await response.read())),
                 url,
