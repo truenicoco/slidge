@@ -48,11 +48,10 @@ def avatar(request):
         headers = {"etag": "etag", "last-modified": "last"}
 
     @asynccontextmanager
-    async def mock_get(url, headers):
+    async def mock_get(url, headers=None):
         assert url == "AVATAR_URL"
-        if (
-            headers
-            and headers.get("If-None-Match") == "etag"
+        if headers and (
+            headers.get("If-None-Match") == "etag"
             or headers.get("If-Modified-Since") == "last"
         ):
             yield MockResponse(HTTPStatus.NOT_MODIFIED)

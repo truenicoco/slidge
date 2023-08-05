@@ -816,6 +816,27 @@ class TestMuc(Base):
         self.send(  # language=XML
             f"""
             <message type="groupchat"
+                     from="room-private@aim.shakespeare.lit/stan"
+                     to="romeo@montague.lit/gajim">
+              <body>Hey</body>
+              <delay xmlns="urn:xmpp:delay"
+                     stamp="{now_fmt}" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item role="participant"
+                      affiliation="member"
+                      jid="uuid@aim.shakespeare.lit" />
+              </x>
+            </message>
+            """,
+        )
+        self.send(  # language=XML
+            f"""
+            <message type="groupchat"
                      to="romeo@montague.lit/gajim"
                      from="room-private@aim.shakespeare.lit/unknown">
               <delay xmlns="urn:xmpp:delay"
