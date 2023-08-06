@@ -123,7 +123,7 @@ class PepAvatar(PepItem):
         metadata.add_info(
             id=cached_avatar.hash,
             itype="image/png",
-            ibytes=len(cached_avatar.data),
+            ibytes=cached_avatar.path.stat().st_size,
             height=str(cached_avatar.height),
             width=str(cached_avatar.width),
         )
