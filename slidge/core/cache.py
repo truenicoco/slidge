@@ -39,8 +39,8 @@ class CachedAvatar:
 
 
 class AvatarCache:
-    _shelf: shelve.Shelf[CachedAvatar]
-    _jid_to_legacy: shelve.Shelf[LegacyFileIdType]
+    _shelf_path: str
+    _jid_to_legacy_path: str
     dir: Path
     http: aiohttp.ClientSession
 
@@ -50,14 +50,10 @@ class AvatarCache:
     def set_dir(self, path: Path):
         self.dir = path
         self.dir.mkdir(exist_ok=True)
-        self._shelf = shelve.open(str(path / "slidge_avatar_cache.shelf"))  # type: ignore
-        self._jid_to_legacy = shelve.open(str(path / "jid_to_avatar_unique_id.shelf"))
+        self._shelf_path = str(path / "slidge_avatar_cache.shelf")
+        self._jid_to_legacy_path = str(path / "jid_to_avatar_unique_id.shelf")
 
     def close(self):
-        self._shelf.sync()
-        self._shelf.close()
-        self._jid_to_legacy.sync()
-        self._jid_to_legacy.close()
         self._thread_pool.shutdown(cancel_futures=True)
 
     def __get_http_headers(self, cached: Optional[CachedAvatar]):
@@ -74,7 +70,7 @@ class AvatarCache:
         Used when no avatar unique ID is passed. Store and use http headers
         to avoid fetching ut
         """
-        cached = self._shelf.get(url)
+        cached = self.get(url)
         headers = self.__get_http_headers(cached)
         async with _download_lock:
             return await self.__download(cached, url, headers, jid)
@@ -99,7 +95,8 @@ class AvatarCache:
             )
 
     async def url_has_changed(self, url: URL):
-        cached = self._shelf.get(url)
+        with shelve.open(self._shelf_path) as s:
+            cached = s.get(url)
         if cached is None:
             return True
         headers = self.__get_http_headers(cached)
@@ -107,21 +104,21 @@ class AvatarCache:
             return response.status != HTTPStatus.NOT_MODIFIED
 
     def get(self, unique_id: LegacyFileIdType) -> Optional[CachedAvatar]:
-        return self._shelf.get(str(unique_id))
+        with shelve.open(self._shelf_path) as s:
+            return s.get(str(unique_id))
 
     def get_cached_id_for(self, jid: JID) -> Optional[LegacyFileIdType]:
-        c = self._jid_to_legacy.get(str(jid))
-        if c is None:
-            return None
-        return c
+        with shelve.open(self._jid_to_legacy_path) as s:
+            return s.get(str(jid))
 
     def store_jid(self, jid: JID, uid: LegacyFileIdType):
-        self._jid_to_legacy[str(jid)] = uid
-        self._jid_to_legacy.sync()
+        with shelve.open(self._jid_to_legacy_path) as s:
+            s[str(jid)] = uid
 
     def delete_jid(self, jid: JID):
         try:
-            del self._jid_to_legacy[str(jid)]
+            with shelve.open(self._jid_to_legacy_path) as s:
+                del s[str(jid)]
         except KeyError:
             pass
 
@@ -170,8 +167,8 @@ class AvatarCache:
         if response_headers:
             avatar.etag = response_headers.get("etag")
             avatar.last_modified = response_headers.get("last-modified")
-        self._shelf[str(unique_id)] = avatar
-        self._shelf.sync()
+        with shelve.open(self._shelf_path) as s:
+            s[str(unique_id)] = avatar
         self.store_jid(jid, unique_id)
         return avatar
 
