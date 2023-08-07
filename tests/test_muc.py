@@ -109,11 +109,16 @@ jids = {
     333: "not-in-roster",
     666: "imposter",
     667: "imposter2",
+    999: "weirdguy🎉",
 }
 legacy = {v: k for k, v in jids.items()}
 
 
 class Roster(LegacyRoster):
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.ready.set_result(True)
+
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return legacy[jid_username]
@@ -176,6 +181,10 @@ class MUC(LegacyMUC):
         else:
             first = await self.get_participant("firstwitch")
             second = await self.get_participant("secondwitch")
+        if "weird" in str(self.legacy_id):
+            first = await self.get_participant_by_legacy_id(999)
+            second = await self.get_participant("secondwitch")
+
         first.affiliation = "owner"
         first.role = "moderator"
 
@@ -214,14 +223,14 @@ class MUC(LegacyMUC):
 class Bookmarks(LegacyBookmarks):
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part: str):
-        if not local_part.startswith("room") and local_part != "coven":
+        if not local_part.startswith("room") and local_part not in ("coven", "weird"):
             raise XMPPError("item-not-found")
         else:
             return local_part
 
     async def by_jid(self, jid: JID):
         muc = await super().by_jid(jid)
-        if not (x in jid.local for x in ["private", "public", "coven"]):
+        if not (x in jid.local for x in ["private", "public", "coven", "weird"]):
             raise XMPPError("item-not-found")
         return muc
 
@@ -739,7 +748,6 @@ class TestMuc(Base):
     def test_join_group(self):
         muc = self.get_private_muc("room-private")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
-        muc.session.contacts.ready.set_result(True)
         participant = self.run_coro(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
@@ -933,7 +941,6 @@ class TestMuc(Base):
 
     def test_resource_not_joined(self):
         session = self.get_romeo_session()
-        session.contacts.ready.set_result(True)
         self.recv(  # language=XML
             """
             <message from='romeo@montague.lit/gajim'
@@ -2300,7 +2307,6 @@ class TestMuc(Base):
     def test_get_members(self):
         muc = self.get_private_muc()
         # muc.user_resources.add("gajim")
-        muc.session.contacts.ready.set_result(True)
         self.recv(  # language=XML
             """
             <iq from='romeo@montague.lit/gajim'
@@ -2745,7 +2751,6 @@ class TestMuc(Base):
         muc = self.get_private_muc(resources=["movim"])
         # muc.user_resources.add("movim")
         self.run_coro(muc.session.contacts.fill())
-        muc.session.contacts.ready.set_result(True)
         participants_before: list[Participant] = self.run_coro(muc.get_participants())
         return participants_before
 
@@ -2894,3 +2899,70 @@ class TestMuc(Base):
             """
         )
         assert self.next_sent() is None
+
+    def test_illegal_nickname(self):
+        self.recv(  # language=XML
+            """
+            <presence from='romeo@montague.lit/cheogram'
+                      id='forbidden'
+                      to='weird@aim.shakespeare.lit/blup'>
+              <x xmlns='http://jabber.org/protocol/muc' />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence from="weird@aim.shakespeare.lit/firstwitch"
+                      to="romeo@montague.lit/cheogram">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence from="weird@aim.shakespeare.lit/secondwitch"
+                      to="romeo@montague.lit/cheogram">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="admin"
+                      role="moderator" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence from="weird@aim.shakespeare.lit/weirdguy-9u25g"
+                      to="romeo@montague.lit/cheogram">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="owner"
+                      role="moderator" />
+              </x>
+              <nick xmlns="http://jabber.org/protocol/nick">weirdguy🎉</nick>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="weirdguy🎉@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence from="weird@aim.shakespeare.lit/thirdwitch"
+                      id="forbidden"
+                      to="romeo@montague.lit/cheogram">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+                <status code="210" />
+                <status code="110" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </presence>
+            """
+        )

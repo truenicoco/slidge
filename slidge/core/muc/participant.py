@@ -84,7 +84,7 @@ class LegacyParticipant(
             return
 
         if nickname:
-            nickname = strip_illegal_chars(nickname)
+            nickname = self._nickname_no_illegal = strip_illegal_chars(nickname)
         else:
             warnings.warn(
                 "Only the system participant is allowed to not have a nickname"
@@ -290,6 +290,10 @@ class LegacyParticipant(
         )
         if presence_id:
             p["id"] = presence_id
+        if (nick := self._nickname_no_illegal) != self.jid.resource:
+            n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
+            n["nick"] = nick
+            p.append(n)
         self._send(p, full_jid)
 
     def leave(self):
