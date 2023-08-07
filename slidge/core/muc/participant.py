@@ -1,5 +1,6 @@
 import logging
 import string
+import stringprep
 import uuid
 import warnings
 from copy import copy
@@ -9,7 +10,9 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
+from slixmpp.stringprep import StringprepError, resourceprep
 from slixmpp.types import MessageTypes, OptJid
+from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
 from ...util import SubclassableOnce, strip_illegal_chars
 from ...util.types import LegacyMessageType, MucAffiliation, MucRole, MucType
@@ -18,6 +21,15 @@ from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 
 if TYPE_CHECKING:
     from .room import LegacyMUC
+
+
+def strip_non_printable(nickname: str):
+    new = (
+        "".join(x for x in nickname if x in string.printable)
+        + f"-slidge-{hash(nickname)}"
+    )
+    warnings.warn(f"Could not use {nickname} as a nickname, using {new}")
+    return new
 
 
 class LegacyParticipant(
@@ -82,14 +94,17 @@ class LegacyParticipant(
         assert isinstance(nickname, str)
 
         try:
+            # workaround for https://codeberg.org/poezio/slixmpp/issues/3480
+            prohibit_output(nickname, [stringprep.in_table_a1])
+            resourceprep(nickname)
+        except (StringPrepError, StringprepError):
+            nickname = nickname.encode("punycode").decode()
+
+        # at this point there still might be control chars
+        try:
             j.resource = nickname
         except InvalidJID:
-            new = (
-                "".join(x for x in nickname if x in string.printable)
-                + f"-slidge-{hash(nickname)}"
-            )
-            warnings.warn(f"Could not use {nickname} as a nickname, using {new}")
-            j.resource = new
+            j.resource = strip_non_printable(nickname)
 
         self.jid = j
 
