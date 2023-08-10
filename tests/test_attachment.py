@@ -177,14 +177,14 @@ class TestAttachmentUpload(Base):
         )
 
     def test_bytes(self):
-        with patch("os.stat", return_value=os.stat(self.avatar_path)):
+        with patch("pathlib.Path.stat", return_value=os.stat(self.avatar_path)):
             self.__test_basic(
                 LegacyAttachment(data=self.avatar_path.read_bytes(), name="5x5.png"),
                 dict(filename=ANY, content_type=None, ifrom=self.xmpp.boundjid),
             )
 
     def test_bytes_and_id(self):
-        with patch("os.stat", return_value=os.stat(self.avatar_path)):
+        with patch("pathlib.Path.stat", return_value=os.stat(self.avatar_path)):
             self.__test_reuse(
                 LegacyAttachment(
                     data=self.avatar_path.read_bytes(),
