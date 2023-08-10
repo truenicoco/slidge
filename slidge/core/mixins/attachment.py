@@ -136,7 +136,7 @@ class AttachmentMixin(MessageMaker):
         file_name: Optional[str] = None,
         content_type: Optional[str] = None,
         legacy_file_id: Optional[Union[str, int]] = None,
-    ):
+    ) -> tuple[bool, Optional[Path], str]:
         if legacy_file_id:
             cache = db.attachment_get_url(legacy_file_id)
             if cache is not None:
@@ -198,7 +198,7 @@ class AttachmentMixin(MessageMaker):
         self,
         msg: Message,
         uploaded_url: str,
-        path: Path,
+        path: Optional[Path],
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
     ):
@@ -221,7 +221,7 @@ class AttachmentMixin(MessageMaker):
         self,
         msg: Message,
         uploaded_url: str,
-        path: Path,
+        path: Optional[Path],
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
     ):
