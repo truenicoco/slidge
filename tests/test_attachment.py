@@ -74,7 +74,7 @@ class Base(Shakespeare, AvatarFixtureMixin):
 
     def _assert_file(self, url="http://url"):
         when = (
-            datetime.fromtimestamp(self.avatar_path.stat().st_ctime)
+            datetime.fromtimestamp(self.avatar_path.stat().st_mtime)
             .isoformat()
             .replace("+00:00", "Z")
         )
