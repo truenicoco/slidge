@@ -871,13 +871,21 @@ class BaseSession(
         raise NotImplementedError
 
     async def get_contact_or_group_or_participant(self, jid: JID):
+        if jid.bare in (contacts := self.contacts.known_contacts(only_friends=False)):
+            return contacts[jid.bare]
+        if jid.bare in (mucs := self.bookmarks._mucs_by_bare_jid):
+            muc = mucs[jid.bare]
+        else:
+            muc = None
+
         try:
             return await self.contacts.by_jid(jid)
         except XMPPError:
-            try:
-                muc = await self.bookmarks.by_jid(jid)
-            except XMPPError:
-                return
+            if muc is None:
+                try:
+                    muc = await self.bookmarks.by_jid(jid)
+                except XMPPError:
+                    return
             if nick := jid.resource:
                 try:
                     return await muc.get_participant(
