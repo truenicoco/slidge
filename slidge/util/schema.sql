@@ -81,3 +81,15 @@ CREATE TABLE avatar(
 );
 
 CREATE INDEX avatar_jid ON avatar(jid);
+
+
+CREATE TABLE presence(
+  id INTEGER PRIMARY KEY,
+  jid TEXT UNIQUE,
+  last_seen INTEGER,
+  ptype TEXT,
+  pstatus TEXT,
+  pshow TEXT
+);
+
+CREATE INDEX presence_jid ON presence(jid);

@@ -21,6 +21,7 @@ from slidge.slixfix.xep_0356.permissions import (
     PresencePermission,
     RosterAccess,
 )
+from slidge.util.sql import db
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
 
@@ -1263,6 +1264,7 @@ class TestContact(SlidgeTest):
         )
         self.get_romeo_session().logged = True
         self.get_romeo_session().contacts.ready.set_result(True)
+        db.presence_nuke()
 
     @staticmethod
     def get_romeo_session() -> Session:

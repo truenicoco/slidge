@@ -2,20 +2,29 @@ import os
 import sqlite3
 import tempfile
 from asyncio import AbstractEventLoop, Task, sleep
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Collection, Generic, Optional, Union
+from typing import TYPE_CHECKING, Collection, Generic, NamedTuple, Optional, Union
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
+from slixmpp.types import PresenceTypes
 
 from ..core import config
+from .types import PresenceShow
 from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
-    from slidge.core.muc.archive import HistoryMessage
+    from ..core.muc.archive import HistoryMessage
+
+
+class CachedPresence(NamedTuple):
+    last_seen: Optional[datetime] = None
+    ptype: Optional[PresenceTypes] = None
+    pstatus: Optional[str] = None
+    pshow: Optional[PresenceShow] = None
 
 
 class TemporaryDB:
@@ -232,6 +241,32 @@ class TemporaryDB:
     def avatar_delete(self, jid: JID):
         self.cur.execute("DELETE FROM avatar WHERE jid = ?", (str(jid),))
         self.con.commit()
+
+    def presence_nuke(self):
+        # useful for tests
+        self.cur.execute("DELETE FROM presence")
+        self.con.commit()
+
+    def presence_store(self, jid: JID, presence: CachedPresence):
+        self.cur.execute(
+            "REPLACE INTO presence(jid, last_seen, ptype, pstatus, pshow) "
+            "VALUES (?,?,?,?,?)",
+            (str(jid), presence[0].timestamp() if presence[0] else None, *presence[1:]),
+        )
+        self.con.commit()
+
+    def presence_get(self, jid: JID) -> Optional[CachedPresence]:
+        res = self.cur.execute(
+            "SELECT last_seen, ptype, pstatus, pshow FROM presence WHERE jid = ?",
+            (str(jid),),
+        ).fetchone()
+        if not res:
+            return None
+        if res[0]:
+            last_seen = datetime.fromtimestamp(res[0], tz=timezone.utc)
+        else:
+            last_seen = None
+        return CachedPresence(last_seen, *res[1:])
 
 
 def first_of_tuple_or_none(x: Optional[tuple]):

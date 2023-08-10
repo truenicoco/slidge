@@ -1,7 +1,11 @@
 import re
 from datetime import datetime, timezone
-from typing import NamedTuple, Optional
+from typing import Optional
 
+from slixmpp.types import PresenceTypes
+
+from ...util.sql import CachedPresence, db
+from ...util.types import PresenceShow
 from .. import config
 from .base import BaseSender
 
@@ -10,17 +14,17 @@ class _NoChange(Exception):
     pass
 
 
-class _CachedPresence(NamedTuple):
-    presence_kwargs: dict[str, str]
-    last_seen: Optional[datetime] = None
-
-
 _FRIEND_REQUEST_PRESENCES = {"subscribe", "unsubscribe", "subscribed", "unsubscribed"}
 
 
 class PresenceMixin(BaseSender):
-    _last_presence: Optional[_CachedPresence] = None
     _ONLY_SEND_PRESENCE_CHANGES = False
+
+    def _get_last_presence(self) -> Optional[CachedPresence]:
+        return db.presence_get(self.jid)
+
+    def _store_last_presence(self, new: CachedPresence):
+        return db.presence_store(self.jid, new)
 
     def _make_presence(
         self,
@@ -28,26 +32,31 @@ class PresenceMixin(BaseSender):
         last_seen: Optional[datetime] = None,
         force=False,
         bare=False,
-        **presence_kwargs,
+        ptype: Optional[PresenceTypes] = None,
+        pstatus: Optional[str] = None,
+        pshow: Optional[PresenceShow] = None,
     ):
-        old = self._last_presence
+        old = self._get_last_presence()
 
-        if presence_kwargs.get("ptype") not in _FRIEND_REQUEST_PRESENCES:
-            self._last_presence = _CachedPresence(
-                last_seen=last_seen, presence_kwargs=presence_kwargs
+        if ptype not in _FRIEND_REQUEST_PRESENCES:
+            new = CachedPresence(
+                last_seen=last_seen, ptype=ptype, pstatus=pstatus, pshow=pshow
             )
+            if old != new:
+                self._store_last_presence(new)
             if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:
-                if old == self._last_presence:
+                if old == new:
                     self.session.log.debug("Presence is the same as cached")
                     raise _NoChange
                 self.session.log.debug(
-                    "Presence is not the same as cached: %s vs %s",
-                    old,
-                    self._last_presence,
+                    "Presence is not the same as cached: %s vs %s", old, new
                 )
 
         p = self.xmpp.make_presence(
-            pfrom=self.jid.bare if bare else self.jid, **presence_kwargs
+            pfrom=self.jid.bare if bare else self.jid,
+            ptype=ptype,
+            pshow=pshow,
+            pstatus=pstatus,
         )
         if last_seen:
             if last_seen.tzinfo is None:
@@ -65,7 +74,7 @@ class PresenceMixin(BaseSender):
         return p
 
     def send_last_presence(self, force=False, no_cache_online=False):
-        if (cache := self._last_presence) is None:
+        if (cache := self._get_last_presence()) is None:
             if force:
                 if no_cache_online:
                     self.online()
@@ -74,7 +83,11 @@ class PresenceMixin(BaseSender):
             return
         self._send(
             self._make_presence(
-                last_seen=cache.last_seen, force=True, **cache.presence_kwargs
+                last_seen=cache.last_seen,
+                force=True,
+                ptype=cache.ptype,
+                pshow=cache.pshow,
+                pstatus=cache.pstatus,
             )
         )
 
