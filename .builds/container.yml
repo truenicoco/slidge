@@ -1,13 +1,13 @@
-image: alpine/edge
+image: archlinux
 packages:
   - docker
-  - docker-cli-buildx
+  - docker-buildx
 secrets:
   - 173244e1-c233-43de-969f-65965c5487e1
 tasks:
   - setup-docker1: |
-      sudo service docker start
-      sudo addgroup build docker
+      sudo systemctl start docker
+      sudo usermod -aG docker build
   - setup-docker2: |
       while ! test -e /var/run/docker.sock; do sleep 1; done
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
