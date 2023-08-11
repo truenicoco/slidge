@@ -6,6 +6,7 @@ authors = ["Nicolas Cedilnik <nicoco@nicoco.fr>"]
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 homepage = "https://sr.ht/~nicoco/slidge/"
+include = ["slidge/util/schema.sql"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -27,7 +28,7 @@ include-package-data = true
 [tool.setuptools.packages.find]
 include = ["slidge*"]
 [tool.setuptools.package-data]
-slidge = ["py.typed"]
+slidge = ["py.typed","schema.sql"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
