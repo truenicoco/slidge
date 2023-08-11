@@ -28,7 +28,7 @@ include-package-data = true
 [tool.setuptools.packages.find]
 include = ["slidge*"]
 [tool.setuptools.package-data]
-slidge = ["py.typed","schema.sql"]
+slidge = ["py.typed", "util/schema.sql"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
