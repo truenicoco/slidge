@@ -1,6 +1,14 @@
+CREATE TABLE user(
+  id INTEGER PRIMARY KEY,
+  jid TEXT UNIQUE
+);
+
 CREATE TABLE muc(
   id INTEGER PRIMARY KEY,
-  jid TEXT
+  jid TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id),
+  UNIQUE(user_id, jid)
 );
 
 CREATE TABLE mam_message(
@@ -10,7 +18,10 @@ CREATE TABLE mam_message(
   sender_jid TEXT,
   xml TEXT,
   muc_id INTEGER,
-  FOREIGN KEY(muc_id) REFERENCES muc(id)
+  user_id INTEGER,
+  FOREIGN KEY(muc_id) REFERENCES muc(id),
+  FOREIGN KEY(user_id) REFERENCES user(id),
+  UNIQUE(user_id, muc_id, message_id)
 );
 
 CREATE INDEX mam_sent_on ON mam_message(sent_on);
@@ -18,9 +29,10 @@ CREATE INDEX muc_jid ON muc(jid);
 
 CREATE TABLE session_message_sent(
   id INTEGER PRIMARY KEY,
-  session_jid TEXT,
   legacy_id UNIQUE,
-  xmpp_id TEXT
+  xmpp_id TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id)
 );
 
 CREATE INDEX session_message_sent_legacy_id
@@ -30,9 +42,10 @@ CREATE INDEX session_message_sent_xmpp_id
 
 CREATE TABLE session_message_sent_muc(
   id INTEGER PRIMARY KEY,
-  session_jid TEXT,
   legacy_id UNIQUE,
-  xmpp_id TEXT
+  xmpp_id TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id)
 );
 
 CREATE INDEX session_message_sent_muc_legacy_id
@@ -42,9 +55,10 @@ CREATE INDEX session_message_sent_muc_xmpp_id
 
 CREATE TABLE session_thread_sent_muc(
   id INTEGER PRIMARY KEY,
-  session_jid TEXT,
   legacy_id UNIQUE,
-  xmpp_id TEXT
+  xmpp_id TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id)
 );
 
 CREATE INDEX session_thread_sent_muc_legacy_id
@@ -67,8 +81,11 @@ CREATE INDEX attachment_url ON attachment(url);
 
 CREATE TABLE nick(
   id INTEGER PRIMARY KEY,
-  jid TEXT UNIQUE,
-  nick TEXT
+  jid UNIQUE,
+  nick TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id),
+  UNIQUE(jid, user_id)
 );
 
 CREATE INDEX nick_jid ON nick(jid);
@@ -85,11 +102,14 @@ CREATE INDEX avatar_jid ON avatar(jid);
 
 CREATE TABLE presence(
   id INTEGER PRIMARY KEY,
-  jid TEXT UNIQUE,
+  jid TEXT,
   last_seen INTEGER,
   ptype TEXT,
   pstatus TEXT,
-  pshow TEXT
+  pshow TEXT,
+  user_id INTEGER,
+  FOREIGN KEY(user_id) REFERENCES user(id),
+  UNIQUE(jid, user_id)
 );
 
 CREATE INDEX presence_jid ON presence(jid);

@@ -25,7 +25,7 @@ from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
-from ..util.db import user_store
+from ..util.db import GatewayUser, user_store
 from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
@@ -42,7 +42,7 @@ class PepItem:
     def from_db(jid: JID) -> Optional["PepItem"]:
         raise NotImplementedError
 
-    def to_db(self, jid: JID):
+    def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
         raise NotImplementedError
 
 
@@ -142,7 +142,7 @@ class PepAvatar(PepItem):
         item._set_avatar_from_cache(cached_avatar)
         return item
 
-    def to_db(self, jid: JID):
+    def to_db(self, jid: JID, user=None):
         cached_id = avatar_cache.get_cached_id_for(jid)
         if cached_id is None:
             log.warning("Could not store avatar for %s", jid)
@@ -163,14 +163,16 @@ class PepNick(PepItem):
         self.__nick_str = nick
 
     @staticmethod
-    def from_db(jid: JID) -> Optional["PepNick"]:
-        nick = db.nick_get(jid)
+    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepNick"]:
+        assert user is not None
+        nick = db.nick_get(jid, user)
         if nick is None:
             return None
         return PepNick(nick)
 
-    def to_db(self, jid: JID):
-        db.nick_store(jid, str(self.__nick_str))
+    def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
+        assert user is not None
+        db.nick_store(jid, str(self.__nick_str), user)
 
 
 class PubSubComponent(BasePlugin):
@@ -483,15 +485,15 @@ class PubSubComponent(BasePlugin):
 
     def set_nick(
         self,
+        user: GatewayUser,
         jid: JidStr,
         nick: Optional[str] = None,
-        broadcast_to: OptJidStr = None,
     ):
         jid = JID(jid)
         nickname = PepNick(nick)
-        nickname.to_db(jid)
+        nickname.to_db(jid, user)
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, broadcast_to))
+        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user.bare_jid))
 
     async def broadcast_all(self, from_: JID, to: JID):
         """
@@ -505,7 +507,7 @@ class PubSubComponent(BasePlugin):
                 )
             else:
                 log.warning("No metadata associated to this cached avatar?!")
-        n = PepNick.from_db(from_)
+        n = PepNick.from_db(from_, user_store.get_by_jid(to))
         if n:
             await self._broadcast(n.nick, from_, to)
 

@@ -216,9 +216,7 @@ class LegacyContact(
         for p in self.participants:
             p.nickname = n
         self._name = n
-        self.xmpp.pubsub.set_nick(
-            jid=self.jid.bare, nick=n, broadcast_to=self.user.jid.bare
-        )
+        self.xmpp.pubsub.set_nick(user=self.user, jid=self.jid.bare, nick=n)
 
     def _post_avatar_update(self):
         for p in self.participants:

@@ -15,6 +15,8 @@ from typing import Iterable, Optional, Union
 from pickle_secure import Pickler, Unpickler
 from slixmpp import JID, Iq, Message, Presence
 
+from .sql import db
+
 
 # noinspection PyUnresolvedReferences
 class EncryptedShelf(shelve.DbfilenameShelf):
@@ -93,6 +95,7 @@ class GatewayUser:
         return self.registration_form.get(field, default)
 
     def commit(self):
+        db.user_store(self)
         user_store.commit(self)
 
 
@@ -123,6 +126,8 @@ class UserStore:
             self._users = EncryptedShelf(filename, key=secret_key)
         else:
             self._users = shelve.open(str(filename))
+        for user in self._users.values():
+            db.user_store(user)
         log.info("Registered users in the DB: %s", list(self._users.keys()))
 
     def get_all(self) -> Iterable[GatewayUser]:
@@ -144,12 +149,13 @@ class UserStore:
         :param registration_form: Content of the registration form (:xep:`0077`)
         """
         log.debug("Adding user %s", jid)
-        self._users[jid.bare] = GatewayUser(
+        self._users[jid.bare] = user = GatewayUser(
             bare_jid=jid.bare,
             registration_form=registration_form,
             registration_date=datetime.datetime.now(),
         )
         self._users.sync()
+        user.commit()
         log.debug("Store: %s", self._users)
 
     def commit(self, user: GatewayUser):
@@ -187,6 +193,7 @@ class UserStore:
         """
         j = jid.bare
         log.debug("Removing user %s", j)
+        db.user_del(self._users[j])
         del self._users[j]
         self._users.sync()
 

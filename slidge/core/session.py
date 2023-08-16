@@ -86,11 +86,11 @@ class BaseSession(
 
         self.user = user
         self.sent = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent", "legacy_id", "xmpp_id", str(self.user.jid)
+            "session_message_sent", "legacy_id", "xmpp_id", self.user
         )
         # message ids (*not* stanza-ids), needed for last msg correction
         self.muc_sent_msg_ids = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent_muc", "legacy_id", "xmpp_id", str(self.user.jid)
+            "session_message_sent_muc", "legacy_id", "xmpp_id", self.user
         )
 
         self.ignore_messages = set[str]()
@@ -106,7 +106,7 @@ class BaseSession(
         self.http = self.xmpp.http
 
         self.threads = SQLBiDict[str, LegacyThreadType](  # type:ignore
-            "session_thread_sent_muc", "legacy_id", "xmpp_id", str(self.user.jid)
+            "session_thread_sent_muc", "legacy_id", "xmpp_id", self.user
         )
         self.__thread_creation_lock = asyncio.Lock()
 

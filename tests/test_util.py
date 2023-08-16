@@ -60,8 +60,8 @@ def test_bidict():
     assert len(d.inverse.values()) == 2
 
 
-def test_bidict_sql():
-    d = SQLBiDict("test", "key1", "key2", "test@test.fr", create_table=True)
+def test_bidict_sql(user):
+    d = SQLBiDict("test", "key1", "key2", user, create_table=True)
     d[1] = "a"
     d[2] = "b"
 
@@ -75,7 +75,8 @@ def test_bidict_sql():
     assert d.inverse.get("c") == 2
     assert "b" not in d
 
-    d2 = SQLBiDict("test", "key1", "key2", "test2@test.fr")
+    user.bare_jid = "test2@test.fr"
+    d2 = SQLBiDict("test", "key1", "key2", user)
     assert d2.get(1) is None
     assert d2.inverse.get("a") is None
 

@@ -3,13 +3,14 @@ import io
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
 
 from slidge.core.cache import avatar_cache
 from slidge.util import SubclassableOnce
+from slidge.util.sql import db
 
 SubclassableOnce.TEST_MODE = True
 
@@ -80,3 +81,22 @@ class AvatarFixtureMixin:
     avatar_sha1: str
     avatar_original_sha1: str
     avatar_url: str
+
+
+@pytest.fixture
+def user():
+    user = MagicMock()
+    user.bare_jid = "test@test.fr"
+    db.user_store(user)
+    yield user
+    db.user_del(user)
+
+
+@pytest.fixture(scope="class")
+def user_cls(request):
+    user = MagicMock()
+    user.bare_jid = "test@test.fr"
+    db.user_store(user)
+    request.cls.user = user
+    yield user
+    db.user_del(user)

@@ -21,10 +21,10 @@ class PresenceMixin(BaseSender):
     _ONLY_SEND_PRESENCE_CHANGES = False
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
-        return db.presence_get(self.jid)
+        return db.presence_get(self.jid, self.user)
 
     def _store_last_presence(self, new: CachedPresence):
-        return db.presence_store(self.jid, new)
+        return db.presence_store(self.jid, new, self.user)
 
     def _make_presence(
         self,

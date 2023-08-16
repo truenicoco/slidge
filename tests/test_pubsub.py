@@ -2,6 +2,7 @@ import asyncio
 import tempfile
 from base64 import b64encode
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from slixmpp.exceptions import XMPPError
@@ -10,6 +11,7 @@ from slixmpp.test import SlixTest
 
 from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PubSubComponent
+from slidge.util.sql import db
 from slidge.util.test import SlixTestPlus
 
 
@@ -84,9 +86,15 @@ class TestPubSubNickname(SlixTest):
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
         self.xmpp.get_session_from_jid = lambda j: MockSession
+        self.user = MagicMock()
+        self.user.bare_jid = "kenny@south.park"
+        db.user_store(self.user)
+
+    def tearDown(self):
+        db.user_del(self.user)
 
     def test_new_nick(self):
-        self.pubsub.set_nick("stan@pubsub.south.park", "BUBU", "kenny@south.park")
+        self.pubsub.set_nick(self.user, "stan@pubsub.south.park", "BUBU")
         self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
@@ -106,7 +114,7 @@ class TestPubSubNickname(SlixTest):
         )
 
     def test_no_nick(self):
-        self.pubsub.set_nick("stan@pubsub.south.park", None, "kenny@south.park")
+        self.pubsub.set_nick(self.user, "stan@pubsub.south.park", None)
         self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"

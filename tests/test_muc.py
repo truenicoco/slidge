@@ -149,7 +149,6 @@ class MUC(LegacyMUC):
         super().__init__(*a, **k)
         self.history = []
         self.user_nick = "thirdwitch"
-        self.archive = MessageArchive(self.legacy_id)
 
     async def available_emojis(self, legacy_msg_id=None):
         if self.jid.local != "room-private-emoji-restricted":
@@ -285,7 +284,7 @@ class Base(SlidgeTest):
         return participant
 
 
-@pytest.mark.usefixtures("avatar")
+@pytest.mark.usefixtures("avatar", "user_cls")
 class TestMuc(Base):
     def tearDown(self):
         slidge.util.sql.db.mam_nuke()
@@ -2539,7 +2538,7 @@ class TestMuc(Base):
         m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
         m["body"] = "something"
 
-        a = MessageArchive("blop")
+        a = MessageArchive("blop", self.user)
         slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
@@ -2552,7 +2551,7 @@ class TestMuc(Base):
         ) - datetime.timedelta(days=2)
         m["body"] = "something"
 
-        a = MessageArchive("blip")
+        a = MessageArchive("blip", self.user)
         slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
@@ -2565,9 +2564,11 @@ class TestMuc(Base):
         ) - datetime.timedelta(days=0.5)
         m["body"] = "something"
         a.add(m)
+        assert len(list(a.get_all())) == 1
         a.add(m)
+        assert len(list(a.get_all())) == 1
         slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 2
+        assert len(list(a.get_all())) == 1
 
         global_config.MAM_MAX_DAYS = orig
 

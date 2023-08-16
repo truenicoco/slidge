@@ -116,7 +116,7 @@ class LegacyMUC(
             str, "LegacyContact", "LegacyParticipant"
         ] = "unknown"
 
-        self.archive: MessageArchive = MessageArchive(str(self.jid))
+        self.archive: MessageArchive = MessageArchive(str(self.jid), self.user)
         self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()

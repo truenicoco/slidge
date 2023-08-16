@@ -25,18 +25,18 @@ def stanzas():
     yield r
 
 
-def test_insertion(stanzas):
-    x = MessageArchive("1")
+def test_insertion(stanzas, user):
+    x = MessageArchive("1", user)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive("2")
+    x = MessageArchive("2", user)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive("3")
+    x = MessageArchive("3", user)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1

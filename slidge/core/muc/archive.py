@@ -8,6 +8,7 @@ from xml.etree import ElementTree as ET
 from slixmpp import Iq, Message
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 
+from ...util.db import GatewayUser
 from ...util.sql import db
 from ...util.types import MucType
 
@@ -16,9 +17,10 @@ if TYPE_CHECKING:
 
 
 class MessageArchive:
-    def __init__(self, db_id: str):
+    def __init__(self, db_id: str, user: GatewayUser):
         self.db_id = db_id
-        db.mam_add_muc(db_id)
+        self.user = user
+        db.mam_add_muc(db_id, user)
 
     def add(
         self,
@@ -49,7 +51,7 @@ class MessageArchive:
                     "jid"
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        db.mam_add_msg(self.db_id, HistoryMessage(new_msg))
+        db.mam_add_msg(self.db_id, HistoryMessage(new_msg), self.user)
 
     def __iter__(self):
         return iter(self.get_all())
@@ -66,6 +68,7 @@ class MessageArchive:
         flip=False,
     ):
         for row in db.mam_get_messages(
+            self.user,
             self.db_id,
             before_id=before_id,
             after_id=after_id,

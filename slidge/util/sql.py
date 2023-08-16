@@ -18,6 +18,7 @@ from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
     from ..core.muc.archive import HistoryMessage
+    from .db import GatewayUser
 
 
 class CachedPresence(NamedTuple):
@@ -49,24 +50,33 @@ class TemporaryDB:
         self.cur.execute("DELETE FROM mam_message")
         self.con.commit()
 
-    def mam_add_muc(self, jid: str):
-        self.cur.execute("INSERT INTO muc(jid) VALUES(?)", (jid,))
+    def mam_add_muc(self, jid: str, user: "GatewayUser"):
+        self.cur.execute(
+            "INSERT INTO "
+            "muc(jid, user_id) "
+            "VALUES("
+            "  ?, "
+            "  (SELECT id FROM user WHERE jid = ?)"
+            ")",
+            (jid, user.bare_jid),
+        )
         self.con.commit()
 
-    def mam_add_msg(self, muc_jid: str, msg: "HistoryMessage"):
+    def mam_add_msg(self, muc_jid: str, msg: "HistoryMessage", user: "GatewayUser"):
         self.cur.execute(
-            """
-            INSERT INTO
-                mam_message(message_id, sender_jid, sent_on, xml, muc_id)
-            VALUES
-                (?, ?, ?, ?, (SELECT id FROM muc WHERE jid = ?))
-            """,
+            "REPLACE INTO "
+            "mam_message(message_id, sender_jid, sent_on, xml, muc_id, user_id)"
+            "VALUES(?, ?, ?, ?,"
+            "(SELECT id FROM muc WHERE jid = ?),"
+            "(SELECT id FROM user WHERE jid = ?)"
+            ")",
             (
                 msg.id,
                 str(msg.stanza.get_from()),
                 msg.when.timestamp(),
                 str(msg.stanza),
                 muc_jid,
+                user.bare_jid,
             ),
         )
         self.con.commit()
@@ -85,13 +95,14 @@ class TemporaryDB:
         )
         self.con.commit()
 
-    def __mam_get_sent_on(self, muc_jid: str, mid: str):
+    def __mam_get_sent_on(self, muc_jid: str, mid: str, user: "GatewayUser"):
         res = self.cur.execute(
             "SELECT sent_on "
             "FROM mam_message "
             "WHERE message_id = ? "
-            "AND muc_id = (SELECT id FROM muc WHERE jid = ?)",
-            (mid, muc_jid),
+            "AND muc_id = (SELECT id FROM muc WHERE jid = ?) "
+            "AND user_id = (SELECT id FROM user WHERE jid = ?)",
+            (mid, muc_jid, user.bare_jid),
         )
         row = res.fetchone()
         if row is None:
@@ -101,12 +112,13 @@ class TemporaryDB:
     def __mam_bound(
         self,
         muc_jid: str,
+        user: "GatewayUser",
         date: Optional[datetime] = None,
         id_: Optional[str] = None,
         comparator=min,
     ):
         if id_ is not None:
-            after_id_sent_on = self.__mam_get_sent_on(muc_jid, id_)
+            after_id_sent_on = self.__mam_get_sent_on(muc_jid, id_, user)
             if date:
                 timestamp = comparator(after_id_sent_on, date.timestamp())
             else:
@@ -119,6 +131,7 @@ class TemporaryDB:
 
     def mam_get_messages(
         self,
+        user: "GatewayUser",
         muc_jid: str,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
@@ -131,16 +144,21 @@ class TemporaryDB:
     ):
         query = (
             "SELECT xml, sent_on FROM mam_message "
-            "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?)"
+            "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?) "
+            "AND user_id = (SELECT id FROM user WHERE jid = ?) "
         )
-        params: list[Union[str, float, int]] = [muc_jid]
+        params: list[Union[str, float, int]] = [muc_jid, user.bare_jid]
 
         if start_date or after_id:
-            subquery, timestamp = self.__mam_bound(muc_jid, start_date, after_id, max)
+            subquery, timestamp = self.__mam_bound(
+                muc_jid, user, start_date, after_id, max
+            )
             query += subquery
             params.append(timestamp)
         if end_date or before_id:
-            subquery, timestamp = self.__mam_bound(muc_jid, end_date, before_id, min)
+            subquery, timestamp = self.__mam_bound(
+                muc_jid, user, end_date, before_id, min
+            )
             query += subquery
             params.append(timestamp)
         if sender:
@@ -218,12 +236,21 @@ class TemporaryDB:
         res = self.cur.execute("SELECT sfs FROM attachment WHERE url = ?", (url,))
         return first_of_tuple_or_none(res.fetchone())
 
-    def nick_get(self, jid: JID):
-        res = self.cur.execute("SELECT nick FROM nick WHERE jid = ?", (str(jid),))
+    def nick_get(self, jid: JID, user: "GatewayUser"):
+        res = self.cur.execute(
+            "SELECT nick FROM nick "
+            "WHERE jid = ? "
+            "AND user_id = (SELECT id FROM user WHERE jid = ?)",
+            (str(jid), user.bare_jid),
+        )
         return first_of_tuple_or_none(res.fetchone())
 
-    def nick_store(self, jid: JID, nick: str):
-        self.cur.execute("REPLACE INTO nick(jid, nick) VALUES (?,?)", (str(jid), nick))
+    def nick_store(self, jid: JID, nick: str, user: "GatewayUser"):
+        self.cur.execute(
+            "REPLACE INTO nick(jid, nick, user_id) "
+            "VALUES (?,?,(SELECT id FROM user WHERE jid = ?))",
+            (str(jid), nick, user.bare_jid),
+        )
         self.con.commit()
 
     def avatar_get(self, jid: JID):
@@ -247,18 +274,24 @@ class TemporaryDB:
         self.cur.execute("DELETE FROM presence")
         self.con.commit()
 
-    def presence_store(self, jid: JID, presence: CachedPresence):
+    def presence_store(self, jid: JID, presence: CachedPresence, user: "GatewayUser"):
         self.cur.execute(
-            "REPLACE INTO presence(jid, last_seen, ptype, pstatus, pshow) "
-            "VALUES (?,?,?,?,?)",
-            (str(jid), presence[0].timestamp() if presence[0] else None, *presence[1:]),
+            "REPLACE INTO presence(jid, last_seen, ptype, pstatus, pshow, user_id) "
+            "VALUES (?,?,?,?,?,(SELECT id FROM user WHERE jid = ?))",
+            (
+                str(jid),
+                presence[0].timestamp() if presence[0] else None,
+                *presence[1:],
+                user.bare_jid,
+            ),
         )
         self.con.commit()
 
-    def presence_get(self, jid: JID) -> Optional[CachedPresence]:
+    def presence_get(self, jid: JID, user: "GatewayUser") -> Optional[CachedPresence]:
         res = self.cur.execute(
-            "SELECT last_seen, ptype, pstatus, pshow FROM presence WHERE jid = ?",
-            (str(jid),),
+            "SELECT last_seen, ptype, pstatus, pshow FROM presence "
+            "WHERE jid = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
+            (str(jid), user.bare_jid),
         ).fetchone()
         if not res:
             return None
@@ -267,6 +300,14 @@ class TemporaryDB:
         else:
             last_seen = None
         return CachedPresence(last_seen, *res[1:])
+
+    def user_store(self, user: "GatewayUser"):
+        self.cur.execute("REPLACE INTO user(jid) VALUES (?)", (user.bare_jid,))
+        self.con.commit()
+
+    def user_del(self, user: "GatewayUser"):
+        self.cur.execute("DELETE FROM user WHERE jid = ?", (user.bare_jid,))
+        self.con.commit()
 
 
 def first_of_tuple_or_none(x: Optional[tuple]):
@@ -281,8 +322,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         table: str,
         key1: str,
         key2: str,
-        extra_value: str,
-        extra_key="session_jid",
+        user: "GatewayUser",
         sql: Optional[TemporaryDB] = None,
         create_table=False,
         is_inverse=False,
@@ -293,28 +333,28 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         self.table = table
         self.key1 = key1
         self.key2 = key2
-        self.extra_key = extra_key
-        self.extra_value = extra_value
+        self.user = user
         if create_table:
             sql.cur.execute(
                 f"CREATE TABLE {table} (id "
-                "INTEGER PRIMARY KEY, "
-                f"{extra_key} TEXT, "
-                f"{key1} UNIQUE, "
-                f"{key2} UNIQUE)",
+                "INTEGER PRIMARY KEY,"
+                "user_id INTEGER,"
+                f"{key1} UNIQUE,"
+                f"{key2} UNIQUE,"
+                f"FOREIGN KEY(user_id) REFERENCES user(id))",
             )
         if is_inverse:
             return
         self.inverse = SQLBiDict[ValueType, KeyType](
-            table, key2, key1, extra_value, sql=sql, is_inverse=True
+            table, key2, key1, user, sql=sql, is_inverse=True
         )
 
     def __setitem__(self, key: KeyType, value: ValueType):
         self.db.cur.execute(
             f"REPLACE INTO {self.table}"
-            f"({self.extra_key}, {self.key1}, {self.key2}) "
-            "VALUES (?, ?, ?)",
-            (self.extra_value, key, value),
+            f"(user_id, {self.key1}, {self.key2}) "
+            "VALUES ((SELECT id FROM user WHERE jid = ?), ?, ?)",
+            (self.user.bare_jid, key, value),
         )
         self.db.con.commit()
 
@@ -327,8 +367,8 @@ class SQLBiDict(Generic[KeyType, ValueType]):
     def __contains__(self, item: KeyType) -> bool:
         res = self.db.cur.execute(
             f"SELECT {self.key1} FROM {self.table} "
-            f"WHERE {self.key1} = ? AND {self.extra_key} = ?",
-            (item, self.extra_value),
+            f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
+            (item, self.user.bare_jid),
         ).fetchone()
         return res is not None
 
@@ -336,8 +376,8 @@ class SQLBiDict(Generic[KeyType, ValueType]):
     def get(self, item: KeyType) -> Optional[ValueType]:
         res = self.db.cur.execute(
             f"SELECT {self.key2} FROM {self.table} "
-            f"WHERE {self.key1} = ? AND {self.extra_key} = ?",
-            (item, self.extra_value),
+            f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
+            (item, self.user.bare_jid),
         ).fetchone()
         if res is None:
             return res
