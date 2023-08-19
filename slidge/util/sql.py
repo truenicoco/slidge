@@ -52,7 +52,7 @@ class TemporaryDB:
 
     def mam_add_muc(self, jid: str, user: "GatewayUser"):
         self.cur.execute(
-            "INSERT INTO "
+            "REPLACE INTO "
             "muc(jid, user_id) "
             "VALUES("
             "  ?, "
