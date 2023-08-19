@@ -2,7 +2,7 @@ import asyncio
 import tempfile
 from base64 import b64encode
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from slixmpp.exceptions import XMPPError
@@ -147,6 +147,12 @@ class TestPubSubAvatar(SlixTestPlus):
         self.xmpp.get_session_from_stanza = lambda j: MockSession
         self.temp_dir = tempfile.TemporaryDirectory()
         avatar_cache.dir = Path(self.temp_dir.name)
+        self.user_store_patch = patch("slidge.core.pubsub.user_store")
+        self.user_store_patch.start()
+
+    def tearDown(self):
+        self.user_store_patch.stop()
+        super().tearDown()
 
     def advertise_avatar(self):
         # img = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

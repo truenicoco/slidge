@@ -39,7 +39,7 @@ VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 class PepItem:
     @staticmethod
-    def from_db(jid: JID) -> Optional["PepItem"]:
+    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepItem"]:
         raise NotImplementedError
 
     def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
@@ -131,7 +131,7 @@ class PepAvatar(PepItem):
         self._avatar_data_path = cached_avatar.path
 
     @staticmethod
-    def from_db(jid: JID) -> Optional["PepAvatar"]:
+    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepAvatar"]:
         cached_id = db.avatar_get(jid)
         if cached_id is None:
             return None
@@ -164,6 +164,8 @@ class PepNick(PepItem):
 
     @staticmethod
     def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepNick"]:
+        if user is None:
+            raise XMPPError("not-allowed")
         assert user is not None
         nick = db.nick_get(jid, user)
         if nick is None:
@@ -171,7 +173,8 @@ class PepNick(PepItem):
         return PepNick(nick)
 
     def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
-        assert user is not None
+        if user is None:
+            raise XMPPError("not-allowed")
         db.nick_store(jid, str(self.__nick_str), user)
 
 
@@ -270,6 +273,8 @@ class PubSubComponent(BasePlugin):
             except XMPPError:
                 pass
             else:
+                if pep_avatar.metadata is None:
+                    raise XMPPError("internal-server-error", "Avatar but no metadata?")
                 await self._broadcast(
                     data=pep_avatar.metadata,
                     from_=p.get_to(),
@@ -307,10 +312,10 @@ class PubSubComponent(BasePlugin):
 
     async def _get_authorized_item(
         self, cls: Type[PepItemType], stanza: Union[Iq, Presence]
-    ) -> PepItem:
+    ) -> PepItemType:
         sto = stanza.get_to()
-
-        item = cls.from_db(sto)
+        user = user_store.get_by_jid(stanza.get_from())
+        item = cls.from_db(sto, user)
         if item is None:
             raise XMPPError("item-not-found")
 
@@ -318,12 +323,12 @@ class PubSubComponent(BasePlugin):
             session = self.xmpp.get_session_from_stanza(stanza)
             await session.contacts.by_jid(sto)
 
-        return item
+        return item  # type:ignore
 
-    async def _get_authorized_avatar(self, stanza: Union[Iq, Presence]):
+    async def _get_authorized_avatar(self, stanza: Union[Iq, Presence]) -> PepAvatar:
         return await self._get_authorized_item(PepAvatar, stanza)
 
-    async def _get_authorized_nick(self, stanza: Union[Iq, Presence]):
+    async def _get_authorized_nick(self, stanza: Union[Iq, Presence]) -> PepNick:
         return await self._get_authorized_item(PepNick, stanza)
 
     async def _get_avatar_data(self, iq: Iq):
@@ -373,18 +378,18 @@ class PubSubComponent(BasePlugin):
     @staticmethod
     def _reply_with_payload(
         iq: Iq,
-        payload: Union[AvatarMetadata, AvatarData, VCard4],
-        id_: str,
+        payload: Optional[Union[AvatarMetadata, AvatarData, VCard4]],
+        id_: Optional[str],
         namespace: Optional[str] = None,
     ):
         result = iq.reply()
         item = Item()
         if payload:
             item.set_payload(payload.xml)
-        item["id"] = id_
-        result["pubsub"]["items"]["node"] = (
-            namespace if namespace else payload.namespace
-        )
+            item["id"] = id_
+            result["pubsub"]["items"]["node"] = (
+                namespace if namespace else payload.namespace
+            )
         result["pubsub"]["items"].append(item)
         result.send()
 
