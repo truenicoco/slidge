@@ -265,7 +265,8 @@ class PubSubComponent(BasePlugin):
             await asyncio.sleep(5)
             info = await self.xmpp.plugin["xep_0115"].get_caps(from_)
         if info is None:
-            info = await self.xmpp.plugin["xep_0030"].get_info(from_)
+            iq = await self.xmpp.plugin["xep_0030"].get_info(from_)
+            info = iq["disco_info"]
         features = info["features"]
         if AvatarMetadata.namespace + "+notify" in features:
             try:

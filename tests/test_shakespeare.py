@@ -1636,4 +1636,75 @@ class TestCarbon(SlidgeTest):
         AttachmentMixin._AttachmentMixin__get_url = orig
 
 
+class TestUserGetsOnline(Base):
+    def setUp(self):
+        super().setUp()
+        self.get_romeo_session().contacts.ready.set_result(True)
+        self.juliet.is_friend = True
+        self.juliet.name = "Juliet"
+        self.send(  # language=XML
+            """
+            <message type="headline"
+                     from="juliet@aim.shakespeare.lit"
+                     to="romeo@montague.lit">
+              <event xmlns="http://jabber.org/protocol/pubsub#event">
+                <items node="http://jabber.org/protocol/nick">
+                  <item>
+                    <nick xmlns="http://jabber.org/protocol/nick">Juliet</nick>
+                  </item>
+                </items>
+              </event>
+            </message>
+            """,
+            use_values=False,
+        )
+
+    def test_user_online_without_caps(self):
+        self.recv(  # language=XML
+            """
+            <presence from="romeo@montague.lit/cheogram"
+                      to="juliet@aim.shakespeare.lit" />
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq id="1"
+                from="aim.shakespeare.lit"
+                to="romeo@montague.lit/cheogram"
+                type="get">
+              <query xmlns="http://jabber.org/protocol/disco#info" />
+            </iq>
+            """
+        )
+        self.recv(  # language=XML
+            """
+            <iq id="1"
+                type="result"
+                to="aim.shakespeare.lit"
+                from="romeo@montague.lit/cheogram">
+              <query xmlns='http://jabber.org/protocol/disco#info'>
+                <feature var='http://jabber.org/protocol/nick+notify' />
+              </query>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <message type="headline"
+                     from="juliet@aim.shakespeare.lit"
+                     to="romeo@montague.lit/cheogram">
+              <event xmlns="http://jabber.org/protocol/pubsub#event">
+                <items node="http://jabber.org/protocol/nick">
+                  <item>
+                    <nick xmlns="http://jabber.org/protocol/nick">Juliet</nick>
+                  </item>
+                </items>
+              </event>
+            </message>
+            """,
+            use_values=False,
+        )
+        assert self.next_sent() is None
+
+
 log = logging.getLogger(__name__)
