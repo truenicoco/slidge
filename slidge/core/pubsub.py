@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import io
 import logging
@@ -30,6 +29,7 @@ from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
 from .contact import LegacyContact
+from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:
     from slidge import BaseGateway
@@ -178,7 +178,7 @@ class PepNick(PepItem):
         db.nick_store(jid, str(self.__nick_str), user)
 
 
-class PubSubComponent(BasePlugin):
+class PubSubComponent(NamedLockMixin, BasePlugin):
     xmpp: "BaseGateway"
 
     name = "pubsub"
@@ -262,10 +262,10 @@ class PubSubComponent(BasePlugin):
                 return
 
         if ver_string:
-            await asyncio.sleep(5)
             info = await self.xmpp.plugin["xep_0115"].get_caps(from_)
         if info is None:
-            iq = await self.xmpp.plugin["xep_0030"].get_info(from_)
+            async with self.lock(from_):
+                iq = await self.xmpp.plugin["xep_0030"].get_info(from_)
             info = iq["disco_info"]
         features = info["features"]
         if AvatarMetadata.namespace + "+notify" in features:

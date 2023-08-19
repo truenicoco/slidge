@@ -5,8 +5,8 @@ from typing import Hashable
 
 
 class NamedLockMixin:
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
         self.__locks = dict[Hashable, asyncio.Lock]()
 
     @asynccontextmanager
