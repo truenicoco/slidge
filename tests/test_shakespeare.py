@@ -6,10 +6,12 @@ import unittest.mock
 from copy import copy
 from pathlib import Path
 from typing import Any, Dict, Hashable, Optional
+from xml.etree import ElementTree as ET
 
 from slixmpp import JID, Message, Presence
 from slixmpp import __version__ as slix_version
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0030 import DiscoInfo
 from slixmpp.plugins.xep_0082 import format_datetime
 
 from slidge import *
@@ -1659,6 +1661,24 @@ class TestUserGetsOnline(Base):
             use_values=False,
         )
 
+    def _assert_send_nick(self):
+        self.send(  # language=XML
+            """
+            <message type="headline"
+                     from="juliet@aim.shakespeare.lit"
+                     to="romeo@montague.lit/cheogram">
+              <event xmlns="http://jabber.org/protocol/pubsub#event">
+                <items node="http://jabber.org/protocol/nick">
+                  <item>
+                    <nick xmlns="http://jabber.org/protocol/nick">Juliet</nick>
+                  </item>
+                </items>
+              </event>
+            </message>
+            """,
+            use_values=False,
+        )
+
     def test_user_online_without_caps(self):
         self.recv(  # language=XML
             """
@@ -1688,22 +1708,60 @@ class TestUserGetsOnline(Base):
             </iq>
             """
         )
-        self.send(  # language=XML
+        self._assert_send_nick()
+        assert self.next_sent() is None
+
+    def test_user_online_with_caps(self):
+        with unittest.mock.patch(
+            "slixmpp.plugins.xep_0115.caps.XEP_0115.get_caps"
+        ) as get_caps:
+            get_caps.return_value = DiscoInfo(
+                xml=ET.fromstring(  # language=XML
+                    """
+            <query xmlns='http://jabber.org/protocol/disco#info'>
+              <feature var='http://jabber.org/protocol/nick+notify' />
+            </query>
             """
-            <message type="headline"
-                     from="juliet@aim.shakespeare.lit"
-                     to="romeo@montague.lit/cheogram">
-              <event xmlns="http://jabber.org/protocol/pubsub#event">
-                <items node="http://jabber.org/protocol/nick">
-                  <item>
-                    <nick xmlns="http://jabber.org/protocol/nick">Juliet</nick>
-                  </item>
-                </items>
-              </event>
-            </message>
-            """,
-            use_values=False,
-        )
+                )
+            )
+            self.recv(  # language=XML
+                """
+            <presence from="romeo@montague.lit/cheogram"
+                      to="juliet@aim.shakespeare.lit">
+              <c xmlns='http://jabber.org/protocol/caps'
+                 hash='sha-1'
+                 node='test'
+                 ver='VERSTRING' />
+            </presence>
+            """
+            )
+        self._assert_send_nick()
+        assert self.next_sent() is None
+
+    def test_user_online_with_caps_no_nick_notify(self):
+        with unittest.mock.patch(
+            "slixmpp.plugins.xep_0115.caps.XEP_0115.get_caps"
+        ) as get_caps:
+            get_caps.return_value = DiscoInfo(
+                xml=ET.fromstring(  # language=XML
+                    """
+            <query xmlns='http://jabber.org/protocol/disco#info'>
+              <feature var='http://jabber.org/protocol/whatevs+notify' />
+            </query>
+            """
+                )
+            )
+            self.recv(  # language=XML
+                """
+            <presence from="romeo@montague.lit/cheogram"
+                      to="juliet@aim.shakespeare.lit">
+              <c xmlns='http://jabber.org/protocol/caps'
+                 hash='sha-1'
+                 node='test'
+                 ver='VERSTRING' />
+            </presence>
+            """
+            )
         assert self.next_sent() is None
 
 
