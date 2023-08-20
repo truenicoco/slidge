@@ -166,7 +166,6 @@ class PepNick(PepItem):
     def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepNick"]:
         if user is None:
             raise XMPPError("not-allowed")
-        assert user is not None
         nick = db.nick_get(jid, user)
         if nick is None:
             return None
