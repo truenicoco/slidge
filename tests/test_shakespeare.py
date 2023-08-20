@@ -1765,4 +1765,64 @@ class TestUserGetsOnline(Base):
         assert self.next_sent() is None
 
 
+class TestUserPresence(Base):
+    def setUp(self):
+        self.patcher = unittest.mock.patch("slidge.core.session.BaseSession.presence")
+        self.presence = self.patcher.start()
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        self.patcher.stop()
+
+    def test_user_presence(self):
+        self.recv(  # language=XML
+            """
+            <presence from="romeo@montague.lit/cheogram"
+                      to="aim.shakespeare.lit" />
+            """
+        )
+        self.presence.assert_called_with(
+            "cheogram",
+            "available",
+            "",
+            {"cheogram": {"status": "", "show": "", "priority": 0}},
+        )
+        self.presence.assert_awaited_once()
+        self.presence.reset_mock()
+        self.recv(  # language=XML
+            """
+            <presence from="romeo@montague.lit/gajim"
+                      to="aim.shakespeare.lit">
+              <show>away</show>
+              <status>I use gajim, yay!</status>
+            </presence>
+            """
+        )
+        self.presence.assert_called_with(
+            "gajim",
+            "away",
+            "I use gajim, yay!",
+            {
+                "cheogram": {"status": "", "show": "", "priority": 0},
+                "gajim": {"status": "I use gajim, yay!", "show": "away", "priority": 0},
+            },
+        )
+        self.recv(  # language=XML
+            """
+            <presence from="romeo@montague.lit/gajim"
+                      to="aim.shakespeare.lit"
+                      type="unavailable" />
+            """
+        )
+        self.presence.assert_called_with(
+            "gajim",
+            "unavailable",
+            "",
+            {
+                "cheogram": {"status": "", "show": "", "priority": 0},
+            },
+        )
+
+
 log = logging.getLogger(__name__)

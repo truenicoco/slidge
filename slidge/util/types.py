@@ -9,9 +9,12 @@ from typing import (
     Hashable,
     Literal,
     Optional,
+    TypedDict,
     TypeVar,
     Union,
 )
+
+from slixmpp.types import PresenceTypes
 
 if TYPE_CHECKING:
     from ..core.contact import LegacyContact
@@ -117,3 +120,10 @@ class LegacyAttachment:
 class MucType(int, Enum):
     GROUP = 0
     CHANNEL = 1
+
+
+class ResourceDict(TypedDict):
+    show: PresenceShow
+    type: PresenceTypes
+    status: str
+    priority: int

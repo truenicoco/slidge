@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, Union, cas
 import aiohttp
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
+from slixmpp.types import PresenceTypes
 
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
@@ -15,6 +16,7 @@ from ..util.types import (
     LegacyThreadType,
     PresenceShow,
     RecipientType,
+    ResourceDict,
 )
 from . import config
 from .command.base import SearchResult
@@ -918,10 +920,49 @@ class BaseSession(
                 "Legacy session is not fully initialized, retry later",
             )
 
+    async def _on_presence(self, p: Presence):
+        if p.get_to() != self.xmpp.boundjid.bare:
+            return
+        # NB: get_type() returns either a proper presence type or
+        #     a presence show if available. Weird, weird, weird slix.
+        if (ptype := p.get_type()) not in _USEFUL_PRESENCES:
+            return
+        resources = self.xmpp.roster[self.xmpp.boundjid.bare][p.get_from()].resources
+        self.log.debug("Received a presence from %s", p.get_from())
+        await self.presence(
+            p.get_from().resource,
+            ptype,  # type: ignore
+            p["status"],
+            resources,
+        )
+
+    async def presence(
+        self,
+        resource: str,
+        show: Union[PresenceTypes, PresenceShow],
+        status: str,
+        resources: dict[str, ResourceDict],
+    ):
+        """
+        Called when the gateway component receives a presence, ie, when
+        one of the user's clients goes online of offline, or changes its
+        status.
+
+        :param resource: The XMPP client identifier, arbitrary string.
+        :param show: The presence ``type=`` or ``<show>``.
+        :param status: A status message, like a deeply profound quote, eg,
+            "Roses are red, violets are blue, [INSERT JOKE]".
+        :param resources: A summary of all the resources for this user.
+        """
+        raise NotImplementedError
+
 
 def remove_emoji_variation_selector_16(emoji: str):
     # this is required for compatibility with dino, and maybe other future clients?
     return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
+
+
+_USEFUL_PRESENCES = {"available", "unavailable", "away", "chat", "dnd", "xa"}
 
 
 _sessions: dict[GatewayUser, BaseSession] = {}
