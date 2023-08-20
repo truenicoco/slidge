@@ -874,7 +874,7 @@ class BaseSession(
         if jid.bare in (contacts := self.contacts.known_contacts(only_friends=False)):
             return contacts[jid.bare]
         if jid.bare in (mucs := self.bookmarks._mucs_by_bare_jid):
-            muc = mucs[jid.bare]
+            return await self.__get_muc_or_participant(mucs[jid.bare], jid)
         else:
             muc = None
 
@@ -886,14 +886,18 @@ class BaseSession(
                     muc = await self.bookmarks.by_jid(jid)
                 except XMPPError:
                     return
-            if nick := jid.resource:
-                try:
-                    return await muc.get_participant(
-                        nick, raise_if_not_found=True, fill_first=True
-                    )
-                except XMPPError:
-                    return None
-            return muc
+            return await self.__get_muc_or_participant(muc, jid)
+
+    @staticmethod
+    async def __get_muc_or_participant(muc: LegacyMUC, jid: JID):
+        if nick := jid.resource:
+            try:
+                return await muc.get_participant(
+                    nick, raise_if_not_found=True, fill_first=True
+                )
+            except XMPPError:
+                return None
+        return muc
 
     async def wait_for_ready(self, timeout: Optional[Union[int, float]] = 10):
         """
