@@ -13,6 +13,7 @@ from slidge.util import (
 )
 from slidge.util.db import EncryptedShelf
 from slidge.util.sql import SQLBiDict
+from slidge.util.util import merge_resources
 
 
 def test_subclass():
@@ -144,3 +145,134 @@ def test_strip_delay(monkeypatch):
     msg = MockMsg()
     LegacyContact._add_delay(MockC, msg, datetime.now())
     assert msg.delay_added
+
+
+def test_merge_presence():
+    assert merge_resources(
+        {
+            "1": {
+                "show": "",
+                "status": "",
+                "priority": 0,
+            }
+        }
+    ) == {
+        "show": "",
+        "status": "",
+        "priority": 0,
+    }
+
+    assert merge_resources(
+        {
+            "1": {
+                "show": "dnd",
+                "status": "X",
+                "priority": -10,
+            },
+            "2": {
+                "show": "dnd",
+                "status": "",
+                "priority": 0,
+            },
+        }
+    ) == {
+        "show": "dnd",
+        "status": "X",
+        "priority": 0,
+    }
+
+    assert merge_resources(
+        {
+            "1": {
+                "show": "",
+                "status": "",
+                "priority": 0,
+            },
+            "2": {
+                "show": "away",
+                "status": "",
+                "priority": 0,
+            },
+            "3": {
+                "show": "dnd",
+                "status": "",
+                "priority": 0,
+            },
+        }
+    ) == {
+        "show": "",
+        "status": "",
+        "priority": 0,
+    }
+
+    assert merge_resources(
+        {
+            "1": {
+                "show": "",
+                "status": "",
+                "priority": 0,
+            },
+            "2": {
+                "show": "away",
+                "status": "",
+                "priority": 0,
+            },
+            "3": {
+                "show": "dnd",
+                "status": "Blah blah",
+                "priority": 0,
+            },
+        }
+    ) == {
+        "show": "",
+        "status": "Blah blah",
+        "priority": 0,
+    }
+
+    assert merge_resources(
+        {
+            "1": {
+                "show": "",
+                "status": "",
+                "priority": 0,
+            },
+            "2": {
+                "show": "away",
+                "status": "Blah",
+                "priority": 0,
+            },
+            "3": {
+                "show": "dnd",
+                "status": "Blah blah",
+                "priority": 10,
+            },
+        }
+    ) == {
+        "show": "",
+        "status": "Blah blah",
+        "priority": 0,
+    }
+
+    assert merge_resources(
+        {
+            "1": {
+                "show": "",
+                "status": "",
+                "priority": 0,
+            },
+            "2": {
+                "show": "away",
+                "status": "Blah",
+                "priority": 0,
+            },
+            "3": {
+                "show": "dnd",
+                "status": "",
+                "priority": 10,
+            },
+        }
+    ) == {
+        "show": "",
+        "status": "Blah",
+        "priority": 0,
+    }

@@ -14,8 +14,11 @@ from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,
     PresenceShow,
+    PseudoPresenceShow,
     RecipientType,
+    ResourceDict,
 )
+from ..util.util import merge_resources
 from . import config
 from .command.base import SearchResult
 from .contact import LegacyContact, LegacyRoster
@@ -918,10 +921,55 @@ class BaseSession(
                 "Legacy session is not fully initialized, retry later",
             )
 
+    async def _on_presence(self, p: Presence):
+        if p.get_to() != self.xmpp.boundjid.bare:
+            return
+        # NB: get_type() returns either a proper presence type or
+        #     a presence show if available. Weird, weird, weird slix.
+        if (ptype := p.get_type()) not in _USEFUL_PRESENCES:
+            return
+        resources = self.xmpp.roster[self.xmpp.boundjid.bare][p.get_from()].resources
+        self.log.debug("Received a presence from %s", p.get_from())
+        await self.presence(
+            p.get_from().resource,
+            ptype,  # type: ignore
+            p["status"],
+            resources,
+            merge_resources(resources),
+        )
+
+    async def presence(
+        self,
+        resource: str,
+        show: PseudoPresenceShow,
+        status: str,
+        resources: dict[str, ResourceDict],
+        merged_resource: Optional[ResourceDict],
+    ):
+        """
+        Called when the gateway component receives a presence, ie, when
+        one of the user's clients goes online of offline, or changes its
+        status.
+
+        :param resource: The XMPP client identifier, arbitrary string.
+        :param show: The presence ``<show>``, if available. If the resource is
+            just 'available' without any ``<show>`` element, this is an empty
+            str.
+        :param status: A status message, like a deeply profound quote, eg,
+            "Roses are red, violets are blue, [INSERT JOKE]".
+        :param resources: A summary of all the resources for this user.
+        :param merged_resource: A global presence for the user account,
+            following rules described in :meth:`merge_resources`
+        """
+        raise NotImplementedError
+
 
 def remove_emoji_variation_selector_16(emoji: str):
     # this is required for compatibility with dino, and maybe other future clients?
     return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
+
+
+_USEFUL_PRESENCES = {"available", "unavailable", "away", "chat", "dnd", "xa"}
 
 
 _sessions: dict[GatewayUser, BaseSession] = {}

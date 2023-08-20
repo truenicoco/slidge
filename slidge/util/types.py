@@ -9,6 +9,7 @@ from typing import (
     Hashable,
     Literal,
     Optional,
+    TypedDict,
     TypeVar,
     Union,
 )
@@ -117,3 +118,12 @@ class LegacyAttachment:
 class MucType(int, Enum):
     GROUP = 0
     CHANNEL = 1
+
+
+PseudoPresenceShow = Union[PresenceShow, Literal[""]]
+
+
+class ResourceDict(TypedDict):
+    show: PseudoPresenceShow
+    status: str
+    priority: int

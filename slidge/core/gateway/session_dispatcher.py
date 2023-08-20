@@ -25,6 +25,7 @@ class SessionDispatcher:
         async def react(m): await self._dispatch(m, BaseSession.react_from_msg)
         async def retract(m): await self._dispatch(m, BaseSession.retract_from_msg)
         async def groupchat_join(p): await self._dispatch(p, BaseSession.join_groupchat)
+        async def presence(p): await self._dispatch(p, BaseSession._on_presence)
         # fmt: on
 
         xmpp.add_event_handler("legacy_message", msg)
@@ -40,12 +41,14 @@ class SessionDispatcher:
         xmpp.add_event_handler("groupchat_join", groupchat_join)
         xmpp.add_event_handler("groupchat_message", msg)
 
+        xmpp.add_event_handler("presence", presence)
+
     async def _dispatch(self, m: Union[Message, Presence], cb: Callable):
         xmpp = self.xmpp
         if m.get_from().server == xmpp.boundjid.bare:
             log.debug("Ignoring echo")
             return
-        if m.get_to() == xmpp.boundjid.bare:
+        if m.get_to() == xmpp.boundjid.bare and isinstance(m, Message):
             log.debug("Ignoring message to component")
             return
         s = xmpp.get_session_from_stanza(m)

@@ -6,6 +6,8 @@ from abc import ABCMeta
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
 
+from slidge.util.types import ResourceDict
+
 try:
     import magic
 except ImportError as e:
@@ -229,3 +231,38 @@ def get_version():
         return "git-" + git[:10]
 
     return "NO_VERSION"
+
+
+def merge_resources(resources: dict[str, ResourceDict]) -> Optional[ResourceDict]:
+    if len(resources) == 0:
+        return None
+
+    if len(resources) == 1:
+        return next(iter(resources.values()))
+
+    by_priority = sorted(resources.values(), key=lambda r: r["priority"], reverse=True)
+
+    if any(r["show"] == "" for r in resources.values()):
+        # if a client is "available", we're "available"
+        show = ""
+    else:
+        for r in by_priority:
+            if r["show"]:
+                show = r["show"]
+                break
+        else:
+            raise RuntimeError()
+
+    # if there are different statuses, we use the highest priority one,
+    # but we ignore resources without status, even with high priority
+    status = ""
+    for r in by_priority:
+        if r["status"]:
+            status = r["status"]
+            break
+
+    return {
+        "show": show,  # type:ignore
+        "status": status,
+        "priority": 0,
+    }
