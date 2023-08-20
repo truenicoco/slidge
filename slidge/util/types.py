@@ -14,6 +14,8 @@ from typing import (
     Union,
 )
 
+from slixmpp.types import PresenceShows
+
 if TYPE_CHECKING:
     from ..core.contact import LegacyContact
     from ..core.muc.participant import LegacyParticipant
@@ -52,7 +54,6 @@ AvatarIdType = Union[LegacyFileIdType, URL]
 ChatState = Literal["active", "composing", "gone", "inactive", "paused"]
 ProcessingHint = Literal["no-store", "markable", "store"]
 Marker = Literal["acknowledged", "received", "displayed"]
-PresenceShow = Literal["away", "chat", "dnd", "xa"]
 FieldType = Literal[
     "boolean",
     "fixed",
@@ -120,7 +121,7 @@ class MucType(int, Enum):
     CHANNEL = 1
 
 
-PseudoPresenceShow = Union[PresenceShow, Literal[""]]
+PseudoPresenceShow = Union[PresenceShows, Literal[""]]
 
 
 class ResourceDict(TypedDict):

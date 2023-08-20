@@ -2,10 +2,9 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
-from slixmpp.types import PresenceTypes
+from slixmpp.types import PresenceShows, PresenceTypes
 
 from ...util.sql import CachedPresence, db
-from ...util.types import PresenceShow
 from .. import config
 from .base import BaseSender
 
@@ -34,7 +33,7 @@ class PresenceMixin(BaseSender):
         bare=False,
         ptype: Optional[PresenceTypes] = None,
         pstatus: Optional[str] = None,
-        pshow: Optional[PresenceShow] = None,
+        pshow: Optional[PresenceShows] = None,
     ):
         old = self._get_last_presence()
 

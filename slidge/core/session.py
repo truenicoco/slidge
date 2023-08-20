@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, Union, cas
 import aiohttp
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
+from slixmpp.types import PresenceShows
 
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
@@ -13,7 +14,6 @@ from ..util.sql import SQLBiDict
 from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,
-    PresenceShow,
     PseudoPresenceShow,
     RecipientType,
     ResourceDict,
@@ -594,7 +594,7 @@ class BaseSession(
     def send_gateway_status(
         self,
         status: Optional[str] = None,
-        show=Optional[PresenceShow],
+        show=Optional[PresenceShows],
         **kwargs,
     ):
         """

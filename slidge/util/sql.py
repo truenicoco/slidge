@@ -10,10 +10,9 @@ from typing import TYPE_CHECKING, Collection, Generic, NamedTuple, Optional, Uni
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
-from slixmpp.types import PresenceTypes
+from slixmpp.types import PresenceShows, PresenceTypes
 
 from ..core import config
-from .types import PresenceShow
 from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
@@ -25,7 +24,7 @@ class CachedPresence(NamedTuple):
     last_seen: Optional[datetime] = None
     ptype: Optional[PresenceTypes] = None
     pstatus: Optional[str] = None
-    pshow: Optional[PresenceShow] = None
+    pshow: Optional[PresenceShows] = None
 
 
 class TemporaryDB:
