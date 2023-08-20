@@ -129,14 +129,17 @@ class LegacyParticipant(
         kwargs["status_codes"] = {303}
 
         p = self._make_presence(ptype="unavailable", last_seen=last_seen, **kwargs)
-        p["muc"]["item"]["nick"] = new_nickname
+        # in this order so pfrom=old resource and we actually use the escaped nick
+        # in the muc/item/nick element
+        self.__update_jid(new_nickname)
+        p["muc"]["item"]["nick"] = self.jid.resource
         self._send(p)
 
-        self.__update_jid(new_nickname)
         self._nickname = new_nickname
 
         kwargs["status_codes"] = set()
         p = self._make_presence(ptype="available", last_seen=last_seen, **kwargs)
+        self.__add_nick_element(p)
         self._send(p)
 
         if old:
@@ -249,6 +252,12 @@ class LegacyParticipant(
                 )
         return item
 
+    def __add_nick_element(self, p: Presence):
+        if (nick := self._nickname_no_illegal) != self.jid.resource:
+            n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
+            n["nick"] = nick
+            p.append(n)
+
     def send_initial_presence(
         self,
         full_jid: JID,
@@ -290,10 +299,7 @@ class LegacyParticipant(
         )
         if presence_id:
             p["id"] = presence_id
-        if (nick := self._nickname_no_illegal) != self.jid.resource:
-            n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
-            n["nick"] = nick
-            p.append(n)
+        self.__add_nick_element(p)
         self._send(p, full_jid)
 
     def leave(self):

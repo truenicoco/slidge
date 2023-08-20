@@ -2817,6 +2817,51 @@ class TestMuc(Base):
         p.contact.name = "new-nick"
         self.__test_rename_common(old_nick, participants_before)
 
+    def test_rename_from_contact_with_forbidden_char(self):
+        participants_before = self.__get_participants()
+        p = participants_before[0]
+        old_nick = p.nickname
+        p.contact.name = "a forbidden emoji 🎉"
+
+        self.send(  # language=XML
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      type="unavailable"
+                      from="room-private@aim.shakespeare.lit/{old_nick}"
+                      to="romeo@montague.lit/movim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}"
+                      role="{p.role}"
+                      jid="{p.contact.jid}"
+                      nick="a forbidden emoji -fr59q" />
+                <status code="303" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="{p.contact.jid}" />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <presence xmlns="jabber:component:accept"
+                      from="room-private@aim.shakespeare.lit/a forbidden emoji -fr59q"
+                      to="romeo@montague.lit/movim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{p.affiliation}"
+                      role="{p.role}"
+                      jid="{p.contact.jid}" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="{p.contact.jid}" />
+              <nick xmlns="http://jabber.org/protocol/nick">a forbidden emoji 🎉</nick>
+            </presence>
+            """
+        )
+        muc = self.get_private_muc()
+        participants_after = self.run_coro(muc.get_participants())
+        assert len(participants_after) == len(participants_before)
+        assert self.next_sent() is None
+
     def test_non_anonymous_participants_with_same_nickname(self):
         muc = self.get_private_muc(resources=["movim"])
         participants = self.__get_participants()
