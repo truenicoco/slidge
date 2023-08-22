@@ -44,7 +44,7 @@ class Info(AdminCommand):
         return TableResult(
             description="List of registered users",
             fields=[FormField("jid", type="jid-single"), FormField("joined")],
-            items=items,
+            items=items,  # type:ignore
         )
 
 

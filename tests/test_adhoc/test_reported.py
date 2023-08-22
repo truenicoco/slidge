@@ -1,5 +1,5 @@
 import pytest
-from slixmpp import ComponentXMPP
+from slixmpp import JID, ComponentXMPP
 from slixmpp.plugins.xep_0050.adhoc import XEP_0050
 from slixmpp.test import SlixTest
 
@@ -41,7 +41,7 @@ class Command1(Command):
                 FormField("jid", type="jid-single", label="JID"),
             ],
             items=[
-                {"jid": "test@test", "name": "Some dude"},
+                {"jid": JID("test@test"), "name": "Some dude"},
                 {"jid": "test2@test", "name": "Some dude2"},
             ],
         )

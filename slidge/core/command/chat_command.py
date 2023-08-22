@@ -237,7 +237,7 @@ class ChatCommandProvider:
                         if result.jids_are_mucs:
                             value += "?join"
                     else:
-                        value = item[f.var]
+                        value = item[f.var]  # type:ignore
                     body += f"\n{f.label or f.var}: {value}"
             msg.reply(body).send()
 

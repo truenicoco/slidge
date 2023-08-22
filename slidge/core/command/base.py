@@ -59,7 +59,7 @@ class TableResult:
     """
     The 'columns names' of the table.
     """
-    items: Collection[dict[str, str]]
+    items: Collection[dict[str, Union[str, JID]]]
     """
     The rows of the table. Each row is a dict where keys are the fields ``var``
     attribute.
@@ -83,7 +83,7 @@ class TableResult:
         for f in self.fields:
             form.add_reported(f.var, label=f.label, type=f.type)  # type: ignore[no-untyped-call]
         for item in self.items:
-            form.add_item(item)  # type: ignore[no-untyped-call]
+            form.add_item({k: str(v) for k, v in item.items()})  # type: ignore[no-untyped-call]
         return form
 
 
