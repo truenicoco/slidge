@@ -847,7 +847,8 @@ class TestMuc(Base):
                      to="romeo@montague.lit/gajim"
                      from="room-private@aim.shakespeare.lit/unknown">
               <delay xmlns="urn:xmpp:delay"
-                     stamp="{now_fmt}" />
+                     stamp="{now_fmt}"
+                     from="room-private@aim.shakespeare.lit" />
               <subject>Private Subject</subject>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="uuid" />

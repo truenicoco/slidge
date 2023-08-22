@@ -341,6 +341,7 @@ class LegacyParticipant(
 
         msg = self._make_message()
         msg["delay"].set_stamp(when)
+        msg["delay"]["from"] = self.muc.jid
         msg["subject"] = subject or str(self.muc.name)
         self._send(msg, full_jid)
 
