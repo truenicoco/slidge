@@ -64,7 +64,6 @@ exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = "furo"
 html_static_path = ["_static"]
 
 intersphinx_mapping = {
