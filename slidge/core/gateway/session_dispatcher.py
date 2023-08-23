@@ -57,6 +57,8 @@ class SessionDispatcher:
             await cb(s, m)
         except XMPPError:
             raise
+        except NotImplementedError:
+            log.debug("Legacy module does not implement %s", cb)
         except Exception as e:
             s.log.error("Failed to handle incoming stanza: %s", m, exc_info=e)
             raise XMPPError("internal-server-error", str(e))
