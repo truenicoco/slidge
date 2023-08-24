@@ -1,5 +1,6 @@
 import re
-from datetime import datetime, timezone
+from asyncio import Task, sleep
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from slixmpp.types import PresenceShows, PresenceTypes
@@ -18,6 +19,14 @@ _FRIEND_REQUEST_PRESENCES = {"subscribe", "unsubscribe", "subscribed", "unsubscr
 
 class PresenceMixin(BaseSender):
     _ONLY_SEND_PRESENCE_CHANGES = False
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.__update_last_seen_fallback_task: Optional[Task] = None
+
+    async def __update_last_seen_fallback(self):
+        await sleep(3600 * 7)
+        self.send_last_presence(force=True, no_cache_online=False)
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
         return db.presence_get(self.jid, self.user)
@@ -64,11 +73,20 @@ class PresenceMixin(BaseSender):
             if config.LAST_SEEN_FALLBACK and not re.match(
                 ".*Last seen .* GMT", p["status"]
             ):
-                last_seen_fallback = f"Last seen {last_seen:%A %H:%M GMT}"
+                last_seen_fallback, recent = get_last_seen_fallback(last_seen)
                 if p["status"]:
                     p["status"] = p["status"] + " -- " + last_seen_fallback
                 else:
                     p["status"] = last_seen_fallback
+                if recent:
+                    # if less than a week, we use sth like 'Last seen: Monday, 8:05",
+                    # but if lasts more than a week, this is not very informative, so
+                    # we need to force resend an updated presence status
+                    if self.__update_last_seen_fallback_task:
+                        self.__update_last_seen_fallback_task.cancel()
+                    self.__update_last_seen_fallback_task = self.xmpp.loop.create_task(
+                        self.__update_last_seen_fallback()
+                    )
             p["idle"]["since"] = last_seen
         return p
 
@@ -185,3 +203,11 @@ class PresenceMixin(BaseSender):
             )
         except _NoChange:
             pass
+
+
+def get_last_seen_fallback(last_seen: datetime):
+    now = datetime.now(tz=timezone.utc)
+    if now - last_seen < timedelta(days=7):
+        return f"Last seen {last_seen:%A %H:%M GMT}", True
+    else:
+        return f"Last seen {last_seen:%b %-d %Y}", False

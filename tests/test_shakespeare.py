@@ -1508,6 +1508,36 @@ class TestContact(SlidgeTest):
         assert msg["body"] == "new content"
         assert msg["id"] == "correction_id"
 
+    def test_presence(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = True
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        a_week_ago = now - datetime.timedelta(days=7)
+        juliet.away(status="Bye bye", last_seen=now)
+
+        p = self.next_sent()
+        assert p["status"] == f"Bye bye -- Last seen {now:%A %H:%M GMT}"
+        assert p["idle"]["since"] == now
+        assert p["show"] == "away"
+
+        juliet.extended_away(status="Bye bye", last_seen=a_week_ago)
+        p = self.next_sent()
+        assert p["status"] == f"Bye bye -- Last seen {a_week_ago:%b %-d %Y}"
+        assert p["idle"]["since"] == a_week_ago
+        assert p["show"] == "xa"
+
+        juliet.busy(last_seen=now)
+        p = self.next_sent()
+        assert p["status"] == f"Last seen {now:%A %H:%M GMT}"
+        assert p["idle"]["since"] == now
+        assert p["show"] == "dnd"
+
+        juliet.busy(last_seen=a_week_ago)
+        p = self.next_sent()
+        assert p["status"] == f"Last seen {a_week_ago:%b %-d %Y}"
+        assert p["idle"]["since"] == a_week_ago
+
 
 class TestCarbon(SlidgeTest):
     plugin = globals()
