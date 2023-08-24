@@ -15,7 +15,7 @@ from slixmpp.types import MessageTypes, OptJid
 from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
 from ...util import SubclassableOnce, strip_illegal_chars
-from ...util.types import LegacyMessageType, MucAffiliation, MucRole, MucType
+from ...util.types import LegacyMessageType, MucAffiliation, MucRole
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 
@@ -159,7 +159,7 @@ class LegacyParticipant(
         codes = status_codes or set()
         if self.is_user:
             codes.add(110)
-        if self.muc.type == MucType.GROUP:
+        if not self.muc.is_anonymous:
             if self.is_user and user_full_jid:
                 p["muc"]["jid"] = user_full_jid
                 codes.add(100)
@@ -238,7 +238,7 @@ class LegacyParticipant(
         item["nick"] = self.nickname
         item["affiliation"] = self.affiliation
         item["role"] = self.role
-        if self.muc.type == MucType.GROUP:
+        if not self.muc.is_anonymous:
             if self.is_user:
                 item["jid"] = self.user.bare_jid
             elif self.contact:

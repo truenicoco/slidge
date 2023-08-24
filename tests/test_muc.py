@@ -378,8 +378,8 @@ class TestMuc(Base):
                     <value>1</value>
                   </field>
                   <field var="muc#roomconfig_whois"
-                         type="boolean">
-                    <value>1</value>
+                         type="list-single">
+                    <value>anyone</value>
                   </field>
                   <field var="muc#roomconfig_publicroom"
                          type="boolean">
@@ -458,8 +458,8 @@ class TestMuc(Base):
                     <value>0</value>
                   </field>
                   <field var="muc#roomconfig_whois"
-                         type="boolean">
-                    <value>0</value>
+                         type="list-single">
+                    <value>moderators</value>
                   </field>
                   <field var="muc#roomconfig_publicroom"
                          type="boolean">
@@ -538,8 +538,8 @@ class TestMuc(Base):
                     <value>1</value>
                   </field>
                   <field var="muc#roomconfig_whois"
-                         type="boolean">
-                    <value>1</value>
+                         type="list-single">
+                    <value>anyone</value>
                   </field>
                   <field var="muc#roomconfig_publicroom"
                          type="boolean">
@@ -667,8 +667,8 @@ class TestMuc(Base):
                     <value>0</value>
                   </field>
                   <field var="muc#roomconfig_whois"
-                         type="boolean">
-                    <value>0</value>
+                         type="list-single">
+                    <value>moderators</value>
                   </field>
                   <field var="muc#roomconfig_publicroom"
                          type="boolean">

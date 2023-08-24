@@ -119,6 +119,7 @@ class LegacyAttachment:
 class MucType(int, Enum):
     GROUP = 0
     CHANNEL = 1
+    CHANNEL_NON_ANONYMOUS = 2
 
 
 PseudoPresenceShow = Union[PresenceShows, Literal[""]]

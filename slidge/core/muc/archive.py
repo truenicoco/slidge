@@ -10,7 +10,6 @@ from slixmpp.plugins.xep_0297.stanza import Forwarded
 
 from ...util.db import GatewayUser
 from ...util.sql import db
-from ...util.types import MucType
 
 if TYPE_CHECKING:
     from .participant import LegacyParticipant
@@ -36,7 +35,7 @@ class MessageArchive:
         if not archivable(msg):
             return
         new_msg = copy(msg)
-        if participant and participant.muc.type == MucType.GROUP:
+        if participant and not participant.muc.is_anonymous:
             new_msg["muc"]["role"] = participant.role
             new_msg["muc"]["affiliation"] = participant.affiliation
             if participant.contact:

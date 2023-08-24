@@ -246,6 +246,10 @@ class LegacyMUC(
         )
         self._subject = s
 
+    @property
+    def is_anonymous(self):
+        return self.type == MucType.CHANNEL
+
     async def __get_subject_setter_participant(self):
         from ..contact import LegacyContact
         from .participant import LegacyParticipant
@@ -277,6 +281,8 @@ class LegacyMUC(
             features.extend(["muc_membersonly", "muc_nonanonymous", "muc_hidden"])
         elif self.type == MucType.CHANNEL:
             features.extend(["muc_open", "muc_semianonymous", "muc_public"])
+        elif self.type == MucType.CHANNEL_NON_ANONYMOUS:
+            features.extend(["muc_open", "muc_nonanonymous", "muc_public"])
         return features
 
     async def extended_features(self):
@@ -314,7 +320,11 @@ class LegacyMUC(
                 )
 
         form.add_field("muc#roomconfig_membersonly", "boolean", value=is_group)
-        form.add_field("muc#roomconfig_whois", "boolean", value=is_group)
+        form.add_field(
+            "muc#roomconfig_whois",
+            "list-single",
+            value="moderators" if self.is_anonymous else "anyone",
+        )
         form.add_field("muc#roomconfig_publicroom", "boolean", value=not is_group)
         form.add_field("muc#roomconfig_allowpm", "boolean", value=False)
 
