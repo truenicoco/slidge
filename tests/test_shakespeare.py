@@ -1508,6 +1508,28 @@ class TestContact(SlidgeTest):
         assert msg["body"] == "new content"
         assert msg["id"] == "correction_id"
 
+    def test_retract(self):
+        juliet = self.get_juliet()
+
+        juliet.retract("old_msg_id")
+        # msg = self.next_sent()
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit">
+              <body>I have deleted the message old_msg_id, but your XMPP client does not support that</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <store xmlns="urn:xmpp:hints" />
+              <fallback xmlns="urn:xmpp:fallback:0" />
+              <apply-to xmlns="urn:xmpp:fasten:0"
+                        id="old_msg_id">
+                <retract xmlns="urn:xmpp:message-retract:0" />
+              </apply-to>
+            </message>
+            """
+        )
+
     def test_presence(self):
         juliet = self.get_juliet()
         juliet.is_friend = True

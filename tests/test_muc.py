@@ -1693,6 +1693,51 @@ class TestMuc(Base):
             """
         )
 
+    def test_mam_page_after_last(self):
+        self.recv(  # language=XML
+            """
+            <iq from='romeo@montague.lit/gajim'
+                type='set'
+                id='iq-id1'
+                to='room-private@aim.shakespeare.lit'>
+              <query xmlns='urn:xmpp:mam:2'
+                     queryid='query-id'>
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='FORM_TYPE'
+                         type='hidden'>
+                    <value>urn:xmpp:mam:2</value>
+                  </field>
+                  <field var='start'>
+                    <value>2000-01-01T03:00:00Z</value>
+                  </field>
+                </x>
+                <set xmlns='http://jabber.org/protocol/rsm'>
+                  <max>70</max>
+                  <after>9</after>
+                </set>
+              </query>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq from="room-private@aim.shakespeare.lit"
+                type="result"
+                id="iq-id1"
+                to="romeo@montague.lit/gajim">
+              <fin xmlns="urn:xmpp:mam:2"
+                   stable="false"
+                   complete="true">
+                <set xmlns="http://jabber.org/protocol/rsm">
+                  <count>0</count>
+                </set>
+              </fin>
+            </iq>
+            """,
+            use_values=False,
+        )
+
     def test_mam_page_after_not_found(self):
         self.recv(  # language=XML
             """
