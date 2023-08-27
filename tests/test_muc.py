@@ -349,6 +349,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:mam:2#extended" />
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
+                <feature var="urn:xmpp:occupant-id:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -429,6 +430,7 @@ class TestMuc(Base):
                 <feature var="muc_open" />
                 <feature var="muc_semianonymous" />
                 <feature var="muc_public" />
+                <feature var="urn:xmpp:occupant-id:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -509,6 +511,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:mam:2#extended" />
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
+                <feature var="urn:xmpp:occupant-id:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -638,6 +641,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:mam:2#extended" />
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
+                <feature var="urn:xmpp:occupant-id:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
