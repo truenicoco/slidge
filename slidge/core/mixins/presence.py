@@ -44,6 +44,9 @@ class PresenceMixin(BaseSender):
         pstatus: Optional[str] = None,
         pshow: Optional[PresenceShows] = None,
     ):
+        if last_seen and last_seen.tzinfo is None:
+            last_seen = last_seen.astimezone(timezone.utc)
+
         old = self._get_last_presence()
 
         if ptype not in _FRIEND_REQUEST_PRESENCES:
@@ -67,8 +70,6 @@ class PresenceMixin(BaseSender):
             pstatus=pstatus,
         )
         if last_seen:
-            if last_seen.tzinfo is None:
-                last_seen = last_seen.astimezone(timezone.utc)
             # it's ugly to check for the presence of this string, but a better fix is more work
             if config.LAST_SEEN_FALLBACK and not re.match(
                 ".*Last seen .*", p["status"]
