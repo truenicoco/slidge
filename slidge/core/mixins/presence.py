@@ -71,7 +71,7 @@ class PresenceMixin(BaseSender):
                 last_seen = last_seen.astimezone(timezone.utc)
             # it's ugly to check for the presence of this string, but a better fix is more work
             if config.LAST_SEEN_FALLBACK and not re.match(
-                ".*Last seen .* GMT", p["status"]
+                ".*Last seen .*", p["status"]
             ):
                 last_seen_fallback, recent = get_last_seen_fallback(last_seen)
                 if p["status"]:
