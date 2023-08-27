@@ -15,6 +15,7 @@ from slixmpp.types import MessageTypes, OptJid
 from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
 from ...util import SubclassableOnce, strip_illegal_chars
+from ...util.sql import CachedPresence
 from ...util.types import LegacyMessageType, MucAffiliation, MucRole
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
@@ -258,6 +259,12 @@ class LegacyParticipant(
             n["nick"] = nick
             p.append(n)
 
+    def _get_last_presence(self) -> Optional[CachedPresence]:
+        own = super()._get_last_presence()
+        if own is None and self.contact:
+            return self.contact._get_last_presence()
+        return own
+
     def send_initial_presence(
         self,
         full_jid: JID,
@@ -283,19 +290,22 @@ class LegacyParticipant(
             # the "initial presence" of the user has to be vanilla, as it is
             # a crucial part of the MUC join sequence for XMPP clients.
             kwargs = {}
-            last_seen = None
         else:
-            cache = getattr(self, "_last_presence", None)
+            cache = self._get_last_presence()
+            self.log.debug("Join muc, initial presence: %s", cache)
             if cache:
-                last_seen = cache.last_seen
-                kwargs = cache.presence_kwargs
-                if kwargs.get("ptype") == "unavailable":
+                ptype = cache.ptype
+                if ptype == "unavailable":
                     return
+                kwargs = dict(
+                    last_seen=cache.last_seen, pstatus=cache.pstatus, pshow=cache.pshow
+                )
             else:
-                last_seen = None
                 kwargs = {}
         p = self._make_presence(
-            last_seen=last_seen, status_codes=codes, user_full_jid=full_jid, **kwargs
+            status_codes=codes,
+            user_full_jid=full_jid,
+            **kwargs,  # type:ignore
         )
         if presence_id:
             p["id"] = presence_id
