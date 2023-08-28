@@ -2,7 +2,7 @@ ARG PYTHONVER=3.11
 ## Base build stage for Slidge, prepares and installs common dependencies.
 FROM docker.io/library/python:$PYTHONVER AS builder
 ARG PYTHONVER
-ENV PATH="/venv/bin:/root/.local/bin:$PATH"
+ENV PATH="/venv/bin:$PATH"
 
 # rust/cargo is for building "cryptography" since they don't provide wheels for arm32
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -19,9 +19,13 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     python3-dev \
     rustc
 
+# it seems the recommended curl-based install for poetry is broken on arm64
+# for some 'the ssl module is not available' reason (but import ssl works, so?)
+RUN pip install poetry
+RUN poetry --version
+
 RUN python3 -m venv /venv
 RUN ln -s /venv/lib/python$PYTHONVER /venv/lib/python
-RUN curl -fL https://install.python-poetry.org | python3 - || (cat /poetry-* && false)
 
 WORKDIR /build
 
