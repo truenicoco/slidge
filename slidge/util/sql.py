@@ -83,16 +83,20 @@ class MAMMixin(Base):
         self.con.commit()
 
     def mam_add_muc(self, jid: str, user: "GatewayUser"):
-        self.cur.execute(
-            "REPLACE INTO "
-            "muc(jid, user_id) "
-            "VALUES("
-            "  ?, "
-            "  (SELECT id FROM user WHERE jid = ?)"
-            ")",
-            (jid, user.bare_jid),
-        )
-        self.con.commit()
+        try:
+            self.cur.execute(
+                "INSERT INTO "
+                "muc(jid, user_id) "
+                "VALUES("
+                "  ?, "
+                "  (SELECT id FROM user WHERE jid = ?)"
+                ")",
+                (jid, user.bare_jid),
+            )
+        except sqlite3.IntegrityError:
+            log.debug("Tried to add a MUC that was already here: (%s, %s)", user, jid)
+        else:
+            self.con.commit()
 
     def mam_add_msg(self, muc_jid: str, msg: "HistoryMessage", user: "GatewayUser"):
         self.cur.execute(
@@ -358,8 +362,12 @@ class PresenceMixin(Base):
 
 class UserMixin(Base):
     def user_store(self, user: "GatewayUser"):
-        self.cur.execute("REPLACE INTO user(jid) VALUES (?)", (user.bare_jid,))
-        self.con.commit()
+        try:
+            self.cur.execute("INSERT INTO user(jid) VALUES (?)", (user.bare_jid,))
+        except sqlite3.IntegrityError:
+            log.debug("User has already been added.")
+        else:
+            self.con.commit()
 
     def user_del(self, user: "GatewayUser"):
         self.cur.execute("DELETE FROM user WHERE jid = ?", (user.bare_jid,))
