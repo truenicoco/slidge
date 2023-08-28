@@ -1,3 +1,4 @@
+import logging
 import os
 import sqlite3
 import tempfile
@@ -6,17 +7,25 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Collection, Generic, NamedTuple, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Collection,
+    Generic,
+    Iterator,
+    NamedTuple,
+    Optional,
+    Union,
+)
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import PresenceShows, PresenceTypes
 
 from ..core import config
+from .archive_msg import HistoryMessage
 from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
-    from ..core.muc.archive import HistoryMessage
     from .db import GatewayUser
 
 
@@ -25,6 +34,11 @@ class CachedPresence(NamedTuple):
     ptype: Optional[PresenceTypes] = None
     pstatus: Optional[str] = None
     pshow: Optional[PresenceShows] = None
+
+
+class MamMetadata(NamedTuple):
+    id: str
+    sent_on: datetime
 
 
 class Base:
@@ -49,9 +63,22 @@ class MAMMixin(Base):
     def __init__(self):
         super().__init__()
         self.__mam_cleanup_task: Optional[Task] = None
+        self.__msg_cur = msg_cur = self.con.cursor()
+        msg_cur.row_factory = self.__msg_factory  # type:ignore
+        self.__metadata_cur = metadata_cur = self.con.cursor()
+        metadata_cur.row_factory = self.__metadata_factory  # type:ignore
+
+    @staticmethod
+    def __msg_factory(_cur, row: tuple[str, float]) -> HistoryMessage:
+        return HistoryMessage(
+            row[0], when=datetime.fromtimestamp(row[1], tz=timezone.utc)
+        )
+
+    @staticmethod
+    def __metadata_factory(_cur, row: tuple[str, float]) -> MamMetadata:
+        return MamMetadata(row[0], datetime.fromtimestamp(row[1], tz=timezone.utc))
 
     def mam_nuke(self):
-        # useful for tests
         self.cur.execute("DELETE FROM mam_message")
         self.con.commit()
 
@@ -146,7 +173,7 @@ class MAMMixin(Base):
         last_page_n: Optional[int] = None,
         sender: Optional[str] = None,
         flip=False,
-    ):
+    ) -> Iterator[HistoryMessage]:
         query = (
             "SELECT xml, sent_on FROM mam_message "
             "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?) "
@@ -181,7 +208,7 @@ class MAMMixin(Base):
         if flip:
             query += " DESC"
 
-        res = self.cur.execute(query, params)
+        res = self.__msg_cur.execute(query, params)
 
         if ids:
             rows = res.fetchall()
@@ -197,8 +224,8 @@ class MAMMixin(Base):
         while row := res.fetchone():
             yield row
 
-    def mam_get_first_and_last(self, muc_jid: str):
-        res = self.cur.execute(
+    def mam_get_first_and_last(self, muc_jid: str) -> list[MamMetadata]:
+        res = self.__metadata_cur.execute(
             "SELECT message_id, sent_on "
             "FROM mam_message "
             "JOIN muc ON muc.jid = ? "
@@ -282,6 +309,27 @@ class AvatarMixin(Base):
 
 
 class PresenceMixin(Base):
+    def __init__(self):
+        super().__init__()
+        self.__cur = cur = self.con.cursor()
+        cur.row_factory = self.__row_factory  # type:ignore
+
+    @staticmethod
+    def __row_factory(
+        _cur: sqlite3.Cursor,
+        row: tuple[
+            Optional[int],
+            Optional[PresenceTypes],
+            Optional[str],
+            Optional[PresenceShows],
+        ],
+    ):
+        if row[0] is not None:
+            last_seen = datetime.fromtimestamp(row[0], tz=timezone.utc)
+        else:
+            last_seen = None
+        return CachedPresence(last_seen, *row[1:])
+
     def presence_nuke(self):
         # useful for tests
         self.cur.execute("DELETE FROM presence")
@@ -301,18 +349,11 @@ class PresenceMixin(Base):
         self.con.commit()
 
     def presence_get(self, jid: JID, user: "GatewayUser") -> Optional[CachedPresence]:
-        res = self.cur.execute(
+        return self.__cur.execute(
             "SELECT last_seen, ptype, pstatus, pshow FROM presence "
             "WHERE jid = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
             (str(jid), user.bare_jid),
         ).fetchone()
-        if not res:
-            return None
-        if res[0]:
-            last_seen = datetime.fromtimestamp(res[0], tz=timezone.utc)
-        else:
-            last_seen = None
-        return CachedPresence(last_seen, *res[1:])
 
 
 class UserMixin(Base):
@@ -406,3 +447,4 @@ class TemporaryDB(
 
 
 db = TemporaryDB()
+log = logging.getLogger(__name__)

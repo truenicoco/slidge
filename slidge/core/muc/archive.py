@@ -1,7 +1,7 @@
 import logging
 import uuid
 from copy import copy
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import Iq, Message
@@ -65,7 +65,7 @@ class MessageArchive:
         sender: Optional[str] = None,
         flip=False,
     ):
-        for row in db.mam_get_messages(
+        for msg in db.mam_get_messages(
             self.user,
             self.db_id,
             before_id=before_id,
@@ -77,9 +77,7 @@ class MessageArchive:
             end_date=end_date,
             flip=flip,
         ):
-            yield HistoryMessage(
-                row[0], when=datetime.fromtimestamp(row[1], tz=timezone.utc)
-            )
+            yield msg
 
     async def send_metadata(self, iq: Iq):
         """
@@ -92,10 +90,8 @@ class MessageArchive:
         messages = db.mam_get_first_and_last(self.db_id)
         if messages:
             for x, m in [("start", messages[0]), ("end", messages[-1])]:
-                reply["mam_metadata"][x]["id"] = m[0]
-                reply["mam_metadata"][x]["timestamp"] = datetime.fromtimestamp(
-                    m[1], tz=timezone.utc
-                )
+                reply["mam_metadata"][x]["id"] = m.id
+                reply["mam_metadata"][x]["timestamp"] = m.sent_on
         else:
             reply.enable("mam_metadata")
         reply.send()
