@@ -2,12 +2,11 @@ import logging
 import uuid
 from copy import copy
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Collection, Optional, Union
-from xml.etree import ElementTree as ET
+from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import Iq, Message
-from slixmpp.plugins.xep_0297.stanza import Forwarded
 
+from ...util.archive_msg import HistoryMessage
 from ...util.db import GatewayUser
 from ...util.sql import db
 
@@ -102,45 +101,6 @@ class MessageArchive:
         reply.send()
 
 
-class HistoryMessage:
-    def __init__(self, stanza: Union[Message, str], when: Optional[datetime] = None):
-        if isinstance(stanza, str):
-            from_db = True
-            stanza = Message(xml=ET.fromstring(stanza))
-        else:
-            from_db = False
-
-        self.id = stanza["stanza_id"]["id"]
-        self.when: datetime = (
-            when or stanza["delay"]["stamp"] or datetime.now(tz=timezone.utc)
-        )
-
-        if not from_db:
-            del stanza["delay"]
-            del stanza["markable"]
-            del stanza["hint"]
-            del stanza["chat_state"]
-            if not stanza["body"]:
-                del stanza["body"]
-            fix_namespaces(stanza.xml)
-
-        self.stanza: Message = stanza
-
-    @property
-    def stanza_component_ns(self):
-        stanza = copy(self.stanza)
-        fix_namespaces(
-            stanza.xml, old="{jabber:client}", new="{jabber:component:accept}"
-        )
-        return stanza
-
-    def forwarded(self):
-        forwarded = Forwarded()
-        forwarded["delay"]["stamp"] = self.when
-        forwarded.append(self.stanza)
-        return forwarded
-
-
 def archivable(msg: Message):
     """
     Determine if a message stanza is worth archiving, ie, convey meaningful
@@ -164,21 +124,6 @@ def archivable(msg: Message):
         return True
 
     return False
-
-
-def fix_namespaces(xml, old="{jabber:component:accept}", new="{jabber:client}"):
-    """
-    Hack to fix namespaces between jabber:component and jabber:client
-
-    Acts in-place.
-
-    :param xml:
-    :param old:
-    :param new:
-    """
-    xml.tag = xml.tag.replace(old, new)
-    for child in xml:
-        fix_namespaces(child, old, new)
 
 
 log = logging.getLogger(__name__)
