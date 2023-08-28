@@ -90,7 +90,7 @@ class MAMMixin(Base):
         self.__mam_cleanup_task = loop.create_task(self.__mam_cleanup())
 
     async def __mam_cleanup(self):
-        await sleep(6 * 24 * 3600)
+        await sleep(6 * 3600)
         self.mam_cleanup()
 
     def mam_cleanup(self):
