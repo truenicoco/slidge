@@ -27,7 +27,7 @@ class CachedPresence(NamedTuple):
     pshow: Optional[PresenceShows] = None
 
 
-class TemporaryDB:
+class Base:
     def __init__(self):
         handler, filename = tempfile.mkstemp()
 
@@ -43,6 +43,12 @@ class TemporaryDB:
     def __del__(self):
         self.con.close()
         os.unlink(self.__filename)
+
+
+class MAMMixin(Base):
+    def __init__(self):
+        super().__init__()
+        self.__mam_cleanup_task: Optional[Task] = None
 
     def mam_nuke(self):
         # useful for tests
@@ -203,6 +209,8 @@ class TemporaryDB:
         )
         return res.fetchall()
 
+
+class AttachmentMixin(Base):
     def attachment_remove(self, legacy_id):
         self.cur.execute("DELETE FROM attachment WHERE legacy_id = ?", (legacy_id,))
         self.con.commit()
@@ -235,6 +243,8 @@ class TemporaryDB:
         res = self.cur.execute("SELECT sfs FROM attachment WHERE url = ?", (url,))
         return first_of_tuple_or_none(res.fetchone())
 
+
+class NickMixin(Base):
     def nick_get(self, jid: JID, user: "GatewayUser"):
         res = self.cur.execute(
             "SELECT nick FROM nick "
@@ -252,6 +262,8 @@ class TemporaryDB:
         )
         self.con.commit()
 
+
+class AvatarMixin(Base):
     def avatar_get(self, jid: JID):
         res = self.cur.execute(
             "SELECT cached_id FROM avatar WHERE jid = ?", (str(jid),)
@@ -268,6 +280,8 @@ class TemporaryDB:
         self.cur.execute("DELETE FROM avatar WHERE jid = ?", (str(jid),))
         self.con.commit()
 
+
+class PresenceMixin(Base):
     def presence_nuke(self):
         # useful for tests
         self.cur.execute("DELETE FROM presence")
@@ -300,6 +314,8 @@ class TemporaryDB:
             last_seen = None
         return CachedPresence(last_seen, *res[1:])
 
+
+class UserMixin(Base):
     def user_store(self, user: "GatewayUser"):
         self.cur.execute("REPLACE INTO user(jid) VALUES (?)", (user.bare_jid,))
         self.con.commit()
@@ -322,7 +338,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         key1: str,
         key2: str,
         user: "GatewayUser",
-        sql: Optional[TemporaryDB] = None,
+        sql: Optional[Base] = None,
         create_table=False,
         is_inverse=False,
     ):
@@ -381,6 +397,12 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         if res is None:
             return res
         return res[0]
+
+
+class TemporaryDB(
+    AvatarMixin, AttachmentMixin, NickMixin, MAMMixin, UserMixin, PresenceMixin
+):
+    pass
 
 
 db = TemporaryDB()
