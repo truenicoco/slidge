@@ -285,25 +285,34 @@ class BaseSession(
 
         reply_to = None
         if m.get_plugin("reply", check=True):
-            reply_to_msg_xmpp_id = self.__xmpp_msg_id_to_legacy(m["reply"]["id"])
-            reply_to_jid = JID(m["reply"]["to"])
-            if m["type"] == "chat":
-                if reply_to_jid.bare != self.user.jid.bare:
+            try:
+                reply_to_msg_xmpp_id = self.__xmpp_msg_id_to_legacy(m["reply"]["id"])
+            except XMPPError:
+                self.log.debug(
+                    "Could not determine reply-to legacy msg ID, sending quote instead."
+                )
+                text = m["body"]
+                reply_fallback = None
+                reply_to_msg_xmpp_id = None
+            else:
+                reply_to_jid = JID(m["reply"]["to"])
+                if m["type"] == "chat":
+                    if reply_to_jid.bare != self.user.jid.bare:
+                        try:
+                            reply_to = await self.contacts.by_jid(reply_to_jid)
+                        except XMPPError:
+                            pass
+                elif m["type"] == "groupchat":
+                    nick = reply_to_jid.resource
                     try:
-                        reply_to = await self.contacts.by_jid(reply_to_jid)
+                        muc = await self.bookmarks.by_jid(reply_to_jid)
                     except XMPPError:
                         pass
-            elif m["type"] == "groupchat":
-                nick = reply_to_jid.resource
-                try:
-                    muc = await self.bookmarks.by_jid(reply_to_jid)
-                except XMPPError:
-                    pass
-                else:
-                    if nick != muc.user_nick:
-                        reply_to = await muc.get_participant(
-                            reply_to_jid.resource, store=False
-                        )
+                    else:
+                        if nick != muc.user_nick:
+                            reply_to = await muc.get_participant(
+                                reply_to_jid.resource, store=False
+                            )
         else:
             reply_to_msg_xmpp_id = None
             reply_to = None
