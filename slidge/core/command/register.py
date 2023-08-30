@@ -103,7 +103,11 @@ class Register(Command):
                 suffix=".png", delete=config.NO_UPLOAD_METHOD != "move"
             ) as f:
                 qr.save(f.name)
-                img_url = await self.xmpp.send_file(f.name, mto=ifrom)
+                img_url, _ = await self.xmpp.send_file(f.name, mto=ifrom)
+            if img_url is None:
+                raise XMPPError(
+                    "internal-server-error", "Slidge cannot send attachments"
+                )
             self.xmpp.send_text(qr_text, mto=ifrom)
             return Form(
                 title="Flash this",

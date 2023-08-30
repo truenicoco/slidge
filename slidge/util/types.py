@@ -14,6 +14,7 @@ from typing import (
     Union,
 )
 
+from slixmpp import Message, Presence
 from slixmpp.types import PresenceShows
 
 if TYPE_CHECKING:
@@ -129,3 +130,8 @@ class ResourceDict(TypedDict):
     show: PseudoPresenceShow
     status: str
     priority: int
+
+
+MessageOrPresenceTypeVar = TypeVar(
+    "MessageOrPresenceTypeVar", bound=Union[Message, Presence]
+)

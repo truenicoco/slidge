@@ -242,3 +242,65 @@ class TestAttachmentNoUpload(Base):
             LegacyAttachment(path=self.avatar_path, legacy_file_id=1234),
             "https://url/1234/uuid/5x5.png",
         )
+
+    def test_multi(self):
+        self.xmpp.use_message_ids = True
+        self.run_coro(
+            self.juliet.send_files(
+                [
+                    LegacyAttachment(path=self.avatar_path),
+                    LegacyAttachment(path=self.avatar_path, caption="CAPTION"),
+                ],
+                legacy_msg_id=6666,
+                body="BODY",
+            )
+        )
+        xmpp_ids = []
+        for _ in range(2):
+            att = self.next_sent()
+            xmpp_ids.append(att.get_id())
+        caption = self.next_sent()
+        assert caption["body"] == "CAPTION"
+        xmpp_ids.append(caption.get_id())
+        body = self.next_sent()
+        assert body["body"] == "BODY"
+        xmpp_ids.append(body.get_id())
+        assert self.next_sent() is None
+        assert len(set(xmpp_ids)) == len(xmpp_ids)
+        self.juliet.react(6666, "♥")
+        reaction = self.next_sent()
+        assert reaction["reactions"]["id"] in xmpp_ids
+
+        self.recv(  # language=XML
+            """
+            <message to="aim.shakespeare.lit"
+                     from="montague.lit">
+              <privilege xmlns="urn:xmpp:privilege:2">
+                <perm access="roster"
+                      type="both" />
+                <perm access="message"
+                      type="outgoing" />
+              </privilege>
+            </message>
+            """
+        )
+        for i in xmpp_ids:
+            with patch("test_shakespeare.Session.react") as mock:
+                self.recv(  # language=XML
+                    f"""
+            <message from="romeo@montague.lit/gajim"
+                     to="juliet@{self.xmpp.boundjid.bare}/slidge">
+              <reactions id='{i}'
+                         xmlns='urn:xmpp:reactions:0'>
+                <reaction>👋</reaction>
+                <reaction>🐢</reaction>
+              </reactions>
+            </message>
+            """
+                )
+            for j in [k for k in xmpp_ids if k != i]:
+                reac = self.next_sent()
+                assert reac["privilege"]["forwarded"]["message"]["reactions"]["id"] == j
+
+            mock.assert_called_once_with(self.juliet, 6666, ["👋", "🐢"], thread=None)
+        self.xmpp.use_message_ids = False

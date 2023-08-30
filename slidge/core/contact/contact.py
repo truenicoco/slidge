@@ -10,7 +10,7 @@ from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import MessageTypes
 
 from ...util import SubclassableOnce
-from ...util.types import LegacyUserIdType
+from ...util.types import LegacyUserIdType, MessageOrPresenceTypeVar
 from .. import config
 from ..mixins import FullCarbonMixin
 from ..mixins.avatar import AvatarMixin
@@ -154,13 +154,13 @@ class LegacyContact(
             func(**kw)
 
     def _send(
-        self, stanza: Union[Message, Presence], carbon=False, nick=False, **send_kwargs
-    ):
+        self, stanza: MessageOrPresenceTypeVar, carbon=False, nick=False, **send_kwargs
+    ) -> MessageOrPresenceTypeVar:
         if carbon and isinstance(stanza, Message):
             stanza["to"] = self.jid.bare
             stanza["from"] = self.user.jid
             self._privileged_send(stanza)
-            return
+            return stanza  # type:ignore
 
         if isinstance(stanza, Presence):
             self.__propagate_to_participants(stanza)
@@ -168,7 +168,7 @@ class LegacyContact(
                 not self.is_friend
                 and stanza["type"] not in self._NON_FRIEND_PRESENCES_FILTER
             ):
-                return
+                return stanza  # type:ignore
         if self.name and (nick or not self.is_friend):
             n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
             n["nick"] = self.name
@@ -177,6 +177,7 @@ class LegacyContact(
             self._sent_order.append(stanza["id"])
         stanza["to"] = self.user.jid
         stanza.send()
+        return stanza
 
     def get_msg_xmpp_id_up_to(self, horizon_xmpp_id: str):
         """

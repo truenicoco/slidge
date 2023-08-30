@@ -78,6 +78,17 @@ CREATE TABLE attachment(
 CREATE INDEX attachment_legacy_id ON attachment(legacy_id);
 CREATE INDEX attachment_url ON attachment(url);
 
+CREATE TABLE attachment_legacy_msg_id(
+  id INTEGER PRIMARY KEY,
+  legacy_id UNIQUE
+);
+
+CREATE TABLE attachment_xmpp_ids(
+  id INTEGER PRIMARY KEY,
+  legacy_msg_id INTEGER,
+  xmpp_id TEXT,
+  FOREIGN KEY(legacy_msg_id) REFERENCES attachment_legacy_msg_id(id)
+);
 
 CREATE TABLE nick(
   id INTEGER PRIMARY KEY,

@@ -198,7 +198,7 @@ class ContentMessageMixin(AttachmentMixin):
         )
         if correction:
             msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
-        self._send(msg, archive_only=archive_only, carbon=carbon, **send_kwargs)
+        return self._send(msg, archive_only=archive_only, carbon=carbon, **send_kwargs)
 
     def correct(
         self,
@@ -264,7 +264,9 @@ class ContentMessageMixin(AttachmentMixin):
         msg = self._make_message(
             hints={"store"}, carbon=kwargs.get("carbon"), thread=thread
         )
-        xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
+        xmpp_id = kwargs.pop("xmpp_id", None)
+        if not xmpp_id:
+            xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
         self.xmpp["xep_0444"].set_reactions(msg, to_id=xmpp_id, reactions=emojis)
         self._send(msg, **kwargs)
 

@@ -1,7 +1,9 @@
 from abc import ABCMeta
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
-from slixmpp import JID, Message, Presence
+from slixmpp import JID
+
+from ...util.types import MessageOrPresenceTypeVar
 
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
@@ -23,5 +25,7 @@ class Base:
 
 
 class BaseSender(Base):
-    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
+    def _send(
+        self, stanza: MessageOrPresenceTypeVar, **send_kwargs
+    ) -> MessageOrPresenceTypeVar:
         raise NotImplementedError

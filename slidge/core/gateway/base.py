@@ -20,7 +20,7 @@ from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.db import GatewayUser, user_store
 from ...util.sql import db
-from ...util.types import AvatarType
+from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
 from ..command.adhoc import AdhocProvider
 from ..command.admin import Exec
@@ -402,11 +402,14 @@ class BaseGateway(
         else:
             session.send_gateway_status(status, show="chat")
 
-    def _send(self, stanza: Union[Message, Presence], **send_kwargs):
+    def _send(
+        self, stanza: MessageOrPresenceTypeVar, **send_kwargs
+    ) -> MessageOrPresenceTypeVar:
         stanza.set_from(self.boundjid.bare)
         if mto := send_kwargs.get("mto"):
             stanza.set_to(mto)
         stanza.send()
+        return stanza
 
     async def _on_user_register(self, iq: Iq):
         session = self.get_session_from_stanza(iq)

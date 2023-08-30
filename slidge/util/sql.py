@@ -274,6 +274,46 @@ class AttachmentMixin(Base):
         res = self.cur.execute("SELECT sfs FROM attachment WHERE url = ?", (url,))
         return first_of_tuple_or_none(res.fetchone())
 
+    def attachment_store_legacy_to_multi_xmpp_msg_ids(
+        self, legacy_id, xmpp_ids: list[str]
+    ):
+        with self.con:
+            res = self.cur.execute(
+                "INSERT OR IGNORE INTO attachment_legacy_msg_id(legacy_id) VALUES (?)",
+                (legacy_id,),
+            )
+            row_id = res.lastrowid
+            # for xmpp_id in xmpp_ids:
+            self.cur.executemany(
+                "INSERT INTO attachment_xmpp_ids(legacy_msg_id, xmpp_id) VALUES (?, ?)",
+                ((row_id, i) for i in xmpp_ids),
+            )
+
+    def attachment_get_xmpp_ids_for_legacy_msg_id(self, legacy_id) -> list:
+        res = self.cur.execute(
+            "SELECT xmpp_id FROM attachment_xmpp_ids "
+            "WHERE legacy_msg_id = (SELECT id FROM attachment_legacy_msg_id WHERE legacy_id = ?)",
+            (legacy_id,),
+        )
+        return [r[0] for r in res.fetchall()]
+
+    def attachment_get_associated_xmpp_ids(self, xmpp_id: str):
+        res = self.cur.execute(
+            "SELECT xmpp_id FROM attachment_xmpp_ids "
+            "WHERE legacy_msg_id = "
+            "(SELECT legacy_msg_id FROM attachment_xmpp_ids WHERE xmpp_id = ?)",
+            (xmpp_id,),
+        )
+        return [r[0] for r in res.fetchall() if r[0] != xmpp_id]
+
+    def attachment_get_legacy_id_for_xmpp_id(self, xmpp_id: str):
+        res = self.cur.execute(
+            "SELECT legacy_id FROM attachment_legacy_msg_id "
+            "WHERE id = (SELECT legacy_msg_id FROM attachment_xmpp_ids WHERE xmpp_id = ?)",
+            (xmpp_id,),
+        )
+        return first_of_tuple_or_none(res.fetchone())
+
 
 class NickMixin(Base):
     def nick_get(self, jid: JID, user: "GatewayUser"):

@@ -997,6 +997,9 @@ class TestAimShakespeareBase(Base):
 
         async def send_file(file_path, legacy_msg_id=None, *_a, **_k):
             ids.append(legacy_msg_id)
+            m = Message()
+            m.set_id(legacy_msg_id)
+            return "", [m]
 
         self.juliet.send_file = send_file
 

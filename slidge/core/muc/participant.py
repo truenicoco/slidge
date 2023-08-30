@@ -16,7 +16,12 @@ from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
 from ...util import SubclassableOnce, strip_illegal_chars
 from ...util.sql import CachedPresence
-from ...util.types import LegacyMessageType, MucAffiliation, MucRole
+from ...util.types import (
+    LegacyMessageType,
+    MessageOrPresenceTypeVar,
+    MucAffiliation,
+    MucRole,
+)
 from ..contact import LegacyContact
 from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 
@@ -207,11 +212,11 @@ class LegacyParticipant(
 
     def _send(
         self,
-        stanza: Union[Message, Presence],
+        stanza: MessageOrPresenceTypeVar,
         full_jid: Optional[JID] = None,
         archive_only=False,
         **send_kwargs,
-    ):
+    ) -> MessageOrPresenceTypeVar:
         stanza["occupant-id"]["id"] = self.__occupant_id
         if isinstance(stanza, Presence):
             self.__presence_sent = True
@@ -227,12 +232,13 @@ class LegacyParticipant(
             if isinstance(stanza, Message):
                 self.muc.archive.add(stanza, self)
             if archive_only:
-                return
+                return stanza
             for user_full_jid in self.muc.user_full_jids():
                 stanza = copy(stanza)
                 stanza["to"] = user_full_jid
                 self.__send_presence_if_needed(stanza, user_full_jid, archive_only)
                 stanza.send()
+        return stanza
 
     def mucadmin_item(self):
         item = MUCAdminItem()

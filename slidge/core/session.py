@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import logging
+from copy import copy
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, Union, cast
 
 import aiohttp
@@ -10,7 +11,7 @@ from slixmpp.types import PresenceShows
 
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
-from ..util.sql import SQLBiDict
+from ..util.sql import SQLBiDict, db
 from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,
@@ -438,6 +439,10 @@ class BaseSession(
         if sent:
             return sent
 
+        multi = db.attachment_get_legacy_id_for_xmpp_id(xmpp_id)
+        if multi:
+            return multi
+
         try:
             return self.xmpp_msg_id_to_legacy_msg_id(xmpp_id)
         except XMPPError:
@@ -570,6 +575,19 @@ class BaseSession(
             await e.echo(m, None)
         else:
             self.__ack(m)
+
+        multi = db.attachment_get_associated_xmpp_ids(react_to)
+        if not multi:
+            return
+
+        if isinstance(e, LegacyMUC):
+            for xmpp_id in multi:
+                mc = copy(m)
+                mc["reactions"]["id"] = xmpp_id
+                await e.echo(mc)
+        elif isinstance(e, LegacyContact):
+            for xmpp_id in multi:
+                e.react(legacy_id, emojis, xmpp_id=xmpp_id, carbon=True)
 
     @ignore_sent_carbons
     async def retract_from_msg(self, m: Message):

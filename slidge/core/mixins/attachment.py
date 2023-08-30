@@ -7,7 +7,7 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Collection, Optional, Union
+from typing import IO, Collection, Optional, Sequence, Union
 from uuid import uuid4
 from xml.etree import ElementTree as ET
 
@@ -30,7 +30,7 @@ from .message_maker import MessageMaker
 
 
 class AttachmentMixin(MessageMaker):
-    def send_text(self, *_, **k):
+    def send_text(self, *_, **k) -> Optional[Message]:
         raise NotImplementedError
 
     async def __upload(
@@ -247,17 +247,18 @@ class AttachmentMixin(MessageMaker):
         carbon=False,
         when: Optional[datetime] = None,
         **kwargs,
-    ):
+    ) -> list[Message]:
         msg["oob"]["url"] = uploaded_url
         msg["body"] = uploaded_url
         if caption:
-            self._send(msg, carbon=carbon, **kwargs)
-            self.send_text(
+            m1 = self._send(msg, carbon=carbon, **kwargs)
+            m2 = self.send_text(
                 caption, legacy_msg_id=legacy_msg_id, when=when, carbon=carbon, **kwargs
             )
+            return [m1, m2] if m2 else [m1]
         else:
             self._set_msg_id(msg, legacy_msg_id)
-            self._send(msg, carbon=carbon, **kwargs)
+            return [self._send(msg, carbon=carbon, **kwargs)]
 
     async def send_file(
         self,
@@ -275,7 +276,7 @@ class AttachmentMixin(MessageMaker):
         legacy_file_id: Optional[Union[str, int]] = None,
         thread: Optional[LegacyThreadType] = None,
         **kwargs,
-    ):
+    ) -> tuple[Optional[str], list[Message]]:
         """
         Send a message with an attachment
 
@@ -296,6 +297,7 @@ class AttachmentMixin(MessageMaker):
         """
         carbon = kwargs.pop("carbon", False)
         mto = kwargs.pop("mto", None)
+        store_multi = kwargs.pop("store_multi", True)
         msg = self._make_message(
             when=when,
             reply_to=reply_to,
@@ -319,8 +321,7 @@ class AttachmentMixin(MessageMaker):
                 "Tell your slidge admin to check the logs."
             )
             self._set_msg_id(msg, legacy_msg_id)
-            self._send(msg, **kwargs)
-            return
+            return None, [self._send(msg, **kwargs)]
 
         self.__set_sims(msg, new_url, local_path, content_type, caption)
         self.__set_sfs(msg, new_url, local_path, content_type, caption)
@@ -328,8 +329,12 @@ class AttachmentMixin(MessageMaker):
             local_path.unlink()
             local_path.parent.rmdir()
 
-        self.__send_url(msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs)
-        return new_url
+        msgs = self.__send_url(
+            msg, legacy_msg_id, new_url, caption, carbon, when, **kwargs
+        )
+        if store_multi:
+            self.__store_multi(legacy_msg_id, msgs)
+        return new_url, msgs
 
     def __send_body(
         self,
@@ -339,9 +344,9 @@ class AttachmentMixin(MessageMaker):
         when: Optional[datetime] = None,
         thread: Optional[LegacyThreadType] = None,
         **kwargs,
-    ):
+    ) -> Optional[Message]:
         if body:
-            self.send_text(
+            return self.send_text(
                 body,
                 legacy_msg_id,
                 reply_to=reply_to,
@@ -349,6 +354,8 @@ class AttachmentMixin(MessageMaker):
                 thread=thread,
                 **kwargs,
             )
+        else:
+            return None
 
     async def send_files(
         self,
@@ -385,14 +392,19 @@ class AttachmentMixin(MessageMaker):
             correction_event_id=correction_event_id,
             **kwargs,
         )
+        all_msgs = []
         if body_first:
-            send_body()
+            all_msgs.append(send_body())
         last_attachment_i = len(attachments) - 1
         for i, attachment in enumerate(attachments):
             last = i == last_attachment_i
-            await self.send_file(
+            if last and not body:
+                legacy = legacy_msg_id
+            else:
+                legacy = None
+            _url, msgs = await self.send_file(
                 file_path=attachment.path,
-                legacy_msg_id=legacy_msg_id if last and not body else None,
+                legacy_msg_id=legacy,
                 file_url=attachment.url,
                 data_stream=attachment.stream,
                 data=attachment.data,
@@ -403,10 +415,30 @@ class AttachmentMixin(MessageMaker):
                 content_type=attachment.content_type,
                 legacy_file_id=attachment.legacy_file_id,
                 caption=attachment.caption,
+                store_multi=False,
                 **kwargs,
             )
+            all_msgs.extend(msgs)
         if not body_first:
-            send_body()
+            all_msgs.append(send_body())
+        self.__store_multi(legacy_msg_id, all_msgs)
+
+    def __store_multi(
+        self,
+        legacy_msg_id: Optional[LegacyMessageType],
+        all_msgs: Sequence[Optional[Message]],
+    ):
+        if legacy_msg_id is None:
+            return
+        ids = []
+        for msg in all_msgs:
+            if not msg:
+                continue
+            if stanza_id := msg.get_plugin("stanza_id", check=True):
+                ids.append(stanza_id["id"])
+            else:
+                ids.append(msg.get_id())
+        db.attachment_store_legacy_to_multi_xmpp_msg_ids(legacy_msg_id, ids)
 
 
 log = logging.getLogger(__name__)
