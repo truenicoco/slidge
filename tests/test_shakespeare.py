@@ -47,6 +47,10 @@ class Gateway(BaseGateway):
 
 
 class Session(BaseSession):
+    @staticmethod
+    def xmpp_msg_id_to_legacy_msg_id(i: str):
+        return int(i)
+
     async def paused(self, c: LegacyContactType, thread=None):
         pass
 
@@ -487,7 +491,7 @@ class TestAimShakespeareBase(Base):
             <message type='chat'
                      to='juliet@aim.shakespeare.lit'
                      from='romeo@montague.lit'>
-              <reactions id='xmpp-id1'
+              <reactions id='555'
                          xmlns='urn:xmpp:reactions:0'>
                 <reaction>👋</reaction>
                 <reaction>🐢</reaction>
@@ -497,10 +501,10 @@ class TestAimShakespeareBase(Base):
         )
         assert len(reactions_received_by_juliet) == 2
         msg_id, emoji = reactions_received_by_juliet[0]
-        assert msg_id == "xmpp-id1"
+        assert msg_id == 555
         assert emoji == "👋"
         msg_id, emoji = reactions_received_by_juliet[1]
-        assert msg_id == "xmpp-id1"
+        assert msg_id == 555
         assert emoji == "🐢"
 
         session = BaseSession.get_self_or_unique_subclass().from_jid(
@@ -550,7 +554,7 @@ class TestAimShakespeareBase(Base):
         )
         assert len(reactions_received_by_juliet) == 1
         msg_id, emoji = reactions_received_by_juliet[0]
-        assert msg_id == "4940890112"
+        assert msg_id == 4940890112
         assert emoji == "👍"
         assert len(text_received_by_juliet) == 0
         text_received_by_juliet.clear()

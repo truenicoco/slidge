@@ -2,12 +2,13 @@
 import tempfile
 import types
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 from xml.dom.minidom import parseString
 
 import xmldiff.main
 from slixmpp import (
     ElementBase,
+    Iq,
     MatcherId,
     MatchXMLMask,
     MatchXPath,
@@ -160,7 +161,7 @@ class SlixTestPlus(SlixTest):
                     )
             self.assertTrue(result, debug)
 
-    def next_sent(self, timeout=0.05):
+    def next_sent(self, timeout=0.05) -> Optional[Union[Message, Iq, Presence]]:
         self.wait_for_send_queue()
         sent = self.xmpp.socket.next_sent(timeout=timeout)
         if sent is None:
