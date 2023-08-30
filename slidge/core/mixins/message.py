@@ -1,4 +1,5 @@
 import logging
+import uuid
 import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, Iterable, Optional
@@ -300,7 +301,12 @@ class ContentMessageMixin(AttachmentMixin):
 
 class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
     def _privileged_send(self, msg: Message):
-        self.session.ignore_messages.add(msg.get_id())
+        i = msg.get_id()
+        if not i:
+            i = str(uuid.uuid4())
+            msg.set_id(i)
+        msg.del_origin_id()
+        self.session.ignore_messages.add(i)
         try:
             self.xmpp["xep_0356"].send_privileged_message(msg)
         except PermissionError:

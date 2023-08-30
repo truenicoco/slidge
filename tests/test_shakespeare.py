@@ -1132,7 +1132,7 @@ class TestPrivilegeOld(SlidgeTest):
         juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.send_text("body", carbon=True)
+        juliet.send_text("body", 444, carbon=True)
         self.send(  # language=XML
             """
             <message to="shakespeare.lit"
@@ -1142,7 +1142,8 @@ class TestPrivilegeOld(SlidgeTest):
                   <message xmlns="jabber:client"
                            to="juliet@aim.shakespeare.lit"
                            type="chat"
-                           from="romeo@shakespeare.lit">
+                           from="romeo@shakespeare.lit"
+                           id="444">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
                     <active xmlns="http://jabber.org/protocol/chatstates" />
@@ -1222,7 +1223,7 @@ class TestPrivilege(SlidgeTest):
         juliet = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.send_text("body", carbon=True)
+        juliet.send_text("body", 545, carbon=True)
         self.send(  # language=XML
             """
             <message to="shakespeare.lit"
@@ -1232,7 +1233,8 @@ class TestPrivilege(SlidgeTest):
                   <message xmlns="jabber:client"
                            to="juliet@aim.shakespeare.lit"
                            type="chat"
-                           from="romeo@shakespeare.lit">
+                           from="romeo@shakespeare.lit"
+                           id="545">
                     <body>body</body>
                     <store xmlns="urn:xmpp:hints" />
                     <markable xmlns="urn:xmpp:chat-markers:0" />
@@ -1611,7 +1613,7 @@ class TestCarbon(SlidgeTest):
         )
 
         juliet = self.get_juliet()
-        juliet.send_text("TEXT", carbon=True)
+        juliet.send_text("TEXT", 445, carbon=True)
         self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
@@ -1623,7 +1625,8 @@ class TestCarbon(SlidgeTest):
                   <message xmlns="jabber:client"
                            type="chat"
                            from="romeo@shakespeare.lit"
-                           to="juliet@aim.shakespeare.lit">
+                           to="juliet@aim.shakespeare.lit"
+                           id='445'>
                     <body>TEXT</body>
                     <active xmlns="http://jabber.org/protocol/chatstates" />
                     <store xmlns="urn:xmpp:hints" />
@@ -1637,7 +1640,9 @@ class TestCarbon(SlidgeTest):
         with tempfile.NamedTemporaryFile("w+") as f:
             f.write("test")
             f.seek(0)
-            self.run_coro(juliet.send_file(file_path=f.name, carbon=True))
+            self.run_coro(
+                juliet.send_file(file_path=f.name, legacy_msg_id=446, carbon=True)
+            )
             stamp = format_datetime(
                 datetime.datetime.fromtimestamp(Path(f.name).stat().st_mtime)
             )
@@ -1652,7 +1657,8 @@ class TestCarbon(SlidgeTest):
                   <message xmlns="jabber:client"
                            type="chat"
                            from="romeo@shakespeare.lit"
-                           to="juliet@aim.shakespeare.lit">
+                           to="juliet@aim.shakespeare.lit"
+                           id="446">
                     <reference xmlns="urn:xmpp:reference:0"
                                type="data">
                       <media-sharing xmlns="urn:xmpp:sims:1">
