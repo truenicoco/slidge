@@ -263,7 +263,7 @@ class LegacyMUC(
         elif isinstance(self.subject_setter, LegacyContact):
             return await self.get_participant_by_contact(who)
         else:
-            return await self.get_system_participant()
+            return self.get_system_participant()
 
     def features(self):
         features = [
@@ -536,7 +536,7 @@ class LegacyMUC(
                 self.__store_participant(p)
         return p
 
-    def get_system_participant(self):
+    def get_system_participant(self) -> "LegacyParticipantType":
         """
         Get a pseudo-participant, representing the room itself
 
