@@ -51,7 +51,6 @@ class LegacyMUC(
     subject_date: Optional[datetime] = None
     n_participants: Optional[int] = None
     max_history_fetch = 100
-    description = ""
 
     type = MucType.CHANNEL
     is_group = True
@@ -124,10 +123,15 @@ class LegacyMUC(
 
         self.__participants_filled = False
         self.__history_filled = False
+        self._description = ""
         super().__init__()
 
     def __repr__(self):
         return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
+
+    def __send_configuration_change(self, codes):
+        part = self.get_system_participant()
+        part.send_configuration_change(codes)
 
     @property
     def user_nick(self):
@@ -176,7 +180,21 @@ class LegacyMUC(
 
     @name.setter
     def name(self, n: str):
+        if self.DISCO_NAME == n:
+            return
         self.DISCO_NAME = n
+        self.__send_configuration_change((104,))
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, d: str):
+        if self._description == d:
+            return
+        self._description = d
+        self.__send_configuration_change((104,))
 
     def _on_presence_unavailable(self, p: Presence):
         pto = p.get_to()

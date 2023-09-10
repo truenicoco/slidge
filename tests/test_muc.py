@@ -3062,3 +3062,25 @@ class TestMuc(Base):
             </presence>
             """
         )
+
+    def test_group_rename(self):
+        group = self.get_private_muc(resources=("gajim",))
+        group.name = "prout"
+        self.send(  # language=XML
+            """
+            <message type="groupchat"
+                     from="room-private@aim.shakespeare.lit"
+                     to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <status code="104" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="room" />
+            </message>
+            """,
+            use_values=False,
+        )
+        self.send(None)

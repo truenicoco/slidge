@@ -114,6 +114,13 @@ class LegacyParticipant(
 
         self.jid = j
 
+    def send_configuration_change(self, codes: tuple[int]):
+        if not self.is_system:
+            raise RuntimeError("This is only possible for the system participant")
+        msg = self._make_message()
+        msg["muc"]["status_codes"] = codes
+        self._send(msg)
+
     @property
     def nickname(self):
         return self._nickname
