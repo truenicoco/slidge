@@ -61,8 +61,8 @@ class LegacyParticipant(
         self.session = session = muc.session
         self.user = session.user
         self.xmpp = session.xmpp
-        self.role: MucRole = "participant"
-        self.affiliation: MucAffiliation = "member"
+        self._role: MucRole = "participant"
+        self._affiliation: MucAffiliation = "member"
         self.is_user: bool = is_user
         self.is_system: bool = is_system
 
@@ -81,6 +81,32 @@ class LegacyParticipant(
 
     def __repr__(self):
         return f"<Participant '{self.nickname}'/'{self.jid}' of '{self.muc}'>"
+
+    @property
+    def affiliation(self):
+        return self._affiliation
+
+    @affiliation.setter
+    def affiliation(self, affiliation: MucAffiliation):
+        if self._affiliation == affiliation:
+            return
+        self._affiliation = affiliation
+        if not self.__presence_sent:
+            return
+        self.send_last_presence(force=True, no_cache_online=True)
+
+    @property
+    def role(self):
+        return self._role
+
+    @role.setter
+    def role(self, role: MucRole):
+        if self._role == role:
+            return
+        self._role = role
+        if not self.__presence_sent:
+            return
+        self.send_last_presence(force=True, no_cache_online=True)
 
     def __update_jid(self, nickname: Optional[str]):
         j: JID = copy(self.muc.jid)

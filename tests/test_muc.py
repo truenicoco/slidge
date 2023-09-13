@@ -255,6 +255,7 @@ class Base(SlidgeTest):
 
     def tearDown(self):
         slidge.core.muc.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
+        slidge.util.sql.db.mam_nuke()
 
     @staticmethod
     def get_romeo_session() -> Session:
@@ -286,9 +287,6 @@ class Base(SlidgeTest):
 
 @pytest.mark.usefixtures("avatar", "user_cls")
 class TestMuc(Base):
-    def tearDown(self):
-        slidge.util.sql.db.mam_nuke()
-
     def test_disco_non_existing_room(self):
         self.recv(  # language=XML
             f"""
@@ -3083,4 +3081,46 @@ class TestMuc(Base):
             """,
             use_values=False,
         )
+        self.send(None)
+
+
+class TestRoleAffiliation(Base):
+    def test_role_change(self):
+        part = self.get_participant("a-new-one")
+        part.role = "visitor"
+        self.send(  # language=XML
+            f"""
+            <presence from="room-private@aim.shakespeare.lit/a-new-one"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="{part.affiliation}"
+                      role="visitor" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )
+        self.send(None)
+        part.role = "visitor"
+        self.send(None)
+
+    def test_affiliation_change(self):
+        part = self.get_participant("a-new-one")
+        part.affiliation = "admin"
+        self.send(  # language=XML
+            f"""
+            <presence from="room-private@aim.shakespeare.lit/a-new-one"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="admin"
+                      role="{part.role}" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )
+        self.send(None)
+        part.affiliation = "admin"
         self.send(None)
