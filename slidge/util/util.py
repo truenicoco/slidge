@@ -266,3 +266,8 @@ def merge_resources(resources: dict[str, ResourceDict]) -> Optional[ResourceDict
         "status": status,
         "priority": 0,
     }
+
+
+def remove_emoji_variation_selector_16(emoji: str):
+    # this is required for compatibility with dino, and maybe other future clients?
+    return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
