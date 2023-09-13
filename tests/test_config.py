@@ -158,3 +158,25 @@ def test_set_conf(monkeypatch):
     assert config.SECRET == "secret"
     assert config.IGNORE_DELAY_THRESHOLD.seconds == 200
     assert config.USER_JID_VALIDATOR == "cloup"
+
+
+def test_rest(tmp_path):
+    class Config1:
+        PROUT = "caca"
+        PROUT__DOC = "?"
+
+    class Config2:
+        PROUT2: Optional[str] = None
+        PROUT2__DOC = "?"
+
+    configurator = ConfigModule(Config1)
+    configurator.parser.add_argument("-c", is_config_file=True)
+    conf_path = tmp_path / "test.conf"
+    conf_path.write_text("prout2=something")
+    args, rest = configurator.set_conf(["-c", str(conf_path)])
+
+    configurator2 = ConfigModule(Config2)
+    configurator2.set_conf(rest)
+
+    assert Config1.PROUT == "caca"
+    assert Config2.PROUT2 == "something"
