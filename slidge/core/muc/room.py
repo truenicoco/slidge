@@ -878,6 +878,28 @@ class LegacyMUC(
                 self, reason="This group could not be added automatically for you"
             )
 
+    async def admin_set_avatar(
+        self, data: Optional[bytes], mime: Optional[str]
+    ) -> Optional[Union[int, str]]:
+        """
+        Called when the user tries to set the avatar of the room from an XMPP
+        client.
+
+        If the set avatar operation is completed, should return a legacy image
+        unique identifier. In this case the MUC avatar will be immediately
+        updated on the XMPP side.
+
+        If data is not None and this method returns None, then we assume that
+        self.set_avatar() will be called elsewhere, eg triggered by a legacy
+        room update event.
+
+        :param data: image data or None if the user meant to remove the avatar
+        :param mime: the mime type of the image. Since this is provided by
+            the XMPP client, there can be no guarantee that this is correct
+        :return: A unique avatar identifier if possible
+        """
+        raise NotImplementedError
+
 
 def set_origin_id(msg: Message, origin_id: str):
     sub = ET.Element("{urn:xmpp:sid:0}origin-id")

@@ -1,4 +1,5 @@
 import datetime
+import unittest.mock
 import uuid
 from base64 import b64encode
 from pathlib import Path
@@ -6,6 +7,7 @@ from typing import Any, Dict, Hashable, Optional
 
 import pytest
 import slixmpp
+from conftest import AvatarFixtureMixin
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import xep_0082
@@ -3123,4 +3125,49 @@ class TestRoleAffiliation(Base):
         )
         self.send(None)
         part.affiliation = "admin"
+        self.send(None)
+
+
+@pytest.mark.usefixtures("avatar", "user_cls")
+class TestSetAvatar(Base, AvatarFixtureMixin):
+    def test_set_avatar(self):
+        muc = self.get_private_muc(resources=("gajim",))
+        with unittest.mock.patch(
+            "slidge.core.muc.room.LegacyMUC.admin_set_avatar", return_value=1
+        ):
+            self.recv(  # language=XML
+                f"""
+            <iq id='set1'
+                type='set'
+                to='room-private@aim.shakespeare.lit'
+                from='romeo@montague.lit/gajim'>
+              <vCard xmlns='vcard-temp'>
+                <PHOTO>
+                  <TYPE>image/png</TYPE>
+                  <BINVAL>{b64encode(self.avatar_bytes).decode("utf-8")}</BINVAL>
+                </PHOTO>
+              </vCard>
+            </iq>
+            """
+            )
+        self.send(  # language=XML
+            """
+            <iq from="room-private@aim.shakespeare.lit"
+                type="result"
+                to="romeo@montague.lit/gajim"
+                id="set1">
+              <vCard xmlns="vcard-temp" />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <presence to="romeo@montague.lit/gajim"
+                      from="room-private@aim.shakespeare.lit">
+              <x xmlns="vcard-temp:x:update">
+                <photo>{self.avatar_sha1}</photo>
+              </x>
+            </presence>
+            """
+        )
         self.send(None)

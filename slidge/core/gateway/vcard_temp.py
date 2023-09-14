@@ -16,14 +16,18 @@ class VCardTemp:
             CoroutineCallback(
                 "VCardTemp",
                 StanzaPath("iq/vcard_temp"),
-                self.__handle_get_vcard_temp,  # type:ignore
+                self.__handler,  # type:ignore
             )
         )
 
-    async def __handle_get_vcard_temp(self, iq: Iq):
-        if iq["type"] != "get":
-            raise XMPPError("not-authorized")
+    async def __handler(self, iq: Iq):
+        if iq["type"] == "get":
+            return await self.__handle_get_vcard_temp(iq)
 
+        if iq["type"] == "set":
+            return await self.__handle_set_vcard_temp(iq)
+
+    async def __handle_get_vcard_temp(self, iq: Iq):
         muc = await self.xmpp.get_muc_from_stanza(iq)
         to = iq.get_to()
 
@@ -43,3 +47,30 @@ class VCardTemp:
         reply = iq.reply()
         reply.append(v)
         reply.send()
+
+    async def __handle_set_vcard_temp(self, iq: Iq):
+        muc = await self.xmpp.get_muc_from_stanza(iq)
+        to = iq.get_to()
+
+        if to.resource:
+            raise XMPPError("bad-request", "You cannot set participants avatars")
+
+        data = iq["vcard_temp"]["PHOTO"]["BINVAL"] or None
+        try:
+            legacy_id = await muc.admin_set_avatar(
+                data, iq["vcard_temp"]["PHOTO"]["TYPE"] or None
+            )
+        except XMPPError:
+            raise
+        except Exception as e:
+            raise XMPPError("internal-server-error", str(e))
+        reply = iq.reply(clear=True)
+        reply.enable("vcard_temp")
+        reply.send()
+
+        if not data:
+            await muc.set_avatar(None, blocking=True)
+            return
+
+        if legacy_id:
+            await muc.set_avatar(data, legacy_id, blocking=True)
