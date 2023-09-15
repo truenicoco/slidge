@@ -16,6 +16,7 @@ import slidge.core.mixins.message_maker
 import slidge.core.muc.room
 import slidge.util.sql
 from slidge import *
+from slidge import LegacyBookmarks, LegacyContact, LegacyParticipant, LegacyRoster
 from slidge.core.muc.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
@@ -146,7 +147,7 @@ class Participant(LegacyParticipant):
     pass
 
 
-class MUC(LegacyMUC):
+class MUC(slidge.LegacyMUC):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.history = []

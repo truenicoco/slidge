@@ -1,5 +1,9 @@
+"""
+Typing stuff
+"""
+
 from dataclasses import dataclass
-from enum import Enum
+from enum import IntEnum
 from pathlib import Path
 from typing import (
     IO,
@@ -35,6 +39,10 @@ class URL(str):
 
 
 LegacyGroupIdType = TypeVar("LegacyGroupIdType", bound=Hashable)
+"""
+Type of the unique identifier for groups, usually a str or an int,
+but anything hashable should work.
+"""
 LegacyMessageType = TypeVar("LegacyMessageType", bound=Hashable)
 LegacyThreadType = TypeVar("LegacyThreadType", bound=Hashable)
 LegacyUserIdType = TypeVar("LegacyUserIdType", bound=Hashable)
@@ -117,10 +125,23 @@ class LegacyAttachment:
             raise TypeError("There is not data in this attachment", self)
 
 
-class MucType(int, Enum):
+class MucType(IntEnum):
+    """
+    The type of a group, private, public, anonymous or not.
+    """
+
     GROUP = 0
+    """
+    A private group, members-only and non-anonymous, eg a family group.
+    """
     CHANNEL = 1
+    """
+    A public group, aka an anonymous channel.
+    """
     CHANNEL_NON_ANONYMOUS = 2
+    """
+    A public group where participants' legacy IDs are visible to everybody.
+    """
 
 
 PseudoPresenceShow = Union[PresenceShows, Literal[""]]

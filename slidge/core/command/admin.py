@@ -1,6 +1,4 @@
-"""
-Commands only accessible for slidge admins
-"""
+# Commands only accessible for slidge admins
 import functools
 import logging
 from typing import Any, Optional

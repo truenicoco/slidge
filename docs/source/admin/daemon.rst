@@ -25,8 +25,8 @@ Enable and start the service with ``sudo systemctl enable --now slidge@superdupe
 Containers
 ==========
 
-Installation
-------------
+Container install
+-----------------
 
 Make sure that podman is installed on your system, e.g. ``apt install podman`` (debian, ubuntu...).
 Container images are available on https://hub.docker.com/u/nicocool84

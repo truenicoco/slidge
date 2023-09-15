@@ -53,7 +53,7 @@ class BaseGateway(
     metaclass=ABCSubclassableOnceAtMost,
 ):
     """
-    Must be subclassed by a plugin to set up various aspects of the XMPP
+    Must be subclassed by a legacy module to set up various aspects of the XMPP
     component behaviour, such as its display name or its registration process.
 
     On slidge launch, a singleton is instantiated, and it will be made available
@@ -90,12 +90,25 @@ class BaseGateway(
     """
     REGISTRATION_TYPE = RegistrationType.SINGLE_STEP_FORM
     """
-    SINGLE_STEP_FORM: 1 step, 1 form, compatible with :xep:`0077` (in-band registration)
+    This attribute determines how users to register to the gateway, ie, how they
+    login to the legacy service.
+    The credentials are then stored persistently, so this process should happen
+    once per user (unless they unregister).
+
+    The registration process always start with a basic data form (:xep:`0004`)
+    presented to the user, which is send
+    But the legacy login flow might require something
+    more sophisticated, such as a
+
+    SINGLE_STEP_FORM: 1 step, 1 form, compatible with :xep:`0077`
+    (in-band registration).
 
     QRCODE: The registration requires flashing a QR code in an official client.
-    See :meth:`.BaseGateway.`
+    See :meth:`send_qr`, :meth:`get_qr_text` and :meth:`confirm_qr`.
 
-    TWO_FACTOR_CODE: The registration requires confirming login with a 2FA code
+    TWO_FACTOR_CODE: The registration requires confirming login with a 2FA code,
+    eg something received by email or SMS.
+    See :meth:`validate_two_factor_code`.
     """
 
     COMPONENT_NAME: str = NotImplemented
@@ -304,9 +317,7 @@ class BaseGateway(
 
     @property  # type: ignore
     def jid(self):
-        """
-        Override to avoid slixmpp deprecation warnings.
-        """
+        # Override to avoid slixmpp deprecation warnings.
         return self.boundjid
 
     async def __on_group_chat_error(self, msg: Message):
@@ -485,16 +496,16 @@ class BaseGateway(
         return muc
 
     def exception(self, exception: Exception):
-        """
-        Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
-
-        Stop the event loop and exit on unhandled exception.
-
-        The default :class:`slixmpp.basexmpp.BaseXMPP` behaviour is just to
-        log the exception, but we want to avoid undefined behaviour.
-
-        :param exception: An unhandled :class:`Exception` object.
-        """
+        # """
+        # Called when a task created by slixmpp's internal (eg, on slix events) raises an Exception.
+        #
+        # Stop the event loop and exit on unhandled exception.
+        #
+        # The default :class:`slixmpp.basexmpp.BaseXMPP` behaviour is just to
+        # log the exception, but we want to avoid undefined behaviour.
+        #
+        # :param exception: An unhandled :class:`Exception` object.
+        # """
         if isinstance(exception, IqError):
             iq = exception.iq
             log.error("%s: %s", iq["error"]["condition"], iq["error"]["text"])
@@ -571,10 +582,8 @@ class BaseGateway(
         return reply
 
     async def user_prevalidate(self, ifrom: JID, form_dict: dict[str, Optional[str]]):
-        """
-        Pre validate a registration form using the content of self.REGISTRATION_FIELDS
-        before passing it to the plugin custom validation logic.
-        """
+        # Pre validate a registration form using the content of self.REGISTRATION_FIELDS
+        # before passing it to the plugin custom validation logic.
         for field in self.REGISTRATION_FIELDS:
             if field.required and not form_dict.get(field.var):
                 raise ValueError(f"Missing field: '{field.label}'")
@@ -585,11 +594,10 @@ class BaseGateway(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
         """
-        Validate a registration form from a user.
+        Validate the user's initial registration  form.
 
-        Since :xep:`0077` is pretty limited in terms of validation, it is OK to validate
-        anything that looks good here and continue the legacy auth process via direct messages
-        to the user (using :meth:`.BaseGateway.input` for instance).
+        If :py:attr:`REGISTRATION_TYPE` is a
+        :attr:`.RegistrationType.SINGLE_STEP_FORM`
 
         :param user_jid: JID of the user that has just registered
         :param registration_form: A dict where keys are the :attr:`.FormField.var` attributes
@@ -622,10 +630,6 @@ class BaseGateway(
         You shouldn't need to call directly bust instead use :meth:`.BaseSession.input`
         to directly target a user.
 
-        NB: When using this, the next message that the user sent to the component will
-        not be transmitted to :meth:`.BaseGateway.on_gateway_message`, but rather intercepted.
-        Await the coroutine to get its content.
-
         :param jid: The JID we want input from
         :param text: A prompt to display for the user
         :param mtype: Message type
@@ -637,9 +641,12 @@ class BaseGateway(
         """
         Sends a QR Code to a JID
 
+        You shouldn't need to call directly bust instead use
+        :meth:`.BaseSession.send_qr` to directly target a user.
+
         :param text: The text that will be converted to a QR Code
-        :param msg_kwargs: Optional additional arguments to pass to :meth:`.BaseGateway.send_file`,
-            such as the recipient of the QR code.
+        :param msg_kwargs: Optional additional arguments to pass to
+            :meth:`.BaseGateway.send_file`, such as the recipient of the QR code.
         """
         qr = qrcode.make(text)
         with tempfile.NamedTemporaryFile(
@@ -664,11 +671,17 @@ class BaseGateway(
 
     async def get_qr_text(self, user: GatewayUser) -> str:
         """
-        Plugins should call this to complete registration with QR codes
+        This is where slidge gets the QR code content for the QR-based
+        registration process. It will turn it into a QR code image and send it
+        to the not-yet-fully-registered `.GatewayUser`
+
+        Only used in when :attr:`BaseGateway.REGISTRATION_TYPE` is
+        :attr:`RegistrationType.QR_CODE`.
 
         :param user: The not-yet-fully-registered GatewayUser.
-            Use its ``.bare_jid`` and/or``.registration_form`` attributes
-            to get what you need
+            Use its :attr:`GatewayUser.bare_jid` and/or
+            :attr:`GatewayUser.registration_form` attributes
+            to get follow up on the process.
         """
         raise NotImplementedError
 
@@ -676,11 +689,10 @@ class BaseGateway(
         self, user_bare_jid: str, exception: Optional[Exception] = None
     ):
         """
-        Plugins should call this to complete registration with QR codes
+        This should be called to finalize QR code-based registration flows.
 
-        :param user_bare_jid: The not-yet-fully-registered ``GatewayUser`` instance
-            Use their ``.bare_jid`` and/or``.registration_form`` attributes
-            to get what you need
+        :param user_bare_jid: The bare JID of the almost-registered
+            :class:`GatewayUser` instance
         :param exception: Optionally, an XMPPError to be raised to **not** confirm
             QR code flashing.
         """
@@ -691,13 +703,13 @@ class BaseGateway(
             fut.set_exception(exception)
 
     def shutdown(self):
-        """
-        Called by the slidge entrypoint on normal exit.
-
-        Sends offline presences from all contacts of all user sessions and from
-        the gateway component itself.
-        No need to call this manually, :func:`slidge.__main__.main` should take care of it.
-        """
+        # """
+        # Called by the slidge entrypoint on normal exit.
+        #
+        # Sends offline presences from all contacts of all user sessions and from
+        # the gateway component itself.
+        # No need to call this manually, :func:`slidge.__main__.main` should take care of it.
+        # """
         log.debug("Shutting down")
         for user in user_store.get_all():
             self.session_cls.from_jid(user.jid).shutdown()

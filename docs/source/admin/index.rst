@@ -10,7 +10,6 @@ To keep this guide generic, we'll talk about running the slidge plugin
 ``superduper`` that connects to the fictional legacy network "Super Duper Chat Network".
 
 .. toctree::
-   :maxdepth: 2
 
   install
   config/index

@@ -15,6 +15,14 @@ from slixmpp.plugins.xep_0030 import DiscoInfo
 from slixmpp.plugins.xep_0082 import format_datetime
 
 from slidge import *
+from slidge import (
+    FormField,
+    GatewayUser,
+    LegacyBookmarks,
+    LegacyContact,
+    LegacyRoster,
+    SearchResult,
+)
 from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
 from slidge.slixfix.xep_0356.permissions import (

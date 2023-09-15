@@ -26,6 +26,9 @@ class RegistrationType(int, Enum):
     """
 
     SINGLE_STEP_FORM = 0
+    """
+    Blabla
+    """
     QRCODE = 10
     TWO_FACTOR_CODE = 20
 

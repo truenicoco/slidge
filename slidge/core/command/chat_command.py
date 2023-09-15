@@ -1,10 +1,7 @@
-"""
-Handle slidge commands by exchanging chat messages with the gateway components.
+# Handle slidge commands by exchanging chat messages with the gateway components.
 
-Ad-hoc methods should provide a better UX, but some clients do not support them,
-so this is mostly a fallback.
-"""
-
+# Ad-hoc methods should provide a better UX, but some clients do not support them,
+# so this is mostly a fallback.
 import asyncio
 import functools
 import logging

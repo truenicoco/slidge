@@ -16,11 +16,11 @@ With privileges, slidge can:
   retractions, etc.
 - automatically add XMPP bookmarks (:xep:`0402`) for MUCs (:xep:`0045`)
 
-Prosody
--------
+Privileges with Prosody
+-----------------------
 
-Installation
-~~~~~~~~~~~~
+mod_privilege installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Starting with prosody 0.12, installing the  `mod_privilege <https://modules.prosody.im/mod_privilege.html>`_
 community module is as easy as:
@@ -54,8 +54,8 @@ and activate/deactivate hosts
 for all changes to be taken into account
 (restarting prosody is the easiest way to go).
 
-ejabberd
---------
+Privileges with ejabberd
+------------------------
 
 .. warning::
 

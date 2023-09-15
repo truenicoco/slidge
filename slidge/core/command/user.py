@@ -1,7 +1,4 @@
-"""
-Commands available to users
-"""
-
+# Commands available to users
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from slixmpp import JID  # type:ignore[attr-defined]

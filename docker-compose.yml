@@ -52,7 +52,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_USER: movim
       POSTGRES_PASSWORD: BAD
-    image: docker.io/movim/movim:0.21rc6
+    image: docker.io/movim/movim:0.22
     network_mode: service:prosody
     volumes:
       - ./persistent/movim/html:/var/www/html:rw

@@ -19,6 +19,13 @@ if TYPE_CHECKING:
 
 
 class AvatarMixin:
+    """
+    Mixin for XMPP entities that have avatars that represent them.
+
+    Both :py:class:`slidge.LegacyContact` and :py:class:`slidge.LegacyMUC` use
+    :py:class:`.AvatarMixin`.
+    """
+
     jid: JID = NotImplemented
     session: AnyBaseSession = NotImplemented
     _avatar_pubsub_broadcast: bool = NotImplemented
@@ -34,23 +41,29 @@ class AvatarMixin:
         return JID(self.jid.bare) if self._avatar_bare_jid else self.jid
 
     @property
-    def avatar(self) -> Optional[AvatarIdType]:
+    def avatar_id(self) -> Optional[AvatarIdType]:
         """
         The unique ID of this entity's avatar.
-        NB: Python's ``property`` is abused here to maintain backwards
-        compatibility, and this does not return the same object you give to the
-        setter.
+        """
+        return self.__avatar_unique_id
+
+    @property
+    def avatar(self) -> Optional[AvatarIdType]:
+        """
+        This property can be used to set the avatar, but
+        :py:meth:`~.AvatarMixin.set_avatar()` should be preferred because you can
+        provide a unique ID for the avatar for efficient caching.
+        Setting this is OKish in case the avatar type is a URL or a local path
+        that can act as a legacy ID.
+
+        Python's ``property`` is abused here to maintain backwards
+        compatibility, but when getting it you actually get the avatar legacy
+        ID.
         """
         return self.__avatar_unique_id
 
     @avatar.setter
     def avatar(self, a: Optional[AvatarType]):
-        """
-        Set the avatar. self.set_avatar() should be preferred because you can provide
-        a unique ID for the avatar, to help caching.
-        Setting this is OKish in case the avatar type is a URL or a local path
-        that can act as a legacy ID.
-        """
         if self._set_avatar_task:
             self._set_avatar_task.cancel()
         self.session.log.debug("Setting avatar with property")
@@ -99,7 +112,15 @@ class AvatarMixin:
         avatar_unique_id: Optional[LegacyFileIdType] = None,
         blocking=False,
         cancel=True,
-    ):
+    ) -> None:
+        """
+        Set an avatar for this entity
+
+        :param a:
+        :param avatar_unique_id:
+        :param blocking:
+        :param cancel:
+        """
         if avatar_unique_id is None and a is not None:
             avatar_unique_id = self.__get_uid(a)
         if await self._no_change(a, avatar_unique_id):
@@ -126,7 +147,10 @@ class AvatarMixin:
     async def avatar_wrap_update_info(self):
         cached_id = avatar_cache.get_cached_id_for(self.__avatar_jid)
         self.__avatar_unique_id = cached_id
-        await self.update_info()  # type:ignore
+        try:
+            await self.update_info()  # type:ignore
+        except NotImplementedError:
+            return
         new_id = self.avatar
         if isinstance(new_id, URL) and not await avatar_cache.url_has_changed(new_id):
             return

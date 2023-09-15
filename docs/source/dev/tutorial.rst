@@ -1,5 +1,5 @@
-Tutorial: implementing a plugin
-===============================
+Tutorial: minimal legacy module from scratch
+============================================
 
 Wanna write a new "legacy chat network" slidge plugin? You've come to the right place.
 
@@ -123,16 +123,16 @@ From XMPP to legacy
 
 .. code-block:: python
 
-        async def send_text(self, chat: Recipient, text: str, *kwargs):
+        async def send_text(self, chat: Recipient, text: str, **kwargs):
             self.legacy.send_message(text=text, destination=chat.legacy_id)
 
 When our user sends a message to ``something@superduper.example.org``,
 this method is automagically called, allowing us to transmit the message to the legacy network.
 
-Going further (WIP)
--------------------
+Going further
+-------------
 
-- Adding a contact to the user's roster and setting its name, avatar, ...
-- Handling legacy user IDs that are not valid JID user part
-- Attachments
-- Groupchats (some day...)
+Until we actually write this section, you can refer to :py:mod:`slidge` for the API
+reference, to :py:mod:`superduper` for a mock legacy module that serves as a
+minimal working example, or have a look at the existing
+`legacy module <https://sr.ht/~nicoco/slidge>`_

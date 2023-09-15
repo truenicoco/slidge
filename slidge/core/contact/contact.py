@@ -99,7 +99,17 @@ class LegacyContact(
         super().__init__()
         self.session = session
         self.user = session.user
-        self.legacy_id = legacy_id
+        self.legacy_id: LegacyUserIdType = legacy_id
+        """
+        The legacy identifier of the :term:`Legacy Contact`.
+        By default, this is the :term:`JID Local Part` of this
+        :term:`XMPP Entity`.
+
+        Controlling what values are valid and how they are translated from a
+        :term:`JID Local Part` is done in :meth:`.jid_username_to_legacy_id`.
+        Reciprocally, in :meth:`legacy_id_to_jid_username` the inverse
+        transformation is defined.
+        """
         self.jid_username = jid_username
 
         self._name: Optional[str] = None
@@ -415,8 +425,9 @@ class LegacyContact(
 
         To take advantage of the slidge avatar cache, you can check the .avatar
         property to retrieve the "legacy file ID" of the cached avatar. If there
-        is no change, you should not call ``set_avatar()`` or attempt to modify
-        the ``.avatar`` property.
+        is no change, you should not call
+        :py:meth:`slidge.core.mixins.avatar.AvatarMixin.set_avatar` or attempt
+        to modify the ``.avatar`` property.
         """
         pass
 

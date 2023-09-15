@@ -56,7 +56,7 @@ slidge = 'slidge.__main__:main'
 
 [tool.mypy]
 check_untyped_defs = true
-files = ["slidge"]
+files = ["slidge", "superduper"]
 exclude = ["tests", "slidge.slixfix.*"]
 
 [[tool.mypy.overrides]]

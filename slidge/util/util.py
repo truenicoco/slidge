@@ -4,7 +4,7 @@ import re
 import subprocess
 from abc import ABCMeta
 from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Optional
 
 from slidge.util.types import ResourceDict
 
@@ -49,24 +49,6 @@ def fix_suffix(path: Path, mime_type: Optional[str], file_name: Optional[str]):
 
     log.debug("Changing suffix of %s to %s", file_name or path.name, valid_suffix)
     return name.with_suffix(valid_suffix)
-
-
-KeyType = TypeVar("KeyType")
-ValueType = TypeVar("ValueType")
-
-
-class BiDict(Generic[KeyType, ValueType], dict[KeyType, ValueType]):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.inverse: dict[ValueType, KeyType] = {}
-        for key, value in self.items():
-            self.inverse[value] = key
-
-    def __setitem__(self, key: KeyType, value: ValueType):
-        if key in self:
-            del self.inverse[self[key]]
-        super().__setitem__(key, value)
-        self.inverse[value] = key
 
 
 class SubclassableOnce(type):

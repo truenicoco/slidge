@@ -77,16 +77,16 @@ class LegacyRoster(
         return self._contacts_by_bare_jid
 
     async def by_jid(self, contact_jid: JID) -> LegacyContactType:
-        """
-        Retrieve a contact by their JID
-
-        If the contact was not instantiated before, it will be created
-        using :meth:`slidge.LegacyRoster.jid_username_to_legacy_id` to infer their
-        legacy user ID.
-
-        :param contact_jid:
-        :return:
-        """
+        # """
+        # Retrieve a contact by their JID
+        #
+        # If the contact was not instantiated before, it will be created
+        # using :meth:`slidge.LegacyRoster.jid_username_to_legacy_id` to infer their
+        # legacy user ID.
+        #
+        # :param contact_jid:
+        # :return:
+        # """
         username = contact_jid.node
         async with self.lock(("username", username)):
             bare = contact_jid.bare
@@ -137,14 +137,14 @@ class LegacyRoster(
             return c
 
     async def by_stanza(self, s) -> LegacyContact:
-        """
-        Retrieve a contact by the destination of a stanza
-
-        See :meth:`slidge.Roster.by_legacy_id` for more info.
-
-        :param s:
-        :return:
-        """
+        # """
+        # Retrieve a contact by the destination of a stanza
+        #
+        # See :meth:`slidge.Roster.by_legacy_id` for more info.
+        #
+        # :param s:
+        # :return:
+        # """
         return await self.by_jid(s.get_to())
 
     async def legacy_id_to_jid_username(self, legacy_id: LegacyUserIdType) -> str:

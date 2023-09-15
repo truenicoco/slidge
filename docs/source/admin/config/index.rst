@@ -29,10 +29,3 @@ Plugin specific
 ---------------
 
 There are also plugin-specific options for some legacy services.
-
-.. toctree::
-   signal
-   telegram
-   discord
-   facebook
-   whatsapp

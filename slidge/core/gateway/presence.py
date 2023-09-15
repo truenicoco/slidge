@@ -1,6 +1,6 @@
 import logging
 
-from slixmpp import ComponentXMPP, Presence
+from slixmpp import JID, Presence
 
 from ..session import BaseSession
 
@@ -10,7 +10,9 @@ class _IsDirectedAtComponent(Exception):
         self.session = session
 
 
-class PresenceHandlerMixin(ComponentXMPP):
+class PresenceHandlerMixin:
+    boundjid: JID
+
     def get_session_from_stanza(self, s) -> BaseSession:
         raise NotImplementedError
 

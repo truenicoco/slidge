@@ -5,7 +5,9 @@ For devs
 .. toctree::
    :maxdepth: 2
 
-   general
+   contributing
+   design
    tutorial
-   plugin
+   howto
    api/slidge/index
+   api/superduper/index

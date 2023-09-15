@@ -19,6 +19,10 @@ class LegacyBookmarks(
     NamedLockMixin,
     metaclass=SubclassableOnce,
 ):
+    """
+    This is instantiated once per :class:`~slidge.BaseSession`
+    """
+
     def __init__(self, session: "BaseSession"):
         self.session = session
         self.xmpp = session.xmpp
@@ -62,10 +66,31 @@ class LegacyBookmarks(
         return muc
 
     async def legacy_id_to_jid_local_part(self, legacy_id: LegacyGroupIdType):
-        return str(legacy_id).translate(ESCAPE_TABLE)
+        return await self.legacy_id_to_jid_username(legacy_id)
 
     async def jid_local_part_to_legacy_id(self, local_part: str):
-        return _unescape_node(local_part)
+        return await self.jid_username_to_legacy_id(local_part)
+
+    async def legacy_id_to_jid_username(self, legacy_id: LegacyGroupIdType):
+        """
+        The default implementation calls ``str()`` on the legacy_id and
+        escape characters according to :xep:`0106`.
+
+        You can override this class and implement a more subtle logic to raise
+        an :class:`~slixmpp.exceptions.XMPPError` early
+
+        :param legacy_id:
+        :return:
+        """
+        return str(legacy_id).translate(ESCAPE_TABLE)
+
+    async def jid_username_to_legacy_id(self, username: str):
+        """
+
+        :param username:
+        :return:
+        """
+        return _unescape_node(username)
 
     async def by_jid(self, jid: JID) -> LegacyMUCType:
         bare = jid.bare

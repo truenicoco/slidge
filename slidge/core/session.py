@@ -184,38 +184,38 @@ class BaseSession(
 
     @classmethod
     def from_stanza(cls, s) -> "BaseSession":
-        """
-        Get a user's :class:`.LegacySession` using the "from" field of a stanza
-
-        Meant to be called from :class:`BaseGateway` only.
-
-        :param s:
-        :return:
-        """
+        # """
+        # Get a user's :class:`.LegacySession` using the "from" field of a stanza
+        #
+        # Meant to be called from :class:`BaseGateway` only.
+        #
+        # :param s:
+        # :return:
+        # """
         return cls._from_user_or_none(user_store.get_by_stanza(s))
 
     @classmethod
     def from_jid(cls, jid: JID) -> "BaseSession":
-        """
-        Get a user's :class:`.LegacySession` using its jid
-
-        Meant to be called from :class:`BaseGateway` only.
-
-        :param jid:
-        :return:
-        """
+        # """
+        # Get a user's :class:`.LegacySession` using its jid
+        #
+        # Meant to be called from :class:`BaseGateway` only.
+        #
+        # :param jid:
+        # :return:
+        # """
         return cls._from_user_or_none(user_store.get_by_jid(jid))
 
     @classmethod
     async def kill_by_jid(cls, jid: JID):
-        """
-        Terminate a user session.
-
-        Meant to be called from :class:`BaseGateway` only.
-
-        :param jid:
-        :return:
-        """
+        # """
+        # Terminate a user session.
+        #
+        # Meant to be called from :class:`BaseGateway` only.
+        #
+        # :param jid:
+        # :return:
+        # """
         log.debug("Killing session of %s", jid)
         for user, session in _sessions.items():
             if user.jid == jid.bare:
@@ -554,14 +554,14 @@ class BaseSession(
         return muc
 
     async def wait_for_ready(self, timeout: Optional[Union[int, float]] = 10):
-        """
-        Wait until session, contacts and bookmarks are ready
-
-        (slidge internal use)
-
-        :param timeout:
-        :return:
-        """
+        # """
+        # Wait until session, contacts and bookmarks are ready
+        #
+        # (slidge internal use)
+        #
+        # :param timeout:
+        # :return:
+        # """
         try:
             await asyncio.wait_for(asyncio.shield(self.ready), timeout)
             await asyncio.wait_for(asyncio.shield(self.contacts.ready), timeout)

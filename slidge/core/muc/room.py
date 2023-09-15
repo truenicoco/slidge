@@ -48,6 +48,13 @@ class LegacyMUC(
     ThreadRecipientMixin,
     metaclass=ABCSubclassableOnceAtMost,
 ):
+    """
+    A room, a.k.a. a Multi-User Chat.
+
+    MUC instances are obtained by calling :py:meth:`slidge.core.muc.bookmarks.LegacyBookmarks`
+    on the user's :py:class:`slidge.core.session.BaseSession`.
+    """
+
     subject_date: Optional[datetime] = None
     n_participants: Optional[int] = None
     max_history_fetch = 100
@@ -150,7 +157,10 @@ class LegacyMUC(
             if self.__participants_filled:
                 return
             self.__participants_filled = True
-            await self.fill_participants()
+            try:
+                await self.fill_participants()
+            except NotImplementedError:
+                pass
 
     async def __fill_history(self):
         async with self.lock("fill history"):
@@ -171,7 +181,10 @@ class LegacyMUC(
             else:
                 legacy_id = None
                 oldest_date = None
-            await self.backfill(legacy_id, oldest_date)
+            try:
+                await self.backfill(legacy_id, oldest_date)
+            except NotImplementedError:
+                return
             self.__history_filled = True
 
     @property
@@ -215,6 +228,23 @@ class LegacyMUC(
                 "Received 'leave group' request but resource was not listed. %s", p
             )
 
+    async def update_info(self):
+        """
+        Fetch information about this group from the legacy network
+
+        This is awaited on MUC instantiation, and should be overridden to
+        update the attributes of the group chat, like title, subject, number
+        of participants etc.
+
+        To take advantage of the slidge avatar cache, you can check the .avatar
+        property to retrieve the "legacy file ID" of the cached avatar. If there
+        is no change, you should not call
+        :py:meth:`slidge.core.mixins.avatar.AvatarMixin.set_avatar()` or
+        attempt to modify
+        the :attr:.avatar property.
+        """
+        raise NotImplementedError
+
     async def backfill(
         self,
         oldest_message_id: Optional[LegacyMessageType] = None,
@@ -230,22 +260,14 @@ class LegacyMUC(
         :param oldest_message_id: The oldest message ID already present in the archive
         :param oldest_message_date: The oldest message date already present in the archive
         """
-        return
+        raise NotImplementedError
 
-    async def update_info(self):
+    async def fill_participants(self):
         """
-        Fetch information about this group from the legacy network
-
-        This is awaited on MUC instantiation, and should be overridden to
-        update the attributes of the group chat, like title, subject, number
-        of participants etc.
-
-        To take advantage of the slidge avatar cache, you can check the .avatar
-        property to retrieve the "legacy file ID" of the cached avatar. If there
-        is no change, you should not call ``set_avatar()`` or attempt to modify
-        the ``.avatar`` property.
+        In here, call self.get_participant(), self.get_participant_by_contact(),
+        of self.get_user_participant() to make an initial list of participants.
         """
-        pass
+        raise NotImplementedError
 
     @property
     def subject(self):
@@ -651,13 +673,6 @@ class LegacyMUC(
         if p.nickname == old_nickname:
             p.nickname = new_nickname
 
-    async def fill_participants(self):
-        """
-        In here, call self.get_participant(), self.get_participant_by_contact(),
-        of self.get_user_participant() to make an initial list of participants.
-        """
-        pass
-
     async def __old_school_history(
         self,
         full_jid: JID,
@@ -895,8 +910,11 @@ class LegacyMUC(
 
         :param data: image data or None if the user meant to remove the avatar
         :param mime: the mime type of the image. Since this is provided by
-            the XMPP client, there can be no guarantee that this is correct
-        :return: A unique avatar identifier if possible
+            the XMPP client, there is no guarantee that this is valid or
+            correct.
+        :return: A unique avatar identifier, which will trigger
+            :py:meth:`slidge.core.muc.room.LegacyMUC.set_avatar`. Alternatively, None, if
+            :py:meth:`.LegacyMUC.set_avatar` is meant to be awaited somewhere else.
         """
         raise NotImplementedError
 

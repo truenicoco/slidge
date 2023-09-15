@@ -14,6 +14,7 @@ from typing import (
     Iterator,
     NamedTuple,
     Optional,
+    TypeVar,
     Union,
 )
 
@@ -23,10 +24,12 @@ from slixmpp.types import PresenceShows, PresenceTypes
 
 from ..core import config
 from .archive_msg import HistoryMessage
-from .util import KeyType, ValueType
 
 if TYPE_CHECKING:
     from .db import GatewayUser
+
+KeyType = TypeVar("KeyType")
+ValueType = TypeVar("ValueType")
 
 
 class CachedPresence(NamedTuple):

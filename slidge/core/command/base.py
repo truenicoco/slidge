@@ -91,6 +91,8 @@ class TableResult:
 class SearchResult(TableResult):
     """
     Results of the search command (search for contacts via Jabber Search)
+
+    Return type of :meth:`BaseSession.search`.
     """
 
     description: str = "Contact search results"

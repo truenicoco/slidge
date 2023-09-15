@@ -1,14 +1,18 @@
+"""
+Most of slidge public API can be imported from this top level module.
+"""
+
 import warnings
 
 from . import slixfix  # noqa: F401
-from .core import config as global_config
-from .core.command import FormField, SearchResult
-from .core.contact import LegacyContact, LegacyRoster
-from .core.gateway import BaseGateway
-from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant
-from .core.session import BaseSession
-from .util.db import GatewayUser, user_store
-from .util.types import MucType
+from .core import config as global_config  # noqa: F401
+from .core.command import FormField, SearchResult  # noqa: F401
+from .core.contact import LegacyContact, LegacyRoster  # noqa: F401
+from .core.gateway import BaseGateway  # noqa: F401
+from .core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant  # noqa: F401
+from .core.session import BaseSession  # noqa: F401
+from .util.db import GatewayUser, user_store  # noqa: F401
+from .util.types import MucType  # noqa: F401
 from .util.util import addLoggingLevel
 
 
@@ -22,15 +26,17 @@ warnings.formatwarning = formatwarning
 __all__ = [
     "BaseGateway",
     "BaseSession",
-    "GatewayUser",
-    "LegacyBookmarks",
-    "LegacyMUC",
-    "LegacyContact",
-    "LegacyParticipant",
-    "LegacyRoster",
-    "MucType",
-    "FormField",
-    "SearchResult",
+    # For backwards compatibility, these names are still importable from the
+    # to top-level slidge module, but this is deprecated.
+    # "GatewayUser",
+    # "LegacyBookmarks",
+    # "LegacyMUC",
+    # "LegacyContact",
+    # "LegacyParticipant",
+    # "LegacyRoster",
+    # "MucType",
+    # "FormField",
+    # "SearchResult",
     "user_store",
     "global_config",
 ]

@@ -54,7 +54,7 @@ class EncryptedShelf(shelve.DbfilenameShelf):
 @dataclasses.dataclass
 class GatewayUser:
     """
-    A dataclass representing a gateway user
+    A gateway user
     """
 
     bare_jid: str
@@ -84,14 +84,14 @@ class GatewayUser:
         return JID(self.bare_jid)
 
     def get(self, field: str, default: str = "") -> Optional[str]:
-        """
-        Get fields from the registration form (required to comply with slixmpp backend protocol)
-
-        :param field: Name of the field
-        :param default: Default value to return if the field is not present
-
-        :return: Value of the field
-        """
+        # """
+        # Get fields from the registration form (required to comply with slixmpp backend protocol)
+        #
+        # :param field: Name of the field
+        # :param default: Default value to return if the field is not present
+        #
+        # :return: Value of the field
+        # """
         return self.registration_form.get(field, default)
 
     def commit(self):

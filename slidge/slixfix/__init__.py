@@ -1,7 +1,5 @@
-"""
-This module contains patches for slixmpp; some have pending requests upstream
-and should be removed on the next slixmpp release.
-"""
+# This module contains patches for slixmpp; some have pending requests upstream
+# and should be removed on the next slixmpp release.
 
 # ruff: noqa: F401
 
