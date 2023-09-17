@@ -155,7 +155,7 @@ class Bookmarks(LegacyBookmarks):
     @staticmethod
     async def jid_local_part_to_legacy_id(local_part):
         if local_part != "room":
-            raise XMPPError("not-found")
+            raise XMPPError("item-not-found")
         else:
             return local_part
 
@@ -1346,6 +1346,59 @@ class TestContact(SlidgeTest):
               <priority>0</priority>
             </presence>
             """
+        )
+
+    def test_vcard_temp(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = True
+        self.recv(  # language=XML
+            """
+            <iq from='romeo@montague.lit/orchard'
+                to='juliet@aim.shakespeare.lit'
+                type='get'>
+              <vCard xmlns='vcard-temp' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq xmlns="jabber:component:accept"
+                from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit/orchard"
+                type="result"
+                id="1">
+              <vCard xmlns="vcard-temp" />
+            </iq>
+            """
+        )
+        juliet.set_vcard(full_name="Juliet Something")
+        self.next_sent()
+        self.recv(  # language=XML
+            """
+            <iq from='romeo@montague.lit/orchard'
+                to='juliet@aim.shakespeare.lit'
+                type='get'>
+              <vCard xmlns='vcard-temp' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit/orchard"
+                type="result"
+                id="2">
+              <vCard xmlns="vcard-temp">
+                <impp>
+                  <uri xmlns="urn:ietf:params:xml:ns:vcard-4.0">xmpp:juliet@aim.shakespeare.lit</uri>
+                </impp>
+                <fn>
+                  <text xmlns="urn:ietf:params:xml:ns:vcard-4.0">Juliet Something</text>
+                </fn>
+              </vCard>
+            </iq>
+            """,
+            use_values=False,
         )
 
     def test_probe(self):

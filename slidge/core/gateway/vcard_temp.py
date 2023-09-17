@@ -1,7 +1,12 @@
+from copy import copy
 from typing import TYPE_CHECKING
 
 from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0292.stanza import NS as VCard4NS
+
+from ...contact import LegacyContact
+from ...group import LegacyParticipant
 
 if TYPE_CHECKING:
     from .base import BaseGateway
@@ -28,22 +33,31 @@ class VCardTemp:
             return await self.__handle_set_vcard_temp(iq)
 
     async def __handle_get_vcard_temp(self, iq: Iq):
-        muc = await self.xmpp.get_muc_from_stanza(iq)
-        to = iq.get_to()
+        session = self.xmpp.get_session_from_stanza(iq)
+        entity = await session.get_contact_or_group_or_participant(iq.get_to())
+        if not entity:
+            raise XMPPError("item-not-found")
 
-        if nick := to.resource:
-            participant = await muc.get_participant(nick, raise_if_not_found=True)
-            if not (contact := participant.contact):
+        if isinstance(entity, LegacyParticipant):
+            if not (contact := entity.contact):
                 raise XMPPError("item-not-found", "This participant has no contact")
+            vcard = await self.xmpp.vcard.get_vcard(contact.jid, iq.get_from())
             avatar = contact.get_avatar()
         else:
-            avatar = muc.get_avatar()
-        if avatar is None:
-            raise XMPPError("item-not-found")
-        data = avatar.data
+            avatar = entity.get_avatar()
+            if isinstance(entity, LegacyContact):
+                vcard = await self.xmpp.vcard.get_vcard(entity.jid, iq.get_from())
+            else:
+                vcard = None
         v = self.xmpp.plugin["xep_0054"].make_vcard()
-        v["PHOTO"]["BINVAL"] = data.get_value()
-        v["PHOTO"]["TYPE"] = "image/png"
+        if avatar is not None and avatar.data:
+            v["PHOTO"]["BINVAL"] = avatar.data.get_value()
+            v["PHOTO"]["TYPE"] = "image/png"
+        if vcard:
+            for el in vcard.xml:
+                new = copy(el)
+                new.tag = el.tag.replace(f"{{{VCard4NS}}}", "")
+                v.append(new)
         reply = iq.reply()
         reply.append(v)
         reply.send()

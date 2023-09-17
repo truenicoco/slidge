@@ -2455,12 +2455,10 @@ class TestMuc(Base):
         self.send(  # language=XML
             """
             <iq from="room-private@aim.shakespeare.lit"
-                type="error"
+                type="result"
                 to="romeo@montague.lit/gajim"
                 id="get1">
-              <error type="cancel">
-                <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-              </error>
+              <vCard xmlns="vcard-temp" />
             </iq>
             """,
             use_values=False,
