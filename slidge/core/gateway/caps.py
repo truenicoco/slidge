@@ -5,7 +5,7 @@ from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.xmlstream import StanzaBase
 
-from ..contact import LegacyContact
+from ...contact import LegacyContact
 
 if TYPE_CHECKING:
     from .base import BaseGateway

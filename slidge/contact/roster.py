@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Generic, Optional, Type
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
-from ...util import SubclassableOnce
-from ...util.types import LegacyContactType, LegacyUserIdType
-from ..mixins.lock import NamedLockMixin
+from ..core.mixins.lock import NamedLockMixin
+from ..util import SubclassableOnce
+from ..util.types import LegacyContactType, LegacyUserIdType
 from .contact import LegacyContact
 
 if TYPE_CHECKING:
-    from ..session import BaseSession
+    from ..core.session import BaseSession
 
 
 class ContactIsUser(Exception):

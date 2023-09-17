@@ -3,9 +3,9 @@ import slixmpp.test
 from slixmpp import ComponentXMPP
 from slixmpp.plugins.xep_0050.adhoc import XEP_0050
 
-import slidge.core.command.adhoc
-from slidge.core.command import Command, Confirmation
-from slidge.core.command.adhoc import AdhocProvider
+import slidge.command.adhoc
+from slidge.command import Command, Confirmation
+from slidge.command.adhoc import AdhocProvider
 from slidge.util.test import SlixTestPlus
 
 
@@ -18,7 +18,7 @@ class MockSession:
 @pytest.fixture(autouse=True)
 def mock(monkeypatch, MockRE):
     monkeypatch.setattr(
-        slidge.core.command.base, "is_admin", lambda j: j.username.startswith("admin")
+        slidge.command.base, "is_admin", lambda j: j.username.startswith("admin")
     )
     monkeypatch.setattr(Command, "_get_session", lambda s, j: MockSession(j))
     monkeypatch.setattr(

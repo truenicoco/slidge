@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 import cryptography.fernet
 from slixmpp import JID
 
+from slidge.contact import LegacyContact
 from slidge.core import config
-from slidge.core.contact import LegacyContact
 from slidge.util import (
     ABCSubclassableOnceAtMost,
     SubclassableOnce,

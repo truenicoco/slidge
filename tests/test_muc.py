@@ -13,11 +13,11 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import xep_0082
 
 import slidge.core.mixins.message_maker
-import slidge.core.muc.room
+import slidge.group.room
 import slidge.util.sql
 from slidge import *
 from slidge import LegacyBookmarks, LegacyContact, LegacyParticipant, LegacyRoster
-from slidge.core.muc.archive import MessageArchive
+from slidge.group.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
     LegacyContactType,
@@ -251,13 +251,13 @@ class Base(SlidgeTest):
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        slidge.core.muc.room.uuid4 = (
+        slidge.group.room.uuid4 = (
             slidge.core.mixins.message_maker.uuid4
         ) = uuid.uuid4 = lambda: "uuid"
         self.get_romeo_session().logged = True
 
     def tearDown(self):
-        slidge.core.muc.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
+        slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
         slidge.util.sql.db.mam_nuke()
 
     @staticmethod
@@ -3132,7 +3132,7 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
     def test_set_avatar(self):
         muc = self.get_private_muc(resources=("gajim",))
         with unittest.mock.patch(
-            "slidge.core.muc.room.LegacyMUC.admin_set_avatar", return_value=1
+            "slidge.group.room.LegacyMUC.admin_set_avatar", return_value=1
         ):
             self.recv(  # language=XML
                 f"""

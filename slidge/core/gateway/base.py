@@ -15,6 +15,12 @@ from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
+from ... import command  # noqa: F401
+from ...command.adhoc import AdhocProvider
+from ...command.admin import Exec
+from ...command.base import Command, FormField
+from ...command.chat_command import ChatCommandProvider
+from ...command.register import RegistrationType
 from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
@@ -22,11 +28,6 @@ from ...util.db import GatewayUser, user_store
 from ...util.sql import db
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
-from ..command.adhoc import AdhocProvider
-from ..command.admin import Exec
-from ..command.base import Command, FormField
-from ..command.chat_command import ChatCommandProvider
-from ..command.register import RegistrationType
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
@@ -43,7 +44,7 @@ from .session_dispatcher import SessionDispatcher
 from .vcard_temp import VCardTemp
 
 if TYPE_CHECKING:
-    from ..muc.room import LegacyMUC
+    from ...group.room import LegacyMUC
 
 
 class BaseGateway(
@@ -285,6 +286,7 @@ class BaseGateway(
                 else:
                     continue
             c = cls(self)
+            log.debug("Registering %s", cls)
             self.__adhoc_handler.register(c)
             self.__chat_commands_handler.register(c)
 

@@ -6,8 +6,8 @@ from typing import Any, Optional
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
-from ...util.db import user_store
-from ...util.types import AnyBaseSession
+from ..util.db import user_store
+from ..util.types import AnyBaseSession
 from .base import (
     Command,
     CommandAccess,

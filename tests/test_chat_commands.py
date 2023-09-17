@@ -2,8 +2,8 @@ import pytest
 import slixmpp.test
 from slixmpp import JID
 
-import slidge.core.command.chat_command
-from slidge.core.command import Command, Confirmation
+import slidge.command.chat_command
+from slidge.command import Command, Confirmation
 from slidge.core.gateway.delivery_receipt import DeliveryReceipt
 from slidge.util.test import SlixTestPlus
 
@@ -66,7 +66,7 @@ class TestChatCommands(SlixTestPlus):
             jid="slidge.whatever.ass",
             server="whatever.ass",
         )
-        self.commands = slidge.core.command.chat_command.ChatCommandProvider(self.xmpp)
+        self.commands = slidge.command.chat_command.ChatCommandProvider(self.xmpp)
         self.commands.register(CommandAdmin(self.xmpp))
         self.commands.register(CommandAdminConfirmFail(self.xmpp))
         self.xmpp.delivery_receipt = DeliveryReceipt(self.xmpp)

@@ -6,7 +6,7 @@ from slixmpp.plugins.base import BasePlugin, register_plugin
 from slixmpp.plugins.xep_0292.stanza import NS, VCard4
 from slixmpp.types import JidStr
 
-from slidge.core.contact.contact import LegacyContact
+from slidge.contact import LegacyContact
 
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway

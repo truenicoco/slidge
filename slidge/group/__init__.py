@@ -2,6 +2,9 @@
 Everything related to groups.
 """
 
-from ..core.muc import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from ..util.types import MucType
+from .bookmarks import LegacyBookmarks
+from .participant import LegacyParticipant
+from .room import LegacyMUC
 
 __all__ = ("LegacyBookmarks", "LegacyParticipant", "LegacyMUC", "MucType")

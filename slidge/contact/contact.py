@@ -9,17 +9,17 @@ from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import MessageTypes
 
-from ...util import SubclassableOnce
-from ...util.types import LegacyUserIdType, MessageOrPresenceTypeVar
-from .. import config
-from ..mixins import FullCarbonMixin
-from ..mixins.avatar import AvatarMixin
-from ..mixins.disco import ContactAccountDiscoMixin
-from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
+from ..core import config
+from ..core.mixins import FullCarbonMixin
+from ..core.mixins.avatar import AvatarMixin
+from ..core.mixins.disco import ContactAccountDiscoMixin
+from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
+from ..util import SubclassableOnce
+from ..util.types import LegacyUserIdType, MessageOrPresenceTypeVar
 
 if TYPE_CHECKING:
-    from ..muc import LegacyParticipant
-    from ..session import BaseSession
+    from ..core.session import BaseSession
+    from ..group.participant import LegacyParticipant
 
 
 class LegacyContact(

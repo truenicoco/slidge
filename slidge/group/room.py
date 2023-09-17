@@ -13,26 +13,26 @@ from slixmpp.plugins.xep_0060.stanza import Item
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.xmlstream import ET
 
-from ...util import ABCSubclassableOnceAtMost
-from ...util.types import (
+from ..contact.roster import ContactIsUser
+from ..core import config
+from ..core.mixins.avatar import AvatarMixin
+from ..core.mixins.disco import ChatterDiscoMixin
+from ..core.mixins.lock import NamedLockMixin
+from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
+from ..util import ABCSubclassableOnceAtMost
+from ..util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
     LegacyUserIdType,
     MucType,
 )
-from .. import config
-from ..contact.roster import ContactIsUser
-from ..mixins.avatar import AvatarMixin
-from ..mixins.disco import ChatterDiscoMixin
-from ..mixins.lock import NamedLockMixin
-from ..mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 from .archive import MessageArchive
 
 if TYPE_CHECKING:
     from ..contact import LegacyContact
-    from ..gateway import BaseGateway
-    from ..session import BaseSession
+    from ..core.gateway import BaseGateway
+    from ..core.session import BaseSession
 
 ADMIN_NS = "http://jabber.org/protocol/muc#admin"
 
@@ -51,7 +51,7 @@ class LegacyMUC(
     """
     A room, a.k.a. a Multi-User Chat.
 
-    MUC instances are obtained by calling :py:meth:`slidge.core.muc.bookmarks.LegacyBookmarks`
+    MUC instances are obtained by calling :py:meth:`slidge.group.bookmarks.LegacyBookmarks`
     on the user's :py:class:`slidge.core.session.BaseSession`.
     """
 
@@ -291,7 +291,8 @@ class LegacyMUC(
         return self.type == MucType.CHANNEL
 
     async def __get_subject_setter_participant(self):
-        from ..contact import LegacyContact
+        from slidge.contact import LegacyContact
+
         from .participant import LegacyParticipant
 
         who = self.subject_setter
@@ -913,7 +914,7 @@ class LegacyMUC(
             the XMPP client, there is no guarantee that this is valid or
             correct.
         :return: A unique avatar identifier, which will trigger
-            :py:meth:`slidge.core.muc.room.LegacyMUC.set_avatar`. Alternatively, None, if
+            :py:meth:`slidge.group.room.LegacyMUC.set_avatar`. Alternatively, None, if
             :py:meth:`.LegacyMUC.set_avatar` is meant to be awaited somewhere else.
         """
         raise NotImplementedError

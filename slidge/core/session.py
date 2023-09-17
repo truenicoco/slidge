@@ -7,6 +7,10 @@ from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import PresenceShows
 
+from ..command import SearchResult
+from ..contact import LegacyContact, LegacyRoster
+from ..group.bookmarks import LegacyBookmarks
+from ..group.room import LegacyMUC
 from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
 from ..util.sql import SQLBiDict
@@ -17,15 +21,11 @@ from ..util.types import (
     RecipientType,
     ResourceDict,
 )
-from .command.base import SearchResult
-from .contact import LegacyContact, LegacyRoster
-from .muc.bookmarks import LegacyBookmarks
-from .muc.room import LegacyMUC
 
 if TYPE_CHECKING:
+    from ..group.participant import LegacyParticipant
     from ..util.types import Sender
     from .gateway import BaseGateway
-    from .muc.participant import LegacyParticipant
 
 
 class CachedPresence(NamedTuple):

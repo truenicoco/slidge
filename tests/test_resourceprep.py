@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 from slixmpp import JID
 
-from slidge.core.muc import LegacyParticipant
+from slidge.group import LegacyParticipant
 
 
 @pytest.fixture

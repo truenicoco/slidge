@@ -14,16 +14,16 @@ from slixmpp.stringprep import StringprepError, resourceprep
 from slixmpp.types import MessageTypes, OptJid
 from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
-from ...util import SubclassableOnce, strip_illegal_chars
-from ...util.sql import CachedPresence
-from ...util.types import (
+from ..contact import LegacyContact
+from ..core.mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
+from ..util import SubclassableOnce, strip_illegal_chars
+from ..util.sql import CachedPresence
+from ..util.types import (
     LegacyMessageType,
     MessageOrPresenceTypeVar,
     MucAffiliation,
     MucRole,
 )
-from ..contact import LegacyContact
-from ..mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 
 if TYPE_CHECKING:
     from .room import LegacyMUC

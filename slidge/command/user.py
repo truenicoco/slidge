@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 from slixmpp import JID  # type:ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
 
-from ...util.types import AnyBaseSession
+from ..util.types import AnyBaseSession
 from .base import (
     Command,
     CommandAccess,

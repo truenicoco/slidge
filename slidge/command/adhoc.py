@@ -12,8 +12,8 @@ from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:
-    from ..gateway.base import BaseGateway
-    from ..session import BaseSession
+    from ..core.gateway.base import BaseGateway
+    from ..core.session import BaseSession
 
 
 AdhocSessionType = dict[str, Any]

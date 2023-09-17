@@ -22,13 +22,13 @@ from slixmpp.plugins.xep_0004 import (
 )
 from slixmpp.types import JidStr
 
-from ...util.db import user_store
-from ...util.types import AnyBaseSession, FieldType
-from .. import config
+from ..core import config
+from ..util.db import user_store
+from ..util.types import AnyBaseSession, FieldType
 
 if TYPE_CHECKING:
-    from ..gateway import BaseGateway
-    from ..session import BaseSession
+    from ..core.gateway import BaseGateway
+    from ..core.session import BaseSession
 
 
 HandlerType = Union[

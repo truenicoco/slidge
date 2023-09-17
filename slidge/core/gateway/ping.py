@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
+from ...group import LegacyMUC
 from ...util.db import user_store
-from ..muc import LegacyMUC
 
 if TYPE_CHECKING:
     from .base import BaseGateway

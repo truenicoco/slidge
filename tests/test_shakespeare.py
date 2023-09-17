@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import logging
 import re
 import tempfile
@@ -1430,7 +1431,7 @@ class TestContact(SlidgeTest):
         sub = self.get_presence("subscribe")
 
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_request"
+            "slidge.contact.LegacyContact.on_friend_request"
         ) as mock:
             self.recv(sub)
             mock.assert_not_awaited()
@@ -1446,7 +1447,7 @@ class TestContact(SlidgeTest):
         sub = self.get_presence("subscribe")
 
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_request"
+            "slidge.contact.LegacyContact.on_friend_request"
         ) as mock:
             self.recv(sub)
             mock.assert_awaited_once()
@@ -1473,7 +1474,7 @@ class TestContact(SlidgeTest):
         sub = self.get_presence("subscribe")
 
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_request"
+            "slidge.contact.LegacyContact.on_friend_request"
         ) as mock:
             self.recv(sub)
             mock.assert_awaited_once()
@@ -1502,7 +1503,7 @@ class TestContact(SlidgeTest):
         assert self.next_sent() is None
 
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_accept"
+            "slidge.contact.LegacyContact.on_friend_accept"
         ) as mock:
             self.recv(  # language=XML
                 f"""
@@ -1528,7 +1529,7 @@ class TestContact(SlidgeTest):
         assert self.next_sent() is None
 
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_delete"
+            "slidge.contact.LegacyContact.on_friend_delete"
         ) as mock:
             self.recv(  # language=XML
                 f"""
@@ -1543,7 +1544,7 @@ class TestContact(SlidgeTest):
 
         juliet.is_friend = True
         with unittest.mock.patch(
-            "slidge.core.contact.LegacyContact.on_friend_delete"
+            "slidge.contact.LegacyContact.on_friend_delete"
         ) as mock:
             self.recv(  # language=XML
                 f"""

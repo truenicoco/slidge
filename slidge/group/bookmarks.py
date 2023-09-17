@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING, Generic, Type
 from slixmpp import JID
 from slixmpp.jid import _unescape_node
 
-from ...util import SubclassableOnce
-from ...util.types import LegacyGroupIdType, LegacyMUCType
 from ..contact.roster import ESCAPE_TABLE
-from ..mixins.lock import NamedLockMixin
+from ..core.mixins.lock import NamedLockMixin
+from ..util import SubclassableOnce
+from ..util.types import LegacyGroupIdType, LegacyMUCType
 from .room import LegacyMUC
 
 if TYPE_CHECKING:
-    from ..session import BaseSession
+    from slidge.core.session import BaseSession
 
 
 class LegacyBookmarks(

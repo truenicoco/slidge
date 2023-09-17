@@ -6,7 +6,7 @@ from slixmpp import Message, register_stanza_plugin
 from slixmpp.plugins.xep_0203 import stanza
 from slixmpp.plugins.xep_0359 import stanza as stanza_id
 
-from slidge.core.muc.archive import MessageArchive
+from slidge.group.archive import MessageArchive
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ from slixmpp.types import JidStr, MessageTypes
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 
 if TYPE_CHECKING:
-    from ..gateway import BaseGateway
+    from ..core.gateway import BaseGateway
 
 
 class ChatCommandProvider:

@@ -22,11 +22,10 @@ from slixmpp import Message, Presence
 from slixmpp.types import PresenceShows
 
 if TYPE_CHECKING:
-    from ..core.contact import LegacyContact
-    from ..core.muc.participant import LegacyParticipant
-    from ..core.muc.room import LegacyMUC
+    from ..contact import LegacyContact
     from ..core.pubsub import PepItem
     from ..core.session import BaseSession
+    from ..group.participant import LegacyMUC, LegacyParticipant
     from .db import GatewayUser
 
     AnyBaseSession = BaseSession[Any, Any]

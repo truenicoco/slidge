@@ -18,7 +18,7 @@ from .attachment import AttachmentMixin
 from .message_maker import MessageMaker
 
 if TYPE_CHECKING:
-    from ..muc import LegacyMUC
+    from ...group import LegacyMUC
 
 
 class ChatStateMixin(MessageMaker):

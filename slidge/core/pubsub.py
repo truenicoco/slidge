@@ -24,11 +24,11 @@ from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
+from ..contact.contact import LegacyContact
 from ..util.db import GatewayUser, user_store
 from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
-from .contact import LegacyContact
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:

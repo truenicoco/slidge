@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import Iq, Message
 
-from ...util.archive_msg import HistoryMessage
-from ...util.db import GatewayUser
-from ...util.sql import db
+from ..util.archive_msg import HistoryMessage
+from ..util.db import GatewayUser
+from ..util.sql import db
 
 if TYPE_CHECKING:
     from .participant import LegacyParticipant

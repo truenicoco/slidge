@@ -15,8 +15,8 @@ import qrcode
 from slixmpp import JID, Iq
 from slixmpp.exceptions import XMPPError
 
-from ...util.db import GatewayUser
-from .. import config
+from ..core import config
+from ..util.db import GatewayUser
 from .base import Command, CommandAccess, Form, FormField, FormValues
 
 

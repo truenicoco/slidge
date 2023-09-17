@@ -6,11 +6,11 @@ from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 
 from ... import LegacyContact
+from ...group.room import LegacyMUC
 from ...util.sql import db
 from ...util.types import Recipient, RecipientType
 from ...util.util import merge_resources, remove_emoji_variation_selector_16
 from .. import config
-from ..muc.room import LegacyMUC
 from ..session import BaseSession
 
 if TYPE_CHECKING:

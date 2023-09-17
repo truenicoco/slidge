@@ -7,7 +7,7 @@ from typing import Optional
 from slixmpp import JID
 
 from slidge import BaseGateway, FormField, GatewayUser
-from slidge.core.command.register import RegistrationType
+from slidge.command.register import RegistrationType
 
 from .legacy_client import SuperDuperClient
 from .util import ASSETS_DIR

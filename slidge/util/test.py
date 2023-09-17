@@ -32,8 +32,8 @@ from slidge import (
     user_store,
 )
 
+from ..command import Command
 from ..core import config
-from ..core.command import Command
 from ..core.config import _TimedeltaSeconds
 
 
@@ -286,7 +286,7 @@ def reset_subclasses():
     LegacyMUC.reset_subclass()
     LegacyBookmarks.reset_subclass()
     LegacyParticipant.reset_subclass()
-    reset_commands()
+    # reset_commands()
 
 
 def reset_commands():
