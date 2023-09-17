@@ -199,8 +199,18 @@ class LegacyParticipant(
         if self.is_user:
             codes.add(110)
         if not self.muc.is_anonymous:
-            if self.is_user and user_full_jid:
-                p["muc"]["jid"] = user_full_jid
+            if self.is_user:
+                if user_full_jid:
+                    p["muc"]["jid"] = user_full_jid
+                else:
+                    jid = copy(self.user.jid)
+                    try:
+                        jid.resource = next(
+                            iter(self.muc.user_resources)  # type:ignore
+                        )
+                    except StopIteration:
+                        jid.resource = "pseudo-resource"
+                    p["muc"]["jid"] = self.user.jid
                 codes.add(100)
             elif self.contact:
                 p["muc"]["jid"] = self.contact.jid
