@@ -1,31 +1,40 @@
 Glossary
 ========
 
-.. glossary::
-    User
-        An XMPP user using slidge.
 
-    Legacy [#f1]_ network
-        The messaging network slidge communicates with.
+
+.. glossary::
+    :sorted:
+
+    User
+        Someone using slidge, ie, someone who has an XMPP account and registered
+        to a slidge-based XMPP component.
+
+    Legacy Network
+        The messaging network slidge (and the :term:`User`) communicates with.
 
     Legacy Contact
-        A user of the legacy network that can communicate with the xmpp user.
+        Someone using the legacy network to communicate with the :term:`User`.
 
-    Official client
+    Official Client
         The reference client(s) for a legacy network. Examples: telegram-android
         and telegram-desktop for the telegram network.
 
     Carbons
-        In the XMPP world, carbons are messages sent from one client to another
-        to rapidly synchronize chat history views. In slidge, this refers to
-        actions of the user on an official client. They are synchronized between
-        official clients and XMPP using carbons.
+        In the XMPP world, carbons (:xep:`0280`) are messages sent by the XMPP
+        server to keep outgoing chat history in sync between different clients
+        connected to the same XMPP account (eg, a desktop and mobile app).
+        In slidge however, this refers to actions of the :term:`User` done from
+        an :term:`Official client`.
 
     XMPP Entity
-        An XMPP "recipient", which has a JID. Can be either a
-        :class:`slidge.LegacyContact`,
-        a :class:`slidge.LegacyMUC`, or
-        a :class:`slidge.LegacyParticipant`.
+        Someone or something that has a JID, such as
+        an XMPP user account (eg, ``someone@example.org``),
+        an XMPP component (eg, ``slidge.example.org``),
+        an XMPP Multi-User Chat (MUC in short,
+        eg ``cool-group@groups.example.org``),
+        an XMPP server (eg, ``example.org``),
+        … basically anything that has a JID.
 
     JID Local Part
         The "username" part of a JID, eg ``username`` in
@@ -44,7 +53,13 @@ Glossary
         A way to interact with the gateway component via chat messages, a bit
         like a shell.
 
-.. rubric:: Footnotes
+    Command
+        Either an :term:`Ad-hoc Command` or a :term:`Chatbot Command`.
+        Slidge provides the same commands via both interfaces, so they can be
+        used on any client.
 
-.. [#f1] "Legacy" may sound weird since XMPP is pretty old now, but this attempts to follow
-    the convention of :xep:`0100`
+    Roster
+        This is how the "contact list" is called in XMPP.
+
+"Legacy" may sound weird since XMPP is pretty old now, but slidge follows
+the convention of :xep:`0100`.

@@ -1,20 +1,18 @@
 Finding legacy contacts
 =======================
 
-After registration, slidge should add your contacts puppet XMPP accounts to your
-roster.
-If you want to message someone that was not automagically added by slidge, you can guess
-their puppet JIDs when the username part is trivial, such as a phone number or
-``name.surname``.
-In case you don't know the username part of someone, you can use slidge's
-search feature, either with Jabber Search (:xep:`0055`) if your client support it,
-or via the "find XXX" chat command (direct message to the gateway, similar to the
-fallback registration workflow).
+After registration, slidge should add your
+:term:`legacy contacts <Legacy Contact>` to your :term:`Roster`.
 
-.. note::
-  Currently, slidge `does not provide <https://todo.sr.ht/~nicoco/slidge/28>`_
-  a "friend request workflow", ie, adding/removing legacy contacts to your roster
-  does not trigger anything on the legacy network side.
-  Use official clients to add/remove contacts to your legacy roster.
-  This only applies to network where there is
-  such notion though, such as facebook, discord, skype and steam.
+If you want to message someone that was not automagically added by slidge, you
+can sometimes guess their JIDs when the :term:`JID Local Part` is
+human-readable, such as a phone number or something like ``name.surname``.
+
+Often times though, the :term:`JID Local Part` of
+:term:`legacy contacts <Legacy Contact>`, will be something like a number or a
+random word.
+Since this usually cannot be guessed, you have to use the "find" :term:`Command`
+(or Jabber Search (:xep:`0055`) if your client support it).
+
+If you try to subscribe to a :term:`Legacy Contact`'s presence, this will
+generally trigger a "friend/contact request" on the :term:`Legacy network`.

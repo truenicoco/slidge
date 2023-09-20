@@ -2,20 +2,7 @@
 For users
 =========
 
-.. note::
-
-  These are the generic user docs for slidge. You might be interested in these
-  docs too, for legacy network-specific opotions:
-
-  - `slidgnal <https://slidge.im/slidgnal/user.html>`_
-  - `slidge-whatsapp <https://slidge.im/slidge-whatsapp/user.html>`_
-  - `slidgram <https://slidge.im/slidgram/user.html>`_
-  - `slidcord <https://slidge.im/slidcord/user.html>`_
-  - `matteridge <https://slidge.im/matteridge/user.html>`_
-  - `sleamdge <https://slidge.im/sleamdge/user.html>`_
-  - `skidge <https://slidge.im/skidge/user.html>`_
-  - `messlidger <https://slidge.im/messlidger/user.html>`_
-  - `matridge <https://slidge.im/matridge/user.html>`_
+.. include:: note.rst
 
 Slidge is an XMPP server component that can be used to send and receive messages with
 `any XMPP client <https://xmpp.org/software/clients>`_,
