@@ -10,8 +10,8 @@ include = ["slidge/util/schema.sql"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-qrcode = ">=7.4.1"
-Pillow = ">=8.1.0"
+qrcode = "^7.4.1"
+Pillow = "^10"
 aiohttp = {version = "^3.8.3", extras = ["speedups"]}
 ConfigArgParse = "^1.5.3"
 pickle-secure = "^0.99.9"
