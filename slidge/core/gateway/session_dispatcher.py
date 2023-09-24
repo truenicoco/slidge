@@ -46,26 +46,6 @@ class SessionDispatcher:
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
             )
 
-    async def _dispatch(self, m: Union[Message, Presence], cb: Callable):
-        xmpp = self.xmpp
-        if m.get_from().server == xmpp.boundjid.bare:
-            log.debug("Ignoring echo")
-            return
-        if m.get_to() == xmpp.boundjid.bare and isinstance(m, Message):
-            log.debug("Ignoring message to component")
-            return
-        s = xmpp.get_session_from_stanza(m)
-        await s.wait_for_ready()
-        try:
-            await cb(s, m)
-        except XMPPError:
-            raise
-        except NotImplementedError:
-            log.debug("Legacy module does not implement %s", cb)
-        except Exception as e:
-            s.log.error("Failed to handle incoming stanza: %s", m, exc_info=e)
-            raise XMPPError("internal-server-error", str(e))
-
     async def __get_session(self, stanza: Union[Message, Presence]) -> BaseSession:
         xmpp = self.xmpp
         if stanza.get_from().server == xmpp.boundjid.bare:
