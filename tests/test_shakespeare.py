@@ -1640,26 +1640,6 @@ class TestCarbon(SlidgeTest):
         user_store.add(
             JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        self.get_romeo_session().logged = True
-
-    @staticmethod
-    def get_romeo_session() -> Session:
-        return BaseSession.get_self_or_unique_subclass().from_jid(
-            JID("romeo@shakespeare.lit")
-        )
-
-    def get_juliet(self) -> LegacyContact:
-        session = self.get_romeo_session()
-        return self.run_coro(session.contacts.by_legacy_id(123))
-
-    def test_carbon_send(self):
-        orig = AttachmentMixin._AttachmentMixin__get_url
-
-        async def get_url(self, file_path, *a, **k):
-            return False, file_path, "URL"
-
-        AttachmentMixin._AttachmentMixin__get_url = get_url
-
         self.recv(  # language=XML
             """
             <message to="aim.shakespeare.lit"
@@ -1673,6 +1653,25 @@ class TestCarbon(SlidgeTest):
             </message>
             """
         )
+        self.get_romeo_session().logged = True
+
+    @staticmethod
+    def get_romeo_session() -> Session:
+        return BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@shakespeare.lit")
+        )
+
+    def get_juliet(self) -> LegacyContact:
+        session = self.get_romeo_session()
+        return self.run_coro(session.contacts.by_legacy_id(123))
+
+    def test_carbon_send_file(self):
+        orig = AttachmentMixin._AttachmentMixin__get_url
+
+        async def get_url(self, file_path, *a, **k):
+            return False, file_path, "URL"
+
+        AttachmentMixin._AttachmentMixin__get_url = get_url
 
         juliet = self.get_juliet()
         juliet.send_text("TEXT", 445, carbon=True)
@@ -1763,6 +1762,52 @@ class TestCarbon(SlidgeTest):
             """
             )
         AttachmentMixin._AttachmentMixin__get_url = orig
+
+    def test_carbon_ignore(self):
+        """
+        Ensure we don't react to stanzas we send to ourselves.
+        """
+        juliet = self.get_juliet()
+        juliet.send_text("TEXT", 123456, carbon=True)
+        self.send(  # language=XML
+            """
+            <message xmlns="jabber:component:accept"
+                     to="shakespeare.lit"
+                     from="aim.shakespeare.lit"
+                     type="normal">
+              <privilege xmlns="urn:xmpp:privilege:2">
+                <forwarded xmlns="urn:xmpp:forward:0">
+                  <message xmlns="jabber:client"
+                           type="chat"
+                           from="romeo@shakespeare.lit"
+                           to="juliet@aim.shakespeare.lit"
+                           id='123456'>
+                    <body>TEXT</body>
+                    <active xmlns="http://jabber.org/protocol/chatstates" />
+                    <store xmlns="urn:xmpp:hints" />
+                    <markable xmlns="urn:xmpp:chat-markers:0" />
+                  </message>
+                </forwarded>
+              </privilege>
+            </message>
+            """
+        )
+        with unittest.mock.patch("test_shakespeare.Session.send_text") as mock:
+            mock.get_id = lambda *a: "msg_id"
+            self.recv(  # language=XML
+                """
+            <message type="chat"
+                     from="romeo@shakespeare.lit"
+                     to="juliet@aim.shakespeare.lit"
+                     id='123456'>
+              <body>TEXT</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <store xmlns="urn:xmpp:hints" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+            </message>
+            """
+            )
+            mock.assert_not_awaited()
 
 
 class TestUserGetsOnline(Base):

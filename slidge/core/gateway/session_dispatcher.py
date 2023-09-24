@@ -281,6 +281,9 @@ class SessionDispatcher:
                 await e.echo(msg, None)
 
     async def on_chatstate_active(self, msg: Message):
+        if msg["body"]:
+            # if there is a body, it's handled in self.on_legacy_message()
+            return
         session, entity, thread = await self.__get_session_entity_thread(msg)
         await session.active(entity, thread)
 
