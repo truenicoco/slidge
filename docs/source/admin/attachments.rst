@@ -27,7 +27,7 @@ but you might want to restrict which users can read this directory.
 
 For the following examples, in slidge's config,
 you would have ``no-upload-path=/var/lib/slidge/attachments``.
-  
+
 Example 1: prosody's http_files
 -------------------------------
 
@@ -60,12 +60,12 @@ Here, ``no-upload-url-prefix`` would be ``http://example.org/slidge/``.
       # the section below is for slidge
       location /slidge {
         #  Must be the same value as slidge's no-upload-path
-        alias /var/lib/slidge/attachments/;  
+        alias /var/lib/slidge/attachments/;
       }
     }
 
 See the `nginx docs <https://docs.nginx.com/nginx/admin-guide/web-server/serving-static-content/>`_ for more info.
-    
+
 HTTP File Upload
 ================
 
@@ -94,14 +94,18 @@ In slidge's config: ``upload-service=example.org``
 
   Component "upload.example.org" "http_file_share"
     -- max file size: 16 MiB
-    http_file_share_size_limit = 16*1024*1024 
-    
+    http_file_share_size_limit = 16*1024*1024
+
     -- max per day per slidge component: 100 MiB
-    http_file_share_daily_quota = 100*1024*1024 
-    
+    http_file_share_daily_quota = 100*1024*1024
+
     -- 1 GiB total
     http_file_share_global_quota = 1024*1024*1024
-  
+
+    -- starting from prosody > 0.12 you will need to add one of these two lines:
+    -- server_user_role = "prosody:registered"
+    -- http_file_share_access = { "superduper.example.org" }
+
 More info: `mod_http_file_share <https://prosody.im/doc/modules/mod_http_file_share>`_.
 
 Example 2: ejabberd mod_http_upload
