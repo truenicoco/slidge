@@ -768,7 +768,7 @@ class TestAimShakespeareBase(Base):
               <query xmlns="http://jabber.org/protocol/disco#info">
                 <identity category="conference"
                           type="text"
-                          name="Slidged rooms" />
+                          name="SLIDGE TEST" />
                 <identity category="account"
                           type="registered"
                           name="SLIDGE TEST" />

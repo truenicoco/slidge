@@ -252,7 +252,7 @@ class BaseGateway(
             self.plugin["xep_0030"].add_feature(self.plugin["xep_0421"].namespace)
             self.plugin["xep_0030"].add_identity(
                 category="conference",
-                name="Slidged rooms",
+                name=self.COMPONENT_NAME,
                 itype="text",
                 jid=self.boundjid,
             )
