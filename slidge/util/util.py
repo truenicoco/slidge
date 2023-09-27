@@ -172,11 +172,14 @@ def addLoggingLevel(
         methodName = levelName.lower()
 
     if hasattr(logging, levelName):
-        raise AttributeError("{} already defined in logging module".format(levelName))
+        log.debug("{} already defined in logging module".format(levelName))
+        return
     if hasattr(logging, methodName):
-        raise AttributeError("{} already defined in logging module".format(methodName))
+        log.debug("{} already defined in logging module".format(methodName))
+        return
     if hasattr(logging.getLoggerClass(), methodName):
-        raise AttributeError("{} already defined in logger class".format(methodName))
+        log.debug("{} already defined in logger class".format(methodName))
+        return
 
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
