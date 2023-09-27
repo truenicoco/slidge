@@ -18,17 +18,9 @@ pickle-secure = "^0.99.9"
 python-magic = "^0.4.27"
 slixmpp = "^1.8.4"
 
-# it is very unclear why I had to add these sections but got various setuptools-
-# related errors without them.
-[project]
-name = "slidge"
-version = "0.0.0-dev"
-[tool.setuptools]
-include-package-data = true
-[tool.setuptools.packages.find]
-include = ["slidge*"]
-[tool.setuptools.package-data]
-slidge = ["py.typed", "util/schema.sql"]
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
