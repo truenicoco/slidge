@@ -1,6 +1,7 @@
 import functools
 import logging
 import os
+import re
 import shutil
 import stat
 import tempfile
@@ -11,7 +12,7 @@ from typing import IO, Collection, Optional, Sequence, Union
 from uuid import uuid4
 from xml.etree import ElementTree as ET
 
-from slixmpp import Message
+from slixmpp import JID, Message
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0385.stanza import Sims
@@ -46,11 +47,16 @@ class AttachmentMixin(MessageMaker):
             file_path = temp
         else:
             d = None
+        if config.UPLOAD_SERVICE:
+            domain = None
+        else:
+            domain = re.sub(r"^.*?\.", "", self.xmpp.boundjid.bare)
         try:
             new_url = await self.xmpp.plugin["xep_0363"].upload_file(
                 filename=file_path,
                 content_type=content_type,
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
+                domain=JID(domain),
             )
         except (FileUploadError, IqError) as e:
             warnings.warn(f"Something is wrong with the upload service: {e!r}")

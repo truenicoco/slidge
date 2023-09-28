@@ -164,7 +164,10 @@ class TestAttachmentUpload(Base):
         self.__test_basic(
             LegacyAttachment(path=self.avatar_path),
             dict(
-                filename=self.avatar_path, content_type=None, ifrom=self.xmpp.boundjid
+                filename=self.avatar_path,
+                content_type=None,
+                ifrom=self.xmpp.boundjid,
+                domain=None,
             ),
         )
 
@@ -172,7 +175,10 @@ class TestAttachmentUpload(Base):
         self.__test_reuse(
             LegacyAttachment(path=self.avatar_path, legacy_file_id=1235),
             dict(
-                filename=self.avatar_path, content_type=None, ifrom=self.xmpp.boundjid
+                filename=self.avatar_path,
+                content_type=None,
+                ifrom=self.xmpp.boundjid,
+                domain=None,
             ),
         )
 
@@ -180,7 +186,12 @@ class TestAttachmentUpload(Base):
         with patch("pathlib.Path.stat", return_value=os.stat(self.avatar_path)):
             self.__test_basic(
                 LegacyAttachment(data=self.avatar_path.read_bytes(), name="5x5.png"),
-                dict(filename=ANY, content_type=None, ifrom=self.xmpp.boundjid),
+                dict(
+                    filename=ANY,
+                    content_type=None,
+                    ifrom=self.xmpp.boundjid,
+                    domain=None,
+                ),
             )
 
     def test_bytes_and_id(self):
@@ -191,7 +202,12 @@ class TestAttachmentUpload(Base):
                     legacy_file_id=123,
                     name="5x5.png",
                 ),
-                dict(filename=ANY, content_type=None, ifrom=self.xmpp.boundjid),
+                dict(
+                    filename=ANY,
+                    content_type=None,
+                    ifrom=self.xmpp.boundjid,
+                    domain=None,
+                ),
             )
 
 
