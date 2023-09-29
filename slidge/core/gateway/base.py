@@ -223,7 +223,7 @@ class BaseGateway(
         self.has_crashed = False
         self.use_origin_id = False
 
-        self.jid_validator = re.compile(config.USER_JID_VALIDATOR)
+        self.jid_validator: re.Pattern = re.compile(config.USER_JID_VALIDATOR)
         self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
 
         self.session_cls: BaseSession = BaseSession.get_unique_subclass()

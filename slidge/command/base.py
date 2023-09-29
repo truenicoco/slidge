@@ -378,6 +378,10 @@ class Command(ABC):
 
         return self.xmpp.get_session_from_user(user)
 
+    def __can_use_command(self, jid: JID):
+        j = jid.bare
+        return self.xmpp.jid_validator.match(j) or j in config.ADMINS
+
     def raise_if_not_authorized(self, jid: JID) -> Optional["BaseSession[Any, Any]"]:
         """
         Raise an appropriate error is jid is not authorized to use the command
@@ -386,7 +390,7 @@ class Command(ABC):
         :return:session of JID if it exists
         """
         session = self._get_session(jid)
-        if not self.xmpp.jid_validator.match(jid.bare):  # type:ignore
+        if not self.__can_use_command(jid):
             raise XMPPError(
                 "bad-request", "Your JID is not allowed to use this gateway."
             )
