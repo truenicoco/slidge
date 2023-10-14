@@ -1631,6 +1631,75 @@ class TestContact(SlidgeTest):
         assert p["status"] == f"Last seen {a_week_ago:%b %-d %Y}"
         assert p["idle"]["since"] == a_week_ago
 
+    def test_disco_bare(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = True
+        self.recv(  # language=XML
+            f"""
+            <iq type='get'
+                from='romeo@montague.lit'
+                to="juliet@aim.shakespeare.lit">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                from="juliet@aim.shakespeare.lit"
+                to="romeo@montague.lit"
+                id="1">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="pubsub"
+                          type="pep"
+                          name="SLIDGE TEST" />
+                <identity category="account"
+                          type="registered"
+                          name="SLIDGE TEST" />
+                <feature var="http://jabber.org/protocol/pubsub" />
+                <feature var="http://jabber.org/protocol/pubsub#retrieve-items" />
+                <feature var="http://jabber.org/protocol/pubsub#subscribe" />
+              </query>
+            </iq>
+            """
+        )
+
+    def test_disco_resource(self):
+        juliet = self.get_juliet()
+        juliet.is_friend = True
+        self.recv(  # language=XML
+            f"""
+            <iq type='get'
+                from='romeo@montague.lit'
+                to="juliet@aim.shakespeare.lit/slidge">
+              <query xmlns='http://jabber.org/protocol/disco#info' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                from="juliet@aim.shakespeare.lit/slidge"
+                to="romeo@montague.lit"
+                id="1">
+              <query xmlns="http://jabber.org/protocol/disco#info">
+                <identity category="client"
+                          type="pc"
+                          name="SLIDGE TEST" />
+                <feature var="http://jabber.org/protocol/chatstates" />
+                <feature var="urn:xmpp:receipts" />
+                <feature var="urn:xmpp:message-correct:0" />
+                <feature var="urn:xmpp:chat-markers:0" />
+                <feature var="jabber:x:oob" />
+                <feature var="urn:xmpp:reactions:0" />
+                <feature var="urn:xmpp:message-retract:0" />
+                <feature var="urn:xmpp:reply:0" />
+                <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+              </query>
+            </iq>
+            """
+        )
+
 
 class TestCarbon(SlidgeTest):
     plugin = globals()
