@@ -186,9 +186,11 @@ class Login(Command):
         try:
             msg = await session.login()
         except Exception as e:
+            session.send_gateway_status(f"Re-login failed: {e}", show="dnd")
             raise XMPPError(
                 "internal-server-error", etype="wait", text=f"Could not login: {e}"
             )
         session.logged = True
-
+        session.send_gateway_status(msg or "Re-connected", show="chat")
+        session.send_gateway_message(msg or "Re-connected")
         return msg
