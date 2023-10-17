@@ -347,3 +347,11 @@ class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):
         self.run_coro(muc._set_avatar_task)
         self.romeo_joins(muc)
         self._assert_send_room_avatar(url=True)
+
+    def test_room_avatar_with_url_and_unique_id(self):
+        muc = self.get_muc(joined=False)
+        self.run_coro(muc.set_avatar(self.avatar_url, "id", blocking=True))
+        self.romeo_joins(muc)
+        self._assert_send_room_avatar(url=True)
+        self.run_coro(muc.set_avatar(self.avatar_url, "id", blocking=True))
+        self.send(None)
