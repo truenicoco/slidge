@@ -2008,7 +2008,9 @@ class TestUserGetsOnline(Base):
 
 class TestUserPresence(Base):
     def setUp(self):
-        self.patcher = unittest.mock.patch("slidge.core.session.BaseSession.presence")
+        self.patcher = unittest.mock.patch(
+            "slidge.core.session.BaseSession.on_presence"
+        )
         self.presence = self.patcher.start()
         super().setUp()
 

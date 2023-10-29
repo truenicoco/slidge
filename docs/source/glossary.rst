@@ -13,6 +13,9 @@ Glossary
     Legacy Network
         The messaging network slidge (and the :term:`User`) communicates with.
 
+    Legacy Module
+        An XMPP gateway based on slidge.
+
     Legacy Contact
         Someone using the legacy network to communicate with the :term:`User`.
 

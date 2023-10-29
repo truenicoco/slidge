@@ -46,8 +46,8 @@ extensions = [
 autodoc_typehints = "description"
 
 # Incldude __init__ docstrings
-autoclass_content = "both"
-autoapi_python_class_content = "both"
+# autoclass_content = "class"
+# autoapi_python_class_content = "class"
 
 autoapi_type = "python"
 autoapi_dirs = ["../../slidge", "../../superduper"]
@@ -68,12 +68,18 @@ autoapi_options = [
 ]
 
 
-def skip_util_classes(app, what, name, obj, skip, options):
-    # avoid listing parent methods in the public API docs
-    if any(name.endswith("Gateway." + x) for x in dir(ComponentXMPP)):
+def skip_stuff(app, what, name, obj, skip, options):
+    # Hide some stuff from the docs
+    if name.endswith(".Register"):
+        skip = True
+    elif name.endswith("user_store"):
+        skip = True
+    elif any(name.endswith("Gateway." + x) for x in dir(ComponentXMPP)):
         skip = True
     elif any(
-        name.endswith("MucType." + x) or name.endswith("CommandAccess." + x)
+        name.endswith("MucType." + x)
+        or name.endswith("CommandAccess." + x)
+        or name.endswith("RegistrationType." + x)
         for x in dir(int) + dir(Enum) + dir(IntEnum) + ["name", "value"]
     ):
         skip = True
@@ -81,7 +87,7 @@ def skip_util_classes(app, what, name, obj, skip, options):
 
 
 def setup(sphinx):
-    sphinx.connect("autoapi-skip-member", skip_util_classes)
+    sphinx.connect("autoapi-skip-member", skip_stuff)
 
 
 # Add any paths that contain templates here, relative to this directory.

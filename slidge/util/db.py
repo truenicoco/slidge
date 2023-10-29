@@ -221,5 +221,9 @@ class UserStore:
 
 
 user_store = UserStore()
+"""
+A persistent store for slidge users. Not public, but I didn't find how to hide
+it from the docs!
+"""
 
 log = logging.getLogger(__name__)

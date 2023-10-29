@@ -1,5 +1,7 @@
 """
-Most of slidge public API can be imported from this top level module.
+The main slidge package.
+
+Contains importable classes for a minimal function :term:`Legacy Module`.
 """
 
 import sys
@@ -41,7 +43,7 @@ __all__ = [
     "BaseGateway",
     "BaseSession",
     # For backwards compatibility, these names are still importable from the
-    # to top-level slidge module, but this is deprecated.
+    # top-level slidge module, but this is deprecated.
     # "GatewayUser",
     # "LegacyBookmarks",
     # "LegacyMUC",

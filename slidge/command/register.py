@@ -1,14 +1,13 @@
 """
-The register commands, either by chat or adhoc command
-
-Note that single step forms via jabber:iq:register are handled in ``xep_0077``
+This module handles the registration :term:`Command`, which is a necessary
+step for a JID to become a slidge :term:`User`.
 """
 
 import asyncio
 import functools
 import tempfile
 from datetime import datetime
-from enum import Enum
+from enum import IntEnum
 from typing import Any
 
 import qrcode
@@ -20,23 +19,39 @@ from ..util.db import GatewayUser
 from .base import Command, CommandAccess, Form, FormField, FormValues
 
 
-class RegistrationType(int, Enum):
+class RegistrationType(IntEnum):
     """
-    The type of registration for a gateway
+    An :class:`Enum` to define the registration flow.
     """
 
     SINGLE_STEP_FORM = 0
     """
-    Blabla
+    1 step, 1 form, the only flow compatible with :xep:`0077`.
+    Using this, the whole flow is defined
+    by :attr:`slidge.BaseGateway.REGISTRATION_FIELDS` and
+    :attr:`.REGISTRATION_INSTRUCTIONS`.
     """
+
     QRCODE = 10
+    """
+    The registration requires flashing a QR code in an official client.
+    See :meth:`slidge.BaseGateway.send_qr`, :meth:`.get_qr_text`
+    and :meth:`.confirm_qr`.
+    """
+
     TWO_FACTOR_CODE = 20
+    """
+    The registration requires confirming login with a 2FA code,
+    eg something received by email or SMS to finalize the authentication.
+    See :meth:`.validate_two_factor_code`.
+    """
 
 
 class TwoFactorNotRequired(Exception):
     """
-    Should be raised by two-factor code validation function in case the
-    code is not required after all.
+    Should be raised in :meth:`slidge.BaseGateway.validate` if the code is not
+    required after all. This can happen for a :term:`Legacy Network` where 2FA
+    is optional.
     """
 
     pass

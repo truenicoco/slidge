@@ -36,21 +36,22 @@ class ChatStateMixin(MessageMaker):
 
     def active(self, **kwargs):
         """
-        Send an "active" chat state (:xep:`0085`) from this contact to the user.
+        Send an "active" chat state (:xep:`0085`) from this
+        :term:`XMPP Entity`.
         """
         self._chat_state("active", **kwargs)
 
     def composing(self, **kwargs):
         """
         Send a "composing" (ie "typing notification") chat state (:xep:`0085`)
-        from this contact to the user.
+        from this :term:`XMPP Entity`.
         """
         self._chat_state("composing", forced=True, **kwargs)
 
     def paused(self, **kwargs):
         """
         Send a "paused" (ie "typing paused notification") chat state
-        (:xep:`0085`) from this contact to the user.
+        (:xep:`0085`) from this :term:`XMPP Entity`.
         """
         self._chat_state("paused", **kwargs)
 
@@ -58,7 +59,7 @@ class ChatStateMixin(MessageMaker):
         """
         Send an "inactive" (ie "contact has not interacted with the chat session
         interface for an intermediate period of time") chat state (:xep:`0085`)
-        from this contact to the user.
+        from this :term:`XMPP Entity`.
         """
         self._chat_state("inactive", **kwargs)
 
@@ -66,7 +67,7 @@ class ChatStateMixin(MessageMaker):
         """
         Send a "gone" (ie "contact has not interacted with the chat session interface,
         system, or device for a relatively long period of time") chat state
-        (:xep:`0085`) from this contact to the user.
+        (:xep:`0085`) from this :term:`XMPP Entity`.
         """
         self._chat_state("gone", **kwargs)
 
@@ -83,7 +84,7 @@ class MarkerMixin(MessageMaker):
 
     def ack(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
-        Send an "acknowledged" message marker (:xep:`0333`) from this contact to the user.
+        Send an "acknowledged" message marker (:xep:`0333`) from this :term:`XMPP Entity`.
 
         :param legacy_msg_id: The message this marker refers to
         """
@@ -96,8 +97,9 @@ class MarkerMixin(MessageMaker):
 
     def received(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
-        Send a "received" message marker (:xep:`0333`) from this contact to the user.
-        For LegacyContacts, also send a delivery receipt marker (:xep:`0184`)
+        Send a "received" message marker (:xep:`0333`) from this :term:`XMPP Entity`.
+        If called on a :class:`LegacyContact`, also send a delivery receipt
+        marker (:xep:`0184`).
 
         :param legacy_msg_id: The message this marker refers to
         """
@@ -116,7 +118,7 @@ class MarkerMixin(MessageMaker):
 
     def displayed(self, legacy_msg_id: LegacyMessageType, **kwargs):
         """
-        Send a "displayed" message marker (:xep:`0333`) from this contact to the user.
+        Send a "displayed" message marker (:xep:`0333`) from this :term:`XMPP Entity`.
 
         :param legacy_msg_id: The message this marker refers to
         """
@@ -159,7 +161,7 @@ class ContentMessageMixin(AttachmentMixin):
         **send_kwargs,
     ):
         """
-        Transmit a message from the entity to the user
+        Send a text message from this :term:`XMPP Entity`.
 
         :param body: Content of the message
         :param legacy_msg_id: If you want to be able to transport read markers from the gateway
@@ -168,7 +170,9 @@ class ContentMessageMixin(AttachmentMixin):
         :param reply_to: Quote another message (:xep:`0461`)
         :param hints:
         :param thread:
-        :param carbon: (only in 1:1) Reflect a message sent to this ``Contact`` by the user.
+        :param carbon: (only used if called on a :class:`LegacyContact`)
+            Set this to ``True`` if this is actually a message sent **to** the
+            :class:`LegacyContact` by the :term:`User`.
             Use this to synchronize outgoing history for legacy official apps.
         :param correction: whether this message is a correction or not
         :param correction_event_id: in the case where an ID is associated with the legacy
@@ -216,7 +220,7 @@ class ContentMessageMixin(AttachmentMixin):
         **send_kwargs,
     ):
         """
-        Call this when a legacy contact has modified his last message content.
+        Modify a message that was previously sent by this :term:`XMPP Entity`.
 
         Uses last message correction (:xep:`0308`)
 
@@ -256,7 +260,7 @@ class ContentMessageMixin(AttachmentMixin):
         **kwargs,
     ):
         """
-        Call this when a legacy contact reacts to a message
+        Send a reaction (:xep:`0444`) from this :term:`XMPP Entity`.
 
         :param legacy_msg_id: The message which the reaction refers to.
         :param emojis: An iterable of emojis used as reactions
@@ -278,7 +282,7 @@ class ContentMessageMixin(AttachmentMixin):
         **kwargs,
     ):
         """
-        Call this when a legacy contact retracts (:XEP:`0424`) a message
+        Send a message retraction (:XEP:`0424`) from this :term:`XMPP Entity`.
 
         :param legacy_msg_id: Legacy ID of the message to delete
         :param thread:
@@ -330,8 +334,7 @@ class InviteMixin(MessageMaker):
         **send_kwargs,
     ):
         """
-        Send an invitation to join a group (:xep:`0249`) to the user,
-        emanating from this contact
+        Send an invitation to join a group (:xep:`0249`) from this :term:`XMPP Entity`.
 
         :param muc: the muc the user is invited to
         :param reason: a text explaining why the user should join this muc

@@ -2,9 +2,10 @@ import logging
 import mimetypes
 import re
 import subprocess
+import warnings
 from abc import ABCMeta
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from slidge.util.types import ResourceDict
 
@@ -256,3 +257,15 @@ def merge_resources(resources: dict[str, ResourceDict]) -> Optional[ResourceDict
 def remove_emoji_variation_selector_16(emoji: str):
     # this is required for compatibility with dino, and maybe other future clients?
     return bytes(emoji, encoding="utf-8").replace(b"\xef\xb8\x8f", b"").decode()
+
+
+def deprecated(name: str, new: Callable):
+    # @functools.wraps
+    def wrapped(*args, **kwargs):
+        warnings.warn(
+            f"{name} is deprecated. Use {new.__name__} instead",
+            category=DeprecationWarning,
+        )
+        return new(*args, **kwargs)
+
+    return wrapped

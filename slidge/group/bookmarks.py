@@ -1,3 +1,4 @@
+import abc
 import logging
 from typing import TYPE_CHECKING, Generic, Type
 
@@ -126,6 +127,7 @@ class LegacyBookmarks(
 
             return muc
 
+    @abc.abstractmethod
     async def fill(self):
         """
         Establish a user's known groups.
@@ -134,9 +136,7 @@ class LegacyBookmarks(
         minimum, this should ``await self.by_legacy_id(group_id)`` for all
         the groups a user is part of.
 
-        Ideally, set the group subject, friendly, number, etc. in this method
-
-        Slidge internals will call this on successful ``BaseSession.login()``
+        Slidge internals will call this on successful :meth:`BaseSession.login`
 
         """
         if self.xmpp.GROUPS:

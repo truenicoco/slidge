@@ -126,7 +126,7 @@ class LegacyAttachment:
 
 class MucType(IntEnum):
     """
-    The type of a group, private, public, anonymous or not.
+    The type of group, private, public, anonymous or not.
     """
 
     GROUP = 0

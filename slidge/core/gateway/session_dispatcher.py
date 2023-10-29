@@ -363,7 +363,7 @@ class SessionDispatcher:
             return
         resources = self.xmpp.roster[self.xmpp.boundjid.bare][p.get_from()].resources
         session.log.debug("Received a presence from %s", p.get_from())
-        await session.presence(
+        await session.on_presence(
             p.get_from().resource,
             ptype,  # type: ignore
             p["status"],

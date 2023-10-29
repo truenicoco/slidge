@@ -54,14 +54,35 @@ class BaseGateway(
     metaclass=ABCSubclassableOnceAtMost,
 ):
     """
-    Must be subclassed by a legacy module to set up various aspects of the XMPP
-    component behaviour, such as its display name or its registration process.
+    The gateway component, handling registrations and un-registrations.
 
     On slidge launch, a singleton is instantiated, and it will be made available
     to public classes such :class:`.LegacyContact` or :class:`.BaseSession` as the
     ``.xmpp`` attribute.
-    Since it inherits from :class:`slixmpp.componentxmpp.ComponentXMPP`, this gives you a hand
-    on low-level XMPP interactions via slixmpp plugins, e.g.:
+
+    Must be subclassed by a legacy module to set up various aspects of the XMPP
+    component behaviour, such as its display name or welcome message, via
+    class attributes :attr:`.COMPONENT_NAME` :attr:`.WELCOME_MESSAGE`.
+
+    Abstract methods related to the registration process must be overriden
+    for a functional :term:`Legacy Module`:
+
+    - :meth:`.validate`
+    - :meth:`.validate_two_factor_code`
+    - :meth:`.get_qr_text`
+    - :meth:`.confirm_qr`
+
+    NB: Not all of these must be overridden, it depends on the
+    :attr:`REGISTRATION_TYPE`.
+
+    The other methods, such as :meth:`.send_text` or :meth:`.react` are the same
+    as those of :class:`.LegacyContact` and :class:`.LegacyParticipant`, because
+    the component itself is also a "messaging actor", ie, an :term:`XMPP Entity`.
+    For these methods, you need to specify the JID of the recipient with the
+    `mto` parameter.
+
+    Since it inherits from :class:`slixmpp.componentxmpp.ComponentXMPP`,you also
+    have a hand on low-level XMPP interactions via slixmpp methods, e.g.:
 
     .. code-block:: python
 
@@ -74,6 +95,15 @@ class BaseGateway(
     API provides higher level abstractions around most commonly needed use-cases, such
     as sending messages, or displaying a custom status.
 
+    """
+
+    COMPONENT_NAME: str = NotImplemented
+    """Name of the component, as seen in service discovery by XMPP clients"""
+    COMPONENT_TYPE: str = ""
+    """Type of the gateway, should follow https://xmpp.org/registrar/disco-categories.html"""
+    COMPONENT_AVATAR: Optional[AvatarType] = None
+    """
+    Path, bytes or URL used by the component as an avatar.
     """
 
     REGISTRATION_FIELDS: Collection[FormField] = [
@@ -89,41 +119,39 @@ class BaseGateway(
     The text presented to a user that wants to register (or modify) their legacy account
     configuration.
     """
-    REGISTRATION_TYPE = RegistrationType.SINGLE_STEP_FORM
+    REGISTRATION_TYPE: RegistrationType = RegistrationType.SINGLE_STEP_FORM
     """
-    This attribute determines how users to register to the gateway, ie, how they
-    login to the legacy service.
+    This attribute determines how users register to the gateway, ie, how they
+    login to the :term:`legacy service <Legacy Service>`.
     The credentials are then stored persistently, so this process should happen
     once per user (unless they unregister).
 
     The registration process always start with a basic data form (:xep:`0004`)
-    presented to the user, which is send
-    But the legacy login flow might require something
-    more sophisticated, such as a
-
-    SINGLE_STEP_FORM: 1 step, 1 form, compatible with :xep:`0077`
-    (in-band registration).
-
-    QRCODE: The registration requires flashing a QR code in an official client.
-    See :meth:`send_qr`, :meth:`get_qr_text` and :meth:`confirm_qr`.
-
-    TWO_FACTOR_CODE: The registration requires confirming login with a 2FA code,
-    eg something received by email or SMS.
-    See :meth:`validate_two_factor_code`.
+    presented to the user.
+    But the legacy login flow might require something more sophisticated, see
+    :class:`.RegistrationType` for more details.
     """
 
-    COMPONENT_NAME: str = NotImplemented
-    """Name of the component, as seen in service discovery by XMPP clients"""
-    COMPONENT_TYPE: Optional[str] = ""
-    """Type of the gateway, should ideally follow https://xmpp.org/registrar/disco-categories.html"""
-    COMPONENT_AVATAR: Optional[AvatarType] = None
-    """
-    Path, bytes or URL used by the component as an avatar.
-    """
+    REGISTRATION_2FA_TITLE = "Enter your 2FA code"
+    REGISTRATION_2FA_INSTRUCTIONS = (
+        "You should have received something via email or SMS, or something"
+    )
+    REGISTRATION_QR_INSTRUCTIONS = "Flash this code or follow this link"
 
     ROSTER_GROUP: str = "slidge"
     """
-    Roster entries added by the plugin in the user's roster will be part of the group specified here.
+    Name of the group assigned to a :class:`.LegacyContact` automagically
+    added to the :term:`User`'s roster with :meth:`.LegacyContact.add_to_roster`.
+    """
+    WELCOME_MESSAGE = (
+        "Thank you for registering. Type 'help' to list the available commands, "
+        "or just start messaging away!"
+    )
+    """
+    A welcome message displayed to users on registration.
+    This is useful notably for clients that don't consider component JIDs as a
+    valid recipient in their UI, yet still open a functional chat window on
+    incoming messages from components.
     """
 
     SEARCH_FIELDS: Sequence[FormField] = [
@@ -136,8 +164,8 @@ class BaseGateway(
     A common use case is to allow users to search for legacy contacts by something else than
     their usernames, eg their phone number.
 
-    Plugins should implement search by overriding :meth:`.BaseSession.search`, effectively
-    restricting search to registered users by default.
+    Plugins should implement search by overriding :meth:`.BaseSession.search`
+    (restricted to registered users).
 
     If there is only one field, it can also be used via the ``jabber:iq:gateway`` protocol
     described in :xep:`0100`. Limitation: this only works if the search request returns
@@ -152,27 +180,12 @@ class BaseGateway(
     Instructions of the search form.
     """
 
-    WELCOME_MESSAGE = (
-        "Thank you for registering. Type 'help' to list the available commands, "
-        "or just start messaging away!"
-    )
-    """
-    A welcome message displayed to users on registration.
-    This is useful notably for clients that don't consider component JIDs as a valid recipient in their UI,
-    yet still open a functional chat window on incoming messages from components.
-    """
-
     MARK_ALL_MESSAGES = False
     """
-    Set this to True for legacy networks that expects read marks for *all* messages and not just
-    the latest one that was read (as most XMPP clients will only send a read mark for the latest msg).
+    Set this to True for :term:`legacy networks <Legacy Network>` that expects
+    read marks for *all* messages and not just the latest one that was read
+    (as most XMPP clients will only send a read mark for the latest msg).
     """
-
-    REGISTRATION_2FA_TITLE = "Enter your 2FA code"
-    REGISTRATION_2FA_INSTRUCTIONS = (
-        "You should have received something via email or SMS, or something"
-    )
-    REGISTRATION_QR_INSTRUCTIONS = "Flash this code or follow this link"
 
     PROPER_RECEIPTS = False
     """
@@ -596,16 +609,81 @@ class BaseGateway(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
         """
-        Validate the user's initial registration  form.
+        Validate a user's initial registration form.
+
+        Should raise the appropriate :class:`slixmpp.exceptions.XMPPError`
+        if the registration does not allow to continue the registration process.
 
         If :py:attr:`REGISTRATION_TYPE` is a
-        :attr:`.RegistrationType.SINGLE_STEP_FORM`
+        :attr:`.RegistrationType.SINGLE_STEP_FORM`,
+        this method should raise something if it wasn't possible to successfully
+        log in to the legacy service with the registration form content.
+
+        It is also used for other types of :py:attr:`REGISTRATION_TYPE` too, since
+        the first step is always a form. If :attr:`.REGISTRATION_FIELDS` is an
+        empty list (ie, it declares no :class:`.FormField`), the "form" is
+        effectively a confirmation dialog displaying
+        :attr:`.REGISTRATION_INSTRUCTIONS`.
 
         :param user_jid: JID of the user that has just registered
         :param registration_form: A dict where keys are the :attr:`.FormField.var` attributes
          of the :attr:`.BaseGateway.REGISTRATION_FIELDS` iterable
         """
-        pass
+        raise NotImplementedError
+
+    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+        """
+        Called when the user enters their 2FA code.
+
+        Should raise the appropriate :class:`slixmpp.exceptions.XMPPError`
+        if the login fails, and return successfully otherwise.
+
+        Only used when :attr:`REGISTRATION_TYPE` is
+        :attr:`.RegistrationType.TWO_FACTOR_CODE`.
+
+        :param user: The :class:`.GatewayUser` whose registration is pending
+            Use their :attr:`.GatewayUser.bare_jid` and/or
+            :attr:`.registration_form` attributes to get what you need.
+        :param code: The code they entered, either via "chatbot" message or
+            adhoc command
+        """
+        raise NotImplementedError
+
+    async def get_qr_text(self, user: GatewayUser) -> str:
+        """
+        This is where slidge gets the QR code content for the QR-based
+        registration process. It will turn it into a QR code image and send it
+        to the not-yet-fully-registered :class:`.GatewayUser`.
+
+        Only used in when :attr:`BaseGateway.REGISTRATION_TYPE` is
+        :attr:`.RegistrationType.QRCODE`.
+
+        :param user: The :class:`.GatewayUser` whose registration is pending
+            Use their :attr:`.GatewayUser.bare_jid` and/or
+            :attr:`.registration_form` attributes to get what you need.
+        """
+        raise NotImplementedError
+
+    async def confirm_qr(
+        self, user_bare_jid: str, exception: Optional[Exception] = None
+    ):
+        """
+        This method is meant to be called to finalize QR code-based registration
+        flows, once the legacy service confirms the QR flashing.
+
+        Only used in when :attr:`BaseGateway.REGISTRATION_TYPE` is
+        :attr:`.RegistrationType.QRCODE`.
+
+        :param user_bare_jid: The bare JID of the almost-registered
+            :class:`GatewayUser` instance
+        :param exception: Optionally, an XMPPError to be raised to **not** confirm
+            QR code flashing.
+        """
+        fut = self.qr_pending_registrations[user_bare_jid]
+        if exception is None:
+            fut.set_result(True)
+        else:
+            fut.set_exception(exception)
 
     async def unregister_user(self, user: GatewayUser):
         await self.xmpp.plugin["xep_0077"].api["user_remove"](None, None, user.jid)
@@ -616,7 +694,7 @@ class BaseGateway(
         Optionally override this if you need to clean additional
         stuff after a user has been removed from the permanent user_store.
 
-        By default, this just calls session.logout()
+        By default, this just calls :meth:`BaseSession.logout`.
 
         :param user:
         """
@@ -629,8 +707,8 @@ class BaseGateway(
         """
         Request arbitrary user input using a simple chat message, and await the result.
 
-        You shouldn't need to call directly bust instead use :meth:`.BaseSession.input`
-        to directly target a user.
+        You shouldn't need to call this directly bust instead use
+        :meth:`.BaseSession.input` to directly target a user.
 
         :param jid: The JID we want input from
         :param text: A prompt to display for the user
@@ -648,7 +726,8 @@ class BaseGateway(
 
         :param text: The text that will be converted to a QR Code
         :param msg_kwargs: Optional additional arguments to pass to
-            :meth:`.BaseGateway.send_file`, such as the recipient of the QR code.
+            :meth:`.BaseGateway.send_file`, such as the recipient of the QR,
+            code
         """
         qr = qrcode.make(text)
         with tempfile.NamedTemporaryFile(
@@ -656,53 +735,6 @@ class BaseGateway(
         ) as f:
             qr.save(f.name)
             await self.send_file(f.name, **msg_kwargs)
-
-    async def validate_two_factor_code(self, user: GatewayUser, code: str):
-        """
-        Called when the user enters their 2FA code.
-
-        Should raise the appropriate ``XMPPError`` if the login fails
-
-        :param user: The gateway user whose registration is pending
-            Use their ``.bare_jid`` and/or``.registration_form`` attributes
-            to get what you need
-        :param code: The code they entered, either via "chatbot" message or
-            adhoc command
-        """
-        raise NotImplementedError
-
-    async def get_qr_text(self, user: GatewayUser) -> str:
-        """
-        This is where slidge gets the QR code content for the QR-based
-        registration process. It will turn it into a QR code image and send it
-        to the not-yet-fully-registered `.GatewayUser`
-
-        Only used in when :attr:`BaseGateway.REGISTRATION_TYPE` is
-        :attr:`RegistrationType.QR_CODE`.
-
-        :param user: The not-yet-fully-registered GatewayUser.
-            Use its :attr:`GatewayUser.bare_jid` and/or
-            :attr:`GatewayUser.registration_form` attributes
-            to get follow up on the process.
-        """
-        raise NotImplementedError
-
-    async def confirm_qr(
-        self, user_bare_jid: str, exception: Optional[Exception] = None
-    ):
-        """
-        This should be called to finalize QR code-based registration flows.
-
-        :param user_bare_jid: The bare JID of the almost-registered
-            :class:`GatewayUser` instance
-        :param exception: Optionally, an XMPPError to be raised to **not** confirm
-            QR code flashing.
-        """
-        fut = self.qr_pending_registrations[user_bare_jid]
-        if exception is None:
-            fut.set_result(True)
-        else:
-            fut.set_exception(exception)
 
     def shutdown(self):
         # """

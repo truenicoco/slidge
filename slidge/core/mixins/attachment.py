@@ -284,7 +284,7 @@ class AttachmentMixin(MessageMaker):
         **kwargs,
     ) -> tuple[Optional[str], list[Message]]:
         """
-        Send a message with an attachment
+        Send a single file from this :term:`XMPP Entity`.
 
         :param file_path: Path to the attachment
         :param data_stream: Alternatively, a stream of bytes (such as a File object)

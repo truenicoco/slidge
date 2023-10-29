@@ -21,6 +21,7 @@ from ..util.types import (
     RecipientType,
     ResourceDict,
 )
+from ..util.util import deprecated
 
 if TYPE_CHECKING:
     from ..group.participant import LegacyParticipant
@@ -38,12 +39,14 @@ class BaseSession(
     Generic[LegacyMessageType, RecipientType], metaclass=ABCSubclassableOnceAtMost
 ):
     """
+    The session of a registered :term:`User`.
+
     Represents a gateway user logged in to the legacy network and performing actions.
 
-    Will be instantiated automatically when a user sends an online presence to the gateway
-    component, as per :xep:`0100`.
+    Will be instantiated automatically on slidge startup for each registered user,
+    or upon registration for new (validated) users.
 
-    Must be subclassed for a functional slidge plugin.
+    Must be subclassed for a functional :term:`Legacy Module`.
     """
 
     """
@@ -100,6 +103,266 @@ class BaseSession(
 
         self.__cached_presence: Optional[CachedPresence] = None
 
+    async def login(self) -> Optional[str]:
+        """
+        Logs in the gateway user to the legacy network.
+
+        Triggered when the gateway start and on user registration.
+        It is recommended that this function returns once the user is logged in,
+        so if you need to await forever (for instance to listen to incoming events),
+        it's a good idea to wrap your listener in an asyncio.Task.
+
+        :return: Optionally, a text to use as the gateway status, e.g., "Connected as 'dude@legacy.network'"
+        """
+        raise NotImplementedError
+
+    async def logout(self):
+        """
+        Logs out the gateway user from the legacy network.
+
+        Called on gateway shutdown.
+        """
+        raise NotImplementedError
+
+    async def on_text(
+        self,
+        chat: RecipientType,
+        text: str,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to: Optional["Sender"] = None,
+        thread: Optional[LegacyThreadType] = None,
+    ) -> Optional[LegacyMessageType]:
+        """
+        Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
+        to ``translated_user_name@slidge.example.com``, or ``translated_group_name@slidge.example.com``
+
+        Override this and implement sending a message to the legacy network in this method.
+
+        :param text: Content of the message
+        :param chat: Recipient of the message. :class:`.LegacyContact` instance for 1:1 chat,
+            :class:`.MUC` instance for groups.
+        :param reply_to_msg_id: A legacy message ID if the message references (quotes)
+            another message (:xep:`0461`)
+        :param reply_to_fallback_text: Content of the quoted text. Not necessarily set
+            by XMPP clients
+        :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
+            1:1 chat, :class:`LegacyParticipant` instance for groups.
+            If `None`, should be interpreted as a self-reply if reply_to_msg_id is not None.
+        :param thread:
+
+        :return: An ID of some sort that can be used later to ack and mark the message
+            as read by the user
+        """
+        raise NotImplementedError
+
+    send_text = deprecated("BaseSession.send_text", on_text)
+
+    async def on_file(
+        self,
+        chat: RecipientType,
+        url: str,
+        *,
+        http_response: aiohttp.ClientResponse,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to: Optional[Union["LegacyContact", "LegacyParticipant"]] = None,
+        thread: Optional[LegacyThreadType] = None,
+    ) -> Optional[LegacyMessageType]:
+        """
+        Triggered when the user sends a file using HTTP Upload (:xep:`0363`)
+
+        :param url: URL of the file
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param http_response: The HTTP GET response object on the URL
+        :param reply_to_msg_id: See :meth:`.BaseSession.on_text`
+        :param reply_to_fallback_text: See :meth:`.BaseSession.on_text`
+        :param reply_to: See :meth:`.BaseSession.on_text`
+        :param thread:
+
+        :return: An ID of some sort that can be used later to ack and mark the message
+            as read by the user
+        """
+        raise NotImplementedError
+
+    send_file = deprecated("BaseSession.send_file", on_file)
+
+    async def on_active(
+        self, chat: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
+        """
+        Triggered when the user sends an 'active' chat state (:xep:`0085`)
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        """
+        raise NotImplementedError
+
+    active = deprecated("BaseSession.active", on_active)
+
+    async def on_inactive(
+        self, chat: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
+        """
+        Triggered when the user sends an 'inactive' chat state (:xep:`0085`)
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        """
+        raise NotImplementedError
+
+    inactive = deprecated("BaseSession.inactive", on_inactive)
+
+    async def on_composing(
+        self, chat: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
+        """
+        Triggered when the user starts typing in a legacy chat (:xep:`0085`)
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        """
+        raise NotImplementedError
+
+    composing = deprecated("BaseSession.composing", on_composing)
+
+    async def on_paused(
+        self, chat: RecipientType, thread: Optional[LegacyThreadType] = None
+    ):
+        """
+        Triggered when the user pauses typing in a legacy chat (:xep:`0085`)
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        """
+        raise NotImplementedError
+
+    paused = deprecated("BaseSession.paused", on_paused)
+
+    async def on_displayed(
+        self,
+        chat: RecipientType,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+    ):
+        """
+        Triggered when the user reads a message in a legacy chat. (:xep:`0333`)
+
+        This is only possible if a valid ``legacy_msg_id`` was passed when
+        transmitting a message from a legacy chat to the user, eg in
+        :meth:`slidge.contact.LegacyContact.send_text`
+        or
+        :meth:`slidge.group.LegacyParticipant.send_text`.
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param legacy_msg_id: Identifier of the message/
+        :param thread:
+        """
+        raise NotImplementedError
+
+    displayed = deprecated("BaseSession.displayed", on_displayed)
+
+    async def on_correct(
+        self,
+        chat: RecipientType,
+        text: str,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+    ) -> Optional[LegacyMessageType]:
+        """
+        Triggered when the user corrects a message using :xep:`0308`
+
+        This is only possible if a valid ``legacy_msg_id`` was returned by
+        :meth:`.on_text`.
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param text: The new text
+        :param legacy_msg_id: Identifier of the edited message
+        :param thread:
+        """
+        raise NotImplementedError
+
+    correct = deprecated("BaseSession.correct", on_correct)
+
+    async def on_react(
+        self,
+        chat: RecipientType,
+        legacy_msg_id: LegacyMessageType,
+        emojis: list[str],
+        thread: Optional[LegacyThreadType] = None,
+    ):
+        """
+        Triggered when the user sends message reactions (:xep:`0444`).
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        :param legacy_msg_id: ID of the message the user reacts to
+        :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
+            An empty string means "no reaction", ie, remove all reactions if any were present before
+        """
+        raise NotImplementedError
+
+    react = deprecated("BaseSession.react", on_react)
+
+    async def on_retract(
+        self,
+        chat: RecipientType,
+        legacy_msg_id: LegacyMessageType,
+        thread: Optional[LegacyThreadType] = None,
+    ):
+        """
+        Triggered when the user retracts (:xep:`0424`) a message.
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param thread:
+        :param legacy_msg_id: Legacy ID of the retracted message
+        """
+        raise NotImplementedError
+
+    retract = deprecated("BaseSession.retract", on_retract)
+
+    async def on_presence(
+        self,
+        resource: str,
+        show: PseudoPresenceShow,
+        status: str,
+        resources: dict[str, ResourceDict],
+        merged_resource: Optional[ResourceDict],
+    ):
+        """
+        Called when the gateway component receives a presence, ie, when
+        one of the user's clients goes online of offline, or changes its
+        status.
+
+        :param resource: The XMPP client identifier, arbitrary string.
+        :param show: The presence ``<show>``, if available. If the resource is
+            just 'available' without any ``<show>`` element, this is an empty
+            str.
+        :param status: A status message, like a deeply profound quote, eg,
+            "Roses are red, violets are blue, [INSERT JOKE]".
+        :param resources: A summary of all the resources for this user.
+        :param merged_resource: A global presence for the user account,
+            following rules described in :meth:`merge_resources`
+        """
+        raise NotImplementedError
+
+    presence = deprecated("BaseSession.presence", on_presence)
+
+    async def on_search(self, form_values: dict[str, str]) -> Optional[SearchResult]:
+        """
+        Triggered when the user uses Jabber Search (:xep:`0055`) on the component
+
+        Form values is a dict in which keys are defined in :attr:`.BaseGateway.SEARCH_FIELDS`
+
+        :param form_values: search query, defined for a specific plugin by overriding
+            in :attr:`.BaseGateway.SEARCH_FIELDS`
+        :return:
+        """
+        raise NotImplementedError
+
+    search = deprecated("BaseSession.search", on_search)
+
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
 
@@ -129,36 +392,46 @@ class BaseSession(
         self.xmpp.loop.create_task(self.logout())
 
     @staticmethod
-    def legacy_msg_id_to_xmpp_msg_id(legacy_msg_id: LegacyMessageType) -> str:
+    def legacy_to_xmpp_msg_id(legacy_msg_id: LegacyMessageType) -> str:
         """
         Convert a legacy msg ID to a valid XMPP msg ID.
-        Needed for read marks and message corrections.
+        Needed for read marks, retractions and message corrections.
 
         The default implementation just converts the legacy ID to a :class:`str`,
         but this should be overridden in case some characters needs to be escaped,
-        or to add some additional, legacy network-specific logic.
+        or to add some additional,
+        :term:`legacy network <Legacy Network`>-specific logic.
 
         :param legacy_msg_id:
-        :return: Should return a string that is usable as an XMPP stanza ID
+        :return: A string that is usable as an XMPP stanza ID
         """
         return str(legacy_msg_id)
 
+    legacy_msg_id_to_xmpp_msg_id = staticmethod(
+        deprecated("BaseSession.legacy_msg_id_to_xmpp_msg_id", legacy_to_xmpp_msg_id)
+    )
+
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(i: str) -> LegacyMessageType:
+    def xmpp_to_legacy_msg_id(i: str) -> LegacyMessageType:
         """
         Convert a legacy XMPP ID to a valid XMPP msg ID.
         Needed for read marks and message corrections.
 
         The default implementation just converts the legacy ID to a :class:`str`,
         but this should be overridden in case some characters needs to be escaped,
-        or to add some additional, legacy network-specific logic.
+        or to add some additional,
+        :term:`legacy network <Legacy Network`>-specific logic.
 
-        The default implementation is an identity function
+        The default implementation is an identity function.
 
         :param i: The XMPP stanza ID
         :return: An ID that can be used to identify a message on the legacy network
         """
         return cast(LegacyMessageType, i)
+
+    xmpp_msg_id_to_legacy_msg_id = staticmethod(
+        deprecated("BaseSession.xmpp_msg_id_to_legacy_msg_id", xmpp_to_legacy_msg_id)
+    )
 
     def raise_if_not_logged(self):
         if not self.logged:
@@ -292,7 +565,7 @@ class BaseSession(
 
     async def input(self, text: str, **msg_kwargs):
         """
-        Request user input via direct messages.
+        Request user input via direct messages from the gateway component.
 
         Wraps call to :meth:`.BaseSession.input`
 
@@ -311,218 +584,11 @@ class BaseSession(
         """
         await self.xmpp.send_qr(text, mto=self.user.jid)
 
-    async def login(self) -> Optional[str]:
-        """
-        Login the gateway user to the legacy network.
-
-        Triggered when the gateway start and on user registration.
-        It is recommended that this function returns once the user is logged in,
-        so if you need to await forever (for instance to listen to incoming events),
-        it's a good idea to wrap your listener in an asyncio.Task.
-
-        :return: Optionally, a text to use as the gateway status, e.g., "Connected as 'dude@legacy.network'"
-        """
-        raise NotImplementedError
-
-    async def logout(self):
-        """
-        Logout the gateway user from the legacy network.
-
-        Called on user unregistration and gateway shutdown.
-        """
-        raise NotImplementedError
-
     def re_login(self):
-        """
-        Logout then re-login
-
-        No reason to override this
-        """
+        # Logout then re-login
+        #
+        # No reason to override this
         self.xmpp.re_login(self)
-
-    async def send_text(
-        self,
-        chat: RecipientType,
-        text: str,
-        *,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to: Optional["Sender"] = None,
-        thread: Optional[LegacyThreadType] = None,
-    ) -> Optional[LegacyMessageType]:
-        """
-        Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
-        to ``translated_user_name@slidge.example.com``, or ``translated_group_name@slidge.example.com``
-
-        Override this and implement sending a message to the legacy network in this method.
-
-        :param text: Content of the message
-        :param chat: RecipientType of the message. :class:`.LegacyContact` instance for 1:1 chat,
-            :class:`.MUC` instance for groups.
-        :param reply_to_msg_id: A legacy message ID if the message references (quotes)
-            another message (:xep:`0461`)
-        :param reply_to_fallback_text: Content of the quoted text. Not necessarily set
-            by XMPP clients
-        :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
-            1:1 chat, :class:`LegacyParticipant` instance for groups.
-            If `None`, should be interpreted as a self-reply if reply_to_msg_id is not None.
-        :param thread:
-
-        :return: An ID of some sort that can be used later to ack and mark the message
-            as read by the user
-        """
-        raise NotImplementedError
-
-    async def send_file(
-        self,
-        chat: RecipientType,
-        url: str,
-        *,
-        http_response: aiohttp.ClientResponse,
-        reply_to_msg_id: Optional[LegacyMessageType] = None,
-        reply_to_fallback_text: Optional[str] = None,
-        reply_to: Optional[Union["LegacyContact", "LegacyParticipant"]] = None,
-        thread: Optional[LegacyThreadType] = None,
-    ) -> Optional[LegacyMessageType]:
-        """
-        Triggered when the user has sends a file using HTTP Upload (:xep:`0363`)
-
-        :param url: URL of the file
-        :param chat: See :meth:`.BaseSession.send_text`
-        :param http_response: The HTTP GET response object on the URL
-        :param reply_to_msg_id: See :meth:`.BaseSession.send_text`
-        :param reply_to_fallback_text: See :meth:`.BaseSession.send_text`
-        :param reply_to: See :meth:`.BaseSession.send_text`
-        :param thread:
-
-        :return: An ID of some sort that can be used later to ack and mark the message
-            as read by the user
-        """
-        raise NotImplementedError
-
-    async def active(self, c: RecipientType, thread: Optional[LegacyThreadType] = None):
-        """
-        Triggered when the user sends an 'active' chat state to the legacy network (:xep:`0085`)
-
-        :param thread:
-        :param c: RecipientType of the active chat state
-        """
-        raise NotImplementedError
-
-    async def inactive(
-        self, c: RecipientType, thread: Optional[LegacyThreadType] = None
-    ):
-        """
-        Triggered when the user sends an 'inactive' chat state to the legacy network (:xep:`0085`)
-
-        :param thread:
-        :param c:
-        """
-        raise NotImplementedError
-
-    async def composing(
-        self, c: RecipientType, thread: Optional[LegacyThreadType] = None
-    ):
-        """
-        Triggered when the user starts typing in the window of a legacy contact (:xep:`0085`)
-
-        :param thread:
-        :param c:
-        """
-        raise NotImplementedError
-
-    async def paused(self, c: RecipientType, thread: Optional[LegacyThreadType] = None):
-        """
-        Triggered when the user pauses typing in the window of a legacy contact (:xep:`0085`)
-
-        :param thread:
-        :param c:
-        """
-        raise NotImplementedError
-
-    async def displayed(
-        self,
-        c: RecipientType,
-        legacy_msg_id: LegacyMessageType,
-        thread: Optional[LegacyThreadType] = None,
-    ):
-        """
-        Triggered when the user reads a message sent by a legacy contact.  (:xep:`0333`)
-
-        This is only possible if a valid ``legacy_msg_id`` was passed when transmitting a message
-        from a contact to the user in :meth:`.LegacyContact.sent_text` or :meth:`slidge.LegacyContact.send_file`.
-
-        :param thread:
-        :param legacy_msg_id: Identifier of the message, passed to :meth:`slidge.LegacyContact.send_text`
-            or :meth:`slidge.LegacyContact.send_file`
-        :param c:
-        """
-        raise NotImplementedError
-
-    async def correct(
-        self,
-        c: RecipientType,
-        text: str,
-        legacy_msg_id: LegacyMessageType,
-        thread: Optional[LegacyThreadType] = None,
-    ) -> Optional[LegacyMessageType]:
-        """
-        Triggered when the user corrected a message using :xep:`0308`
-
-        This is only possible if a valid ``legacy_msg_id`` was passed when transmitting a message
-        from a contact to the user in :meth:`.LegacyContact.send_text` or :meth:`slidge.LegacyContact.send_file`.
-
-        :param thread:
-        :param text:
-        :param legacy_msg_id:
-        :param c:
-        """
-        raise NotImplementedError
-
-    async def search(self, form_values: dict[str, str]) -> Optional[SearchResult]:
-        """
-        Triggered when the user uses Jabber Search (:xep:`0055`) on the component
-
-        Form values is a dict in which keys are defined in :attr:`.BaseGateway.SEARCH_FIELDS`
-
-        :param form_values: search query, defined for a specific plugin by overriding
-            in :attr:`.BaseGateway.SEARCH_FIELDS`
-        :return:
-        """
-        raise NotImplementedError
-
-    async def react(
-        self,
-        c: RecipientType,
-        legacy_msg_id: LegacyMessageType,
-        emojis: list[str],
-        thread: Optional[LegacyThreadType] = None,
-    ):
-        """
-        Triggered when the user sends message reactions (:xep:`0444`).
-
-        :param thread:
-        :param legacy_msg_id: ID of the message the user reacts to
-        :param emojis: Unicode characters representing reactions to the message ``legacy_msg_id``.
-            An empty string means "no reaction", ie, remove all reactions if any were present before
-        :param c: Contact or MUC the reaction refers to
-        """
-        raise NotImplementedError
-
-    async def retract(
-        self,
-        c: RecipientType,
-        legacy_msg_id: LegacyMessageType,
-        thread: Optional[LegacyThreadType] = None,
-    ):
-        """
-        Triggered when the user retracts (:xep:`0424`) a message.
-
-        :param thread:
-        :param legacy_msg_id: Legacy ID of the retracted message
-        :param c: The contact this retraction refers to
-        """
-        raise NotImplementedError
 
     async def get_contact_or_group_or_participant(self, jid: JID):
         if jid.bare in (contacts := self.contacts.known_contacts(only_friends=False)):
@@ -571,31 +637,6 @@ class BaseSession(
                 "recipient-unavailable",
                 "Legacy session is not fully initialized, retry later",
             )
-
-    async def presence(
-        self,
-        resource: str,
-        show: PseudoPresenceShow,
-        status: str,
-        resources: dict[str, ResourceDict],
-        merged_resource: Optional[ResourceDict],
-    ):
-        """
-        Called when the gateway component receives a presence, ie, when
-        one of the user's clients goes online of offline, or changes its
-        status.
-
-        :param resource: The XMPP client identifier, arbitrary string.
-        :param show: The presence ``<show>``, if available. If the resource is
-            just 'available' without any ``<show>`` element, this is an empty
-            str.
-        :param status: A status message, like a deeply profound quote, eg,
-            "Roses are red, violets are blue, [INSERT JOKE]".
-        :param resources: A summary of all the resources for this user.
-        :param merged_resource: A global presence for the user account,
-            following rules described in :meth:`merge_resources`
-        """
-        raise NotImplementedError
 
 
 _sessions: dict[GatewayUser, BaseSession] = {}

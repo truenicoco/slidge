@@ -44,6 +44,10 @@ class LegacyParticipant(
     ChatterDiscoMixin,
     metaclass=SubclassableOnce,
 ):
+    """
+    A legacy participant of a legacy group chat.
+    """
+
     mtype: MessageTypes = "groupchat"
     _can_send_carbon = False
     USE_STANZA_ID = True
