@@ -220,7 +220,7 @@ class BaseGateway(
         )
         self.loop.set_exception_handler(self.__exception_handler)
         self.http: aiohttp.ClientSession = aiohttp.ClientSession()
-        self.has_crashed = False
+        self.has_crashed: bool = False
         self.use_origin_id = False
 
         self.jid_validator: re.Pattern = re.compile(config.USER_JID_VALIDATOR)

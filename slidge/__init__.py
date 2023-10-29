@@ -2,6 +2,7 @@
 Most of slidge public API can be imported from this top level module.
 """
 
+import sys
 import warnings
 
 from . import slixfix  # noqa: F401
@@ -14,6 +15,19 @@ from .group import LegacyBookmarks, LegacyMUC, LegacyParticipant  # noqa: F401
 from .util.db import GatewayUser, user_store  # noqa: F401
 from .util.types import MucType  # noqa: F401
 from .util.util import addLoggingLevel
+
+from .__main__ import main  # isort: skip
+
+
+def entrypoint(module_name: str) -> None:
+    """
+    Entrypoint to be used in ``__main__.py`` of
+    :term:`legacy modules <Legacy Module>`.
+
+    :param module_name: An importable :term:`Legacy Module`.
+    """
+    sys.argv.extend(["--legacy", module_name])
+    main()
 
 
 def formatwarning(message, category, filename, lineno, line=""):
@@ -37,6 +51,7 @@ __all__ = [
     # "MucType",
     # "FormField",
     # "SearchResult",
+    "entrypoint",
     "user_store",
     "global_config",
 ]
