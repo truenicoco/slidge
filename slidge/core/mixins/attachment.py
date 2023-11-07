@@ -9,6 +9,7 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import IO, Collection, Optional, Sequence, Union
+from urllib.parse import quote as urlquote
 from uuid import uuid4
 from xml.etree import ElementTree as ET
 
@@ -90,9 +91,7 @@ class AttachmentMixin(MessageMaker):
                 )
                 name = files[0].name
                 uu = files[0].parent.name  # anti-obvious url trick, see below
-                return files[0], "/".join(
-                    [config.NO_UPLOAD_URL_PREFIX, file_id, uu, name]
-                )
+                return files[0], "/".join([file_id, uu, name])
             else:
                 log.warning(
                     (
@@ -128,8 +127,7 @@ class AttachmentMixin(MessageMaker):
         if config.NO_UPLOAD_FILE_READ_OTHERS:
             log.debug("Changing perms of %s", destination)
             destination.chmod(destination.stat().st_mode | stat.S_IROTH)
-
-        uploaded_url = "/".join([config.NO_UPLOAD_URL_PREFIX, file_id, uu, name])
+        uploaded_url = "/".join([file_id, uu, name])
 
         return destination, uploaded_url
 
@@ -191,10 +189,10 @@ class AttachmentMixin(MessageMaker):
             local_path, new_url = await self.__no_upload(
                 file_path, file_name, legacy_file_id
             )
+            new_url = (config.NO_UPLOAD_URL_PREFIX or "") + "/" + urlquote(new_url)
         else:
             local_path = file_path
             new_url = await self.__upload(file_path, file_name, content_type)
-
         if legacy_file_id:
             db.attachment_store_url(legacy_file_id, new_url)
 
