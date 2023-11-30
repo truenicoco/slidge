@@ -791,6 +791,7 @@ class TestAimShakespeareBase(Base):
                 <feature var="urn:xmpp:mam:2#extended" />
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
+                <feature var="urn:xmpp:avatar:metadata+notify" />
               </query>
             </iq>
             """

@@ -41,6 +41,7 @@ class SessionDispatcher:
             "message_retract",
             "groupchat_join",
             "groupchat_message",
+            "avatar_metadata_publish",
         ):
             xmpp.add_event_handler(
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
@@ -51,7 +52,11 @@ class SessionDispatcher:
         if stanza.get_from().server == xmpp.boundjid.bare:
             log.debug("Ignoring echo")
             raise Ignore
-        if stanza.get_to() == xmpp.boundjid.bare and isinstance(stanza, Message):
+        if (
+            stanza.get_type() == "chat"
+            and stanza.get_to() == xmpp.boundjid.bare
+            and isinstance(stanza, Message)
+        ):
             log.debug("Ignoring message to component")
             raise Ignore
         session = xmpp.get_session_from_stanza(stanza)
@@ -381,6 +386,30 @@ class SessionDispatcher:
         session.raise_if_not_logged()
         muc = await session.bookmarks.by_jid(p.get_to())
         await muc.join(p)
+
+    async def on_avatar_metadata_publish(self, m: Message):
+        session = await self.__get_session(m)
+
+        info = m["pubsub_event"]["items"]["item"]["avatar_metadata"]["info"]
+        hash_ = info["id"]
+
+        if session.avatar_hash == hash_:
+            return
+        session.avatar_hash = hash_
+
+        iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(m.get_from(), hash_)
+        bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
+        try:
+            await session.on_avatar(
+                bytes_, hash_, info["type"], info["height"], info["width"]
+            )
+        except Exception as e:
+            # If something goes wrong here, replying an error stanza will to the
+            # avatar update will likely not show in most clients, so let's send
+            # a normal message from the component to the user.
+            session.send_gateway_message(
+                f"Something went wrong trying to set your avatar: {e!r}"
+            )
 
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):

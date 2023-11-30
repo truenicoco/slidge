@@ -1,5 +1,6 @@
 import hashlib
 import io
+from base64 import b64encode
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -65,6 +66,7 @@ def avatar(request):
     request.cls.avatar_sha1 = hashlib.sha1(img_bytes).hexdigest()
     request.cls.avatar_url = "AVATAR_URL"
 
+    request.cls.avatar_base64 = b64encode(img_bytes).decode("utf-8")
     request.cls.avatar_original_sha1 = hashlib.sha1(path.read_bytes()).hexdigest()
 
     with patch("slidge.core.cache.avatar_cache.http", create=True) as mock:
@@ -81,6 +83,7 @@ class AvatarFixtureMixin:
     avatar_sha1: str
     avatar_original_sha1: str
     avatar_url: str
+    avatar_base64: str
 
 
 @pytest.fixture

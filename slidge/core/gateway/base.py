@@ -258,6 +258,9 @@ class BaseGateway(
         self.vcard: VCard4Provider = self["xep_0292_provider"]
         self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
 
+        # with this we receive user avatar updates
+        self.plugin["xep_0030"].add_feature("urn:xmpp:avatar:metadata+notify")
+
         if self.GROUPS:
             self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")

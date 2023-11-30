@@ -103,6 +103,8 @@ class BaseSession(
 
         self.__cached_presence: Optional[CachedPresence] = None
 
+        self.avatar_hash: Optional[str] = None
+
     async def login(self) -> Optional[str]:
         """
         Logs in the gateway user to the legacy network.
@@ -362,6 +364,23 @@ class BaseSession(
         raise NotImplementedError
 
     search = deprecated("BaseSession.search", on_search)
+
+    async def on_avatar(
+        self, bytes_: bytes, hash_: str, type_, width: int, height: int
+    ) -> None:
+        """
+        Triggered when the user uses modifies their avatar via :xep:`0084`.
+
+        :param bytes_: The data of the avatar. According to the spec, this
+            should always be a PNG, but some implementations do not respect
+            that.
+        :param hash_: The SHA1 hash of the avatar data. This is an identifier of
+            the avatar.
+        :param type_: The MIME type of the avatar.
+        :param width: The width of the avatar image.
+        :param height: The height of the avatar image.
+        """
+        raise NotImplementedError
 
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
