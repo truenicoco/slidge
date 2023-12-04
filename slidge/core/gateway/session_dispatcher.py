@@ -388,6 +388,9 @@ class SessionDispatcher:
         await muc.join(p)
 
     async def on_avatar_metadata_publish(self, m: Message):
+        if not config.SYNC_AVATAR:
+            return
+
         session = await self.__get_session(m)
 
         info = m["pubsub_event"]["items"]["item"]["avatar_metadata"]["info"]
