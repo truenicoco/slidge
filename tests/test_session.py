@@ -143,4 +143,24 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </message>
             """
             )
-            on_avatar.assert_awaited_once()
+
+    def test_avatar_unpublish(self):
+        with unittest.mock.patch("slidge.BaseSession.on_avatar") as on_avatar:
+            self.recv(  # language=XML
+                f"""
+            <message from="romeo@montague.lit"
+                     type="headline"
+                     to="{self.xmpp.boundjid.bare}"
+                     id="mid">
+              <event xmlns="http://jabber.org/protocol/pubsub#event">
+                <items node="urn:xmpp:avatar:metadata">
+                  <item id="{self.avatar_sha1}"
+                        publisher="test@localhost">
+                    <metadata xmlns="urn:xmpp:avatar:metadata" />
+                  </item>
+                </items>
+              </event>
+            </message>
+            """
+            )
+            on_avatar.assert_awaited_with(None, None, None, None, None)

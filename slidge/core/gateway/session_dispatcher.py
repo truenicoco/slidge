@@ -400,12 +400,18 @@ class SessionDispatcher:
             return
         session.avatar_hash = hash_
 
-        iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(m.get_from(), hash_)
-        bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
+        if hash_:
+            iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(m.get_from(), hash_)
+            bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
+            type_ = info["type"]
+            height = info["height"]
+            width = info["width"]
+        else:
+            bytes_ = type_ = height = width = hash_ = None
         try:
-            await session.on_avatar(
-                bytes_, hash_, info["type"], info["height"], info["width"]
-            )
+            await session.on_avatar(bytes_, hash_, type_, width, height)
+        except NotImplementedError:
+            pass
         except Exception as e:
             # If something goes wrong here, replying an error stanza will to the
             # avatar update will likely not show in most clients, so let's send

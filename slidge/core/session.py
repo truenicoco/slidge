@@ -366,14 +366,19 @@ class BaseSession(
     search = deprecated("BaseSession.search", on_search)
 
     async def on_avatar(
-        self, bytes_: bytes, hash_: str, type_, width: int, height: int
+        self,
+        bytes_: Optional[bytes],
+        hash_: Optional[str],
+        type_: Optional[str],
+        width: Optional[int],
+        height: Optional[int],
     ) -> None:
         """
         Triggered when the user uses modifies their avatar via :xep:`0084`.
 
         :param bytes_: The data of the avatar. According to the spec, this
             should always be a PNG, but some implementations do not respect
-            that.
+            that. If `None` it means the user has unpublished their avatar.
         :param hash_: The SHA1 hash of the avatar data. This is an identifier of
             the avatar.
         :param type_: The MIME type of the avatar.
