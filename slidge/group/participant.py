@@ -379,7 +379,7 @@ class LegacyParticipant(
         return super().get_disco_info()
 
     def moderate(self, legacy_msg_id: LegacyMessageType, reason: Optional[str] = None):
-        m = self._make_message()
+        m = self.muc.get_system_participant()._make_message()
         m["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         m["apply_to"]["moderated"].enable("retract")
         m["apply_to"]["moderated"]["by"] = self.jid

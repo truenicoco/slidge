@@ -2621,7 +2621,7 @@ class TestMuc(Base):
 
         global_config.MAM_MAX_DAYS = orig
 
-    def test_moderate(self):
+    def test_moderate_by_room(self):
         muc = self.get_private_muc("room", ["gajim"])
         p = muc.get_system_participant()
         p.moderate("legacy-666", "reason™")
@@ -2643,6 +2643,32 @@ class TestMuc(Base):
               </apply-to>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="room" />
+            </message>
+            """
+        )
+
+    def test_moderate_by_moderator(self):
+        # muc = self.get_private_muc(resources=["gajim"])
+        p = self.get_participant(resources=["gajim"])
+        p.moderate("legacy-666", "reason™")
+        self.send(  # language=XML
+            f"""
+            <message type="groupchat"
+                     from='room-private@aim.shakespeare.lit'
+                     to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <apply-to id="666"
+                        xmlns="urn:xmpp:fasten:0">
+                <moderated by='room-private@aim.shakespeare.lit/{p.nickname}'
+                           xmlns='urn:xmpp:message-moderate:0'>
+                  <retract xmlns='urn:xmpp:message-retract:0' />
+                  <reason>reason™</reason>
+                </moderated>
+              </apply-to>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
             </message>
             """
         )
