@@ -126,6 +126,7 @@ class ConfigModule:
                 if skip_next:
                     skip_next = False
                     continue
+                force_keep = False
                 if "=" in a:
                     real_name, _value = a.split("=")
                     opt: Optional[Option] = options_long.get(
@@ -137,9 +138,11 @@ class ConfigModule:
                                 continue
                             else:
                                 a = real_name
+                                force_keep = True
                         else:
                             if _value in _TRUEISH:
                                 a = real_name
+                                force_keep = True
                             else:
                                 continue
                 else:
@@ -150,7 +153,14 @@ class ConfigModule:
                             log.debug("Removing %s from argv", aa)
                             skip_next = True
 
-                no_explicit_bool.append(a)
+                if opt:
+                    if opt.type is bool:
+                        if force_keep or not opt.default:
+                            no_explicit_bool.append(a)
+                    else:
+                        no_explicit_bool.append(a)
+                else:
+                    no_explicit_bool.append(a)
             log.debug("Removed boolean values from %s to %s", argv, no_explicit_bool)
             argv = no_explicit_bool
 

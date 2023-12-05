@@ -20,6 +20,12 @@ etc.), and to specify a plugin-specific file on startup, eg:
 
     slidge -c /etc/slidge/superduper.conf
 
+.. warning::
+
+    Because of an ugly mess that will soon™ be fixed, it is impossible to use
+    the config file to turn off boolean arguments that are true by default.
+    As a workaround, use CLI args instead, e.g., ``--some-opt=false``.
+
 Common config
 -------------
 

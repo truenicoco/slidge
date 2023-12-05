@@ -77,19 +77,38 @@ def test_bool(tmpdir, tmp_path):
         SOME_BOOL = False
         SOME_BOOL__DOC = "a bool"
 
+        TRUE = True
+        TRUE__DOC = "true by default"
+
     configurator = ConfigModule(Config)
 
     configurator.set_conf([])
     assert not Config.SOME_BOOL
+    assert Config.TRUE
 
     configurator.set_conf(["--some-bool"])
     assert Config.SOME_BOOL
+    assert Config.TRUE
+
+    configurator.set_conf(["--true"])
+    assert not Config.SOME_BOOL
+    assert Config.TRUE
+
+    configurator.set_conf(["--true=false"])
+    assert not Config.SOME_BOOL
+    assert not Config.TRUE
+
+    configurator.set_conf(["--true=true"])
+    assert not Config.SOME_BOOL
+    assert Config.TRUE
 
     configurator.set_conf(["--some-bool=true"])
     assert Config.SOME_BOOL
+    assert Config.TRUE
 
     configurator.set_conf(["--some-bool=false"])
     assert not Config.SOME_BOOL
+    assert Config.TRUE
 
     # for the plugin-specific conf files, we use the rest
     configurator.parser.add_argument("-c", is_config_file=True)
@@ -97,6 +116,9 @@ def test_bool(tmpdir, tmp_path):
     class Config2:
         SOME_OTHER_BOOL = False
         SOME_OTHER_BOOL__DOC = "a bool"
+
+        TRUE2 = True
+        TRUE2__DOC = "true by default"
 
     configurator2 = ConfigModule(Config2)
     conf_file = tmpdir / "conf.conf"
@@ -107,6 +129,7 @@ def test_bool(tmpdir, tmp_path):
     assert rest
     configurator2.set_conf(rest)
     assert not Config2.SOME_OTHER_BOOL
+    assert Config2.TRUE2
 
     # true
     conf_file.write_text("some-other-bool=true", "utf-8")
@@ -114,6 +137,7 @@ def test_bool(tmpdir, tmp_path):
     assert rest
     configurator2.set_conf(rest)
     assert Config2.SOME_OTHER_BOOL
+    assert Config2.TRUE2
 
     # true
     conf_file.write_text("", "utf-8")
@@ -121,6 +145,74 @@ def test_bool(tmpdir, tmp_path):
     assert not rest
     configurator2.set_conf(rest)
     assert not Config2.SOME_OTHER_BOOL
+    assert Config2.TRUE2
+
+    conf_file.write_text("true2=true", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert rest
+    configurator2.set_conf(rest)
+    assert not Config2.SOME_OTHER_BOOL
+    assert Config2.TRUE2
+
+    conf_file.write_text("true2=false", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert rest
+    configurator2.set_conf(rest)
+    assert not Config2.SOME_OTHER_BOOL
+    assert not Config2.TRUE2
+
+
+def test_true_by_default_file(tmpdir, tmp_path):
+    conf_file = tmpdir / "conf.conf"
+
+    class Config:
+        TRUE = True
+        TRUE__DOC = "true by default"
+
+    configurator = ConfigModule(Config)
+    configurator.parser.add_argument("-c", is_config_file=True)
+
+    conf_file.write_text("", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert not rest
+    assert Config.TRUE
+
+    # TODO: fix these cases!
+    # conf_file.write_text("true=true", "utf-8")
+    # args, rest = configurator.set_conf(["-c", str(conf_file)])
+    # assert not rest
+    # assert Config.TRUE
+
+    # conf_file.write_text("true=false", "utf-8")
+    # args, rest = configurator.set_conf(["-c", str(conf_file)])
+    # assert not rest
+    # assert not Config.TRUE
+
+
+def test_false_by_default_file(tmpdir, tmp_path):
+    conf_file = tmpdir / "conf.conf"
+
+    class Config:
+        FALSE = False
+        FALSE__DOC = "true by default"
+
+    configurator = ConfigModule(Config)
+    configurator.parser.add_argument("-c", is_config_file=True)
+
+    conf_file.write_text("", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert not rest
+    assert not Config.FALSE
+
+    conf_file.write_text("false=true", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert not rest
+    assert Config.FALSE
+
+    conf_file.write_text("false=false", "utf-8")
+    args, rest = configurator.set_conf(["-c", str(conf_file)])
+    assert not rest
+    assert not Config.FALSE
 
 
 def test_slidge_conf():
