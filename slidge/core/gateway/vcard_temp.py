@@ -1,11 +1,13 @@
 from copy import copy
 from typing import TYPE_CHECKING
 
-from slixmpp import CoroutineCallback, Iq, StanzaPath
+from slixmpp import CoroutineCallback, Iq, StanzaPath, register_stanza_plugin
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0084 import MetaData
 from slixmpp.plugins.xep_0292.stanza import NS as VCard4NS
 
 from ...contact import LegacyContact
+from ...core.session import BaseSession
 from ...group import LegacyParticipant
 
 if TYPE_CHECKING:
@@ -24,6 +26,11 @@ class VCardTemp:
                 self.__handler,  # type:ignore
             )
         )
+        # TODO: MR to slixmpp adding this to XEP-0084
+        register_stanza_plugin(
+            self.xmpp.plugin["xep_0060"].stanza.Item,
+            MetaData,
+        )
 
     async def __handler(self, iq: Iq):
         if iq["type"] == "get":
@@ -32,27 +39,59 @@ class VCardTemp:
         if iq["type"] == "set":
             return await self.__handle_set_vcard_temp(iq)
 
+    async def __fetch_user_avatar(self, session: BaseSession):
+        hash_ = session.avatar_hash
+        if not hash_:
+            raise XMPPError("item-not-found", "This participant has no contact")
+        meta_iq = await self.xmpp.plugin["xep_0060"].get_item(
+            session.user.jid,
+            MetaData.namespace,
+            hash_,
+        )
+        info = meta_iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]
+        type_ = info["type"]
+        data_iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
+            session.user.jid, hash_
+        )
+        bytes_ = data_iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
+        return bytes_, type_
+
     async def __handle_get_vcard_temp(self, iq: Iq):
         session = self.xmpp.get_session_from_stanza(iq)
         entity = await session.get_contact_or_group_or_participant(iq.get_to())
         if not entity:
             raise XMPPError("item-not-found")
 
+        bytes_ = None
         if isinstance(entity, LegacyParticipant):
-            if not (contact := entity.contact):
+            if entity.is_user:
+                bytes_, type_ = await self.__fetch_user_avatar(session)
+                if not bytes_:
+                    raise XMPPError(
+                        "internal-server-error",
+                        "Could not fetch the slidge user's avatar",
+                    )
+                avatar = None
+                vcard = None
+            elif not (contact := entity.contact):
                 raise XMPPError("item-not-found", "This participant has no contact")
-            vcard = await self.xmpp.vcard.get_vcard(contact.jid, iq.get_from())
-            avatar = contact.get_avatar()
+            else:
+                vcard = await self.xmpp.vcard.get_vcard(contact.jid, iq.get_from())
+                avatar = contact.get_avatar()
+                type_ = "image/png"
         else:
             avatar = entity.get_avatar()
+            type_ = "image/png"
             if isinstance(entity, LegacyContact):
                 vcard = await self.xmpp.vcard.get_vcard(entity.jid, iq.get_from())
             else:
                 vcard = None
         v = self.xmpp.plugin["xep_0054"].make_vcard()
         if avatar is not None and avatar.data:
-            v["PHOTO"]["BINVAL"] = avatar.data.get_value()
-            v["PHOTO"]["TYPE"] = "image/png"
+            bytes_ = avatar.data.get_value()
+        if bytes_:
+            v["PHOTO"]["BINVAL"] = bytes_
+            v["PHOTO"]["TYPE"] = type_
         if vcard:
             for el in vcard.xml:
                 new = copy(el)

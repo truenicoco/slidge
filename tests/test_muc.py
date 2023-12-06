@@ -3196,3 +3196,127 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
             """
         )
         self.send(None)
+
+
+@pytest.mark.usefixtures("avatar", "user_cls")
+class TestUserAvatar(Base, AvatarFixtureMixin):
+    def setUp(self):
+        super().setUp()
+        session = self.get_romeo_session()
+        session.avatar_hash = self.avatar_sha1
+        muc = self.get_private_muc(name="room-user-avatar-test", resources=("gajim",))
+        self.user_participant = self.run_coro(muc.get_user_participant())
+
+    def test_user_avatar(self):
+        self.user_participant.send_initial_presence("romeo@montague.lit/gajim")
+        self.send(  # language=XML
+            f"""
+            <presence from="room-user-avatar-test@aim.shakespeare.lit/{self.user_participant.nickname}"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+                <status code="110" />
+              </x>
+              <x xmlns="vcard-temp:x:update">
+                <photo>{self.avatar_sha1}</photo>
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </presence>
+            """
+        )
+
+    def test_fetch_user_avatar(self):
+        self.recv(  # language=XML
+            f"""
+            <iq from="romeo@montague.lit/gajim"
+                to="room-user-avatar-test@aim.shakespeare.lit/{self.user_participant.nickname}"
+                type="get"
+                xml:lang="en">
+              <vCard xmlns="vcard-temp" />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq type="get"
+                to="romeo@montague.lit"
+                id="1">
+              <pubsub xmlns="http://jabber.org/protocol/pubsub">
+                <items node="urn:xmpp:avatar:metadata">
+                  <item id="{self.avatar_sha1}" />
+                </items>
+              </pubsub>
+            </iq>
+            """
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq type='result'
+                from='romeo@montague.lit'
+                to='{self.xmpp.boundjid.bare}'
+                id='1'>
+              <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+                <items node='urn:xmpp:avatar:metadata'>
+                  <item id='{self.avatar_sha1}'>
+                    <metadata xmlns='urn:xmpp:avatar:metadata'>
+                      <info bytes='{len(self.avatar_bytes)}'
+                            height='5'
+                            id='{self.avatar_sha1}'
+                            type='image/test'
+                            width='5' />
+                    </metadata>
+                  </item>
+                </items>
+              </pubsub>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq type="get"
+                to="romeo@montague.lit"
+                id="2">
+              <pubsub xmlns="http://jabber.org/protocol/pubsub">
+                <items node="urn:xmpp:avatar:data">
+                  <item id="{self.avatar_sha1}" />
+                </items>
+              </pubsub>
+            </iq>
+            """
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq type='result'
+                from='romeo@montague.lit'
+                to='{self.xmpp.boundjid.bare}'
+                id='2'>
+              <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+                <items node='urn:xmpp:avatar:data'>
+                  <item id='{self.avatar_sha1}'>
+                    <data xmlns='urn:xmpp:avatar:data'>{self.avatar_base64}</data>
+                  </item>
+                </items>
+              </pubsub>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq from="room-user-avatar-test@aim.shakespeare.lit/thirdwitch"
+                to="romeo@montague.lit/gajim"
+                type="result"
+                id="3"
+                xml:lang="en">
+              <vCard xmlns="vcard-temp">
+                <PHOTO>
+                  <BINVAL>{self.avatar_base64}</BINVAL>
+                  <TYPE>image/test</TYPE>
+                </PHOTO>
+              </vCard>
+            </iq>
+            """,
+            use_values=False,
+        )
+        self.send(None)

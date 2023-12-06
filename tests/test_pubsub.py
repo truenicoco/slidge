@@ -329,6 +329,7 @@ class TestPubSubAvatar(SlixTestPlus):
               </pubsub>
             </iq>
             """,
+            use_values=False,
         )
 
     def test_all_metadata_retrieval(self):
@@ -367,6 +368,7 @@ class TestPubSubAvatar(SlixTestPlus):
               </pubsub>
             </iq>
             """,
+            use_values=False,
         )
 
     def test_no_avatar(self):
