@@ -59,8 +59,7 @@ Privileges with ejabberd
 
 .. warning::
 
-  While this configuration is the correct way to go, this actually serves no
-  purpose in slidge, because of these two issues:
+  If you want to set up privileges, you need ejabberd with version 23.10 or newer because of these two issues:
   https://github.com/processone/ejabberd/issues/3990 and
   https://github.com/processone/ejabberd/issues/3942
 
@@ -69,7 +68,9 @@ Privileges with ejabberd
     acl:
       slidge_acl:
         server:
+        # Make sure to include all of your slidge bridges that need privileges here:
           - "superduper.example.org"
+          - "other-walled-garden.example.org"
 
     access_rules:
       slidge_rule:

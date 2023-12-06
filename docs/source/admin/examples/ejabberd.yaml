@@ -3,14 +3,14 @@ listen:
     ip: 127.0.0.1
     port: 5347
     module: ejabberd_service
+    # The next line is required if you're settings up multiple bridges
+    global_routes: false
     hosts:
       - "superduper.example.org":
           password: secret
       - "other-walled-garden.example.org":
           password: some-other-secret
       # repeat for other slidge plugins…
-      # upload-service=example.org in Slidge's config
-      - "example.org"
 
   # HTTP upload service (XEP-0363)
   -
@@ -25,7 +25,7 @@ acl:
     server:
       - "superduper.example.org"
       - "other-walled-garden.example.org"
-      # repeat for other slidge plugins…
+      # repeat for other slidge plugins you added in the listen section above
 
 access_rules:
   slidge_rule:
