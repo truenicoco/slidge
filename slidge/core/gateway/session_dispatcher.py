@@ -2,7 +2,7 @@ import logging
 from copy import copy
 from typing import TYPE_CHECKING, Awaitable, Callable, Union
 
-from slixmpp import JID, Message, Presence
+from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
 
 from ... import LegacyContact
@@ -28,6 +28,14 @@ class SessionDispatcher:
         self.xmpp = xmpp
         self.http = xmpp.http
 
+        xmpp.register_handler(
+            CoroutineCallback(
+                "VCardTemp",
+                StanzaPath("iq/apply_to/moderate"),
+                _exceptions_to_xmpp_errors(self.on_user_moderation),  # type:ignore
+            )
+        )
+
         for event in (
             "legacy_message",
             "marker_displayed",
@@ -47,15 +55,15 @@ class SessionDispatcher:
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
             )
 
-    async def __get_session(self, stanza: Union[Message, Presence]) -> BaseSession:
+    async def __get_session(self, stanza: Union[Message, Presence, Iq]) -> BaseSession:
         xmpp = self.xmpp
         if stanza.get_from().server == xmpp.boundjid.bare:
             log.debug("Ignoring echo")
             raise Ignore
         if (
-            stanza.get_type() == "chat"
+            isinstance(stanza, Message)
+            and stanza.get_type() == "chat"
             and stanza.get_to() == xmpp.boundjid.bare
-            and isinstance(stanza, Message)
         ):
             log.debug("Ignoring message to component")
             raise Ignore
@@ -420,6 +428,28 @@ class SessionDispatcher:
                 f"Something went wrong trying to set your avatar: {e!r}"
             )
 
+    async def on_user_moderation(self, iq: Iq):
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+
+        muc = await session.bookmarks.by_jid(iq.get_to())
+
+        apply_to = iq["apply_to"]
+        xmpp_id = apply_to["id"]
+        if not xmpp_id:
+            raise XMPPError("bad-request", "Missing moderated message ID")
+
+        moderate = apply_to["moderate"]
+        if not moderate["retract"]:
+            raise XMPPError(
+                "feature-not-implemented",
+                "Slidge only implements moderation/retraction",
+            )
+
+        legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
+        await session.on_moderate(muc, legacy_id, moderate["reason"] or None)
+        iq.reply(clear=True).send()
+
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):
     sent = session.sent.inverse.get(xmpp_id)
@@ -490,6 +520,9 @@ def _exceptions_to_xmpp_errors(cb: HandlerType) -> HandlerType:
             raise
         except NotImplementedError:
             log.debug("Legacy module does not implement %s", cb)
+            raise XMPPError(
+                "feature-not-implemented", "Not implemented by the legacy module"
+            )
         except Exception as e:
             log.error("Failed to handle incoming stanza: %s", stanza, exc_info=e)
             raise XMPPError("internal-server-error", str(e))

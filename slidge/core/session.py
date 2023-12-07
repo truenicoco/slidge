@@ -387,6 +387,28 @@ class BaseSession(
         """
         raise NotImplementedError
 
+    async def on_moderate(
+        self, muc: LegacyMUC, legacy_msg_id: LegacyMessageType, reason: Optional[str]
+    ):
+        """
+        Triggered when the user attempts to retract a message that was sent in
+        a MUC using :xep:`0425`.
+
+        If retraction is not possible, this should raise the appropriate
+        XMPPError with a human-readable message.
+
+        NB: the legacy module is responsible for calling
+        :method:`LegacyParticipant.moderate` when this is successful, because
+        slidge will acknowledge the moderation IQ, but will not send the
+        moderation message from the MUC automatically.
+
+        :param muc: The MUC in which the message was sent
+        :param legacy_msg_id: The legacy ID of the message to be retracted
+        :param reason: Optionally, a reason for the moderation, given by the
+            user-moderator.
+        """
+        raise NotImplementedError
+
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
 

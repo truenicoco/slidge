@@ -318,6 +318,7 @@ class LegacyMUC(
             "vcard-temp",
             "urn:xmpp:ping",
             "urn:xmpp:occupant-id:0",
+            self.xmpp.plugin["xep_0425"].stanza.NS,
         ]
         if self.type == MucType.GROUP:
             features.extend(["muc_membersonly", "muc_nonanonymous", "muc_hidden"])

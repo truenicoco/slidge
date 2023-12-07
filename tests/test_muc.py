@@ -351,6 +351,7 @@ class TestMuc(Base):
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
+                <feature var="urn:xmpp:message-moderate:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -432,6 +433,7 @@ class TestMuc(Base):
                 <feature var="muc_semianonymous" />
                 <feature var="muc_public" />
                 <feature var="urn:xmpp:occupant-id:0" />
+                <feature var="urn:xmpp:message-moderate:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -513,6 +515,7 @@ class TestMuc(Base):
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
+                <feature var="urn:xmpp:message-moderate:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -643,6 +646,7 @@ class TestMuc(Base):
                 <feature var="vcard-temp" />
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
+                <feature var="urn:xmpp:message-moderate:0" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -3320,3 +3324,74 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
             use_values=False,
         )
         self.send(None)
+
+
+class TestModeration(Base):
+    def setUp(self):
+        super().setUp()
+        self.muc = muc = self.get_private_muc(
+            name="room-moderation-test", resources=("gajim",)
+        )
+        self.user_participant = self.run_coro(muc.get_user_participant())
+        self.user_jid = self.get_romeo_session().user.jid
+
+    def test_moderation_not_implemented(self):
+        self.recv(  # language=XML
+            f"""
+            <iq type='set'
+                to='{self.muc.jid}'
+                id='retract-request-1'
+                from='{self.user_jid}'>
+              <apply-to id="stanza-id-1"
+                        xmlns="urn:xmpp:fasten:0">
+                <moderate xmlns='urn:xmpp:message-moderate:0'>
+                  <retract xmlns='urn:xmpp:message-retract:0' />
+                  <reason>This message contains inappropriate content for this forum</reason>
+                </moderate>
+              </apply-to>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="error"
+                to="romeo@montague.lit"
+                id="retract-request-1"
+                from="room-moderation-test@aim.shakespeare.lit">
+              <error type="cancel">
+                <feature-not-implemented xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Not implemented by the legacy module</text>
+              </error>
+            </iq>
+            """
+        )
+
+    def test_moderation_success(self):
+        with unittest.mock.patch("slidge.BaseSession.on_moderate") as on_moderate:
+            self.recv(  # language=XML
+                f"""
+            <iq type='set'
+                to='{self.muc.jid}'
+                id='retract-request-1'
+                from='{self.user_jid}'>
+              <apply-to id="stanza-id-1"
+                        xmlns="urn:xmpp:fasten:0">
+                <moderate xmlns='urn:xmpp:message-moderate:0'>
+                  <retract xmlns='urn:xmpp:message-retract:0' />
+                  <reason>REASON</reason>
+                </moderate>
+              </apply-to>
+            </iq>
+            """
+            )
+            on_moderate.assert_awaited_once_with(
+                self.muc, "legacy-stanza-id-1", "REASON"
+            )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                to="romeo@montague.lit"
+                id="retract-request-1"
+                from="room-moderation-test@aim.shakespeare.lit"></iq>
+            """
+        )
