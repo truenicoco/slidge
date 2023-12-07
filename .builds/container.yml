@@ -4,6 +4,8 @@ packages:
   - docker-buildx
 secrets:
   - 173244e1-c233-43de-969f-65965c5487e1
+sources:
+  - https://git.sr.ht/~nicoco/slidge
 tasks:
   - setup-docker1: |
       sudo systemctl start docker
