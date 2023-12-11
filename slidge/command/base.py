@@ -259,7 +259,7 @@ class FormField:
         if isinstance(value, list) and not self.type.endswith("multi"):
             raise XMPPError("not-acceptable", "A single value was expected")
 
-        if self.type == "list-multi":
+        if self.type in ("list-multi", "jid-multi"):
             if not value:
                 value = []
             if isinstance(value, list):
@@ -294,7 +294,9 @@ class FormField:
         for v in value:
             if v not in self.__acceptable_options():
                 raise XMPPError("not-acceptable", f"Not a valid option: '{v}'")
-        return value
+        if self.type == "list-multi":
+            return value
+        return [JID(v) for v in value]
 
     def get_xml(self) -> SlixFormField:
         """
