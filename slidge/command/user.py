@@ -1,10 +1,10 @@
 # Commands available to users
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 from slixmpp import JID  # type:ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
 
-from ..util.types import AnyBaseSession
+from ..util.types import AnyBaseSession, LegacyGroupIdType
 from .base import (
     Command,
     CommandAccess,
@@ -194,3 +194,51 @@ class Login(Command):
         session.send_gateway_status(msg or "Re-connected", show="chat")
         session.send_gateway_message(msg or "Re-connected")
         return msg
+
+
+class CreateGroup(Command):
+    NAME = "New legacy group"
+    HELP = "Create a group on the legacy service"
+    NODE = CHAT_COMMAND = "create-group"
+
+    ACCESS = CommandAccess.USER_LOGGED
+
+    async def run(self, session: Optional[AnyBaseSession], _ifrom, *_):
+        assert session is not None
+        contacts = session.contacts.known_contacts(only_friends=True)
+        return Form(
+            title="Create a new group",
+            instructions="Pick contacts that should be part of this new group",
+            fields=[
+                FormField(var="group_name", label="Name of the group", required=True),
+                FormField(
+                    var="contacts",
+                    label="Contacts to add to the new group",
+                    type="list-multi",
+                    options=[
+                        {"value": str(contact.jid), "label": contact.name}
+                        for contact in sorted(contacts.values(), key=lambda c: c.name)
+                    ],
+                    required=False,
+                ),
+            ],
+            handler=self.finish,
+        )
+
+    @staticmethod
+    async def finish(form_values: FormValues, session: Optional[AnyBaseSession], *_):
+        assert session is not None
+        legacy_id: LegacyGroupIdType = await session.on_create_group(  # type:ignore
+            cast(str, form_values["group_name"]),
+            [
+                await session.contacts.by_jid(JID(j))
+                for j in form_values.get("contacts", [])  # type:ignore
+            ],
+        )
+        muc = await session.bookmarks.by_legacy_id(legacy_id)
+        return TableResult(
+            description=f"Your new group: xmpp:{muc.jid}?join",
+            fields=[FormField("name"), FormField("jid", type="jid-single")],
+            items=[{"name": muc.name, "jid": muc.jid}],
+            jids_are_mucs=True,
+        )

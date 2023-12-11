@@ -67,6 +67,7 @@ FieldType = Literal[
     "fixed",
     "text-single",
     "jid-single",
+    "jid-multi",
     "list-single",
     "list-multi",
     "text-private",

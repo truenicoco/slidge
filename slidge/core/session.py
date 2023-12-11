@@ -15,6 +15,7 @@ from ..util import ABCSubclassableOnceAtMost
 from ..util.db import GatewayUser, user_store
 from ..util.sql import SQLBiDict
 from ..util.types import (
+    LegacyGroupIdType,
     LegacyMessageType,
     LegacyThreadType,
     PseudoPresenceShow,
@@ -406,6 +407,18 @@ class BaseSession(
         :param legacy_msg_id: The legacy ID of the message to be retracted
         :param reason: Optionally, a reason for the moderation, given by the
             user-moderator.
+        """
+        raise NotImplementedError
+
+    async def on_create_group(
+        self, name: str, contacts: list[LegacyContact]
+    ) -> LegacyGroupIdType:
+        """
+        Triggered when the user request the creation of a group via the
+        dedicated :term:`Command`.
+
+        :param name: Name of the group
+        :param contacts: list of contacts that should be members of the group
         """
         raise NotImplementedError
 

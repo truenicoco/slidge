@@ -643,6 +643,9 @@ class TestAimShakespeareBase(Base):
                 <item jid="aim.shakespeare.lit"
                       node="groups"
                       name="List your legacy groups" />
+                <item jid="aim.shakespeare.lit"
+                      node="create-group"
+                      name="New legacy group" />
               </query>
             </iq>
             """
