@@ -56,6 +56,7 @@ class SessionDispatcher:
             "message_retract",
             "groupchat_join",
             "groupchat_message",
+            "groupchat_direct_invite",
             "avatar_metadata_publish",
         ):
             xmpp.add_event_handler(
@@ -470,6 +471,29 @@ class SessionDispatcher:
             contact, item["affiliation"], item["reason"] or None, item["nick"] or None
         )
         iq.reply(clear=True).send()
+
+    async def on_groupchat_direct_invite(self, msg: Message):
+        session = await self.__get_session(msg)
+        session.raise_if_not_logged()
+
+        invite = msg["groupchat_invite"]
+        jid = JID(invite["jid"])
+
+        if jid.domain != self.xmpp.boundjid.bare:
+            raise XMPPError(
+                "bad-request",
+                "Legacy contacts can only be invited to legacy groups, not standard XMPP MUCs.",
+            )
+
+        if invite["password"]:
+            raise XMPPError(
+                "bad-request", "Password-protected groups are not supported"
+            )
+
+        contact = await session.contacts.by_jid(msg.get_to())
+        muc = await session.bookmarks.by_jid(jid)
+
+        await session.on_invitation(contact, muc, invite["reason"] or None)
 
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):

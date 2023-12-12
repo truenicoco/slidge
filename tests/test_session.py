@@ -39,6 +39,13 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         self.xmpp["xep_0060"].map_node_event(MetaData.namespace, "avatar_metadata")
         register_stanza_plugin(EventItem, MetaData)
 
+        self.juliet = self.run_coro(
+            self.get_romeo_session().contacts.by_legacy_id("juliet")
+        )
+        self.room = self.run_coro(
+            self.get_romeo_session().bookmarks.by_legacy_id("room")
+        )
+
     @staticmethod
     def get_romeo_session() -> Session:
         return BaseSession.get_self_or_unique_subclass().from_jid(
@@ -164,3 +171,39 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             """
             )
             on_avatar.assert_awaited_with(None, None, None, None, None)
+
+    def test_user_send_invitation_to_standard_muc(self):
+        self.recv(  # language=XML
+            f"""
+            <message from="romeo@montague.lit"
+                     to="juliet@{self.xmpp.boundjid.bare}"
+                     id="mid">
+              <x xmlns='jabber:x:conference'
+                 jid='darkcave@macbeth.shakespeare.lit'
+                 password='cauldronburn'
+                 reason='Hey Hecate, this is the place for all good witches!' />
+            </message>
+            """
+        )
+        msg = self.next_sent()
+        assert msg["type"] == "error"
+        assert msg["error"]["condition"] == "bad-request"
+
+    def test_user_send_invitation(self):
+        with unittest.mock.patch("slidge.BaseSession.on_invitation") as on_invitation:
+            self.recv(  # language=XML
+                f"""
+            <message from="romeo@montague.lit"
+                     to="juliet@{self.xmpp.boundjid.bare}"
+                     id="mid">
+              <x xmlns='jabber:x:conference'
+                 jid='room@{self.xmpp.boundjid.bare}'
+                 reason='Hey Hecate, this is the place for all good witches!' />
+            </message>
+            """
+            )
+            on_invitation.assert_awaited_once_with(
+                self.juliet,
+                self.room,
+                "Hey Hecate, this is the place for all good witches!",
+            )

@@ -422,6 +422,23 @@ class BaseSession(
         """
         raise NotImplementedError
 
+    async def on_invitation(
+        self, contact: LegacyContact, muc: LegacyMUC, reason: Optional[str]
+    ):
+        """
+        Triggered when the user invites a :term:`Contact` to a legacy MUC via
+        :xep:`0249`.
+
+        The default implementation calls :meth:`LegacyMUC.on_set_affiliation`
+        with the 'member' affiliation. Override if you want to customize this
+        behaviour.
+
+        :param contact: The invitee
+        :param muc: The group
+        :param reason: Optionally, a reason
+        """
+        await muc.on_set_affiliation(contact, "member", reason, None)
+
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
 

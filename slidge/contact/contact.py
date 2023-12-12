@@ -84,6 +84,8 @@ class LegacyContact(
     _avatar_pubsub_broadcast = True
     _avatar_bare_jid = True
 
+    INVITATION_RECIPIENT = True
+
     def __init__(
         self,
         session: "BaseSession",

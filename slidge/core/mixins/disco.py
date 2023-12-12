@@ -64,6 +64,7 @@ class ChatterDiscoMixin(BaseDiscoMixin):
     REACTION = True
     RETRACTION = True
     REPLIES = True
+    INVITATION_RECIPIENT = False
 
     DISCO_TYPE = "pc"
     DISCO_CATEGORY = "client"
@@ -87,6 +88,8 @@ class ChatterDiscoMixin(BaseDiscoMixin):
             features.append("urn:xmpp:message-retract:0")
         if self.REPLIES:
             features.append("urn:xmpp:reply:0")
+        if self.INVITATION_RECIPIENT:
+            features.append("jabber:x:conference")
         features.append("urn:ietf:params:xml:ns:vcard-4.0")
         return features
 

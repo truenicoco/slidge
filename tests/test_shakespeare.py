@@ -857,6 +857,7 @@ class TestAimShakespeareBase(Base):
                 <feature var="urn:xmpp:message-retract:0" />
                 <feature var="urn:xmpp:reply:0" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+                <feature var='jabber:x:conference' />
               </query>
             </iq>
             """,
@@ -961,6 +962,7 @@ class TestAimShakespeareBase(Base):
                 <feature var="urn:xmpp:message-retract:0" />
                 <feature var="urn:xmpp:reply:0" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+                <feature var="jabber:x:conference" />
                 <x xmlns='jabber:x:data'
                    type='result'>
                   <field var='FORM_TYPE'
@@ -1326,7 +1328,7 @@ class TestContact(SlidgeTest):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/{slix_version}"
                  hash="sha-1"
-                 ver="aefnNdzUD10Q7P37iH9fxDgg4Co=" />
+                 ver="UQAWii/9nNwlRpOcbTSGXm6r+aY=" />
               <priority>0</priority>
             </presence>
             """
@@ -1347,7 +1349,7 @@ class TestContact(SlidgeTest):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/{slix_version}"
                  hash="sha-1"
-                 ver="/7DLGo7MgQHSwLw/uRa96BDb/N0=" />
+                 ver="IFcuRXqYgRH7E9ZvZRxPhOrTH7E=" />
               <priority>0</priority>
             </presence>
             """
@@ -1699,6 +1701,7 @@ class TestContact(SlidgeTest):
                 <feature var="urn:xmpp:message-retract:0" />
                 <feature var="urn:xmpp:reply:0" />
                 <feature var="urn:ietf:params:xml:ns:vcard-4.0" />
+                <feature var="jabber:x:conference" />
               </query>
             </iq>
             """
