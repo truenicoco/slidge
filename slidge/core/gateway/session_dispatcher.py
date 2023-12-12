@@ -35,6 +35,13 @@ class SessionDispatcher:
                 _exceptions_to_xmpp_errors(self.on_user_moderation),  # type:ignore
             )
         )
+        xmpp.register_handler(
+            CoroutineCallback(
+                "MUCSetAffiliation",
+                StanzaPath("iq@type=set/mucadmin_query"),
+                _exceptions_to_xmpp_errors(self.on_user_set_affiliation),  # type:ignore
+            )
+        )
 
         for event in (
             "legacy_message",
@@ -448,6 +455,20 @@ class SessionDispatcher:
 
         legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
         await session.on_moderate(muc, legacy_id, moderate["reason"] or None)
+        iq.reply(clear=True).send()
+
+    async def on_user_set_affiliation(self, iq: Iq):
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+
+        item = iq["mucadmin_query"]["item"]
+        contact = await session.contacts.by_jid(JID(item["jid"]))
+
+        muc = await session.bookmarks.by_jid(iq.get_to())
+
+        await muc.on_set_affiliation(
+            contact, item["affiliation"], item["reason"] or None, item["nick"] or None
+        )
         iq.reply(clear=True).send()
 
 

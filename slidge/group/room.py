@@ -25,6 +25,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyParticipantType,
     LegacyUserIdType,
+    MucAffiliation,
     MucType,
 )
 from .archive import MessageArchive
@@ -919,6 +920,27 @@ class LegacyMUC(
             :py:meth:`.LegacyMUC.set_avatar` is meant to be awaited somewhere else.
         """
         raise NotImplementedError
+
+    async def on_set_affiliation(
+        self,
+        contact: "LegacyContact",
+        affiliation: MucAffiliation,
+        reason: Optional[str],
+        nickname: Optional[str],
+    ):
+        """
+        Triggered when the user requests changing the affiliation of a contact
+        for this group,
+
+        Examples: promotion them to moderator, kick (affiliation=none),
+        ban (affiliation=outcast).
+
+        :param contact: The contact whose affiliation change is requested
+        :param affiliation: The new affiliation
+        :param reason: A reason for this affiliation change
+        :param nickname:
+        """
+        pass
 
 
 def set_origin_id(msg: Message, origin_id: str):

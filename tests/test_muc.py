@@ -3326,7 +3326,7 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
         self.send(None)
 
 
-class TestModeration(Base):
+class TestMUCAdmin(Base):
     def setUp(self):
         super().setUp()
         self.muc = muc = self.get_private_muc(
@@ -3392,6 +3392,41 @@ class TestModeration(Base):
             <iq type="result"
                 to="romeo@montague.lit"
                 id="retract-request-1"
+                from="room-moderation-test@aim.shakespeare.lit"></iq>
+            """
+        )
+
+    def test_set_member(self):
+        with unittest.mock.patch(
+            "slidge.LegacyMUC.on_set_affiliation"
+        ) as on_set_affiliation:
+            self.recv(  # language=XML
+                f"""
+            <iq type='set'
+                to='{self.muc.jid}'
+                id='set-affiliation-1'
+                from='{self.user_jid}'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item affiliation='member'
+                      jid='secondwitch@shakespeare.lit'
+                      nick='a-nick'>
+                  <reason>A reason</reason>
+                </item>
+              </query>
+            </iq>
+            """
+            )
+            on_set_affiliation.assert_awaited_once_with(
+                self.run_coro(self.get_romeo_session().contacts.by_legacy_id(222)),
+                "member",
+                "A reason",
+                "a-nick",
+            )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                to="romeo@montague.lit"
+                id="set-affiliation-1"
                 from="room-moderation-test@aim.shakespeare.lit"></iq>
             """
         )

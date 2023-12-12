@@ -13,15 +13,12 @@ class MucAdmin:
         xmpp.register_handler(
             CoroutineCallback(
                 "muc#admin",
-                StanzaPath("iq/mucadmin_query"),
+                StanzaPath("iq@type=get/mucadmin_query"),
                 self._handle_admin,  # type: ignore
             )
         )
 
     async def _handle_admin(self, iq: Iq):
-        if iq["type"] != "get":
-            raise XMPPError("not-authorized")
-
         muc = await self.xmpp.get_muc_from_stanza(iq)
 
         affiliation = iq["mucadmin_query"]["item"]["affiliation"]
