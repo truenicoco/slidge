@@ -645,12 +645,16 @@ class LegacyMUC(
         await self.__fill_participants()
         return list(self._participants_by_nicknames.values())
 
-    def remove_participant(self, p: "LegacyParticipantType"):
+    def remove_participant(self, p: "LegacyParticipantType", kick=False, ban=False):
         """
-        This ho
-        :param p:
-        :return:
+        Call this when a participant leaves the room
+
+        :param p: The participant
+        :param kick: Whether the participant left because they were kicked
+        :param ban: Whether the participant left because they were banned
         """
+        if kick and ban:
+            raise TypeError("Either kick or ban")
         if p.contact is not None:
             try:
                 del self._participants_by_contacts[p.contact]
@@ -664,7 +668,16 @@ class LegacyMUC(
             del self._participants_by_nicknames[p.nickname]  # type:ignore
         except KeyError:
             self.log.warning("Removed a participant we didn't know was here?, %s", p)
-        p.leave()
+        if kick:
+            codes = {307}
+        elif ban:
+            codes = {301}
+        else:
+            codes = None
+        presence = p._make_presence(ptype="unavailable", status_codes=codes)
+        p._affiliation = "outcast" if ban else "none"
+        p._role = "none"
+        p._send(presence)
 
     def rename_participant(self, old_nickname: str, new_nickname: str):
         try:

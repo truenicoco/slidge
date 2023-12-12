@@ -368,11 +368,21 @@ class LegacyParticipant(
 
     def leave(self):
         """
-        To be called only by room. To remove a participant, call
-        Room.remove_participant(self) instead.
+        Call this when the participant leaves the room
         """
-        p = self._make_presence(ptype="unavailable")
-        self._send(p)
+        self.muc.remove_participant(self)
+
+    def kick(self):
+        """
+        Call this when the participant is kicked from the room
+        """
+        self.muc.remove_participant(self, kick=True)
+
+    def ban(self):
+        """
+        Call this when the participant is banned from the room
+        """
+        self.muc.remove_participant(self, ban=True)
 
     def get_disco_info(self, jid: OptJid = None, node: Optional[str] = None):
         if self.contact is not None:
