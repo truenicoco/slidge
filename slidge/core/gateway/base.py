@@ -788,6 +788,7 @@ SLIXMPP_PLUGINS = [
     "xep_0199",  # XMPP Ping
     "xep_0221",  # Data Forms Media Element
     "xep_0249",  # Direct MUC Invitations
+    "xep_0264",  # Jingle Content Thumbnails
     "xep_0280",  # Carbons
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction

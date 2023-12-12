@@ -123,6 +123,64 @@ class Base(Shakespeare, AvatarFixtureMixin):
             use_values=False,  # ?
         )
 
+    def _assert_file_with_media_type(self):
+        when = (
+            datetime.fromtimestamp(self.avatar_path.stat().st_mtime)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        self.send(  # language=XML
+            f"""
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit">
+              <reference xmlns="urn:xmpp:reference:0"
+                         type="data">
+                <media-sharing xmlns="urn:xmpp:sims:1">
+                  <sources>
+                    <reference xmlns="urn:xmpp:reference:0"
+                               uri="http://url"
+                               type="data" />
+                  </sources>
+                  <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
+                    <media-type>image/png</media-type>
+                    <name>5x5.png</name>
+                    <size>547</size>
+                    <date>{when}</date>
+                    <hash xmlns="urn:xmpp:hashes:2"
+                          algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
+                    <thumbnail xmlns="urn:xmpp:thumbs:1"
+                               width="5"
+                               height="5"
+                               media-type="image/blurhash"
+                               uri="data:image/blurhash,e00000fQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQ" />
+                  </file>
+                </media-sharing>
+              </reference>
+              <file-sharing xmlns="urn:xmpp:sfs:0"
+                            disposition="inline">
+                <sources>
+                  <url-data xmlns="http://jabber.org/protocol/url-data"
+                            target="http://url" />
+                </sources>
+                <file xmlns="urn:xmpp:file:metadata:0">
+                  <media-type>image/png</media-type>
+                  <name>5x5.png</name>
+                  <size>547</size>
+                  <date>{when}</date>
+                  <hash xmlns="urn:xmpp:hashes:2"
+                        algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
+                </file>
+              </file-sharing>
+              <x xmlns="jabber:x:oob">
+                <url>http://url</url>
+              </x>
+              <body>http://url</body>
+            </message>
+            """,
+            use_values=False,
+        )
+
 
 class TestBodyOnly(Base):
     def test_no_file_no_body(self):
@@ -145,7 +203,10 @@ class TestAttachmentUpload(Base):
         """
         self.run_coro(self.juliet.send_files([attachment]))
         self.http_upload.assert_called_with(**upload_kwargs)
-        self._assert_file()
+        if attachment.content_type:
+            self._assert_file_with_media_type()
+        else:
+            self._assert_file()
 
     def __test_reuse(self, attachment: LegacyAttachment, upload_kwargs: dict):
         """
@@ -166,6 +227,17 @@ class TestAttachmentUpload(Base):
             dict(
                 filename=self.avatar_path,
                 content_type=None,
+                ifrom=self.xmpp.boundjid,
+                domain=None,
+            ),
+        )
+
+    def test_blurhash(self):
+        self.__test_basic(
+            LegacyAttachment(path=self.avatar_path, content_type="image/png"),
+            dict(
+                filename=self.avatar_path,
+                content_type="image/png",
                 ifrom=self.xmpp.boundjid,
                 domain=None,
             ),

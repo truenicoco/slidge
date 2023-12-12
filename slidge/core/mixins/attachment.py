@@ -13,6 +13,8 @@ from urllib.parse import quote as urlquote
 from uuid import uuid4
 from xml.etree import ElementTree as ET
 
+import blurhash
+from PIL import Image
 from slixmpp import JID, Message
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
@@ -28,6 +30,7 @@ from ...util.types import (
 )
 from ...util.util import fix_suffix
 from .. import config
+from ..cache import avatar_cache
 from .message_maker import MessageMaker
 
 
@@ -198,7 +201,7 @@ class AttachmentMixin(MessageMaker):
 
         return is_temp, local_path, new_url
 
-    def __set_sims(
+    async def __set_sims(
         self,
         msg: Message,
         uploaded_url: str,
@@ -217,6 +220,20 @@ class AttachmentMixin(MessageMaker):
         sims = self.xmpp["xep_0385"].get_sims(
             path, [uploaded_url], content_type, caption
         )
+        if content_type is not None and content_type.startswith("image"):
+            try:
+                h, x, y = await self.xmpp.loop.run_in_executor(
+                    avatar_cache._thread_pool, get_blurhash, path
+                )
+            except Exception as e:
+                log.debug("Could not generate a blurhash", exc_info=e)
+            else:
+                thumbnail = sims["sims"]["file"]["thumbnail"]
+                thumbnail["width"] = x
+                thumbnail["height"] = y
+                thumbnail["media-type"] = "image/blurhash"
+                thumbnail["uri"] = "data:image/blurhash," + urlquote(h)
+
         db.attachment_store_sims(uploaded_url, str(sims))
 
         msg.append(sims)
@@ -327,7 +344,7 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             return None, [self._send(msg, **kwargs)]
 
-        self.__set_sims(msg, new_url, local_path, content_type, caption)
+        await self.__set_sims(msg, new_url, local_path, content_type, caption)
         self.__set_sfs(msg, new_url, local_path, content_type, caption)
         if is_temp and isinstance(local_path, Path):
             local_path.unlink()
@@ -443,6 +460,20 @@ class AttachmentMixin(MessageMaker):
             else:
                 ids.append(msg.get_id())
         db.attachment_store_legacy_to_multi_xmpp_msg_ids(legacy_msg_id, ids)
+
+
+def get_blurhash(path: Path, n=9) -> tuple[str, int, int]:
+    img = Image.open(path)
+    n = min(img.width, img.height, n)
+    if img.width == img.height:
+        x = y = n
+    elif img.width > img.height:
+        x = n
+        y = round(n * img.height / img.width)
+    else:
+        x = round(n * img.width / img.height)
+        y = n
+    return blurhash.encode(img, x, y), img.width, img.height
 
 
 log = logging.getLogger(__name__)

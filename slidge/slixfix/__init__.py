@@ -15,6 +15,7 @@ from . import (
     xep_0077,
     xep_0100,
     xep_0153,
+    xep_0264,
     xep_0292,
     xep_0313,
     xep_0356,
@@ -67,6 +68,7 @@ XEP_0115._process_caps = process_caps_wrapper
 
 slixmpp.plugins.PLUGINS.extend(
     [
+        "xep_0264",
         "xep_0292_provider",
         "xep_0356_old",
         "xep_0385",
