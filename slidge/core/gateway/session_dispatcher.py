@@ -30,7 +30,7 @@ class SessionDispatcher:
 
         xmpp.register_handler(
             CoroutineCallback(
-                "VCardTemp",
+                "MUCModerate",
                 StanzaPath("iq/apply_to/moderate"),
                 _exceptions_to_xmpp_errors(self.on_user_moderation),  # type:ignore
             )
