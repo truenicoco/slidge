@@ -1,6 +1,6 @@
 import logging
 from copy import copy
-from typing import TYPE_CHECKING, Awaitable, Callable, Union
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
 
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
@@ -63,7 +63,9 @@ class SessionDispatcher:
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
             )
 
-    async def __get_session(self, stanza: Union[Message, Presence, Iq]) -> BaseSession:
+    async def __get_session(
+        self, stanza: Union[Message, Presence, Iq], timeout: Optional[int] = 10
+    ) -> BaseSession:
         xmpp = self.xmpp
         if stanza.get_from().server == xmpp.boundjid.bare:
             log.debug("Ignoring echo")
@@ -76,7 +78,7 @@ class SessionDispatcher:
             log.debug("Ignoring message to component")
             raise Ignore
         session = xmpp.get_session_from_stanza(stanza)
-        await session.wait_for_ready()
+        await session.wait_for_ready(timeout)
         if isinstance(stanza, Message) and _ignore(session, stanza):
             raise Ignore
         return session
@@ -407,7 +409,7 @@ class SessionDispatcher:
         if not config.SYNC_AVATAR:
             return
 
-        session = await self.__get_session(m)
+        session = await self.__get_session(m, timeout=None)
 
         info = m["pubsub_event"]["items"]["item"]["avatar_metadata"]["info"]
         hash_ = info["id"]
