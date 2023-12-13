@@ -2832,6 +2832,8 @@ class TestMuc(Base):
         # muc.user_resources.add("movim")
         self.run_coro(muc.session.contacts.fill())
         participants_before: list[Participant] = self.run_coro(muc.get_participants())
+        for p in participants_before:
+            p._LegacyParticipant__presence_sent = True
         return participants_before
 
     def __test_rename_common(self, old_nick, participants_before):

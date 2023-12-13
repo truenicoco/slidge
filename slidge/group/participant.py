@@ -267,6 +267,8 @@ class LegacyParticipant(
     ) -> MessageOrPresenceTypeVar:
         stanza["occupant-id"]["id"] = self.__occupant_id
         if isinstance(stanza, Presence):
+            if stanza["type"] == "unavailable" and not self.__presence_sent:
+                return stanza  # type:ignore
             self.__presence_sent = True
         if full_jid:
             stanza["to"] = full_jid
