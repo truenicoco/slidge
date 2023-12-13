@@ -3432,3 +3432,88 @@ class TestMUCAdmin(Base):
                 from="room-moderation-test@aim.shakespeare.lit"></iq>
             """
         )
+
+
+class TestJoinAway(Base):
+    def setUp(self):
+        super().setUp()
+        self.muc = muc = self.get_private_muc(
+            name="room-moderation-test", resources=("gajim",)
+        )
+        self.user_participant = self.run_coro(muc.get_user_participant())
+        self.user_jid = self.get_romeo_session().user.jid
+        self.juliet = self.run_coro(self.get_romeo_session().contacts.by_legacy_id(123))
+
+    def get_juliet_participant(self):
+        return self.run_coro(self.muc.get_participant_by_contact(self.juliet))
+
+    def test_online_contact_joins(self):
+        self.juliet.online()
+        assert self.next_sent() is None
+        self.get_juliet_participant()
+        self.send(  # language=XML
+            """
+            <presence from="room-moderation-test@aim.shakespeare.lit/juliet"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        self.muc.remove_participant(self.get_juliet_participant())
+        self.send(  # language=XML
+            """
+            <presence type="unavailable"
+                      from="room-moderation-test@aim.shakespeare.lit/juliet"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        assert self.next_sent() is None
+        self.test_away_contact_joins()
+
+    def test_away_contact_joins(self):
+        self.juliet.away()
+        assert self.next_sent() is None
+        self.run_coro(self.muc.get_participant_by_contact(self.juliet))
+        self.send(  # language=XML
+            """
+            <presence from="room-moderation-test@aim.shakespeare.lit/juliet"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <show>away</show>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        assert self.next_sent() is None
+        self.muc.remove_participant(self.get_juliet_participant())
+        self.send(  # language=XML
+            """
+            <presence type="unavailable"
+                      from="room-moderation-test@aim.shakespeare.lit/juliet"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        assert self.next_sent() is None
