@@ -209,6 +209,7 @@ class AttachmentMixin(MessageMaker):
         path: Optional[Path],
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
+        file_name: Optional[str] = None,
     ):
         cache = db.attachment_get_sims(uploaded_url)
         if cache:
@@ -221,6 +222,8 @@ class AttachmentMixin(MessageMaker):
         sims = self.xmpp["xep_0385"].get_sims(
             path, [uploaded_url], content_type, caption
         )
+        if file_name:
+            sims["sims"]["file"]["name"] = file_name
         if content_type is not None and content_type.startswith("image"):
             try:
                 h, x, y = await self.xmpp.loop.run_in_executor(
@@ -246,6 +249,7 @@ class AttachmentMixin(MessageMaker):
         path: Optional[Path],
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
+        file_name: Optional[str] = None,
     ):
         cache = db.attachment_get_sfs(uploaded_url)
         if cache:
@@ -256,6 +260,8 @@ class AttachmentMixin(MessageMaker):
             return
 
         sfs = self.xmpp["xep_0447"].get_sfs(path, [uploaded_url], content_type, caption)
+        if file_name:
+            sfs["file"]["name"] = file_name
         db.attachment_store_sfs(uploaded_url, str(sfs))
 
         msg.append(sfs)
@@ -349,8 +355,10 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             return None, [self._send(msg, **kwargs)]
 
-        await self.__set_sims(msg, new_url, local_path, content_type, caption)
-        self.__set_sfs(msg, new_url, local_path, content_type, caption)
+        await self.__set_sims(
+            msg, new_url, local_path, content_type, caption, file_name
+        )
+        self.__set_sfs(msg, new_url, local_path, content_type, caption, file_name)
         if is_temp and isinstance(local_path, Path):
             local_path.unlink()
             local_path.parent.rmdir()
