@@ -7,6 +7,7 @@ import stat
 import tempfile
 import warnings
 from datetime import datetime
+from mimetypes import guess_type
 from pathlib import Path
 from typing import IO, Collection, Optional, Sequence, Union
 from urllib.parse import quote as urlquote
@@ -326,6 +327,10 @@ class AttachmentMixin(MessageMaker):
             mto=mto,
             thread=thread,
         )
+
+        if content_type is None and (name := (file_name or file_path or file_url)):
+            content_type, _ = guess_type(name)
+
         is_temp, local_path, new_url = await self.__get_url(
             Path(file_path) if file_path else None,
             data_stream,

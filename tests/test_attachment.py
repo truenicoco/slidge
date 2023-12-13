@@ -92,57 +92,6 @@ class Base(Shakespeare, AvatarFixtureMixin):
                                type="data" />
                   </sources>
                   <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
-                    <name>5x5.png</name>
-                    <size>547</size>
-                    <date>{when}</date>
-                    <hash xmlns="urn:xmpp:hashes:2"
-                          algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
-                  </file>
-                </media-sharing>
-              </reference>
-              <file-sharing xmlns="urn:xmpp:sfs:0"
-                            disposition="inline">
-                <sources>
-                  <url-data xmlns="http://jabber.org/protocol/url-data"
-                            target="{url}" />
-                </sources>
-                <file xmlns="urn:xmpp:file:metadata:0">
-                  <name>5x5.png</name>
-                  <size>547</size>
-                  <date>{when}</date>
-                  <hash xmlns="urn:xmpp:hashes:2"
-                        algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
-                </file>
-              </file-sharing>
-              <x xmlns="jabber:x:oob">
-                <url>{url}</url>
-              </x>
-              <body>{url}</body>
-            </message>
-            """,
-            use_values=False,  # ?
-        )
-
-    def _assert_file_with_media_type(self):
-        when = (
-            datetime.fromtimestamp(self.avatar_path.stat().st_mtime)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
-        self.send(  # language=XML
-            f"""
-            <message type="chat"
-                     from="juliet@aim.shakespeare.lit/slidge"
-                     to="romeo@montague.lit">
-              <reference xmlns="urn:xmpp:reference:0"
-                         type="data">
-                <media-sharing xmlns="urn:xmpp:sims:1">
-                  <sources>
-                    <reference xmlns="urn:xmpp:reference:0"
-                               uri="http://url"
-                               type="data" />
-                  </sources>
-                  <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
                     <media-type>image/png</media-type>
                     <name>5x5.png</name>
                     <size>547</size>
@@ -161,7 +110,7 @@ class Base(Shakespeare, AvatarFixtureMixin):
                             disposition="inline">
                 <sources>
                   <url-data xmlns="http://jabber.org/protocol/url-data"
-                            target="http://url" />
+                            target="{url}" />
                 </sources>
                 <file xmlns="urn:xmpp:file:metadata:0">
                   <media-type>image/png</media-type>
@@ -173,9 +122,9 @@ class Base(Shakespeare, AvatarFixtureMixin):
                 </file>
               </file-sharing>
               <x xmlns="jabber:x:oob">
-                <url>http://url</url>
+                <url>{url}</url>
               </x>
-              <body>http://url</body>
+              <body>{url}</body>
             </message>
             """,
             use_values=False,
@@ -203,10 +152,7 @@ class TestAttachmentUpload(Base):
         """
         self.run_coro(self.juliet.send_files([attachment]))
         self.http_upload.assert_called_with(**upload_kwargs)
-        if attachment.content_type:
-            self._assert_file_with_media_type()
-        else:
-            self._assert_file()
+        self._assert_file()
 
     def __test_reuse(self, attachment: LegacyAttachment, upload_kwargs: dict):
         """
@@ -226,7 +172,7 @@ class TestAttachmentUpload(Base):
             LegacyAttachment(path=self.avatar_path),
             dict(
                 filename=self.avatar_path,
-                content_type=None,
+                content_type="image/png",
                 ifrom=self.xmpp.boundjid,
                 domain=None,
             ),
@@ -248,7 +194,7 @@ class TestAttachmentUpload(Base):
             LegacyAttachment(path=self.avatar_path, legacy_file_id=1235),
             dict(
                 filename=self.avatar_path,
-                content_type=None,
+                content_type="image/png",
                 ifrom=self.xmpp.boundjid,
                 domain=None,
             ),
@@ -260,7 +206,7 @@ class TestAttachmentUpload(Base):
                 LegacyAttachment(data=self.avatar_path.read_bytes(), name="5x5.png"),
                 dict(
                     filename=ANY,
-                    content_type=None,
+                    content_type="image/png",
                     ifrom=self.xmpp.boundjid,
                     domain=None,
                 ),
@@ -276,7 +222,7 @@ class TestAttachmentUpload(Base):
                 ),
                 dict(
                     filename=ANY,
-                    content_type=None,
+                    content_type="image/png",
                     ifrom=self.xmpp.boundjid,
                     domain=None,
                 ),
