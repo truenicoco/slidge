@@ -395,6 +395,13 @@ class PresenceMixin(Base):
         )
         self.con.commit()
 
+    def presence_delete(self, jid: JID, user: "GatewayUser"):
+        self.cur.execute(
+            "DELETE FROM presence WHERE (jid = ? and user_id = (SELECT id FROM user WHERE jid = ?))",
+            (str(jid), user.bare_jid),
+        )
+        self.con.commit()
+
     def presence_get(self, jid: JID, user: "GatewayUser") -> Optional[CachedPresence]:
         return self.__cur.execute(
             "SELECT last_seen, ptype, pstatus, pshow FROM presence "

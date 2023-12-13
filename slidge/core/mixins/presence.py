@@ -54,7 +54,10 @@ class PresenceMixin(BaseSender):
                 last_seen=last_seen, ptype=ptype, pstatus=pstatus, pshow=pshow
             )
             if old != new:
-                self._store_last_presence(new)
+                if hasattr(self, "muc") and ptype == "unavailable":
+                    db.presence_delete(self.jid, self.user)
+                else:
+                    self._store_last_presence(new)
             if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:
                 if old == new:
                     self.session.log.debug("Presence is the same as cached")
