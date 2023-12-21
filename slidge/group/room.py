@@ -28,6 +28,7 @@ from ..util.types import (
     MucAffiliation,
     MucType,
 )
+from ..util.util import deprecated
 from .archive import MessageArchive
 
 if TYPE_CHECKING:
@@ -909,7 +910,7 @@ class LegacyMUC(
                 self, reason="This group could not be added automatically for you"
             )
 
-    async def admin_set_avatar(
+    async def on_avatar(
         self, data: Optional[bytes], mime: Optional[str]
     ) -> Optional[Union[int, str]]:
         """
@@ -933,6 +934,8 @@ class LegacyMUC(
             :py:meth:`.LegacyMUC.set_avatar` is meant to be awaited somewhere else.
         """
         raise NotImplementedError
+
+    admin_set_avatar = deprecated("LegacyMUC.on_avatar", on_avatar)
 
     async def on_set_affiliation(
         self,

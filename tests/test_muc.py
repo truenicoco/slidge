@@ -3165,7 +3165,7 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
     def test_set_avatar(self):
         muc = self.get_private_muc(resources=("gajim",))
         with unittest.mock.patch(
-            "slidge.group.room.LegacyMUC.admin_set_avatar", return_value=1
+            "slidge.group.room.LegacyMUC.on_avatar", return_value=1
         ):
             self.recv(  # language=XML
                 f"""

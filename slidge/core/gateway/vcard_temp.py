@@ -110,7 +110,7 @@ class VCardTemp:
 
         data = iq["vcard_temp"]["PHOTO"]["BINVAL"] or None
         try:
-            legacy_id = await muc.admin_set_avatar(
+            legacy_id = await muc.on_avatar(
                 data, iq["vcard_temp"]["PHOTO"]["TYPE"] or None
             )
         except XMPPError:
