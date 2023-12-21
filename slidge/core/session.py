@@ -1,6 +1,15 @@
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Iterable,
+    NamedTuple,
+    Optional,
+    Union,
+    cast,
+)
 
 import aiohttp
 from slixmpp import JID, Message
@@ -18,6 +27,7 @@ from ..util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyThreadType,
+    LinkPreview,
     PseudoPresenceShow,
     RecipientType,
     ResourceDict,
@@ -136,6 +146,7 @@ class BaseSession(
         reply_to_fallback_text: Optional[str] = None,
         reply_to: Optional["Sender"] = None,
         thread: Optional[LegacyThreadType] = None,
+        link_previews: Iterable[LinkPreview] = (),
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
@@ -153,6 +164,9 @@ class BaseSession(
         :param reply_to: Author of the quoted message. :class:`LegacyContact` instance for
             1:1 chat, :class:`LegacyParticipant` instance for groups.
             If `None`, should be interpreted as a self-reply if reply_to_msg_id is not None.
+        :param link_previews: A list of sender-generated link previews.
+            At the time of writing, only `Cheogram <https://wiki.soprani.ca/CheogramApp/LinkPreviews>`_
+            supports it.
         :param thread:
 
         :return: An ID of some sort that can be used later to ack and mark the message
@@ -272,6 +286,7 @@ class BaseSession(
         text: str,
         legacy_msg_id: LegacyMessageType,
         thread: Optional[LegacyThreadType] = None,
+        link_previews: Iterable[LinkPreview] = (),
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrects a message using :xep:`0308`
@@ -283,6 +298,9 @@ class BaseSession(
         :param text: The new text
         :param legacy_msg_id: Identifier of the edited message
         :param thread:
+        :param link_previews: A list of sender-generated link previews.
+            At the time of writing, only `Cheogram <https://wiki.soprani.ca/CheogramApp/LinkPreviews>`_
+            supports it.
         """
         raise NotImplementedError
 

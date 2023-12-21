@@ -10,6 +10,7 @@ from ...util.types import (
     ChatState,
     LegacyMessageType,
     LegacyThreadType,
+    LinkPreview,
     Marker,
     MessageReference,
     ProcessingHint,
@@ -158,6 +159,7 @@ class ContentMessageMixin(AttachmentMixin):
         archive_only=False,
         correction=False,
         correction_event_id: Optional[LegacyMessageType] = None,
+        link_previews: Optional[list[LinkPreview]] = None,
         **send_kwargs,
     ):
         """
@@ -178,6 +180,8 @@ class ContentMessageMixin(AttachmentMixin):
         :param correction_event_id: in the case where an ID is associated with the legacy
             'correction event', specify it here to use it on the XMPP side. If not specified,
             a random ID will be used.
+        :param link_previews: A little of sender (or server, or gateway)-generated
+            previews of URLs linked in the body.
         :param archive_only: (only in groups) Do not send this message to user,
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
@@ -200,6 +204,7 @@ class ContentMessageMixin(AttachmentMixin):
             hints=hints or (),
             carbon=carbon,
             thread=thread,
+            link_previews=link_previews,
         )
         if correction:
             msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
@@ -217,6 +222,7 @@ class ContentMessageMixin(AttachmentMixin):
         carbon=False,
         archive_only=False,
         correction_event_id: Optional[LegacyMessageType] = None,
+        link_previews: Optional[list[LinkPreview]] = None,
         **send_kwargs,
     ):
         """
@@ -237,6 +243,8 @@ class ContentMessageMixin(AttachmentMixin):
         :param correction_event_id: in the case where an ID is associated with the legacy
             'correction event', specify it here to use it on the XMPP side. If not specified,
             a random ID will be used.
+        :param link_previews: A little of sender (or server, or gateway)-generated
+            previews of URLs linked in the body.
         """
         self.send_text(
             new_text,
@@ -249,6 +257,7 @@ class ContentMessageMixin(AttachmentMixin):
             correction=True,
             archive_only=archive_only,
             correction_event_id=correction_event_id,
+            link_previews=link_previews,
             **send_kwargs,
         )
 

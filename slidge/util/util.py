@@ -5,7 +5,7 @@ import subprocess
 import warnings
 from abc import ABCMeta
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, NamedTuple, Optional, Type
 
 from slidge.util.types import ResourceDict
 
@@ -269,3 +269,7 @@ def deprecated(name: str, new: Callable):
         return new(*args, **kwargs)
 
     return wrapped
+
+
+def dict_to_named_tuple(data: dict, cls: Type[NamedTuple]):
+    return cls(*(data.get(f) for f in cls._fields))  # type:ignore

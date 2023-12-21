@@ -67,7 +67,7 @@ class Session(BaseSession):
     async def logout(self):
         pass
 
-    async def send_text(
+    async def on_text(
         self,
         chat: LegacyContact,
         text: str,
@@ -76,6 +76,7 @@ class Session(BaseSession):
         reply_to_fallback_text: Optional[str] = None,
         reply_to=None,
         thread=None,
+        link_previews=(),
     ):
         self.SENT_TEXT.append(locals())
         return "legacy-id"

@@ -7,8 +7,15 @@ from uuid import uuid4
 from slixmpp import Message
 from slixmpp.types import MessageTypes
 
+from ...slixfix.link_preview.stanza import LinkPreview as LinkPreviewStanza
 from ...util.db import GatewayUser
-from ...util.types import ChatState, LegacyMessageType, MessageReference, ProcessingHint
+from ...util.types import (
+    ChatState,
+    LegacyMessageType,
+    LinkPreview,
+    MessageReference,
+    ProcessingHint,
+)
 from .. import config
 from .base import BaseSender
 
@@ -30,6 +37,7 @@ class MessageMaker(BaseSender):
         when: Optional[datetime] = None,
         reply_to: Optional[MessageReference] = None,
         carbon=False,
+        link_previews: Optional[Iterable[LinkPreview]] = None,
         **kwargs,
     ):
         body = kwargs.pop("mbody", None)
@@ -60,6 +68,8 @@ class MessageMaker(BaseSender):
             msg.enable(hint)
         self._set_msg_id(msg, legacy_msg_id)
         self._add_delay(msg, when)
+        if link_previews:
+            self._add_link_previews(msg, link_previews)
         if reply_to:
             self._add_reply_to(msg, reply_to)
         return msg
@@ -128,3 +138,14 @@ class MessageMaker(BaseSender):
 
         if fallback := reply_to.body:
             msg["feature_fallback"].add_quoted_fallback(fallback, fallback_nick)
+
+    @staticmethod
+    def _add_link_previews(msg: Message, link_previews: Iterable[LinkPreview]):
+        for preview in link_previews:
+            element = LinkPreviewStanza()
+            for i, name in enumerate(preview._fields):
+                val = preview[i]
+                if not val:
+                    continue
+                element[name] = val
+            msg.append(element)

@@ -6,8 +6,9 @@ from slixmpp import JID, Iq, register_stanza_plugin
 from slixmpp.plugins.xep_0060.stanza import EventItem
 from slixmpp.plugins.xep_0084 import MetaData
 
-from slidge import BaseGateway, BaseSession, user_store
+from slidge import BaseGateway, BaseSession, LegacyContact, user_store
 from slidge.util.test import SlidgeTest
+from slidge.util.types import LinkPreview
 
 
 class Gateway(BaseGateway):
@@ -39,7 +40,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         self.xmpp["xep_0060"].map_node_event(MetaData.namespace, "avatar_metadata")
         register_stanza_plugin(EventItem, MetaData)
 
-        self.juliet = self.run_coro(
+        self.juliet: LegacyContact = self.run_coro(
             self.get_romeo_session().contacts.by_legacy_id("juliet")
         )
         self.room = self.run_coro(
@@ -207,3 +208,79 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                 self.room,
                 "Hey Hecate, this is the place for all good witches!",
             )
+
+    def test_link_preview(self):
+        with unittest.mock.patch("slidge.BaseSession.on_text") as on_text:
+            self.recv(  # language=XML
+                f"""
+            <message from="romeo@montague.lit"
+                     to="juliet@{self.xmpp.boundjid.bare}"
+                     id="mid">
+              <body>I wanted to mention https://the.link.example.com/what-was-linked-to</body>
+              <rdf:Description xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                               xmlns:og="https://ogp.me/ns#"
+                               rdf:about="https://the.link.example.com/what-was-linked-to">
+                <og:title>Page Title</og:title>
+                <og:description>Page Description</og:description>
+                <og:url>Canonical URL</og:url>
+                <og:image>https://link.to.example.com/image.png</og:image>
+                <og:site_name>Some Website</og:site_name>
+              </rdf:Description>
+            </message>
+            """
+            )
+            on_text.assert_awaited_once_with(
+                self.juliet,
+                "I wanted to mention https://the.link.example.com/what-was-linked-to",
+                reply_to_msg_id=None,
+                reply_to_fallback_text=None,
+                reply_to=None,
+                thread=None,
+                link_previews=[
+                    LinkPreview(
+                        about="https://the.link.example.com/what-was-linked-to",
+                        title="Page Title",
+                        description="Page Description",
+                        url="Canonical URL",
+                        image="https://link.to.example.com/image.png",
+                        type=None,
+                        site_name="Some Website",
+                    )
+                ],
+            )
+
+    def test_juliet_sends_link_preview(self):
+        self.juliet.send_text(
+            "I wanted to mention https://the.link.example.com/what-was-linked-to",
+            link_previews=[
+                LinkPreview(
+                    about="https://the.link.example.com/what-was-linked-to",
+                    title="Page Title",
+                    description="Page Description",
+                    url="Canonical URL",
+                    image="https://link.to.example.com/image.png",
+                    type=None,
+                    site_name="Some Website",
+                )
+            ],
+        )
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit">
+              <body>I wanted to mention https://the.link.example.com/what-was-linked-to</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <store xmlns="urn:xmpp:hints" />
+              <Description xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                           about="https://the.link.example.com/what-was-linked-to">
+                <title xmlns="https://ogp.me/ns#">Page Title</title>
+                <description xmlns="https://ogp.me/ns#">Page Description</description>
+                <url xmlns="https://ogp.me/ns#">Canonical URL</url>
+                <image xmlns="https://ogp.me/ns#">https://link.to.example.com/image.png</image>
+                <site_name xmlns="https://ogp.me/ns#">Some Website</site_name>
+              </Description>
+            </message>
+            """
+        )

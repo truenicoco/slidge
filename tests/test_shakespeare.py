@@ -87,7 +87,7 @@ class Session(BaseSession):
     async def logout(self):
         pass
 
-    async def send_text(
+    async def on_text(
         self,
         chat: LegacyContact,
         text: str,
@@ -96,6 +96,7 @@ class Session(BaseSession):
         reply_to_msg_id=None,
         reply_to_fallback_text: Optional[str] = None,
         thread=None,
+        link_previews=(),
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
@@ -1868,7 +1869,7 @@ class TestCarbon(SlidgeTest):
             </message>
             """
         )
-        with unittest.mock.patch("test_shakespeare.Session.send_text") as mock:
+        with unittest.mock.patch("test_shakespeare.Session.on_text") as mock:
             mock.get_id = lambda *a: "msg_id"
             self.recv(  # language=XML
                 """

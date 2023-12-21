@@ -768,6 +768,7 @@ KICKABLE_ERRORS = {
 
 
 SLIXMPP_PLUGINS = [
+    "link_preview",  # https://wiki.soprani.ca/CheogramApp/LinkPreviews
     "xep_0030",  # Service discovery
     "xep_0045",  # Multi-User Chat
     "xep_0050",  # Adhoc commands

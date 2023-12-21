@@ -12,6 +12,7 @@ from slixmpp.plugins.xep_0115 import XEP_0115
 from slixmpp.xmlstream import StanzaBase
 
 from . import (
+    link_preview,
     xep_0077,
     xep_0100,
     xep_0153,
@@ -68,6 +69,7 @@ XEP_0115._process_caps = process_caps_wrapper
 
 slixmpp.plugins.PLUGINS.extend(
     [
+        "link_preview",
         "xep_0264",
         "xep_0292_provider",
         "xep_0356_old",

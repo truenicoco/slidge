@@ -8,8 +8,12 @@ from slixmpp.exceptions import XMPPError
 from ... import LegacyContact
 from ...group.room import LegacyMUC
 from ...util.sql import db
-from ...util.types import Recipient, RecipientType
-from ...util.util import merge_resources, remove_emoji_variation_selector_16
+from ...util.types import LinkPreview, Recipient, RecipientType
+from ...util.util import (
+    dict_to_named_tuple,
+    merge_resources,
+    remove_emoji_variation_selector_16,
+)
 from .. import config
 from ..session import BaseSession
 
@@ -170,12 +174,20 @@ class SessionDispatcher:
             reply_to_msg_xmpp_id = None
             reply_to = None
 
+        if msg.get_plugin("link_previews", check=True):
+            pass
+
         kwargs = dict(
             reply_to_msg_id=reply_to_msg_xmpp_id,
             reply_to_fallback_text=reply_fallback,
             reply_to=reply_to,
             thread=thread,
         )
+
+        if previews := msg["link_previews"]:
+            kwargs["link_previews"] = [
+                dict_to_named_tuple(p, LinkPreview) for p in previews
+            ]
 
         if url:
             async with self.http.get(url) as response:
@@ -187,13 +199,13 @@ class SessionDispatcher:
                         ),
                         response,
                     )
-                    legacy_msg_id = await session.send_text(e, url, **kwargs)
+                    legacy_msg_id = await session.on_text(e, url, **kwargs)
                 else:
                     legacy_msg_id = await session.send_file(
                         e, url, http_response=response, **kwargs
                     )
         elif text:
-            legacy_msg_id = await session.send_text(e, text, **kwargs)
+            legacy_msg_id = await session.on_text(e, text, **kwargs)
         else:
             log.debug("Ignoring %s", msg.get_id())
             return
@@ -222,7 +234,7 @@ class SessionDispatcher:
 
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
-            new_legacy_msg_id = await session.send_text(
+            new_legacy_msg_id = await session.on_text(
                 entity, "Correction:" + msg["body"], thread=thread
             )
         elif (
@@ -253,7 +265,7 @@ class SessionDispatcher:
                     )
                     await session.retract(entity, legacy_id, thread=thread)
 
-            new_legacy_msg_id = await session.send_text(
+            new_legacy_msg_id = await session.on_text(
                 entity, "Correction: " + msg["body"], thread=thread
             )
 

@@ -12,6 +12,7 @@ from typing import (
     Generic,
     Hashable,
     Literal,
+    NamedTuple,
     Optional,
     TypedDict,
     TypeVar,
@@ -156,3 +157,13 @@ class ResourceDict(TypedDict):
 MessageOrPresenceTypeVar = TypeVar(
     "MessageOrPresenceTypeVar", bound=Union[Message, Presence]
 )
+
+
+class LinkPreview(NamedTuple):
+    about: str
+    title: Optional[str]
+    description: Optional[str]
+    url: Optional[str]
+    image: Optional[str]
+    type: Optional[str]
+    site_name: Optional[str]
