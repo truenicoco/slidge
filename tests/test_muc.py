@@ -50,15 +50,20 @@ class Session(BaseSession):
     def legacy_msg_id_to_xmpp_msg_id(i: str) -> str:
         return i[7:]
 
-    async def paused(self, c: LegacyContactType, thread=None):
+    async def on_paused(self, c: LegacyContactType, thread=None):
         pass
 
-    async def correct(
-        self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None
+    async def on_correct(
+        self,
+        c: LegacyContactType,
+        text: str,
+        legacy_msg_id: Any,
+        thread=None,
+        link_previews=(),
     ):
         pass
 
-    async def search(self, form_values: Dict[str, str]):
+    async def on_search(self, form_values: Dict[str, str]):
         pass
 
     async def login(self):
@@ -81,22 +86,7 @@ class Session(BaseSession):
         self.SENT_TEXT.append(locals())
         return "legacy-id"
 
-    async def send_file(self, c: LegacyContact, url: str, **kwargs):
-        pass
-
-    async def active(self, c: LegacyContact, thread=None):
-        pass
-
-    async def inactive(self, c: LegacyContact, thread=None):
-        pass
-
-    async def composing(self, c: LegacyContact, thread=None):
-        pass
-
-    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable, thread=None):
-        pass
-
-    async def react(
+    async def on_react(
         self,
         c: LegacyContact,
         legacy_msg_id: LegacyMessageType,

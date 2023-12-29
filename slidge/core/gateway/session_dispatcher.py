@@ -201,7 +201,7 @@ class SessionDispatcher:
                     )
                     legacy_msg_id = await session.on_text(e, url, **kwargs)
                 else:
-                    legacy_msg_id = await session.send_file(
+                    legacy_msg_id = await session.on_file(
                         e, url, http_response=response, **kwargs
                     )
         elif text:
@@ -242,10 +242,10 @@ class SessionDispatcher:
             and config.CORRECTION_EMPTY_BODY_AS_RETRACTION
             and entity.RETRACTION
         ):
-            await session.retract(entity, legacy_id, thread=thread)
+            await session.on_retract(entity, legacy_id, thread=thread)
             new_legacy_msg_id = None
         elif entity.CORRECTION:
-            new_legacy_msg_id = await session.correct(
+            new_legacy_msg_id = await session.on_correct(
                 entity, msg["body"], legacy_id, thread=thread
             )
         else:
@@ -263,7 +263,7 @@ class SessionDispatcher:
                         "Slidge will attempt to retract the original message you wanted"
                         " to edit."
                     )
-                    await session.retract(entity, legacy_id, thread=thread)
+                    await session.on_retract(entity, legacy_id, thread=thread)
 
             new_legacy_msg_id = await session.on_text(
                 entity, "Correction: " + msg["body"], thread=thread
@@ -288,7 +288,7 @@ class SessionDispatcher:
         xmpp_id: str = msg["apply_to"]["id"]
         legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
         if legacy_id:
-            await session.retract(entity, legacy_id, thread=thread)
+            await session.on_retract(entity, legacy_id, thread=thread)
             if isinstance(entity, LegacyMUC):
                 await entity.echo(msg, None)
         else:
@@ -309,7 +309,7 @@ class SessionDispatcher:
         else:
             to_mark = [displayed_msg_id]
         for xmpp_id in to_mark:
-            await session.displayed(
+            await session.on_displayed(
                 e, _xmpp_msg_id_to_legacy(session, xmpp_id), legacy_thread
             )
             if isinstance(e, LegacyMUC):
@@ -320,19 +320,19 @@ class SessionDispatcher:
             # if there is a body, it's handled in self.on_legacy_message()
             return
         session, entity, thread = await self.__get_session_entity_thread(msg)
-        await session.active(entity, thread)
+        await session.on_active(entity, thread)
 
     async def on_chatstate_inactive(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
-        await session.inactive(entity, thread)
+        await session.on_inactive(entity, thread)
 
     async def on_chatstate_composing(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
-        await session.composing(entity, thread)
+        await session.on_composing(entity, thread)
 
     async def on_chatstate_paused(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
-        await session.paused(entity, thread)
+        await session.on_paused(entity, thread)
 
     async def on_reactions(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
@@ -365,10 +365,10 @@ class SessionDispatcher:
             if not isinstance(entity, LegacyMUC):
                 # no need to carbon for groups, we just don't echo the stanza
                 entity.react(legacy_id, carbon=True)  # type: ignore
-            await session.react(entity, legacy_id, [], thread=thread)
+            await session.on_react(entity, legacy_id, [], thread=thread)
             raise XMPPError("not-acceptable", text=error_msg)
 
-        await session.react(entity, legacy_id, emojis, thread=thread)
+        await session.on_react(entity, legacy_id, emojis, thread=thread)
         if isinstance(entity, LegacyMUC):
             await entity.echo(msg, None)
         else:
@@ -578,7 +578,7 @@ def _exceptions_to_xmpp_errors(cb: HandlerType) -> HandlerType:
         except XMPPError:
             raise
         except NotImplementedError:
-            log.debug("Legacy module does not implement %s", cb)
+            log.debug("Legacy module does not implement %s", cb, stack_info=True)
             raise XMPPError(
                 "feature-not-implemented", "Not implemented by the legacy module"
             )

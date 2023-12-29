@@ -319,7 +319,7 @@ class TestAttachmentNoUpload(Base):
             """
         )
         for i in xmpp_ids:
-            with patch("test_shakespeare.Session.react") as mock:
+            with patch("test_shakespeare.Session.on_react") as mock:
                 self.recv(  # language=XML
                     f"""
             <message from="romeo@montague.lit/gajim"

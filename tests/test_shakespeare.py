@@ -60,14 +60,6 @@ class Session(BaseSession):
     def xmpp_msg_id_to_legacy_msg_id(i: str):
         return int(i)
 
-    async def paused(self, c: LegacyContactType, thread=None):
-        pass
-
-    async def correct(
-        self, c: LegacyContactType, text: str, legacy_msg_id: Any, thread=None
-    ):
-        pass
-
     async def search(self, form_values: Dict[str, str]):
         if form_values["leg"] == "exists":
             return SearchResult(
@@ -105,22 +97,15 @@ class Session(BaseSession):
         chat.send_text("I love you")
         return 0
 
-    async def send_file(self, chat: LegacyContact, url: str, *a, **k):
-        pass
-
-    async def active(self, c: LegacyContact, thread=None):
-        pass
-
-    async def inactive(self, c: LegacyContact, thread=None):
-        pass
-
-    async def composing(self, c: LegacyContact, thread=None):
+    async def on_composing(self, c: LegacyContact, thread=None):
         composing_chat_states_received_by_juliet.append(c)
 
-    async def displayed(self, c: LegacyContact, legacy_msg_id: Hashable, thread=None):
+    async def on_displayed(
+        self, c: LegacyContact, legacy_msg_id: Hashable, thread=None
+    ):
         pass
 
-    async def react(
+    async def on_react(
         self,
         c: LegacyContact,
         legacy_msg_id: LegacyMessageType,
