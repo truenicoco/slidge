@@ -477,16 +477,30 @@ class AttachmentMixin(MessageMaker):
 
 def get_blurhash(path: Path, n=9) -> tuple[str, int, int]:
     img = Image.open(path)
-    n = min(img.width, img.height, n)
-    if img.width == img.height:
+    width, height = img.size
+    n = min(width, height, n)
+    if width == height:
         x = y = n
-    elif img.width > img.height:
+    elif width > height:
         x = n
-        y = round(n * img.height / img.width)
+        y = round(n * height / width)
     else:
-        x = round(n * img.width / img.height)
+        x = round(n * width / height)
         y = n
-    return blurhash.encode(img, x, y), img.width, img.height
+    # There are 2 blurhash-python packages:
+    # https://github.com/woltapp/blurhash-python
+    # https://github.com/halcy/blurhash-python
+    # With this hack we're compatible with both, which is useful for packaging
+    # without using pyproject.toml, as most distro do
+    try:
+        hash_ = blurhash.encode(img, x, y)
+    except TypeError:
+        # We are using halcy's blurhash which expects
+        # the 1st argument to be a 3-dimensional array
+        import numpy  # type:ignore
+
+        hash_ = blurhash.encode(numpy.array(img.convert("RGB")), x, y)
+    return hash_, width, height
 
 
 log = logging.getLogger(__name__)
