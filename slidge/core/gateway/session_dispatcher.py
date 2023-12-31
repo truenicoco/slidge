@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
 
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0004 import Form
 
 from ... import LegacyContact
 from ...group.room import LegacyMUC
@@ -44,6 +45,20 @@ class SessionDispatcher:
                 "MUCSetAffiliation",
                 StanzaPath("iq@type=set/mucadmin_query"),
                 _exceptions_to_xmpp_errors(self.on_user_set_affiliation),  # type:ignore
+            )
+        )
+        xmpp.register_handler(
+            CoroutineCallback(
+                "muc#admin",
+                StanzaPath("iq@type=get/mucowner_query"),
+                _exceptions_to_xmpp_errors(self.on_muc_owner_query),  # type: ignore
+            )
+        )
+        xmpp.register_handler(
+            CoroutineCallback(
+                "muc#admin",
+                StanzaPath("iq@type=set/mucowner_query"),
+                _exceptions_to_xmpp_errors(self.on_muc_owner_set),  # type: ignore
             )
         )
 
@@ -508,6 +523,55 @@ class SessionDispatcher:
         muc = await session.bookmarks.by_jid(jid)
 
         await session.on_invitation(contact, muc, invite["reason"] or None)
+
+    async def on_muc_owner_query(self, iq: Iq):
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+
+        muc = await session.bookmarks.by_jid(iq.get_to())
+
+        reply = iq.reply()
+
+        form = Form(title="Slidge room configuration")
+        form[
+            "instructions"
+        ] = "Complete this form to modify the configuration of your room."
+        form.add_field(
+            var="FORM_TYPE",
+            type="hidden",
+            value="http://jabber.org/protocol/muc#roomconfig",
+        )
+        form.add_field(
+            var="muc#roomconfig_roomname",
+            label="Natural-Language Room Name",
+            type="text-single",
+            value=muc.name,
+        )
+        form.add_field(
+            var="muc#roomconfig_roomdesc",
+            label="Short Description of Room",
+            type="text-single",
+            value=muc.description,
+        )
+
+        muc_owner = iq["mucowner_query"]
+        muc_owner.append(form)
+        reply.append(muc_owner)
+        reply.send()
+
+    async def on_muc_owner_set(self, iq: Iq):
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+        muc = await session.bookmarks.by_jid(iq.get_to())
+
+        values = iq["mucowner_query"]["form"].get_values()
+
+        await muc.on_set_config(
+            name=values.get("muc#roomconfig_roomname"),
+            description=values.get("muc#roomconfig_roomdesc"),
+        )
+
+        iq.reply(clear=True).send()
 
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):

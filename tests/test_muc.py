@@ -3424,6 +3424,93 @@ class TestMUCAdmin(Base):
             """
         )
 
+    def test_get_owner_form(self):
+        self.recv(  # language=XML
+            f"""
+            <iq type='get'
+                to='{self.muc.jid}'
+                id='config1'
+                from='{self.user_jid}'>
+              <query xmlns='http://jabber.org/protocol/muc#owner' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq from='{self.muc.jid}'
+                id='config1'
+                to='{self.user_jid}'
+                type='result'>
+              <query xmlns='http://jabber.org/protocol/muc#owner'>
+                <x xmlns='jabber:x:data'
+                   type='form'>
+                  <title>Slidge room configuration</title>
+                  <instructions>Complete this form to modify the configuration of your room.</instructions>
+                  <field type='hidden'
+                         var='FORM_TYPE'>
+                    <value>http://jabber.org/protocol/muc#roomconfig</value>
+                  </field>
+                  <field label='Natural-Language Room Name'
+                         type='text-single'
+                         var='muc#roomconfig_roomname'>
+                    <value>unnamed-room</value>
+                  </field>
+                  <field label='Short Description of Room'
+                         type='text-single'
+                         var='muc#roomconfig_roomdesc'>
+                    <value></value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+        )
+
+    def test_set_description(self):
+        with unittest.mock.patch("slidge.LegacyMUC.on_set_config") as on_set_config:
+            self.recv(  # language=XML
+                f"""
+            <iq type="set"
+                to='{self.muc.jid}'
+                id='set-description'
+                from='{self.user_jid}'>
+              <query xmlns="http://jabber.org/protocol/muc#owner">
+                <x xmlns="jabber:x:data"
+                   type="submit">
+                  <title>Slidge room configuration</title>
+                  <instructions>Complete this form to modify the configuration of your room.</instructions>
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roomconfig</value>
+                  </field>
+                  <field var="muc#roomconfig_roomname"
+                         label="Natural-Language Room Name"
+                         type="text-single">
+                    <value>A new name</value>
+                  </field>
+                  <field var="muc#roomconfig_roomdesc"
+                         label="Short Description of Room"
+                         type="text-single">
+                    <value>A new description</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
+            """
+            )
+            on_set_config.assert_awaited_once_with(
+                name="A new name",
+                description="A new description",
+            )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                to="romeo@montague.lit"
+                id="set-description"
+                from="room-moderation-test@aim.shakespeare.lit"></iq>
+            """
+        )
+
 
 class TestJoinAway(Base):
     def setUp(self):

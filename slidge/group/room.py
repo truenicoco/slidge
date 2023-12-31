@@ -956,7 +956,24 @@ class LegacyMUC(
         :param reason: A reason for this affiliation change
         :param nickname:
         """
-        pass
+        raise NotImplementedError
+
+    async def on_set_config(
+        self,
+        name: Optional[str],
+        description: Optional[str],
+    ):
+        """
+        Triggered when the user requests changing the room configuration.
+        Only title and description can be changed at the moment.
+
+        The legacy module is responsible for updating :attr:`.title` and/or
+        :attr:`.description` of this instance.
+
+        :param name: The new name of the room.
+        :param description: The new description of the room.
+        """
+        raise NotImplementedError
 
 
 def set_origin_id(msg: Message, origin_id: str):
