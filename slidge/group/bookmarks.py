@@ -144,3 +144,20 @@ class LegacyBookmarks(
                 "The plugin advertised support for groups but"
                 " LegacyBookmarks.fill() was not overridden."
             )
+
+    def remove(self, muc: LegacyMUC):
+        try:
+            del self._mucs_by_legacy_id[muc.legacy_id]
+        except KeyError:
+            self.log.warning("Removed a MUC that we didn't store by legacy ID")
+        try:
+            del self._mucs_by_bare_jid[muc.jid.bare]
+        except KeyError:
+            self.log.warning("Removed a MUC that we didn't store by JID")
+        for part in muc._participants_by_contacts.values():
+            try:
+                part.contact.participants.remove(part)
+            except KeyError:
+                part.log.warning(
+                    "That participant wasn't stored in the contact's participants attribute"
+                )

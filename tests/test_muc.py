@@ -3326,6 +3326,7 @@ class TestMUCAdmin(Base):
             name="room-moderation-test", resources=("gajim",)
         )
         self.user_participant = self.run_coro(muc.get_user_participant())
+        self.user_participant._LegacyParticipant__presence_sent = True
         self.user_jid = self.get_romeo_session().user.jid
 
     def test_moderation_not_implemented(self):
@@ -3508,6 +3509,52 @@ class TestMUCAdmin(Base):
                 to="romeo@montague.lit"
                 id="set-description"
                 from="room-moderation-test@aim.shakespeare.lit"></iq>
+            """
+        )
+
+    def test_destruct(self):
+        with unittest.mock.patch(
+            "slidge.LegacyMUC.on_destroy_request"
+        ) as on_destroy_request:
+            self.recv(  # language=XML
+                f"""
+            <iq type="set"
+                to='{self.muc.jid}'
+                id='destroy'
+                from='{self.user_jid}'>
+              <query xmlns="http://jabber.org/protocol/muc#owner">
+                <destroy>
+                  <reason>Macbeth doth come.</reason>
+                </destroy>
+              </query>
+            </iq>
+            """
+            )
+            on_destroy_request.assert_awaited_once_with("Macbeth doth come.")
+        self.send(  # language=XML
+            f"""
+            <presence type="unavailable"
+                      from="room-moderation-test@aim.shakespeare.lit/thirdwitch"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="none"
+                      role="none" />
+                <status code="110" />
+                <destroy>
+                  <reason>Macbeth doth come.</reason>
+                </destroy>
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+            </presence>
+            """,
+        )
+        self.send(  # language=XML
+            f"""
+            <iq type="result"
+                to="{self.user_jid}"
+                id="destroy"
+                from="{self.muc.jid}" />
             """
         )
 

@@ -563,13 +563,28 @@ class SessionDispatcher:
         session = await self.__get_session(iq)
         session.raise_if_not_logged()
         muc = await session.bookmarks.by_jid(iq.get_to())
+        query = iq["mucowner_query"]
 
-        values = iq["mucowner_query"]["form"].get_values()
-
-        await muc.on_set_config(
-            name=values.get("muc#roomconfig_roomname"),
-            description=values.get("muc#roomconfig_roomdesc"),
-        )
+        if form := query.get_plugin("form", check=True):
+            values = form.get_values()
+            await muc.on_set_config(
+                name=values.get("muc#roomconfig_roomname"),
+                description=values.get("muc#roomconfig_roomdesc"),
+            )
+        elif destroy := query.get_plugin("destroy", check=True):
+            reason = destroy["reason"] or None
+            await muc.on_destroy_request(reason)
+            user_participant = await muc.get_user_participant()
+            user_participant._affiliation = "none"
+            user_participant._role = "none"
+            presence = user_participant._make_presence(ptype="unavailable", force=True)
+            presence["muc"].enable("destroy")
+            if reason is not None:
+                presence["muc"]["destroy"]["reason"] = reason
+            user_participant._send(presence)
+            session.bookmarks.remove(muc)
+        else:
+            raise XMPPError("bad-request")
 
         iq.reply(clear=True).send()
 

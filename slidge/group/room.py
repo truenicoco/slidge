@@ -975,6 +975,14 @@ class LegacyMUC(
         """
         raise NotImplementedError
 
+    async def on_destroy_request(self, reason: Optional[str]):
+        """
+        Triggered when the user requests room destruction.
+
+        :param reason: Optionally, a reason for the destruction
+        """
+        raise NotImplementedError
+
 
 def set_origin_id(msg: Message, origin_id: str):
     sub = ET.Element("{urn:xmpp:sid:0}origin-id")
