@@ -51,7 +51,7 @@ class Search:
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
-        result = await self.xmpp.get_session_from_stanza(iq).search(
+        result = await self.xmpp.get_session_from_stanza(iq).on_search(
             iq["search"]["form"].get_values()
         )
 
@@ -85,7 +85,7 @@ class Search:
         elif iq["type"] == "set":
             prompt = iq["gateway"]["prompt"]
             session = self.xmpp.session_cls.from_user(user)
-            result = await session.search({field.var: prompt})
+            result = await session.on_search({field.var: prompt})
             if result is None or not result.items:
                 raise XMPPError(
                     "item-not-found", "No contact was found with the info you provided."

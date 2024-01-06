@@ -32,7 +32,7 @@ class Search(Command):
     ) -> Union[Form, SearchResult, None]:
         if args:
             assert session is not None
-            return await session.search(
+            return await session.on_search(
                 {self.xmpp.SEARCH_FIELDS[0].var: " ".join(args)}
             )
         return Form(
@@ -47,7 +47,7 @@ class Search(Command):
         form_values: FormValues, session: Optional[AnyBaseSession], _ifrom: JID
     ) -> SearchResult:
         assert session is not None
-        results = await session.search(form_values)  # type: ignore
+        results = await session.on_search(form_values)  # type: ignore
         if results is None:
             raise XMPPError("item-not-found", "No contact was found")
 
