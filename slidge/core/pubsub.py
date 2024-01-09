@@ -25,6 +25,7 @@ from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
 from ..contact.contact import LegacyContact
+from ..contact.roster import ContactIsUser
 from ..util.db import GatewayUser, user_store
 from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
@@ -401,7 +402,10 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             if session is None:
                 return
             await session.ready
-            entity = await session.get_contact_or_group_or_participant(from_)
+            try:
+                entity = await session.get_contact_or_group_or_participant(from_)
+            except ContactIsUser:
+                return
             if isinstance(entity, LegacyContact) and not entity.is_friend:
                 return
 
