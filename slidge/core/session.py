@@ -82,6 +82,13 @@ class BaseSession(
     in which case the message ID is also a thread ID (and all messages are potential
     threads).
     """
+    SPECIAL_MSG_ID_PREFIX: Optional[str] = None
+    """
+    If you set this, XMPP message IDs starting with this won't be converted to legacy ID,
+    but passed as is to :meth:`.on_react`, and usual checks for emoji restriction won't be
+    applied.
+    This can be used to implement voting in polls in a hacky way.
+    """
 
     def __init__(self, user: GatewayUser):
         self.log = logging.getLogger(user.bare_jid)

@@ -352,7 +352,15 @@ class SessionDispatcher:
     async def on_reactions(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
         react_to: str = msg["reactions"]["id"]
-        legacy_id = _xmpp_msg_id_to_legacy(session, react_to)
+
+        special_msg = session.SPECIAL_MSG_ID_PREFIX and react_to.startswith(
+            session.SPECIAL_MSG_ID_PREFIX
+        )
+
+        if special_msg:
+            legacy_id = react_to
+        else:
+            legacy_id = _xmpp_msg_id_to_legacy(session, react_to)
 
         if not legacy_id:
             log.debug("Ignored reaction from user")
@@ -366,14 +374,14 @@ class SessionDispatcher:
         ]
         error_msg = None
         entity = entity
-        if entity.REACTIONS_SINGLE_EMOJI and len(emojis) > 1:
-            error_msg = "Maximum 1 emoji/message"
 
-        if not error_msg and (subset := await entity.available_emojis(legacy_id)):
-            if not set(emojis).issubset(subset):
-                error_msg = (
-                    f"You can only react with the following emojis: {''.join(subset)}"
-                )
+        if not special_msg:
+            if entity.REACTIONS_SINGLE_EMOJI and len(emojis) > 1:
+                error_msg = "Maximum 1 emoji/message"
+
+            if not error_msg and (subset := await entity.available_emojis(legacy_id)):
+                if not set(emojis).issubset(subset):
+                    error_msg = f"You can only react with the following emojis: {''.join(subset)}"
 
         if error_msg:
             session.send_gateway_message(error_msg)
