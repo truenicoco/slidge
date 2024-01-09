@@ -254,6 +254,31 @@ class TestAimShakespeareBase(Base):
             use_values=False,
         )
 
+    def test_jabber_iq_gateway_on_contact(self):
+        self.recv(  # language=XML
+            """
+            <iq type='get'
+                to='juliet@aim.shakespeare.lit'
+                from='romeo@montague.lit'
+                id='gate1'>
+              <query xmlns='jabber:iq:gateway' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type='error'
+                from='juliet@aim.shakespeare.lit'
+                to='romeo@montague.lit'
+                id='gate1'>
+              <error type="modify">
+                <bad-request xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">This can only be used on the component JID</text>
+              </error>
+            </iq>
+            """
+        )
+
     def test_from_romeo_to_eve(self):
         self.recv(  # language=XML
             """

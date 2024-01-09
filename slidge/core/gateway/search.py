@@ -67,6 +67,9 @@ class Search:
         return reply
 
     async def _handle_gateway_iq(self, iq: Iq):
+        if iq.get_to() != self.xmpp.boundjid.bare:
+            raise XMPPError("bad-request", "This can only be used on the component JID")
+
         user = user_store.get_by_jid(iq.get_from())
         if user is None:
             raise XMPPError("not-authorized", "Register to the gateway first")
