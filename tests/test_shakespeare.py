@@ -60,7 +60,7 @@ class Session(BaseSession):
     def xmpp_msg_id_to_legacy_msg_id(i: str):
         return int(i)
 
-    async def search(self, form_values: Dict[str, str]):
+    async def on_search(self, form_values: Dict[str, str]):
         if form_values["leg"] == "exists":
             return SearchResult(
                 fields=[FormField(var="jid", label="JID", type="jid-single")],
