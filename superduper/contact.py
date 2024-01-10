@@ -28,5 +28,6 @@ class Contact(LegacyContact[int]):
         self.name = profile.nickname
         self.set_vcard(full_name=profile.full_name)
         await self.set_avatar(profile.avatar, profile.avatar_unique_id)
-        self.is_friend = True
+        if self.legacy_id != 666:
+            self.is_friend = True
         self.online()

@@ -65,6 +65,9 @@ class SuperDuperClient:
     async def __incoming_messages(self):
         while True:
             await self.on_contact_message(
+                DirectMessage(666, "Hey devil!", id=uuid.uuid4().hex)
+            )
+            await self.on_contact_message(
                 DirectMessage(111, "Hey!", id=uuid.uuid4().hex)
             )
             await asyncio.sleep(300)
@@ -137,6 +140,12 @@ _PROFILES = {
         nickname="The devil",
         avatar=ASSETS_DIR / "5x5.png",
         full_name="Lucy Fer",
+        avatar_unique_id="devil-uid",
+    ),
+    000: Profile(
+        nickname="🎉 The joker 🎉",
+        avatar=ASSETS_DIR / "5x5.png",
+        full_name="A guy with emojis in his nick",
         avatar_unique_id="devil-uid",
     ),
 }

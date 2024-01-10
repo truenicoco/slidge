@@ -30,11 +30,13 @@ class MUC(LegacyMUC):
     async def fill_participants(self):
         # in a real case, this would probably call something like
         # self.session.legacy_client.fetch_group_members(self.legacy_id)
-        for i in 111, 222:
+        for i in 0, 111, 222:
             part = await self.get_participant_by_legacy_id(i)
             if i == 111:
                 part.role = "moderator"
                 part.affiliation = "owner"
+        (await self.get_user_participant()).role = "moderator"
+        (await self.get_user_participant()).affiliation = "owner"
 
     async def backfill(
         self,
@@ -44,7 +46,7 @@ class MUC(LegacyMUC):
         # in a real case, this would probably call something like
         # self.session.legacy_client.fetch_group_history(self.legacy_id)
         for i in range(10):
-            part = await self.get_participant_by_legacy_id(666)
+            part = await self.get_participant_by_legacy_id(0)
             part.send_text(
                 f"History message #{i}",
                 when=datetime.now() - timedelta(hours=i),
