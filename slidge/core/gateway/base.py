@@ -430,6 +430,18 @@ class BaseGateway(
             session.send_gateway_status("Logged in", show="chat")
         else:
             session.send_gateway_status(status, show="chat")
+        # If we stored users avatars (or their hash) persistently across slidge
+        # restarts, we would not need to fetch it on startup
+        self.loop.create_task(self.__fetch_user_avatar(session))
+
+    async def __fetch_user_avatar(self, session: BaseSession):
+        iq = await self.xmpp.plugin["xep_0060"].get_items(
+            session.user.bare_jid,
+            self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
+        )
+        await self.__dispatcher.on_avatar_metadata_info(
+            session, iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]
+        )
 
     def _send(
         self, stanza: MessageOrPresenceTypeVar, **send_kwargs

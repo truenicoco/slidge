@@ -46,6 +46,17 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         self.room = self.run_coro(
             self.get_romeo_session().bookmarks.by_legacy_id("room")
         )
+        self.send(  # language=XML
+            """
+            <iq type="get"
+                to="romeo@montague.lit"
+                id="1">
+              <pubsub xmlns="http://jabber.org/protocol/pubsub">
+                <items node="urn:xmpp:avatar:metadata" />
+              </pubsub>
+            </iq>
+            """
+        )
 
     @staticmethod
     def get_romeo_session() -> Session:
@@ -101,7 +112,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                 f"""
             <iq type="get"
                 to="romeo@montague.lit"
-                id="1">
+                id="2">
               <pubsub xmlns="http://jabber.org/protocol/pubsub">
                 <items node="urn:xmpp:avatar:data">
                   <item id="{self.avatar_sha1}" />
@@ -114,7 +125,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                 f"""
             <iq type="result"
                 from="romeo@montague.lit"
-                id="1">
+                id="2">
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
                 <items node='urn:xmpp:avatar:data'>
                   <item id='{self.avatar_sha1}'>

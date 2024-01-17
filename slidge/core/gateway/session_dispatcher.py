@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form
+from slixmpp.plugins.xep_0084.stanza import Info
 
 from ... import LegacyContact
 from ...group.room import LegacyMUC
@@ -445,8 +446,12 @@ class SessionDispatcher:
             return
 
         session = await self.__get_session(m, timeout=None)
-
         info = m["pubsub_event"]["items"]["item"]["avatar_metadata"]["info"]
+
+        await self.on_avatar_metadata_info(session, info)
+
+    async def on_avatar_metadata_info(self, session: BaseSession, info: Info):
+        session.log.debug("Avatar metadata info: %s", info)
         hash_ = info["id"]
 
         if session.avatar_hash == hash_:
@@ -454,7 +459,9 @@ class SessionDispatcher:
         session.avatar_hash = hash_
 
         if hash_:
-            iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(m.get_from(), hash_)
+            iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
+                session.user.jid, hash_
+            )
             bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
             type_ = info["type"]
             height = info["height"]
