@@ -15,6 +15,7 @@ from .base import (
     SearchResult,
     TableResult,
 )
+from .categories import CONTACTS, GROUPS
 
 if TYPE_CHECKING:
     pass
@@ -26,6 +27,7 @@ class Search(Command):
     NODE = "search"
     CHAT_COMMAND = "find"
     ACCESS = CommandAccess.USER_LOGGED
+    CATEGORY = CONTACTS
 
     async def run(
         self, session: Optional[AnyBaseSession], _ifrom: JID, *args: str
@@ -83,6 +85,7 @@ class SyncContacts(Command):
     )
     NODE = CHAT_COMMAND = "sync-contacts"
     ACCESS = CommandAccess.USER_LOGGED
+    CATEGORY = CONTACTS
 
     async def run(self, session: Optional[AnyBaseSession], _ifrom, *_) -> Confirmation:
         return Confirmation(
@@ -141,6 +144,7 @@ class ListContacts(Command):
     NAME = HELP = "List your legacy contacts"
     NODE = CHAT_COMMAND = "contacts"
     ACCESS = CommandAccess.USER_LOGGED
+    CATEGORY = CONTACTS
 
     async def run(
         self, session: Optional[AnyBaseSession], _ifrom: JID, *_
@@ -161,6 +165,7 @@ class ListGroups(Command):
     NAME = HELP = "List your legacy groups"
     NODE = CHAT_COMMAND = "groups"
     ACCESS = CommandAccess.USER_LOGGED
+    CATEGORY = GROUPS
 
     async def run(self, session, _ifrom, *_):
         assert session is not None
@@ -200,6 +205,7 @@ class CreateGroup(Command):
     NAME = "New legacy group"
     HELP = "Create a group on the legacy service"
     NODE = CHAT_COMMAND = "create-group"
+    CATEGORY = GROUPS
 
     ACCESS = CommandAccess.USER_LOGGED
 

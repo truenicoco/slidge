@@ -348,6 +348,14 @@ class Command(ABC):
     Who can use this command
     """
 
+    CATEGORY: Optional[str] = None
+    """
+    If used, the command will be under this top-level category.
+    Use the same string for several commands to group them.
+    This hierarchy only used for the adhoc interface, not the chat command
+    interface.
+    """
+
     subclasses = list[Type["Command"]]()
 
     def __init__(self, xmpp: "BaseGateway"):

@@ -6,6 +6,7 @@ import slidge.command.adhoc
 import slidge.command.base
 from slidge.command import Command, CommandAccess
 from slidge.command.adhoc import AdhocProvider
+from slidge.command.base import Confirmation
 from slidge.util.test import SlixTestPlus
 
 
@@ -27,6 +28,12 @@ def mock(monkeypatch, MockRE):
         MockRE,
         raising=False,
     )
+    monkeypatch.setattr(
+        ComponentXMPP,
+        "get_session_from_stanza",
+        lambda s, j: MockSession(j.get_from()),
+        raising=False,
+    )
 
 
 class Command1(Command):
@@ -41,6 +48,38 @@ class Command2(Command1):
     ACCESS = CommandAccess.ADMIN_ONLY
 
 
+class Command3(Command):
+    NAME = "Command number three"
+    NODE = "command3"
+
+    CATEGORY = "category"
+    ACCESS = CommandAccess.ADMIN_ONLY
+
+    async def run(self, _session, _ifrom):
+        return Confirmation(
+            prompt="Confirm?", handler=self.finish, success="It worked!"
+        )
+
+    async def finish(self, _session, _ifrom):
+        pass
+
+
+class Command4(Command):
+    NAME = "Command number four"
+    NODE = "command4"
+
+    CATEGORY = "category"
+    ACCESS = CommandAccess.ADMIN_ONLY
+
+    async def run(self, _session, _ifrom):
+        return Confirmation(
+            prompt="Confirm?", handler=self.finish, success="It worked!"
+        )
+
+    async def finish(self, _session, _ifrom):
+        return "OK"
+
+
 class TestCommandsDisco(SlixTestPlus):
     def setUp(self):
         self.stream_start(
@@ -52,6 +91,8 @@ class TestCommandsDisco(SlixTestPlus):
         self.adhoc = AdhocProvider(self.xmpp)
         self.adhoc.register(Command1(self.xmpp))
         self.adhoc.register(Command2(self.xmpp))
+        self.adhoc.register(Command3(self.xmpp))
+        self.adhoc.register(Command4(self.xmpp))
         super().setUp()
 
     def test_disco_admin(self):
@@ -80,6 +121,9 @@ class TestCommandsDisco(SlixTestPlus):
                 <item jid="slidge.whatever.ass"
                       node="command2"
                       name="Command number two" />
+                <item jid="slidge.whatever.ass"
+                      node="category"
+                      name="category" />
               </query>
             </iq>
             """
@@ -134,4 +178,96 @@ class TestCommandsDisco(SlixTestPlus):
             </iq>
             """,
             use_values=False,
+        )
+
+    def test_category(self):
+        self.recv(  # language=XML
+            f"""
+            <iq type='set'
+                from='admin@whatever.ass/cheogram'
+                to='{self.xmpp.boundjid.bare}'
+                id="1">
+              <command xmlns='http://jabber.org/protocol/commands'
+                       node='category'
+                       action='execute' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="1">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="category"
+                       sessionid="session-id"
+                       status="executing">
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>category</title>
+                  <field var="command"
+                         type="list-single"
+                         label="Command">
+                    <option label="Command number three">
+                      <value>0</value>
+                    </option>
+                    <option label="Command number four">
+                      <value>1</value>
+                    </option>
+                    <value />
+                  </field>
+                </x>
+              </command>
+            </iq>
+            """,
+            use_values=False,
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq type='set'
+                from='admin@whatever.ass/cheogram'
+                to='{self.xmpp.boundjid.bare}'
+                id="2">
+              <command xmlns='http://jabber.org/protocol/commands'
+                       node='category'
+                       sessionid="session-id">
+                <x xmlns='jabber:x:data'
+                   type='submit'>
+                  <field var='command'>
+                    <value>0</value>
+                  </field>
+                </x>
+              </command>
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                from="slidge.whatever.ass"
+                to="admin@whatever.ass/cheogram"
+                id="2">
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="category"
+                       sessionid="session-id"
+                       status="executing">
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>Confirm?</title>
+                  <field var="confirm"
+                         label="Confirm"
+                         type="boolean">
+                    <value>1</value>
+                  </field>
+                </x>
+              </command>
+            </iq>
+            """
         )

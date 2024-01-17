@@ -24,6 +24,7 @@ from slidge import (
     LegacyRoster,
     SearchResult,
 )
+from slidge.command.categories import ADMINISTRATION
 from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
 from slidge.slixfix.xep_0356.permissions import (
@@ -614,7 +615,7 @@ class TestAimShakespeareBase(Base):
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
                       node="jabber:iq:register"
-                      name="Register to the gateway" />
+                      name="📝 Register to the gateway" />
               </query>
             </iq>
             """
@@ -640,23 +641,14 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="search"
-                      name="Search for contacts" />
+                      node="👤 Contacts"
+                      name="👤 Contacts" />
+                <item jid="aim.shakespeare.lit"
+                      node="👥 Groups"
+                      name="👥 Groups" />
                 <item jid="aim.shakespeare.lit"
                       node="unregister"
-                      name="Unregister to the gateway" />
-                <item jid="aim.shakespeare.lit"
-                      node="sync-contacts"
-                      name="Sync XMPP roster" />
-                <item jid="aim.shakespeare.lit"
-                      node="contacts"
-                      name="List your legacy contacts" />
-                <item jid="aim.shakespeare.lit"
-                      node="groups"
-                      name="List your legacy groups" />
-                <item jid="aim.shakespeare.lit"
-                      node="create-group"
-                      name="New legacy group" />
+                      name="❌ Unregister to the gateway" />
               </query>
             </iq>
             """
@@ -683,11 +675,11 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="unregister"
-                      name="Unregister to the gateway" />
-                <item jid="aim.shakespeare.lit"
                       node="re-login"
-                      name="Re-login to the legacy network" />
+                      name="🔐 Re-login to the legacy network" />
+                <item jid="aim.shakespeare.lit"
+                      node="unregister"
+                      name="❌ Unregister to the gateway" />
               </query>
             </iq>
             """
@@ -716,17 +708,11 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="info"
-                      name="List registered users" />
-                <item jid="aim.shakespeare.lit"
-                      node="delete_user"
-                      name="Delete a user" />
-                <item jid="aim.shakespeare.lit"
-                      node="loglevel"
-                      name="Change the verbosity of the logs" />
+                      node="{ADMINISTRATION}"
+                      name="{ADMINISTRATION}" />
                 <item jid="aim.shakespeare.lit"
                       node="jabber:iq:register"
-                      name="Register to the gateway" />
+                      name="📝 Register to the gateway" />
               </query>
             </iq>
             """
@@ -742,7 +728,7 @@ class TestAimShakespeareBase(Base):
                 id="123">
               <command xmlns="http://jabber.org/protocol/commands"
                        action="execute"
-                       node="delete_user" />
+                       node="{ADMINISTRATION}" />
             </iq>
             """
         )
@@ -754,7 +740,8 @@ class TestAimShakespeareBase(Base):
                 to="test@localhost/gajim"
                 id="123">
               <error type="auth">
-                <not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <subscription-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">User not found</text>
               </error>
             </iq>
             """,

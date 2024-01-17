@@ -17,10 +17,12 @@ from .base import (
     FormValues,
     TableResult,
 )
+from .categories import ADMINISTRATION
 
 
 class AdminCommand(Command):
     ACCESS = CommandAccess.ADMIN_ONLY
+    CATEGORY = ADMINISTRATION
 
 
 class Info(AdminCommand):

@@ -10,6 +10,7 @@ from slixmpp.plugins.xep_0004 import Form as SlixForm  # type: ignore[attr-defin
 from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
+from .base import FormField
 
 if TYPE_CHECKING:
     from ..core.gateway.base import BaseGateway
@@ -28,6 +29,7 @@ class AdhocProvider:
     def __init__(self, xmpp: "BaseGateway") -> None:
         self.xmpp = xmpp
         self._commands = dict[str, Command]()
+        self._categories = dict[str, list[Command]]()
         xmpp.plugin["xep_0030"].set_node_handler(
             "get_items",
             jid=xmpp.boundjid,
@@ -42,6 +44,49 @@ class AdhocProvider:
         session = command.raise_if_not_authorized(ifrom)
         result = await self.__wrap_handler(command.run, session, ifrom)
         return await self.__handle_result(session, result, adhoc_session)
+
+    async def __handle_category_list(
+        self, category: str, iq: Iq, adhoc_session: AdhocSessionType
+    ) -> AdhocSessionType:
+        session = self.xmpp.get_session_from_stanza(iq)
+        commands = []
+        for command in self._categories[category]:
+            try:
+                command.raise_if_not_authorized(iq.get_from())
+            except XMPPError:
+                continue
+            commands.append(command)
+        return await self.__handle_result(
+            session,
+            Form(
+                category,
+                "",
+                [
+                    FormField(
+                        var="command",
+                        label="Command",
+                        type="list-single",
+                        options=[
+                            {"label": command.NAME, "value": str(i)}
+                            for i, command in enumerate(commands)
+                        ],
+                    )
+                ],
+                partial(self.__handle_category_choice, commands),
+            ),
+            adhoc_session,
+        )
+
+    async def __handle_category_choice(
+        self,
+        commands: list[Command],
+        form_values: dict[str, str],
+        session: "BaseSession[Any, Any]",
+        jid: JID,
+    ):
+        command = commands[int(form_values["command"])]
+        result = await self.__wrap_handler(command.run, session, jid)
+        return result
 
     async def __handle_result(
         self,
@@ -104,7 +149,7 @@ class AdhocProvider:
             session,
             adhoc_session["from"],
             *result.handler_args,
-            **result.handler_kwargs
+            **result.handler_kwargs,
         )
 
         return await self.__handle_result(session, new_result, adhoc_session)
@@ -122,7 +167,7 @@ class AdhocProvider:
                 session,
                 adhoc_session["from"],
                 *confirmation.handler_args,
-                **confirmation.handler_kwargs
+                **confirmation.handler_kwargs,
             )
             if confirmation.success:
                 result = confirmation.success
@@ -141,22 +186,33 @@ class AdhocProvider:
         :param command:
         :param jid:
         """
-        if command.NODE in self._commands:
-            raise RuntimeError(
-                "There is already a command for the node '%s'", command.NODE
-            )
-        self._commands[command.NODE] = command
         if jid is None:
             jid = self.xmpp.boundjid
         elif not isinstance(jid, JID):
             jid = JID(jid)
 
-        self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
-            jid=jid,
-            node=command.NODE,
-            name=command.NAME,
-            handler=partial(self.__wrap_initial_handler, command),
-        )
+        if (category := command.CATEGORY) is None:
+            if command.NODE in self._commands:
+                raise RuntimeError(
+                    "There is already a command for the node '%s'", command.NODE
+                )
+            self._commands[command.NODE] = command
+            self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
+                jid=jid,
+                node=command.NODE,
+                name=command.NAME,
+                handler=partial(self.__wrap_initial_handler, command),
+            )
+        else:
+            if category not in self._categories:
+                self._categories[category] = list[Command]()
+                self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
+                    jid=jid,
+                    node=category,
+                    name=category,
+                    handler=partial(self.__handle_category_list, category),
+                )
+            self._categories[category].append(command)
 
     async def get_items(self, jid: JID, node: str, iq: Iq) -> DiscoItems:
         """
@@ -177,12 +233,24 @@ class AdhocProvider:
         filtered_items = DiscoItems()
         filtered_items["node"] = self.xmpp.plugin["xep_0050"].stanza.Command.namespace
         for item in all_items:
-            try:
-                self._commands[item["node"]].raise_if_not_authorized(ifrom)
-            except XMPPError:
-                continue
+            authorized = True
+            if item["node"] in self._categories:
+                for command in self._categories[item["node"]]:
+                    try:
+                        command.raise_if_not_authorized(ifrom)
+                    except XMPPError:
+                        authorized = False
+                    else:
+                        authorized = True
+                        break
+            else:
+                try:
+                    self._commands[item["node"]].raise_if_not_authorized(ifrom)
+                except XMPPError:
+                    authorized = False
 
-            filtered_items.append(item)
+            if authorized:
+                filtered_items.append(item)
 
         return filtered_items
 
