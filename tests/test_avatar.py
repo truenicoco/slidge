@@ -325,6 +325,71 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
 
+    def test_avatar_forbidden_emoji_in_participant_nickname(self):
+        muc = self.get_muc(joined=True)
+        session = self.get_romeo_session()
+        juliet = self.juliet
+        juliet.name = "juliet🎉"
+        juliet.avatar = self.avatar_url
+        session.contacts.ready.set_result(True)
+        self.run_coro(muc.get_participant_by_contact(juliet))
+        self.send(  # language=XML
+            """
+            <presence from="room@aim.shakespeare.lit/juliet-1934e"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="juliet@aim.shakespeare.lit/slidge" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <presence from="room@aim.shakespeare.lit/juliet-1934e"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="juliet@aim.shakespeare.lit/slidge" />
+              </x>
+              <x xmlns="vcard-temp:x:update">
+                <photo>630e98ce280a370dd1c7933289ce7a0338b8b3f1</photo>
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="juliet@aim.shakespeare.lit/slidge" />
+            </presence>
+            """
+        )
+        self.recv(  # language=XML
+            """
+            <iq from="romeo@montague.lit/gajim"
+                to="room@aim.shakespeare.lit/juliet-1934e"
+                type="get">
+              <vCard xmlns="vcard-temp" />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq from="room@aim.shakespeare.lit/juliet-1934e"
+                to="romeo@montague.lit/gajim"
+                type="result"
+                id="1">
+              <vCard xmlns="vcard-temp">
+                <PHOTO>
+                  <BINVAL>{self.avatar_base64}</BINVAL>
+                  <TYPE>image/png</TYPE>
+                </PHOTO>
+              </vCard>
+            </iq>
+            """
+        )
+        assert self.next_sent() is None
+
 
 @pytest.mark.usefixtures("avatar")
 class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):

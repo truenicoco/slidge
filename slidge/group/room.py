@@ -128,6 +128,7 @@ class LegacyMUC(
         self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
+        self._participants_by_escaped_nicknames = dict[str, LegacyParticipantType]()
         self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
 
         self.__participants_filled = False
@@ -571,7 +572,9 @@ class LegacyMUC(
         """
         if fill_first:
             await self.__fill_participants()
-        p = self._participants_by_nicknames.get(nickname)
+        p = self._participants_by_nicknames.get(
+            nickname
+        ) or self._participants_by_escaped_nicknames.get(nickname)
         if p is None:
             if raise_if_not_found:
                 raise XMPPError("item-not-found")

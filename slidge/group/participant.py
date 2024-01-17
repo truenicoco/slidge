@@ -112,12 +112,14 @@ class LegacyParticipant(
             return
         self.send_last_presence(force=True, no_cache_online=True)
 
-    def __update_jid(self, nickname: Optional[str]):
+    def __update_jid(self, unescaped_nickname: Optional[str]):
         j: JID = copy(self.muc.jid)
 
         if self.is_system:
             self.jid = j
             return
+
+        nickname = unescaped_nickname
 
         if nickname:
             nickname = self._nickname_no_illegal = strip_illegal_chars(nickname)
@@ -141,6 +143,9 @@ class LegacyParticipant(
             j.resource = nickname
         except InvalidJID:
             j.resource = strip_non_printable(nickname)
+
+        if nickname != unescaped_nickname:
+            self.muc._participants_by_escaped_nicknames[nickname] = self  # type:ignore
 
         self.jid = j
 
