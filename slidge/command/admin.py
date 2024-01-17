@@ -49,7 +49,7 @@ class Info(AdminCommand):
 
 
 class DeleteUser(AdminCommand):
-    NAME = "Delete a user"
+    NAME = "❌ Delete a user"
     HELP = "Unregister a user from the gateway"
     NODE = CHAT_COMMAND = "delete_user"
 
@@ -85,7 +85,7 @@ class DeleteUser(AdminCommand):
 
 
 class ChangeLoglevel(AdminCommand):
-    NAME = "Change the verbosity of the logs"
+    NAME = "📋 Change the verbosity of the logs"
     HELP = "Set the logging level"
     NODE = CHAT_COMMAND = "loglevel"
 

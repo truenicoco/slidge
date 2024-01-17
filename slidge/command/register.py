@@ -58,7 +58,7 @@ class TwoFactorNotRequired(Exception):
 
 
 class Register(Command):
-    NAME = "Register to the gateway"
+    NAME = "📝 Register to the gateway"
     HELP = "Link your JID to this gateway"
     NODE = "jabber:iq:register"
     CHAT_COMMAND = "register"

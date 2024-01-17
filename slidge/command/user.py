@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class Search(Command):
-    NAME = "Search for contacts"
+    NAME = "🔎 Search for contacts"
     HELP = "Search for contacts via this gateway"
     NODE = "search"
     CHAT_COMMAND = "find"
@@ -56,29 +56,8 @@ class Search(Command):
         return results
 
 
-class Unregister(Command):
-    NAME = "Unregister to the gateway"
-    HELP = "Unregister to the gateway"
-    NODE = CHAT_COMMAND = "unregister"
-    ACCESS = CommandAccess.USER
-
-    async def run(
-        self, session: Optional[AnyBaseSession], _ifrom: JID, *_: Any
-    ) -> Confirmation:
-        return Confirmation(
-            prompt=f"Are you sure you want to unregister from '{self.xmpp.boundjid}'?",
-            success=f"You are not registered to '{self.xmpp.boundjid}' anymore.",
-            handler=self.unregister,
-        )
-
-    async def unregister(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
-        assert session is not None
-        await self.xmpp.unregister_user(session.user)
-        return "OK"
-
-
 class SyncContacts(Command):
-    NAME = "Sync XMPP roster"
+    NAME = "🔄 Sync XMPP roster"
     HELP = (
         "Synchronize your XMPP roster with your legacy contacts. "
         "Slidge will only add/remove/modify contacts in its dedicated roster group"
@@ -141,7 +120,7 @@ class SyncContacts(Command):
 
 
 class ListContacts(Command):
-    NAME = HELP = "List your legacy contacts"
+    NAME = HELP = "👤 List your legacy contacts"
     NODE = CHAT_COMMAND = "contacts"
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = CONTACTS
@@ -162,7 +141,7 @@ class ListContacts(Command):
 
 
 class ListGroups(Command):
-    NAME = HELP = "List your legacy groups"
+    NAME = HELP = "👥 List your legacy groups"
     NODE = CHAT_COMMAND = "groups"
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = GROUPS
@@ -180,7 +159,7 @@ class ListGroups(Command):
 
 
 class Login(Command):
-    NAME = "Re-login to the legacy network"
+    NAME = "🔐 Re-login to the legacy network"
     HELP = "Login to the legacy service"
     NODE = CHAT_COMMAND = "re-login"
 
@@ -202,7 +181,7 @@ class Login(Command):
 
 
 class CreateGroup(Command):
-    NAME = "New legacy group"
+    NAME = "🆕 New legacy group"
     HELP = "Create a group on the legacy service"
     NODE = CHAT_COMMAND = "create-group"
     CATEGORY = GROUPS
@@ -248,3 +227,24 @@ class CreateGroup(Command):
             items=[{"name": muc.name, "jid": muc.jid}],
             jids_are_mucs=True,
         )
+
+
+class Unregister(Command):
+    NAME = "❌ Unregister to the gateway"
+    HELP = "Unregister to the gateway"
+    NODE = CHAT_COMMAND = "unregister"
+    ACCESS = CommandAccess.USER
+
+    async def run(
+        self, session: Optional[AnyBaseSession], _ifrom: JID, *_: Any
+    ) -> Confirmation:
+        return Confirmation(
+            prompt=f"Are you sure you want to unregister from '{self.xmpp.boundjid}'?",
+            success=f"You are not registered to '{self.xmpp.boundjid}' anymore.",
+            handler=self.unregister,
+        )
+
+    async def unregister(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
+        assert session is not None
+        await self.xmpp.unregister_user(session.user)
+        return "OK"
