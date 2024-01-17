@@ -665,7 +665,7 @@ def _exceptions_to_xmpp_errors(cb: HandlerType) -> HandlerType:
         except XMPPError:
             raise
         except NotImplementedError:
-            log.debug("Legacy module does not implement %s", cb, stack_info=True)
+            log.debug("NotImplementedError raised in %s", cb)
             raise XMPPError(
                 "feature-not-implemented", "Not implemented by the legacy module"
             )
