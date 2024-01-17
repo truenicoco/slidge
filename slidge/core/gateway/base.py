@@ -435,10 +435,14 @@ class BaseGateway(
         self.loop.create_task(self.__fetch_user_avatar(session))
 
     async def __fetch_user_avatar(self, session: BaseSession):
-        iq = await self.xmpp.plugin["xep_0060"].get_items(
-            session.user.bare_jid,
-            self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
-        )
+        try:
+            iq = await self.xmpp.plugin["xep_0060"].get_items(
+                session.user.bare_jid,
+                self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
+            )
+        except IqError as e:
+            session.log.debug("Failed to retrieve avatar: %r", e)
+            return
         await self.__dispatcher.on_avatar_metadata_info(
             session, iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]
         )
