@@ -256,10 +256,19 @@ class SessionDispatcher:
         else:
             mentions = None
 
+        if previews := msg["link_previews"]:
+            link_previews = [dict_to_named_tuple(p, LinkPreview) for p in previews]
+        else:
+            link_previews = []
+
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
             new_legacy_msg_id = await session.on_text(
-                entity, "Correction:" + msg["body"], thread=thread, mentions=mentions
+                entity,
+                "Correction:" + msg["body"],
+                thread=thread,
+                mentions=mentions,
+                link_previews=link_previews,
             )
         elif (
             not msg["body"].strip()
@@ -270,7 +279,12 @@ class SessionDispatcher:
             new_legacy_msg_id = None
         elif entity.CORRECTION:
             new_legacy_msg_id = await session.on_correct(
-                entity, msg["body"], legacy_id, thread=thread, mentions=mentions
+                entity,
+                msg["body"],
+                legacy_id,
+                thread=thread,
+                mentions=mentions,
+                link_previews=link_previews,
             )
         else:
             session.send_gateway_message(
@@ -290,7 +304,11 @@ class SessionDispatcher:
                     await session.on_retract(entity, legacy_id, thread=thread)
 
             new_legacy_msg_id = await session.on_text(
-                entity, "Correction: " + msg["body"], thread=thread, mentions=mentions
+                entity,
+                "Correction: " + msg["body"],
+                thread=thread,
+                mentions=mentions,
+                link_previews=link_previews,
             )
 
         if isinstance(entity, LegacyMUC):
