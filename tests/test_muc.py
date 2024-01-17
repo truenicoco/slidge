@@ -22,6 +22,7 @@ from slidge.util.test import SlidgeTest
 from slidge.util.types import (
     LegacyContactType,
     LegacyMessageType,
+    Mention,
     MessageReference,
     MucType,
 )
@@ -82,6 +83,7 @@ class Session(BaseSession):
         reply_to=None,
         thread=None,
         link_previews=(),
+        mentions=None,
     ):
         self.SENT_TEXT.append(locals())
         return "legacy-id"
@@ -3642,3 +3644,34 @@ class TestJoinAway(Base):
             """
         )
         assert self.next_sent() is None
+
+
+class TestMentions(Base):
+    def test_mentions(self):
+        muc = self.get_private_muc("weird", ("gajim",))
+        session = self.get_romeo_session()
+        with unittest.mock.patch("test_muc.Session.on_text") as on_text:
+            self.recv(  # language=XML
+                f"""
+            <message from='{session.user.jid}/gajim'
+                     to='{muc.jid}'
+                     type='groupchat'>
+              <body>I am {muc.user_nick} I want weirdguy🎉 to kiss me</body>
+            </message>
+            """
+            )
+            on_text.assert_awaited_once_with(
+                muc,
+                f"I am {muc.user_nick} I want weirdguy🎉 to kiss me",
+                reply_to_msg_id=None,
+                reply_to_fallback_text=None,
+                reply_to=None,
+                thread=None,
+                mentions=[
+                    Mention(
+                        contact=self.run_coro(muc.get_participant("weirdguy🎉")).contact,
+                        start=23,
+                        end=32,
+                    )
+                ],
+            )

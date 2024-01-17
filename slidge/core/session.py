@@ -28,6 +28,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyThreadType,
     LinkPreview,
+    Mention,
     PseudoPresenceShow,
     RecipientType,
     ResourceDict,
@@ -154,6 +155,7 @@ class BaseSession(
         reply_to: Optional["Sender"] = None,
         thread: Optional[LegacyThreadType] = None,
         link_previews: Iterable[LinkPreview] = (),
+        mentions: Optional[list[Mention]] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user sends a text message from XMPP to a bridged entity, e.g.
@@ -174,6 +176,8 @@ class BaseSession(
         :param link_previews: A list of sender-generated link previews.
             At the time of writing, only `Cheogram <https://wiki.soprani.ca/CheogramApp/LinkPreviews>`_
             supports it.
+        :param mentions: (only for groups) A list of Contacts mentioned by their
+            nicknames.
         :param thread:
 
         :return: An ID of some sort that can be used later to ack and mark the message
@@ -294,6 +298,7 @@ class BaseSession(
         legacy_msg_id: LegacyMessageType,
         thread: Optional[LegacyThreadType] = None,
         link_previews: Iterable[LinkPreview] = (),
+        mentions: Optional[list[Mention]] = None,
     ) -> Optional[LegacyMessageType]:
         """
         Triggered when the user corrects a message using :xep:`0308`
@@ -308,6 +313,8 @@ class BaseSession(
         :param link_previews: A list of sender-generated link previews.
             At the time of writing, only `Cheogram <https://wiki.soprani.ca/CheogramApp/LinkPreviews>`_
             supports it.
+        :param mentions: (only for groups) A list of Contacts mentioned by their
+            nicknames.
         """
         raise NotImplementedError
 

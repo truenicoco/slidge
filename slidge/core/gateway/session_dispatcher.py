@@ -200,6 +200,9 @@ class SessionDispatcher:
             thread=thread,
         )
 
+        if isinstance(e, LegacyMUC):
+            kwargs["mentions"] = await e.parse_mentions(text)
+
         if previews := msg["link_previews"]:
             kwargs["link_previews"] = [
                 dict_to_named_tuple(p, LinkPreview) for p in previews
@@ -248,10 +251,15 @@ class SessionDispatcher:
         else:
             legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
 
+        if isinstance(entity, LegacyMUC):
+            mentions = await entity.parse_mentions(msg["body"])
+        else:
+            mentions = None
+
         if legacy_id is None:
             log.debug("Did not find legacy ID to correct")
             new_legacy_msg_id = await session.on_text(
-                entity, "Correction:" + msg["body"], thread=thread
+                entity, "Correction:" + msg["body"], thread=thread, mentions=mentions
             )
         elif (
             not msg["body"].strip()
@@ -262,7 +270,7 @@ class SessionDispatcher:
             new_legacy_msg_id = None
         elif entity.CORRECTION:
             new_legacy_msg_id = await session.on_correct(
-                entity, msg["body"], legacy_id, thread=thread
+                entity, msg["body"], legacy_id, thread=thread, mentions=mentions
             )
         else:
             session.send_gateway_message(
@@ -282,7 +290,7 @@ class SessionDispatcher:
                     await session.on_retract(entity, legacy_id, thread=thread)
 
             new_legacy_msg_id = await session.on_text(
-                entity, "Correction: " + msg["body"], thread=thread
+                entity, "Correction: " + msg["body"], thread=thread, mentions=mentions
             )
 
         if isinstance(entity, LegacyMUC):

@@ -1,4 +1,5 @@
 import logging
+import re
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,7 @@ from ..util.types import (
     LegacyMessageType,
     LegacyParticipantType,
     LegacyUserIdType,
+    Mention,
     MucAffiliation,
     MucType,
 )
@@ -985,6 +987,23 @@ class LegacyMUC(
         :param reason: Optionally, a reason for the destruction
         """
         raise NotImplementedError
+
+    async def parse_mentions(self, text: str) -> list[Mention]:
+        await self.__fill_participants()
+
+        if len(self._participants_by_nicknames) == 0:
+            return []
+
+        result = []
+        for match in re.finditer(
+            "|".join(re.escape(nick) for nick in self._participants_by_nicknames), text
+        ):
+            span = match.span()
+            nick = match.group()
+            participant = self._participants_by_nicknames[nick]
+            if contact := participant.contact:
+                result.append(Mention(contact=contact, start=span[0], end=span[1]))
+        return result
 
 
 def set_origin_id(msg: Message, origin_id: str):

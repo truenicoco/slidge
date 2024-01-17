@@ -167,3 +167,9 @@ class LinkPreview(NamedTuple):
     image: Optional[str]
     type: Optional[str]
     site_name: Optional[str]
+
+
+class Mention(NamedTuple):
+    contact: "LegacyContact"
+    start: int
+    end: int
