@@ -267,7 +267,9 @@ class ChatCommandProvider:
 
     def _help(self, mfrom: JID):
         msg = "Available commands:"
-        for c in self._commands.values():
+        for c in sorted(
+            self._commands.values(), key=lambda co: (co.CATEGORY or "", co.CHAT_COMMAND)
+        ):
             try:
                 c.raise_if_not_authorized(mfrom)
             except XMPPError:
