@@ -996,7 +996,14 @@ class LegacyMUC(
 
         result = []
         for match in re.finditer(
-            "|".join(re.escape(nick) for nick in self._participants_by_nicknames), text
+            "|".join(
+                sorted(
+                    [re.escape(nick) for nick in self._participants_by_nicknames],
+                    key=lambda nick: len(nick),
+                    reverse=True,
+                )
+            ),
+            text,
         ):
             span = match.span()
             nick = match.group()
