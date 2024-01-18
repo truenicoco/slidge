@@ -5,9 +5,12 @@ import subprocess
 import warnings
 from abc import ABCMeta
 from pathlib import Path
-from typing import Callable, NamedTuple, Optional, Type
+from typing import TYPE_CHECKING, Callable, NamedTuple, Optional, Type
 
-from slidge.util.types import ResourceDict
+from .types import Mention, ResourceDict
+
+if TYPE_CHECKING:
+    from ..contact.contact import LegacyContact
 
 try:
     import magic
@@ -273,3 +276,19 @@ def deprecated(name: str, new: Callable):
 
 def dict_to_named_tuple(data: dict, cls: Type[NamedTuple]):
     return cls(*(data.get(f) for f in cls._fields))  # type:ignore
+
+
+def replace_mentions(
+    text: str,
+    mentions: Optional[list[Mention]],
+    mapping: Callable[["LegacyContact"], str],
+):
+    if not mentions:
+        return text
+
+    cursor = 0
+    pieces = []
+    for mention in mentions:
+        pieces.extend([text[cursor : mention.start], mapping(mention.contact)])
+        cursor = mention.end
+    return "".join(pieces)

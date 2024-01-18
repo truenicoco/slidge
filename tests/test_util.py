@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 
 import cryptography.fernet
@@ -12,7 +13,8 @@ from slidge.util import (
 )
 from slidge.util.db import EncryptedShelf
 from slidge.util.sql import SQLBiDict
-from slidge.util.util import merge_resources
+from slidge.util.types import Mention
+from slidge.util.util import merge_resources, replace_mentions
 
 
 def test_subclass():
@@ -258,3 +260,18 @@ def test_merge_presence():
         "status": "Blah",
         "priority": 0,
     }
+
+
+def test_replace_mentions():
+    mentions = []
+    text = "Text Mention 1 and Mention 2, and Mention 3"
+    for match in re.finditer("Mention 1|Mention 2|Mention 3", text):
+        span = match.span()
+        nick = match.group()
+        mentions.append(
+            Mention(contact=f"Contact{nick[-1]}", start=span[0], end=span[1])
+        )
+    assert (
+        replace_mentions(text, mentions, lambda c: "@" + c[-1])
+        == "Text @1 and @2, and @3"
+    )
