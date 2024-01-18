@@ -648,7 +648,7 @@ class TestAimShakespeareBase(Base):
                       name="👥 Groups" />
                 <item jid="aim.shakespeare.lit"
                       node="unregister"
-                      name="❌ Unregister to the gateway" />
+                      name="❌ Unregister from the gateway" />
               </query>
             </iq>
             """
@@ -679,7 +679,7 @@ class TestAimShakespeareBase(Base):
                       name="🔐 Re-login to the legacy network" />
                 <item jid="aim.shakespeare.lit"
                       node="unregister"
-                      name="❌ Unregister to the gateway" />
+                      name="❌ Unregister from the gateway" />
               </query>
             </iq>
             """

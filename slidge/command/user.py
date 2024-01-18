@@ -230,8 +230,8 @@ class CreateGroup(Command):
 
 
 class Unregister(Command):
-    NAME = "❌ Unregister to the gateway"
-    HELP = "Unregister to the gateway"
+    NAME = "❌ Unregister from the gateway"
+    HELP = "Unregister from the gateway"
     NODE = CHAT_COMMAND = "unregister"
     ACCESS = CommandAccess.USER
 
