@@ -296,6 +296,7 @@ class BaseSession(
         chat: RecipientType,
         text: str,
         legacy_msg_id: LegacyMessageType,
+        *,
         thread: Optional[LegacyThreadType] = None,
         link_previews: Iterable[LinkPreview] = (),
         mentions: Optional[list[Mention]] = None,
