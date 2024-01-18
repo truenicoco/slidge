@@ -614,6 +614,9 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
+                      node="🛷️ Slidge administration"
+                      name="🛷️ Slidge administration" />
+                <item jid="aim.shakespeare.lit"
                       node="jabber:iq:register"
                       name="📝 Register to the gateway" />
               </query>
@@ -640,6 +643,9 @@ class TestAimShakespeareBase(Base):
                 id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit"
+                      node="🛷️ Slidge administration"
+                      name="🛷️ Slidge administration" />
                 <item jid="aim.shakespeare.lit"
                       node="👤 Contacts"
                       name="👤 Contacts" />
@@ -674,6 +680,9 @@ class TestAimShakespeareBase(Base):
                 id='1'>
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
+                <item jid="aim.shakespeare.lit"
+                      node="🛷️ Slidge administration"
+                      name="🛷️ Slidge administration" />
                 <item jid="aim.shakespeare.lit"
                       node="re-login"
                       name="🔐 Re-login to the legacy network" />

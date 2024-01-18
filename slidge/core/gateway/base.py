@@ -6,6 +6,7 @@ import logging
 import re
 import tempfile
 from copy import copy
+from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Union
 
 import aiohttp
@@ -201,6 +202,7 @@ class BaseGateway(
     _can_send_carbon = False
 
     def __init__(self):
+        self.datetime_started = datetime.now()
         self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
         self.default_ns = "jabber:component:accept"
         super().__init__(

@@ -1,6 +1,7 @@
 # Commands only accessible for slidge admins
 import functools
 import logging
+from datetime import datetime
 from typing import Any, Optional
 
 from slixmpp import JID
@@ -25,12 +26,10 @@ class AdminCommand(Command):
     CATEGORY = ADMINISTRATION
 
 
-class Info(AdminCommand):
-    # TODO: return uptime
-    # TODO: return version
-    NAME = "List registered users"
+class ListUsers(AdminCommand):
+    NAME = "👤 List registered users"
     HELP = "List the users registered to this gateway"
-    NODE = CHAT_COMMAND = "info"
+    NODE = CHAT_COMMAND = "list_users"
 
     async def run(self, _session, _ifrom, *_):
         items = []
@@ -45,6 +44,56 @@ class Info(AdminCommand):
             description="List of registered users",
             fields=[FormField("jid", type="jid-single"), FormField("joined")],
             items=items,  # type:ignore
+        )
+
+
+class SlidgeInfo(AdminCommand):
+    NAME = "ℹ️ Server information"
+    HELP = "List the users registered to this gateway"
+    NODE = CHAT_COMMAND = "info"
+    ACCESS = CommandAccess.ANY
+
+    async def run(self, _session, _ifrom, *_):
+        from ..__main__ import __version__
+
+        start = self.xmpp.datetime_started
+        uptime = datetime.now() - start
+
+        if uptime.days:
+            days_ago = f"{uptime.days} day{'s' if uptime.days != 1 else ''}"
+        else:
+            days_ago = None
+        hours, seconds = divmod(uptime.seconds, 3600)
+
+        if hours:
+            hours_ago = f"{hours} hour"
+            if hours != 1:
+                hours_ago += "s"
+        else:
+            hours_ago = None
+
+        minutes, seconds = divmod(seconds, 60)
+        if minutes:
+            minutes_ago = f"{minutes} minute"
+            if minutes_ago != 1:
+                minutes_ago += "s"
+        else:
+            minutes_ago = None
+
+        if any((days_ago, hours_ago, minutes_ago)):
+            seconds_ago = None
+        else:
+            seconds_ago = f"{seconds} second"
+            if seconds != 1:
+                seconds_ago += "s"
+
+        ago = ", ".join(
+            [a for a in (days_ago, hours_ago, minutes_ago, seconds_ago) if a]
+        )
+
+        return (
+            f"{self.xmpp.COMPONENT_NAME} version {__version__}\n"
+            f"Up since {start:%Y-%m-%d %H:%M} ({ago} ago)"
         )
 
 
