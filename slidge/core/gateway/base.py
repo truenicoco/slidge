@@ -268,6 +268,7 @@ class BaseGateway(
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2#extended")
             self.plugin["xep_0030"].add_feature(self.plugin["xep_0421"].namespace)
+            self.plugin["xep_0030"].add_feature(self["xep_0317"].stanza.NS)
             self.plugin["xep_0030"].add_identity(
                 category="conference",
                 name=self.COMPONENT_NAME,
@@ -812,6 +813,7 @@ SLIXMPP_PLUGINS = [
     "xep_0292_provider",  # VCard4
     "xep_0308",  # Last message correction
     "xep_0313",  # Message Archive Management
+    "xep_0317",  # Hats
     "xep_0319",  # Last User Interaction in Presence
     "xep_0333",  # Chat markers
     "xep_0334",  # Message Processing Hints

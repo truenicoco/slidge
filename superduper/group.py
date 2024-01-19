@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from slidge.util.types import Hat
 
 if TYPE_CHECKING:
     from .session import Session
@@ -35,6 +36,7 @@ class MUC(LegacyMUC):
             if i == 111:
                 part.role = "moderator"
                 part.affiliation = "owner"
+                part.set_hats([Hat("test", "test"), Hat("prout", "prout")])
         (await self.get_user_participant()).role = "moderator"
         (await self.get_user_participant()).affiliation = "owner"
 

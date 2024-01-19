@@ -20,6 +20,7 @@ from slidge import LegacyBookmarks, LegacyContact, LegacyParticipant, LegacyRost
 from slidge.group.archive import MessageArchive
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
+    Hat,
     LegacyContactType,
     LegacyMessageType,
     Mention,
@@ -3675,3 +3676,43 @@ class TestMentions(Base):
                     )
                 ],
             )
+
+
+class TestHats(Base):
+    def test_hats(self):
+        muc = self.get_private_muc("room-private", ("gajim",))
+        participant = self.run_coro(muc.get_participant("i-wear-hats"))
+        participant.send_last_presence(force=True, no_cache_online=True)
+        self.send(  # language=XML
+            """
+            <presence from="room-private@aim.shakespeare.lit/i-wear-hats"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )
+        participant.set_hats([Hat("uri1", "title1"), Hat("uri2", "title2")])
+        self.send(  # language=XML
+            """
+            <presence from="room-private@aim.shakespeare.lit/i-wear-hats"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant" />
+              </x>
+              <hats xmlns="urn:xmpp:hats:0">
+                <hat uri="uri1"
+                     title="title1" />
+                <hat uri="uri2"
+                     title="title2" />
+              </hats>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </presence>
+            """
+        )

@@ -173,3 +173,8 @@ class Mention(NamedTuple):
     contact: "LegacyContact"
     start: int
     end: int
+
+
+class Hat(NamedTuple):
+    uri: str
+    title: str

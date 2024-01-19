@@ -19,6 +19,7 @@ from ..core.mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 from ..util import SubclassableOnce, strip_illegal_chars
 from ..util.sql import CachedPresence
 from ..util.types import (
+    Hat,
     LegacyMessageType,
     MessageOrPresenceTypeVar,
     MucAffiliation,
@@ -61,6 +62,7 @@ class LegacyParticipant(
         is_system=False,
     ):
         super().__init__()
+        self._hats = list[Hat]()
         self.muc = muc
         self.session = session = muc.session
         self.user = session.user
@@ -108,6 +110,14 @@ class LegacyParticipant(
         if self._role == role:
             return
         self._role = role
+        if not self.__presence_sent:
+            return
+        self.send_last_presence(force=True, no_cache_online=True)
+
+    def set_hats(self, hats: list[Hat]):
+        if self._hats == hats:
+            return
+        self._hats = hats
         if not self.__presence_sent:
             return
         self.send_last_presence(force=True, no_cache_online=True)
@@ -204,6 +214,8 @@ class LegacyParticipant(
         p = super()._make_presence(last_seen=last_seen, **presence_kwargs)
         p["muc"]["affiliation"] = self.affiliation
         p["muc"]["role"] = self.role
+        if self._hats:
+            p["hats"].add_hats(self._hats)
         codes = status_codes or set()
         if self.is_user:
             codes.add(110)
