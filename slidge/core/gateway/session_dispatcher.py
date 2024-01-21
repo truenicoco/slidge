@@ -200,7 +200,7 @@ class SessionDispatcher:
             thread=thread,
         )
 
-        if isinstance(e, LegacyMUC):
+        if not url and isinstance(e, LegacyMUC):
             kwargs["mentions"] = await e.parse_mentions(text)
 
         if previews := msg["link_previews"]:
