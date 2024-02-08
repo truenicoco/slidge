@@ -16,7 +16,7 @@ aiohttp = {version = "^3.8.3", extras = ["speedups"]}
 ConfigArgParse = "^1.5.3"
 pickle-secure = "^0.99.9"
 python-magic = "^0.4.27"
-slixmpp = "^1.8.4"
+slixmpp = "^1.8.5"
 blurhash-python = "^1.2.1"
 
 [build-system]

@@ -75,8 +75,6 @@ slixmpp.plugins.PLUGINS.extend(
         "xep_0292_provider",
         "xep_0317",
         "xep_0356_old",
-        "xep_0385",
-        "xep_0447",
     ]
 )
 
