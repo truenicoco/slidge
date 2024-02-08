@@ -245,9 +245,9 @@ class Base(SlidgeTest):
         user_store.add(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        slidge.group.room.uuid4 = (
-            slidge.core.mixins.message_maker.uuid4
-        ) = uuid.uuid4 = lambda: "uuid"
+        slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = (
+            uuid.uuid4
+        ) = lambda: "uuid"
         self.get_romeo_session().logged = True
 
     def tearDown(self):
@@ -2764,10 +2764,10 @@ class TestMuc(Base):
             "http://jabber.org/protocol/pubsub"
         ] = "both"
         self.xmpp.loop.create_task(muc.add_to_bookmarks(auto_join=True, preserve=False))
-        import slidge.slixfix.xep_0356.privilege
+        import slixmpp.plugins.xep_0356.privilege
 
-        o = slidge.slixfix.xep_0356.privilege.uuid.uuid4
-        slidge.slixfix.xep_0356.privilege.uuid.uuid4 = lambda: "0"
+        o = slixmpp.plugins.xep_0356.privilege.uuid.uuid4
+        slixmpp.plugins.xep_0356.privilege.uuid.uuid4 = lambda: "0"
         self.send(  # language=XML
             """
             <iq from="aim.shakespeare.lit"
@@ -2819,7 +2819,7 @@ class TestMuc(Base):
             """,
             use_values=False,
         )
-        slidge.slixfix.xep_0356.privilege.uuid.uuid4 = o
+        slixmpp.plugins.xep_0356.privilege.uuid.uuid4 = o
 
     def __get_participants(self):
         muc = self.get_private_muc(resources=["movim"])
@@ -3670,7 +3670,9 @@ class TestMentions(Base):
                 thread=None,
                 mentions=[
                     Mention(
-                        contact=self.run_coro(muc.get_participant("weirdguy🎉")).contact,
+                        contact=self.run_coro(
+                            muc.get_participant("weirdguy🎉")
+                        ).contact,
                         start=23,
                         end=32,
                     )

@@ -8,7 +8,7 @@ from slixmpp import Message
 from slixmpp.plugins.xep_0050 import XEP_0050, Command
 from slixmpp.xmlstream import StanzaBase
 
-from . import (
+from . import (  # xep_0356,
     link_preview,
     xep_0077,
     xep_0100,
@@ -17,7 +17,6 @@ from . import (
     xep_0292,
     xep_0313,
     xep_0317,
-    xep_0356,
     xep_0356_old,
 )
 

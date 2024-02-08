@@ -4,16 +4,15 @@ from collections import defaultdict
 
 from slixmpp import JID, Iq, Message
 from slixmpp.plugins.base import BasePlugin
-from slixmpp.types import JidStr
-from slixmpp.xmlstream import StanzaBase
-from slixmpp.xmlstream.handler import Callback
-from slixmpp.xmlstream.matcher import StanzaPath
-
-from slidge.slixfix.xep_0356.permissions import (
+from slixmpp.plugins.xep_0356.permissions import (
     MessagePermission,
     Permissions,
     RosterAccess,
 )
+from slixmpp.types import JidStr
+from slixmpp.xmlstream import StanzaBase
+from slixmpp.xmlstream.handler import Callback
+from slixmpp.xmlstream.matcher import StanzaPath
 
 from . import stanza
 
