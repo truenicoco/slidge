@@ -3,12 +3,9 @@
 
 # ruff: noqa: F401
 
-from asyncio import Semaphore
-
 import slixmpp.plugins
-from slixmpp import Message, Presence
+from slixmpp import Message
 from slixmpp.plugins.xep_0050 import XEP_0050, Command
-from slixmpp.plugins.xep_0115 import XEP_0115
 from slixmpp.xmlstream import StanzaBase
 
 from . import (
@@ -53,18 +50,6 @@ def reply(self, body=None, clear=True):
     if body is not None:
         new_message["body"] = body
     return new_message
-
-
-process_caps_original = XEP_0115._process_caps
-caps_semaphore = Semaphore()
-
-
-async def process_caps_wrapper(self, pres: Presence):
-    async with caps_semaphore:
-        await process_caps_original(self, pres)
-
-
-XEP_0115._process_caps = process_caps_wrapper
 
 
 slixmpp.plugins.PLUGINS.extend(
