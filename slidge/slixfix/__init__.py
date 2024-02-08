@@ -22,7 +22,6 @@ from . import (
     xep_0317,
     xep_0356,
     xep_0356_old,
-    xep_0461,
 )
 
 

@@ -137,7 +137,7 @@ class MessageMaker(BaseSender):
             fallback_nick = None
 
         if fallback := reply_to.body:
-            msg["feature_fallback"].add_quoted_fallback(fallback, fallback_nick)
+            msg["reply"].add_quoted_fallback(fallback, fallback_nick)
 
     @staticmethod
     def _add_link_previews(msg: Message, link_previews: Iterable[LinkPreview]):

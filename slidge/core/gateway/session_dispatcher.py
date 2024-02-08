@@ -146,11 +146,11 @@ class SessionDispatcher:
             url = None
 
         text = msg["body"]
-        if msg.get_plugin("feature_fallback", check=True) and (
+        if msg.get_plugin("fallback", check=True) and (
             isinstance(e, LegacyMUC) or e.REPLIES
         ):
-            text = msg["feature_fallback"].get_stripped_body()
-            reply_fallback = msg["feature_fallback"].get_fallback_body()
+            text = msg["fallback"].get_stripped_body(self.xmpp["xep_0461"].namespace)
+            reply_fallback = msg["reply"].get_fallback_body()
         else:
             reply_fallback = None
 
@@ -574,9 +574,9 @@ class SessionDispatcher:
         reply = iq.reply()
 
         form = Form(title="Slidge room configuration")
-        form[
-            "instructions"
-        ] = "Complete this form to modify the configuration of your room."
+        form["instructions"] = (
+            "Complete this form to modify the configuration of your room."
+        )
         form.add_field(
             var="FORM_TYPE",
             type="hidden",
