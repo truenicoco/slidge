@@ -588,12 +588,13 @@ class SessionDispatcher:
             type="text-single",
             value=muc.name,
         )
-        form.add_field(
-            var="muc#roomconfig_roomdesc",
-            label="Short Description of Room",
-            type="text-single",
-            value=muc.description,
-        )
+        if muc.HAS_DESCRIPTION:
+            form.add_field(
+                var="muc#roomconfig_roomdesc",
+                label="Short Description of Room",
+                type="text-single",
+                value=muc.description,
+            )
 
         muc_owner = iq["mucowner_query"]
         muc_owner.append(form)
@@ -610,7 +611,11 @@ class SessionDispatcher:
             values = form.get_values()
             await muc.on_set_config(
                 name=values.get("muc#roomconfig_roomname"),
-                description=values.get("muc#roomconfig_roomdesc"),
+                description=(
+                    values.get("muc#roomconfig_roomdesc")
+                    if muc.HAS_DESCRIPTION
+                    else None
+                ),
             )
         elif destroy := query.get_plugin("destroy", check=True):
             reason = destroy["reason"] or None

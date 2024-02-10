@@ -99,6 +99,13 @@ class LegacyMUC(
     fit the legacy API, ie, no lazy loading of the participant list and history.
     """
 
+    HAS_DESCRIPTION = True
+    """
+    Set this to false if the legacy network does not allow setting a description
+    for the group. In this case the description field will not be present in the
+    room configuration form.
+    """
+
     _avatar_pubsub_broadcast = False
     _avatar_bare_jid = True
 
@@ -974,6 +981,9 @@ class LegacyMUC(
 
         The legacy module is responsible for updating :attr:`.title` and/or
         :attr:`.description` of this instance.
+
+        If :attr:`.HAS_DESCRIPTION` is set to False, description will always
+        be ``None``.
 
         :param name: The new name of the room.
         :param description: The new description of the room.
