@@ -51,8 +51,7 @@ class ChatCommandProvider:
     @overload
     async def input(
         self, jid: JidStr, text: Optional[str], blocking: Literal[False]
-    ) -> asyncio.Future[str]:
-        ...
+    ) -> asyncio.Future[str]: ...
 
     @overload
     async def input(
@@ -61,8 +60,7 @@ class ChatCommandProvider:
         text: Optional[str],
         mtype: MessageTypes = ...,
         blocking: Literal[True] = ...,
-    ) -> str:
-        ...
+    ) -> str: ...
 
     async def input(
         self,

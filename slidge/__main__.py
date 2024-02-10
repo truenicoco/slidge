@@ -12,6 +12,7 @@ INI file, eg ``debug=true``.
 An example configuration file is available at
 https://git.sr.ht/~nicoco/slidge/tree/master/item/dev/confs/slidge-example.ini
 """
+
 import importlib
 import logging
 import os

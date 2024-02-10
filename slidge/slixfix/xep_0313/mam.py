@@ -22,7 +22,6 @@ log = logging.getLogger(__name__)
 
 
 class XEP_0313(BasePlugin):
-
     """
     XEP-0313 Message Archive Management
     """

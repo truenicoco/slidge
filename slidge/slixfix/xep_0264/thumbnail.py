@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 
 class XEP_0264(BasePlugin):
-
     """
     XEP-0264: Jingle Content Thumbnails
 

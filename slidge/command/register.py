@@ -114,7 +114,9 @@ class Register(Command):
         elif self.xmpp.REGISTRATION_TYPE == RegistrationType.QRCODE:
             self.xmpp.qr_pending_registrations[  # type:ignore
                 user.bare_jid
-            ] = self.xmpp.loop.create_future()
+            ] = (
+                self.xmpp.loop.create_future()
+            )
             qr_text = await self.xmpp.get_qr_text(user)
             qr = qrcode.make(qr_text)
             with tempfile.NamedTemporaryFile(

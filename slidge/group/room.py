@@ -122,9 +122,9 @@ class LegacyMUC(
         )
 
         self._subject = ""
-        self.subject_setter: Union[
-            str, "LegacyContact", "LegacyParticipant"
-        ] = "unknown"
+        self.subject_setter: Union[str, "LegacyContact", "LegacyParticipant"] = (
+            "unknown"
+        )
 
         self.archive: MessageArchive = MessageArchive(str(self.jid), self.user)
         self._user_nick: Optional[str] = None

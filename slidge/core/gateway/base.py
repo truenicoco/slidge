@@ -1,6 +1,7 @@
 """
 This module extends slixmpp.ComponentXMPP to make writing new LegacyClients easier
 """
+
 import asyncio
 import logging
 import re
@@ -247,9 +248,9 @@ class BaseGateway(
         self.get_session_from_stanza: Callable[
             [Union[Message, Presence, Iq]], BaseSession
         ] = self.session_cls.from_stanza  # type: ignore
-        self.get_session_from_user: Callable[
-            [GatewayUser], BaseSession
-        ] = self.session_cls.from_user
+        self.get_session_from_user: Callable[[GatewayUser], BaseSession] = (
+            self.session_cls.from_user
+        )
 
         self.register_plugins()
         self.__register_slixmpp_events()

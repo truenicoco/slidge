@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 
 # noinspection PyPep8Naming
 class XEP_0077(BasePlugin):
-
     """
     XEP-0077: In-Band Registration
 

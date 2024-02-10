@@ -26,7 +26,7 @@ Component "other-walled-garden.example.org"
   modules_enabled = {"privilege"}
 
 -- repeat for other slidge plugins…
-  
+
 -- -- for attachments with the "upload" option
 -- -- in slidge's config: upload-service=upload.example.org
 -- Component "upload.example.org" "http_file_share"

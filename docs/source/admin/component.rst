@@ -27,7 +27,7 @@ Add a component block below the appropriate virtualhost in ``prosody.cfg.lua``
       modules_enabled = {"privilege"} -- optional, additional config required to make it work
 
 For the last line, see :ref:`Privileges` for more info about how what it does and how to set it up entirely
-      
+
 ejabberd
 --------
 
