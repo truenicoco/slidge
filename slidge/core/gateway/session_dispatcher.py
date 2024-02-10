@@ -618,6 +618,8 @@ class SessionDispatcher:
                     else None
                 ),
             )
+            form["type"] = "result"
+            clear = False
         elif destroy := query.get_plugin("destroy", check=True):
             reason = destroy["reason"] or None
             await muc.on_destroy_request(reason)
@@ -630,10 +632,11 @@ class SessionDispatcher:
                 presence["muc"]["destroy"]["reason"] = reason
             user_participant._send(presence)
             session.bookmarks.remove(muc)
+            clear = True
         else:
             raise XMPPError("bad-request")
 
-        iq.reply(clear=True).send()
+        iq.reply(clear=clear).send()
 
     async def on_groupchat_subject(self, msg: Message):
         session = await self.__get_session(msg)

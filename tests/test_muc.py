@@ -3511,7 +3511,29 @@ class TestMUCAdmin(Base):
             <iq type="result"
                 to="romeo@montague.lit"
                 id="set-description"
-                from="room-moderation-test@aim.shakespeare.lit"></iq>
+                from="room-moderation-test@aim.shakespeare.lit">
+              <query xmlns="http://jabber.org/protocol/muc#owner">
+                <x xmlns="jabber:x:data"
+                   type="result">
+                  <title>Slidge room configuration</title>
+                  <instructions>Complete this form to modify the configuration of your room.</instructions>
+                  <field var="FORM_TYPE"
+                         type="hidden">
+                    <value>http://jabber.org/protocol/muc#roomconfig</value>
+                  </field>
+                  <field var="muc#roomconfig_roomname"
+                         label="Natural-Language Room Name"
+                         type="text-single">
+                    <value>A new name</value>
+                  </field>
+                  <field var="muc#roomconfig_roomdesc"
+                         label="Short Description of Room"
+                         type="text-single">
+                    <value>A new description</value>
+                  </field>
+                </x>
+              </query>
+            </iq>
             """
         )
 
