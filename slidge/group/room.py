@@ -106,6 +106,16 @@ class LegacyMUC(
     room configuration form.
     """
 
+    HAS_SUBJECT = True
+    """
+    Set this to false if the legacy network does not allow setting a subject
+    (sometimes also called topic) for the group. In this case, as a subject is
+    recommended by :xep:`0045` ("SHALL"), the description (or the group name as
+    ultimate fallback) will be used as the room subject.
+    By setting this to false, an error will be returned when the :term:`User`
+    tries to set the room subject.
+    """
+
     _avatar_pubsub_broadcast = False
     _avatar_bare_jid = True
 
@@ -527,7 +537,9 @@ class LegacyMUC(
                 since=since,
             )
         (await self.__get_subject_setter_participant()).set_room_subject(
-            self._subject, user_full_jid, self.subject_date
+            self._subject if self.HAS_SUBJECT else (self.description or self.name),
+            user_full_jid,
+            self.subject_date,
         )
         if t := self._set_avatar_task:
             await t
@@ -1021,6 +1033,17 @@ class LegacyMUC(
             if contact := participant.contact:
                 result.append(Mention(contact=contact, start=span[0], end=span[1]))
         return result
+
+    async def on_set_subject(self, subject: str) -> None:
+        """
+        Triggered when the user requests changing the room subject.
+
+        The legacy module is responsible for updating :attr:`.subject` of this
+        instance.
+
+        :param subject: The new subject for this room.
+        """
+        raise NotImplementedError
 
 
 def set_origin_id(msg: Message, origin_id: str):

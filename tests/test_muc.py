@@ -3561,6 +3561,20 @@ class TestMUCAdmin(Base):
             """
         )
 
+    def test_subject(self):
+        with unittest.mock.patch("slidge.LegacyMUC.on_set_subject") as on_set_subject:
+            self.recv(  # language=XML
+                f"""
+            <message type="groupchat"
+                     to='{self.muc.jid}'
+                     from='{self.user_jid}'>
+              <subject>Fire Burn and Cauldron Bubble!</subject>
+            </message>
+            """
+            )
+            on_set_subject.assert_awaited_once_with("Fire Burn and Cauldron Bubble!")
+        self.send(None)
+
 
 class TestJoinAway(Base):
     def setUp(self):

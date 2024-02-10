@@ -77,6 +77,7 @@ class SessionDispatcher:
             "groupchat_join",
             "groupchat_message",
             "groupchat_direct_invite",
+            "groupchat_subject",
             "avatar_metadata_publish",
         ):
             xmpp.add_event_handler(
@@ -633,6 +634,18 @@ class SessionDispatcher:
             raise XMPPError("bad-request")
 
         iq.reply(clear=True).send()
+
+    async def on_groupchat_subject(self, msg: Message):
+        session = await self.__get_session(msg)
+        session.raise_if_not_logged()
+        muc = await session.bookmarks.by_jid(msg.get_to())
+        if not muc.HAS_SUBJECT:
+            raise XMPPError(
+                "bad-request",
+                "There are no room subject in here. "
+                "Use the room configuration to update its name or description",
+            )
+        await muc.on_set_subject(msg["subject"])
 
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):
