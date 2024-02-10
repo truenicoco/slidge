@@ -867,7 +867,7 @@ class LegacyMUC(
             it can help for clients that do not support :xep:`0402`, or
             that have 'do not honor bookmarks auto-join' turned on in their
             settings.
-        :param preserve: preserve name, auto-join and bookmarks extensions
+        :param preserve: preserve auto-join and bookmarks extensions
             set by the user outside slidge
         """
         item = Item()
@@ -887,7 +887,6 @@ class LegacyMUC(
                 item = ans["pubsub"]["items"]["item"]
                 item["id"] = self.jid
             except IqError:
-                item["conference"]["name"] = self.name
                 item["conference"]["autojoin"] = auto_join
             except PermissionError:
                 warnings.warn(
@@ -897,14 +896,10 @@ class LegacyMUC(
                 # if the bookmark is already present, we preserve it as much as
                 # possible, especially custom <extensions>
                 self.log.debug("Existing: %s", item)
-                # if the entry has no name, we set it, even if it's an update
-                if not item["conference"]["name"]:
-                    item["conference"]["name"] = self.name
                 # if it's an update, we do not touch the auto join flag
                 if not is_update:
                     item["conference"]["autojoin"] = auto_join
         else:
-            item["conference"]["name"] = self.name
             item["conference"]["autojoin"] = auto_join
 
         item["conference"]["nick"] = self.user_nick

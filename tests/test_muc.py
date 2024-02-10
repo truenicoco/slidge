@@ -2785,7 +2785,6 @@ class TestMuc(Base):
                     <publish node='urn:xmpp:bookmarks:1'>
                       <item id='room-private@aim.shakespeare.lit'>
                         <conference xmlns='urn:xmpp:bookmarks:1'
-                                    name='Private Room'
                                     autojoin='true'>
                           <nick>thirdwitch</nick>
                         </conference>
