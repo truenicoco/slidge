@@ -147,15 +147,9 @@ class SessionDispatcher:
             url = None
 
         text = msg["body"]
-        if msg.get_plugin("fallback", check=True) and (
-            isinstance(e, LegacyMUC) or e.REPLIES
-        ):
-            text = msg["fallback"].get_stripped_body(self.xmpp["xep_0461"].namespace)
-            reply_fallback = msg["reply"].get_fallback_body()
-        else:
-            reply_fallback = None
 
         reply_to = None
+        reply_fallback = None
         if msg.get_plugin("reply", check=True):
             try:
                 reply_to_msg_xmpp_id = _xmpp_msg_id_to_legacy(
@@ -187,6 +181,16 @@ class SessionDispatcher:
                             reply_to = await muc.get_participant(
                                 reply_to_jid.resource, store=False
                             )
+                if msg.get_plugin("fallback", check=True) and (
+                    isinstance(e, LegacyMUC) or e.REPLIES
+                ):
+                    text = msg["fallback"].get_stripped_body(
+                        self.xmpp["xep_0461"].namespace
+                    )
+                    try:
+                        reply_fallback = msg["reply"].get_fallback_body()
+                    except AttributeError:
+                        pass
         else:
             reply_to_msg_xmpp_id = None
             reply_to = None
