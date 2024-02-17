@@ -1607,10 +1607,8 @@ class TestContact(SlidgeTest):
               <active xmlns="http://jabber.org/protocol/chatstates" />
               <store xmlns="urn:xmpp:hints" />
               <fallback xmlns="urn:xmpp:fallback:0" />
-              <apply-to xmlns="urn:xmpp:fasten:0"
-                        id="old_msg_id">
-                <retract xmlns="urn:xmpp:message-retract:0" />
-              </apply-to>
+              <retract xmlns="urn:xmpp:message-retract:1"
+                       id="old_msg_id" />
             </message>
             """
         )

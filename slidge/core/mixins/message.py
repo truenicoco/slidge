@@ -307,8 +307,7 @@ class ContentMessageMixin(AttachmentMixin):
             thread=thread,
         )
         msg.enable("fallback")
-        msg["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-        msg["apply_to"].enable("retract")
+        msg["retract"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
         self._send(msg, **kwargs)
 
 

@@ -135,6 +135,10 @@ class SessionDispatcher:
             # ignore message reaction fallback.
             # the reaction itself is handled by self.react_from_msg().
             return
+        if msg.get_plugin("retract", check=True) is not None:
+            # ignore message retraction fallback.
+            # the retraction itself is handled by self.on_retract
+            return
 
         session, entity, thread = await self.__get_session_entity_thread(msg)
 
@@ -332,7 +336,7 @@ class SessionDispatcher:
                 "bad-request",
                 "This legacy service does not support message retraction.",
             )
-        xmpp_id: str = msg["apply_to"]["id"]
+        xmpp_id: str = msg["retract"]["id"]
         legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
         if legacy_id:
             await session.on_retract(entity, legacy_id, thread=thread)

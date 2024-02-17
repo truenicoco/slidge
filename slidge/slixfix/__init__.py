@@ -18,6 +18,7 @@ from . import (  # xep_0356,
     xep_0313,
     xep_0317,
     xep_0356_old,
+    xep_0424,
 )
 
 
