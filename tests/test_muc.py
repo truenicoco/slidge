@@ -45,11 +45,11 @@ class Session(BaseSession):
         return
 
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(i: str) -> str:
+    def xmpp_to_legacy_msg_id(i: str) -> str:
         return "legacy-" + i
 
     @staticmethod
-    def legacy_msg_id_to_xmpp_msg_id(i: str) -> str:
+    def legacy_to_xmpp_msg_id(i: str) -> str:
         return i[7:]
 
     async def on_paused(self, c: LegacyContactType, thread=None):

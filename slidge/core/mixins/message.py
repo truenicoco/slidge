@@ -192,8 +192,8 @@ class ContentMessageMixin(AttachmentMixin):
                     legacy_msg_id,
                 )
                 return
-            self.session.sent[legacy_msg_id] = (
-                self.session.legacy_msg_id_to_xmpp_msg_id(legacy_msg_id)
+            self.session.sent[legacy_msg_id] = self.session.legacy_to_xmpp_msg_id(
+                legacy_msg_id
             )
         hints = self.__default_hints(hints)
         msg = self._make_message(

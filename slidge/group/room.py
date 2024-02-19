@@ -192,7 +192,7 @@ class LegacyMUC(
             log.debug("Fetching history for %s", self)
             for msg in self.archive:
                 try:
-                    legacy_id = self.session.xmpp_msg_id_to_legacy_msg_id(msg.id)
+                    legacy_id = self.session.xmpp_to_legacy_msg_id(msg.id)
                     oldest_date = msg.when
                 except Exception as e:
                     # not all archived stanzas have a valid legacy msg ID, eg
@@ -425,9 +425,9 @@ class LegacyMUC(
         return user_muc_jid
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
-        return self.session.sent.get(
+        return self.session.sent.get(legacy_id) or self.session.legacy_to_xmpp_msg_id(
             legacy_id
-        ) or self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
+        )
 
     async def echo(
         self, msg: Message, legacy_msg_id: Optional[LegacyMessageType] = None
@@ -441,9 +441,7 @@ class LegacyMUC(
             # is present
             set_origin_id(msg, origin_id)
         if legacy_msg_id:
-            msg["stanza_id"]["id"] = self.session.legacy_msg_id_to_xmpp_msg_id(
-                legacy_msg_id
-            )
+            msg["stanza_id"]["id"] = self.session.legacy_to_xmpp_msg_id(legacy_msg_id)
         else:
             msg["stanza_id"]["id"] = str(uuid4())
         msg["stanza_id"]["by"] = self.jid

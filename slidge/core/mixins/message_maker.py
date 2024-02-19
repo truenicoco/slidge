@@ -88,9 +88,9 @@ class MessageMaker(BaseSender):
             msg["stanza_id"]["by"] = self.muc.jid  # type: ignore
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
-        return self.session.sent.get(
+        return self.session.sent.get(legacy_id) or self.session.legacy_to_xmpp_msg_id(
             legacy_id
-        ) or self.session.legacy_msg_id_to_xmpp_msg_id(legacy_id)
+        )
 
     def _add_delay(self, msg: Message, when: Optional[datetime]):
         if when:

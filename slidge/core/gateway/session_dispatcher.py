@@ -669,7 +669,7 @@ def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):
         return multi
 
     try:
-        return session.xmpp_msg_id_to_legacy_msg_id(xmpp_id)
+        return session.xmpp_to_legacy_msg_id(xmpp_id)
     except XMPPError:
         raise
     except Exception as e:

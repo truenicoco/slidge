@@ -58,7 +58,7 @@ class Gateway(BaseGateway):
 
 class Session(BaseSession):
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(i: str):
+    def xmpp_to_legacy_msg_id(i: str):
         return int(i)
 
     async def on_search(self, form_values: Dict[str, str]):
