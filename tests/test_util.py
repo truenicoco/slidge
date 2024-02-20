@@ -275,3 +275,16 @@ def test_replace_mentions():
         replace_mentions(text, mentions, lambda c: "@" + c[-1])
         == "Text @1 and @2, and @3"
     )
+
+    mentions = []
+    text = "Text Mention 1 and Mention 2, and Mention 3 blabla"
+    for match in re.finditer("Mention 1|Mention 2|Mention 3", text):
+        span = match.span()
+        nick = match.group()
+        mentions.append(
+            Mention(contact=f"Contact{nick[-1]}", start=span[0], end=span[1])
+        )
+    assert (
+        replace_mentions(text, mentions, lambda c: "@" + c[-1])
+        == "Text @1 and @2, and @3 blabla"
+    )

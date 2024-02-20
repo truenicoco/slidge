@@ -291,4 +291,5 @@ def replace_mentions(
     for mention in mentions:
         pieces.extend([text[cursor : mention.start], mapping(mention.contact)])
         cursor = mention.end
+    pieces.append(text[cursor:])
     return "".join(pieces)
