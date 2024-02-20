@@ -1,5 +1,6 @@
 import logging
 import re
+import string
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
@@ -1022,6 +1023,13 @@ class LegacyMUC(
         ):
             span = match.span()
             nick = match.group()
+            if span[0] != 0 and text[span[0] - 1] not in _WHITESPACE_OR_PUNCTUATION:
+                continue
+            if (
+                span[1] != len(text) - 1
+                and text[span[1]] not in _WHITESPACE_OR_PUNCTUATION
+            ):
+                continue
             participant = self._participants_by_nicknames[nick]
             if contact := participant.contact:
                 result.append(Mention(contact=contact, start=span[0], end=span[1]))
@@ -1084,5 +1092,6 @@ def bookmarks_form():
 
 
 _BOOKMARKS_OPTIONS = bookmarks_form()
+_WHITESPACE_OR_PUNCTUATION = string.whitespace + string.punctuation
 
 log = logging.getLogger(__name__)
