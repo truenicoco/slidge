@@ -50,7 +50,8 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             """
             <iq type="get"
                 to="romeo@montague.lit"
-                id="1">
+                id="1"
+                from="aim.shakespeare.lit">
               <pubsub xmlns="http://jabber.org/protocol/pubsub">
                 <items node="urn:xmpp:avatar:metadata" />
               </pubsub>

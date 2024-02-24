@@ -443,6 +443,7 @@ class BaseGateway(
             iq = await self.xmpp.plugin["xep_0060"].get_items(
                 session.user.bare_jid,
                 self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
+                ifrom=self.boundjid.bare,
             )
         except IqError as e:
             session.log.debug("Failed to retrieve avatar: %r", e)
