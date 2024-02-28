@@ -3241,7 +3241,8 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
             f"""
             <iq type="get"
                 to="romeo@montague.lit"
-                id="1">
+                id="1"
+                from="{self.xmpp.boundjid.bare}">
               <pubsub xmlns="http://jabber.org/protocol/pubsub">
                 <items node="urn:xmpp:avatar:metadata">
                   <item id="{self.avatar_sha1}" />
@@ -3276,7 +3277,8 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
             f"""
             <iq type="get"
                 to="romeo@montague.lit"
-                id="2">
+                id="2"
+                from="{self.xmpp.boundjid.bare}">
               <pubsub xmlns="http://jabber.org/protocol/pubsub">
                 <items node="urn:xmpp:avatar:data">
                   <item id="{self.avatar_sha1}" />

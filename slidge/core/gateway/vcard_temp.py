@@ -47,11 +47,12 @@ class VCardTemp:
             session.user.jid,
             MetaData.namespace,
             hash_,
+            ifrom=self.xmpp.boundjid.bare,
         )
         info = meta_iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]
         type_ = info["type"]
         data_iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
-            session.user.jid, hash_
+            session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
         )
         bytes_ = data_iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
         return bytes_, type_
