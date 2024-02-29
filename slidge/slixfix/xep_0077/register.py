@@ -80,7 +80,7 @@ class XEP_0077(BasePlugin):
             self.xmpp.register_handler(
                 CoroutineCallback(
                     "registration",
-                    StanzaPath("/iq/register"),
+                    StanzaPath(f"/iq/register@to={self.xmpp.boundjid.bare}"),
                     self._handle_registration,
                 )
             )
