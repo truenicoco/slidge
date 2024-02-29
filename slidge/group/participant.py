@@ -424,17 +424,15 @@ class LegacyParticipant(
         when: Optional[datetime] = None,
         update_muc=True,
     ):
-        if when is None:
-            when = datetime.now().astimezone()
-
         if update_muc:
             self.muc._subject = subject  # type: ignore
             self.muc.subject_setter = self
             self.muc.subject_date = when
 
         msg = self._make_message()
-        msg["delay"].set_stamp(when)
-        msg["delay"]["from"] = self.muc.jid
+        if when is not None:
+            msg["delay"].set_stamp(when)
+            msg["delay"]["from"] = self.muc.jid
         msg["subject"] = subject or str(self.muc.name)
         self._send(msg, full_jid)
 
