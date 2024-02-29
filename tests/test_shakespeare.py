@@ -452,7 +452,7 @@ class TestAimShakespeareBase(Base):
     def test_jid_validator(self):
         self.xmpp.jid_validator = re.compile(".*@noteverybody")
         self.recv(  # language=XML
-            """
+            f"""
             <iq from='eve@nothingshakespearian'
                 type='get'
                 to='aim.shakespeare.lit'
@@ -1603,12 +1603,15 @@ class TestContact(SlidgeTest):
             <message type="chat"
                      from="juliet@aim.shakespeare.lit/slidge"
                      to="romeo@montague.lit">
-              <body>I have deleted the message old_msg_id, but your XMPP client does not support that</body>
+              <body>/me retracted the message old_msg_id</body>
               <active xmlns="http://jabber.org/protocol/chatstates" />
               <store xmlns="urn:xmpp:hints" />
-              <fallback xmlns="urn:xmpp:fallback:0" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:message-retract:1" />
               <retract xmlns="urn:xmpp:message-retract:1"
                        id="old_msg_id" />
+              <replace id='old_msg_id'
+                       xmlns='urn:xmpp:message-correct:0' />
             </message>
             """
         )

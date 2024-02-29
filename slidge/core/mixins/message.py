@@ -299,15 +299,14 @@ class ContentMessageMixin(AttachmentMixin):
         msg = self._make_message(
             state=None,
             hints={"store"},
-            mbody=(
-                f"I have deleted the message {legacy_msg_id}, "
-                "but your XMPP client does not support that"
-            ),
+            mbody=f"/me retracted the message {legacy_msg_id}",
             carbon=kwargs.get("carbon"),
             thread=thread,
         )
         msg.enable("fallback")
-        msg["retract"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
+        # namespace version mismatch between slidge and slixmpp, update me later
+        msg["fallback"]["for"] = self.xmpp["xep_0424"].namespace[:-1] + "1"
+        msg["retract"]["id"] = msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
         self._send(msg, **kwargs)
 
 
