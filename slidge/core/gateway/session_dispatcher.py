@@ -495,7 +495,7 @@ class SessionDispatcher:
 
         if hash_:
             iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
-                session.user.jid, hash_
+                session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
             )
             bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
             type_ = info["type"]

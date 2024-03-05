@@ -113,6 +113,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                 f"""
             <iq type="get"
                 to="romeo@montague.lit"
+                from="{self.xmpp.boundjid}"
                 id="2">
               <pubsub xmlns="http://jabber.org/protocol/pubsub">
                 <items node="urn:xmpp:avatar:data">
