@@ -3087,6 +3087,37 @@ class TestMuc(Base):
             """
         )
 
+    def test_illegal_nickname_quoted_fallback(self):
+        op = self.get_participant("weirdguy🎉")
+        replier = self.get_participant()
+        replier.send_text(
+            "reply",
+            reply_to=MessageReference("some-id", op, "quoted text"),
+        )
+        self.send(  # language=XML
+            """
+            <message type="groupchat"
+                     from="room-private@aim.shakespeare.lit/firstwitch"
+                     to="romeo@montague.lit/gajim">
+              <body>&gt; weirdguy🎉:\n&gt; quoted text\nreply</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <reply xmlns="urn:xmpp:reply:0"
+                     to="room-private@aim.shakespeare.lit/weirdguy-9u25g" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:reply:0">
+                <body start="0"
+                      end="27" />
+              </fallback>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+            </message>
+            """
+        )
+
     def test_group_rename(self):
         group = self.get_private_muc(resources=("gajim",))
         group.name = "prout"

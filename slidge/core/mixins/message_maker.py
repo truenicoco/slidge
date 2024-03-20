@@ -1,7 +1,7 @@
 import warnings
 from copy import copy
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional, cast
 from uuid import uuid4
 
 from slixmpp import Message
@@ -20,7 +20,7 @@ from .. import config
 from .base import BaseSender
 
 if TYPE_CHECKING:
-    pass
+    from ...group.participant import LegacyParticipant
 
 
 class MessageMaker(BaseSender):
@@ -122,14 +122,17 @@ class MessageMaker(BaseSender):
                     fallback_nick = entity.jid.local
             else:
                 if muc:
-                    if not hasattr(entity, "muc"):
+                    if hasattr(entity, "muc"):
                         # TODO: accept a Contact here and use muc.get_participant_by_legacy_id()
                         # a bit of work because right now this is a sync function
+                        entity = cast("LegacyParticipant", entity)
+                        fallback_nick = entity.nickname
+                    else:
                         warnings.warn(
                             "The author of a message reference in a MUC must be a"
                             " Participant instance, not a Contact"
                         )
-                    fallback_nick = entity.jid.resource
+                        fallback_nick = entity.name
                 else:
                     fallback_nick = entity.name
                 msg["reply"]["to"] = entity.jid
