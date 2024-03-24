@@ -18,6 +18,8 @@ class BaseDiscoMixin(Base):
         self.__caps_cache: Optional[str] = None
 
     def _get_disco_name(self):
+        if self.DISCO_NAME is NotImplemented:
+            return self.xmpp.COMPONENT_NAME
         return self.DISCO_NAME or self.xmpp.COMPONENT_NAME
 
     def features(self):
