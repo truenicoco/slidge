@@ -79,6 +79,7 @@ class SessionDispatcher:
             "groupchat_direct_invite",
             "groupchat_subject",
             "avatar_metadata_publish",
+            "message_displayed_synchronization_publish",
         ):
             xmpp.add_event_handler(
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
@@ -475,6 +476,18 @@ class SessionDispatcher:
         session.raise_if_not_logged()
         muc = await session.bookmarks.by_jid(p.get_to())
         await muc.join(p)
+
+    async def on_message_displayed_synchronization_publish(self, msg: Message):
+        session = await self.__get_session(msg, timeout=None)
+
+        chat_jid = msg["pubsub_event"]["items"]["item"]["id"]
+        chat = await session.get_contact_or_group_or_participant(JID(chat_jid))
+        if not isinstance(chat, LegacyMUC):
+            session.log.debug("Ignoring non-groupchat MDS event")
+            return
+
+        stanza_id = msg["pubsub_event"]["items"]["item"]["displayed"]["stanza_id"]["id"]
+        await session.on_displayed(chat, _xmpp_msg_id_to_legacy(session, stanza_id))
 
     async def on_avatar_metadata_publish(self, m: Message):
         if not config.SYNC_AVATAR:

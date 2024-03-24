@@ -14,6 +14,7 @@ import aiohttp
 import qrcode
 from slixmpp import JID, ComponentXMPP, Iq, Message, Presence
 from slixmpp.exceptions import IqError, IqTimeout, XMPPError
+from slixmpp.plugins.xep_0060.stanza import OwnerAffiliation
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
@@ -384,6 +385,7 @@ class BaseGateway(
             #       as last resort.
             try:
                 await self["xep_0100"].add_component_to_roster(user.jid)
+                await self.__add_component_to_mds_whitelist(user.jid)
             except IqError as e:
                 # TODO: remove the user when this happens? or at least
                 # this can happen when the user has unsubscribed from the XMPP server
@@ -400,6 +402,56 @@ class BaseGateway(
             self.loop.create_task(self.__login_wrap(session))
 
         log.info("Slidge has successfully started")
+
+    async def __add_component_to_mds_whitelist(self, user_jid: JID):
+        # Uses privileged entity to add ourselves to the whitelist of the PEP
+        # MDS node so we receive MDS events
+        iq_creation = Iq(sto=user_jid.bare, sfrom=user_jid, stype="set")
+        iq_creation["pubsub"]["create"]["node"] = self["mds"].stanza.NS
+
+        try:
+            await self["xep_0356"].send_privileged_iq(iq_creation)
+        except PermissionError:
+            log.warning(
+                "IQ privileges not granted for pubsub namespace, we cannot "
+                "create the MDS node of %s",
+                user_jid,
+            )
+        except IqError as e:
+            # conflict this means the node already exists, we can ignore that
+            if e.condition != "conflict":
+                log.exception(
+                    "Could not create the MDS node of %s", user_jid, exc_info=e
+                )
+        except Exception as e:
+            log.exception(
+                "Error while trying to create to the MDS node of %s",
+                user_jid,
+                exc_info=e,
+            )
+
+        iq_affiliation = Iq(sto=user_jid.bare, sfrom=user_jid, stype="set")
+        iq_affiliation["pubsub_owner"]["affiliations"]["node"] = self["mds"].stanza.NS
+
+        aff = OwnerAffiliation()
+        aff["jid"] = self.boundjid.bare
+        aff["affiliation"] = "member"
+        iq_affiliation["pubsub_owner"]["affiliations"].append(aff)
+
+        try:
+            await self["xep_0356"].send_privileged_iq(iq_affiliation)
+        except PermissionError:
+            log.warning(
+                "IQ privileges not granted for pubsub#owner namespace, we cannot "
+                "listen to the MDS events of %s",
+                user_jid,
+            )
+        except Exception as e:
+            log.exception(
+                "Error while trying to subscribe to the MDS node of %s",
+                user_jid,
+                exc_info=e,
+            )
 
     async def __login_wrap(self, session: "BaseSession"):
         session.send_gateway_status("Logging in…", show="dnd")
@@ -830,6 +882,7 @@ SLIXMPP_PLUGINS = [
     "xep_0444",  # Message reactions
     "xep_0447",  # Stateless File Sharing
     "xep_0461",  # Message replies
+    "mds",  # Message Displayed Synchronization
 ]
 
 LOG_STRIP_ELEMENTS = ["data", "binval"]

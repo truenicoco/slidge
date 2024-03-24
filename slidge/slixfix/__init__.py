@@ -19,6 +19,7 @@ from . import (  # xep_0356,
     xep_0317,
     xep_0356_old,
     xep_0424,
+    xep_mds,
 )
 
 
@@ -59,6 +60,7 @@ slixmpp.plugins.PLUGINS.extend(
         "xep_0292_provider",
         "xep_0317",
         "xep_0356_old",
+        "mds",
     ]
 )
 

@@ -4,8 +4,9 @@ import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, Iterable, Optional
 
-from slixmpp import Message
+from slixmpp import Iq, Message
 
+from ...slixfix.xep_mds.mds import PUBLISH_OPTIONS
 from ...util.types import (
     ChatState,
     LegacyMessageType,
@@ -127,6 +128,34 @@ class MarkerMixin(MessageMaker):
             self._make_marker(legacy_msg_id, "displayed", carbon=kwargs.get("carbon")),
             **kwargs,
         )
+        if getattr(self, "is_user", False):
+            self.xmpp.loop.create_task(self.__send_mds(legacy_msg_id))
+
+    async def __send_mds(self, legacy_msg_id: LegacyMessageType):
+        # Send a MDS displayed marker on behalf of the user for a group chat
+        if muc := getattr(self, "muc", None):
+            muc_jid = muc.jid.bare
+        else:
+            # This is not implemented for 1:1 chat because it would rely on
+            # storing the XMPP-server injected stanza-id, which we don't track
+            # ATM.
+            # In practice, MDS should mostly be useful for public group chats,
+            # so it should not be an issue.
+            # We'll see if we need to implement that later
+            return
+        xmpp_msg_id = self._legacy_to_xmpp(legacy_msg_id)
+        iq = Iq(sto=self.user.bare_jid, sfrom=self.user.bare_jid)
+        iq["pubsub"]["publish"]["node"] = self.xmpp["mds"].stanza.NS
+        iq["pubsub"]["publish"]["item"]["id"] = muc_jid
+        displayed = self.xmpp["mds"].stanza.Displayed()
+        displayed["stanza_id"]["id"] = xmpp_msg_id
+        displayed["stanza_id"]["by"] = muc_jid
+        iq["pubsub"]["publish"]["item"]["payload"] = displayed
+        iq["pubsub"]["publish_options"] = PUBLISH_OPTIONS
+        try:
+            await self.xmpp["xep_0356"].send_privileged_iq(iq)
+        except Exception as e:
+            self.session.log.debug("Could not MDS mark", exc_info=e)
 
 
 class ContentMessageMixin(AttachmentMixin):

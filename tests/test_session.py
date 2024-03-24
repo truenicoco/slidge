@@ -12,7 +12,7 @@ from slidge.util.types import LinkPreview
 
 
 class Gateway(BaseGateway):
-    pass
+    COMPONENT_NAME = "A test"
 
 
 class Session(BaseSession):
@@ -79,6 +79,10 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                       from="{self.xmpp.boundjid.bare}">
               <status>YUP</status>
               <show>chat</show>
+              <c xmlns="http://jabber.org/protocol/caps"
+                 node="http://slixmpp.com/ver/1.8.5"
+                 hash="sha-1"
+                 ver="MQesQ734HJbCNJOF87C/MoVNllM=" />
             </presence>
             """
         )
