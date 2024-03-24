@@ -452,6 +452,10 @@ class TestMuc(Base):
                   <field var="{http://modules.prosody.im/mod_vcard_muc}avatar#sha1">
                     <value>e6f9170123620949a6821e25ea2861d22b0dff66</value>
                   </field>
+                  <field var="muc#roominfo_avatarhash"
+                         type='text-multi'>
+                    <value>e6f9170123620949a6821e25ea2861d22b0dff66</value>
+                  </field>
                   <field var="muc#roomconfig_membersonly"
                          type="boolean">
                     <value>0</value>
@@ -3214,6 +3218,23 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
               <vCard xmlns="vcard-temp" />
             </iq>
             """
+        )
+        self.send(  # language=XML
+            """
+            <message type="groupchat"
+                     from="room-private@aim.shakespeare.lit"
+                     to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <status code="104" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="room" />
+            </message>
+            """,
+            use_values=False,
         )
         self.send(  # language=XML
             f"""

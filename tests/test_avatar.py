@@ -1,3 +1,5 @@
+import unittest.mock
+
 import pytest
 from conftest import AvatarFixtureMixin
 from test_shakespeare import Base as BaseNoMUC
@@ -180,6 +182,16 @@ class MUC(LegacyMUC):
 
 class BaseMUC(BaseNoMUC):
     plugin = BaseNoMUC.plugin | {"MUC": MUC}
+
+    def setUp(self):
+        self.patch = unittest.mock.patch(
+            "slidge.core.mixins.message_maker.uuid4", return_value="uuid4"
+        )
+        self.patch.start()
+        super().setUp()
+
+    def tearDown(self):
+        self.patch.stop()
 
     def _assert_send_room_avatar(self, empty=False, url=False):
         if empty:
@@ -398,6 +410,23 @@ class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):
         self._assert_send_room_avatar(empty=True)
         muc.avatar = self.avatar_path
         self.run_coro(muc._set_avatar_task)
+        self.send(  # language=XML
+            """
+            <message type="groupchat"
+                     from="room@aim.shakespeare.lit"
+                     to="romeo@montague.lit/gajim">
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid4"
+                         by="room@aim.shakespeare.lit" />
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <status code="104" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="room" />
+            </message>
+            """,
+            use_values=False,
+        )
         self._assert_send_room_avatar()
 
     def test_room_avatar_on_join(self):

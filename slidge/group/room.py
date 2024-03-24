@@ -384,6 +384,7 @@ class LegacyMUC(
                 form.add_field(
                     "{http://modules.prosody.im/mod_vcard_muc}avatar#sha1", value=h
                 )
+                form.add_field("muc#roominfo_avatarhash", "text-multi", value=[h])
 
         form.add_field("muc#roomconfig_membersonly", "boolean", value=is_group)
         form.add_field(
@@ -458,6 +459,7 @@ class LegacyMUC(
             msg.send()
 
     def _post_avatar_update(self) -> None:
+        self.__send_configuration_change((104,))
         self._send_room_presence()
 
     def _send_room_presence(self, user_full_jid: Optional[JID] = None):
