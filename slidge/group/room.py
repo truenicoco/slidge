@@ -1025,14 +1025,10 @@ class LegacyMUC(
             nick = match.group()
             if span[0] != 0 and text[span[0] - 1] not in _WHITESPACE_OR_PUNCTUATION:
                 continue
-            if (
-                span[1] != len(text) - 1
-                and text[span[1]] not in _WHITESPACE_OR_PUNCTUATION
-            ):
-                continue
-            participant = self._participants_by_nicknames[nick]
-            if contact := participant.contact:
-                result.append(Mention(contact=contact, start=span[0], end=span[1]))
+            if span[1] == len(text) or text[span[1]] in _WHITESPACE_OR_PUNCTUATION:
+                participant = self._participants_by_nicknames[nick]
+                if contact := participant.contact:
+                    result.append(Mention(contact=contact, start=span[0], end=span[1]))
         return result
 
     async def on_set_subject(self, subject: str) -> None:
