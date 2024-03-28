@@ -6,13 +6,13 @@ from slixmpp.types import JidStr
 from . import stanza
 
 
-class XEP_xxxx_mds(BasePlugin):  # FIXME
+class XEP_0490(BasePlugin):
     """
-    XEP-xxxx: Message Displayed Synchronization
+    XEP-0490: Message Displayed Synchronization
     """
 
-    name = "mds"
-    description = "XEP-xxxx: Message Displayed Synchronization"
+    name = "xep_0490"
+    description = "XEP-0490: Message Displayed Synchronization"
     dependencies = {"xep_0060", "xep_0163", "xep_0359"}
     stanza = stanza
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Iterable, Optional
 
 from slixmpp import Iq, Message
 
-from ...slixfix.xep_mds.mds import PUBLISH_OPTIONS
+from ...slixfix.xep_0490.mds import PUBLISH_OPTIONS
 from ...util.types import (
     ChatState,
     LegacyMessageType,
@@ -145,9 +145,9 @@ class MarkerMixin(MessageMaker):
             return
         xmpp_msg_id = self._legacy_to_xmpp(legacy_msg_id)
         iq = Iq(sto=self.user.bare_jid, sfrom=self.user.bare_jid)
-        iq["pubsub"]["publish"]["node"] = self.xmpp["mds"].stanza.NS
+        iq["pubsub"]["publish"]["node"] = self.xmpp["xep_0490"].stanza.NS
         iq["pubsub"]["publish"]["item"]["id"] = muc_jid
-        displayed = self.xmpp["mds"].stanza.Displayed()
+        displayed = self.xmpp["xep_0490"].stanza.Displayed()
         displayed["stanza_id"]["id"] = xmpp_msg_id
         displayed["stanza_id"]["by"] = muc_jid
         iq["pubsub"]["publish"]["item"]["payload"] = displayed

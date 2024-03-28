@@ -407,7 +407,7 @@ class BaseGateway(
         # Uses privileged entity to add ourselves to the whitelist of the PEP
         # MDS node so we receive MDS events
         iq_creation = Iq(sto=user_jid.bare, sfrom=user_jid, stype="set")
-        iq_creation["pubsub"]["create"]["node"] = self["mds"].stanza.NS
+        iq_creation["pubsub"]["create"]["node"] = self["xep_0490"].stanza.NS
 
         try:
             await self["xep_0356"].send_privileged_iq(iq_creation)
@@ -431,7 +431,9 @@ class BaseGateway(
             )
 
         iq_affiliation = Iq(sto=user_jid.bare, sfrom=user_jid, stype="set")
-        iq_affiliation["pubsub_owner"]["affiliations"]["node"] = self["mds"].stanza.NS
+        iq_affiliation["pubsub_owner"]["affiliations"]["node"] = self[
+            "xep_0490"
+        ].stanza.NS
 
         aff = OwnerAffiliation()
         aff["jid"] = self.boundjid.bare
@@ -882,7 +884,7 @@ SLIXMPP_PLUGINS = [
     "xep_0444",  # Message reactions
     "xep_0447",  # Stateless File Sharing
     "xep_0461",  # Message replies
-    "mds",  # Message Displayed Synchronization
+    "xep_0490",  # Message Displayed Synchronization
 ]
 
 LOG_STRIP_ELEMENTS = ["data", "binval"]
