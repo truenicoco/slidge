@@ -9,11 +9,20 @@ modules_enabled = {
 -- in slidge's config: no-upload-path=/var/lib/slidge/attachments
 http_files_dir = "/var/lib/slidge/attachments"
 
+local _privileges = {
+    roster = "both";
+    message = "outgoing";
+    iq = {
+      ["http://jabber.org/protocol/pubsub"] = "both";
+      ["http://jabber.org/protocol/pubsub#owner"] = "both";
+    };
+}
+
 VirtualHost "example.org"
   -- for roster sync and 'legacy carbons'
   privileged_entities = {
-    ["superduper.example.org"] = {roster = "both"; message = "outgoing"},
-    ["other-walled-garden.example.org"] = {roster = "both"; message = "outgoing"},
+    ["superduper.example.org"] =_privileges,
+    ["other-walled-garden.example.org"] = _privileges,
     -- repeat for other slidge plugins…
   }
 

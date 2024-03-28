@@ -43,7 +43,10 @@ Define the gateway component's privileges in the appropriate virtualhost block:
         ["superduper.example.org"] = {
           roster = "both";
           message = "outgoing";
-          iq = { ["http://jabber.org/protocol/pubsub"] = "set"; };
+          iq = {
+            ["http://jabber.org/protocol/pubsub"] = "set";
+            ["http://jabber.org/protocol/pubsub#owner"] = "set";
+          };
         }
       }
 

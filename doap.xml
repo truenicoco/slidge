@@ -488,5 +488,14 @@
             <xmpp:since>0.1.0</xmpp:since>
         </xmpp:SupportedXep>
     </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0490.html"/>
+            <xmpp:status>complete</xmpp:status>
+            <xmpp:version>0.1.0</xmpp:version>
+            <xmpp:since>0.1.0</xmpp:since>
+            <xmpp:note>Slidge supports listening to MDS events and triggering "legacy MDS" events, if added to the PEP MDS node, which is done automatically if XEP-0356 IQ privileges are set. Slidge also support updating MDS node in reaction to "legacy MDS" events.</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
 </Project>
 </rdf:RDF>
