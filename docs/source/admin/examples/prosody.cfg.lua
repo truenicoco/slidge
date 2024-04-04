@@ -14,7 +14,7 @@ local _privileges = {
     message = "outgoing";
     iq = {
       ["http://jabber.org/protocol/pubsub"] = "both";
-      ["http://jabber.org/protocol/pubsub#owner"] = "both";
+      ["http://jabber.org/protocol/pubsub#owner"] = "set";
     };
 }
 
