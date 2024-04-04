@@ -47,7 +47,7 @@ class LegacyRoster(
         self.session = session
         self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
         self._contacts_by_legacy_id: dict[LegacyUserIdType, LegacyContactType] = {}
-        self.log = logging.getLogger(f"{self.session.user.bare_jid}:roster")
+        self.log = logging.getLogger(f"{self.session.user.jid.bare}:roster")
         self.user_legacy_id: Optional[LegacyUserIdType] = None
         self.ready: asyncio.Future[bool] = self.session.xmpp.loop.create_future()
         super().__init__()

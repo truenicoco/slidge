@@ -24,10 +24,10 @@ from ...command.admin import Exec
 from ...command.base import Command, FormField
 from ...command.chat_command import ChatCommandProvider
 from ...command.register import RegistrationType
+from ...db import GatewayUser, SlidgeStore
 from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
-from ...util.db import GatewayUser, user_store
 from ...util.sql import db
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
@@ -202,6 +202,7 @@ class BaseGateway(
     mtype: MessageTypes = "chat"
     is_group = False
     _can_send_carbon = False
+    store: SlidgeStore
 
     def __init__(self):
         self.datetime_started = datetime.now()
@@ -222,7 +223,6 @@ class BaseGateway(
                 },
                 "xep_0100": {
                     "component_name": self.COMPONENT_NAME,
-                    "user_store": user_store,
                     "type": self.COMPONENT_TYPE,
                 },
                 "xep_0184": {
@@ -255,7 +255,7 @@ class BaseGateway(
 
         self.register_plugins()
         self.__register_slixmpp_events()
-        self.roster.set_backend(RosterBackend)
+        self.roster.set_backend(RosterBackend(self))
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
@@ -378,7 +378,7 @@ class BaseGateway(
             jid=self.boundjid.bare, avatar=self.COMPONENT_AVATAR
         )
 
-        for user in user_store.get_all():
+        for user in self.store.users.get_all():
             # TODO: before this, we should check if the user has removed us from their roster
             #       while we were offline and trigger unregister from there. Presence probe does not seem
             #       to work in this case, there must be another way. privileged entity could be used
@@ -396,7 +396,7 @@ class BaseGateway(
                 )
                 continue
             self.send_presence(
-                pto=user.bare_jid, ptype="probe"
+                pto=user.jid.bare, ptype="probe"
             )  # ensure we get all resources for user
             session = self.session_cls.from_user(user)
             session.create_task(self.__login_wrap(session))
@@ -483,7 +483,7 @@ class BaseGateway(
         for c in session.contacts:
             # we need to receive presences directed at the contacts, in
             # order to send pubsub events for their +notify features
-            self.send_presence(pfrom=c.jid, pto=session.user.bare_jid, ptype="probe")
+            self.send_presence(pfrom=c.jid, pto=session.user.jid.bare, ptype="probe")
         if status is None:
             session.send_gateway_status("Logged in", show="chat")
         else:
@@ -495,7 +495,7 @@ class BaseGateway(
     async def __fetch_user_avatar(self, session: BaseSession):
         try:
             iq = await self.xmpp.plugin["xep_0060"].get_items(
-                session.user.bare_jid,
+                session.user.jid.bare,
                 self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
                 ifrom=self.boundjid.bare,
             )
@@ -577,7 +577,7 @@ class BaseGateway(
             )
 
         ifrom = iq.get_from()
-        user = user_store.get_by_jid(ifrom)
+        user = self.store.users.get(ifrom)
         if user is None:
             raise XMPPError("registration-required")
 
@@ -629,7 +629,7 @@ class BaseGateway(
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         self.raise_if_not_allowed_jid(iq.get_from())
         reg = iq["register"]
-        user = user_store.get_by_stanza(iq)
+        user = self.store.users.get_by_stanza(iq)
         log.debug("User found: %s", user)
 
         form = reg["form"]
@@ -706,7 +706,9 @@ class BaseGateway(
 
         :param user_jid: JID of the user that has just registered
         :param registration_form: A dict where keys are the :attr:`.FormField.var` attributes
-         of the :attr:`.BaseGateway.REGISTRATION_FIELDS` iterable
+            of the :attr:`.BaseGateway.REGISTRATION_FIELDS` iterable.
+            This dict can be modified and will be accessible as the ``legacy_module_data``
+            of the
         """
         raise NotImplementedError
 
@@ -771,7 +773,7 @@ class BaseGateway(
     async def unregister(self, user: GatewayUser):
         """
         Optionally override this if you need to clean additional
-        stuff after a user has been removed from the permanent user_store.
+        stuff after a user has been removed from the persistent user store.
 
         By default, this just calls :meth:`BaseSession.logout`.
 
@@ -825,7 +827,7 @@ class BaseGateway(
         # """
         log.debug("Shutting down")
         tasks = []
-        for user in user_store.get_all():
+        for user in self.store.users.get_all():
             tasks.append(self.session_cls.from_jid(user.jid).shutdown())
             self.send_presence(ptype="unavailable", pto=user.jid)
         return tasks

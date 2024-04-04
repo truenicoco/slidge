@@ -23,7 +23,7 @@ class Gateway(BaseGateway):
 
     COMPONENT_NAME = "The great legacy network (slidge)"
     COMPONENT_AVATAR = ASSETS_DIR / "slidge-color.png"
-    COMPONENT_TYPE = "aim"
+    COMPONENT_TYPE = "whatsapp"
     REGISTRATION_INSTRUCTIONS = (
         "Register to this fake service by using 'slidger' as username, and any "
         "password you want. Then you will need to enter '666' as the 2FA code."
@@ -65,7 +65,7 @@ class Gateway(BaseGateway):
         :param code:
         """
         await SuperDuperClient.validate_2fa(
-            user.registration_form["username"],
-            user.registration_form["password"],
+            user.legacy_module_data["username"],
+            user.legacy_module_data["password"],
             code,
         )

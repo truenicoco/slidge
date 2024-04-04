@@ -4,7 +4,6 @@ from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
 from ...group import LegacyMUC
-from ...util.db import user_store
 
 if TYPE_CHECKING:
     from .base import BaseGateway
@@ -31,7 +30,7 @@ class Ping:
             iq.reply().send()
 
         ifrom = iq.get_from()
-        user = user_store.get_by_jid(ifrom)
+        user = self.xmpp.store.users.get(ifrom)
         if user is None:
             raise XMPPError("registration-required")
 

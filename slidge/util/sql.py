@@ -26,7 +26,7 @@ from ..core import config
 from .archive_msg import HistoryMessage
 
 if TYPE_CHECKING:
-    from .db import GatewayUser
+    from ..db import GatewayUser
 
 KeyType = TypeVar("KeyType")
 ValueType = TypeVar("ValueType")
@@ -94,7 +94,7 @@ class MAMMixin(Base):
                 "  ?, "
                 "  (SELECT id FROM user WHERE jid = ?)"
                 ")",
-                (jid, user.bare_jid),
+                (jid, user.jid.bare),
             )
         except sqlite3.IntegrityError:
             log.debug("Tried to add a MUC that was already here: (%s, %s)", user, jid)
@@ -115,7 +115,7 @@ class MAMMixin(Base):
                 msg.when.timestamp(),
                 str(msg.stanza),
                 muc_jid,
-                user.bare_jid,
+                user.jid.bare,
             ),
         )
         self.con.commit()
@@ -141,7 +141,7 @@ class MAMMixin(Base):
             "WHERE message_id = ? "
             "AND muc_id = (SELECT id FROM muc WHERE jid = ?) "
             "AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (mid, muc_jid, user.bare_jid),
+            (mid, muc_jid, user.jid.bare),
         )
         row = res.fetchone()
         if row is None:
@@ -186,7 +186,7 @@ class MAMMixin(Base):
             "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?) "
             "AND user_id = (SELECT id FROM user WHERE jid = ?) "
         )
-        params: list[Union[str, float, int]] = [muc_jid, user.bare_jid]
+        params: list[Union[str, float, int]] = [muc_jid, user.jid.bare]
 
         if start_date or after_id:
             subquery, timestamp = self.__mam_bound(
@@ -324,7 +324,7 @@ class NickMixin(Base):
             "SELECT nick FROM nick "
             "WHERE jid = ? "
             "AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (str(jid), user.bare_jid),
+            (str(jid), user.jid.bare),
         )
         return first_of_tuple_or_none(res.fetchone())
 
@@ -332,7 +332,7 @@ class NickMixin(Base):
         self.cur.execute(
             "REPLACE INTO nick(jid, nick, user_id) "
             "VALUES (?,?,(SELECT id FROM user WHERE jid = ?))",
-            (str(jid), nick, user.bare_jid),
+            (str(jid), nick, user.jid.bare),
         )
         self.con.commit()
 
@@ -390,7 +390,7 @@ class PresenceMixin(Base):
                 str(jid),
                 presence[0].timestamp() if presence[0] else None,
                 *presence[1:],
-                user.bare_jid,
+                user.jid.bare,
             ),
         )
         self.con.commit()
@@ -398,7 +398,7 @@ class PresenceMixin(Base):
     def presence_delete(self, jid: JID, user: "GatewayUser"):
         self.cur.execute(
             "DELETE FROM presence WHERE (jid = ? and user_id = (SELECT id FROM user WHERE jid = ?))",
-            (str(jid), user.bare_jid),
+            (str(jid), user.jid.bare),
         )
         self.con.commit()
 
@@ -406,21 +406,21 @@ class PresenceMixin(Base):
         return self.__cur.execute(
             "SELECT last_seen, ptype, pstatus, pshow FROM presence "
             "WHERE jid = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (str(jid), user.bare_jid),
+            (str(jid), user.jid.bare),
         ).fetchone()
 
 
 class UserMixin(Base):
     def user_store(self, user: "GatewayUser"):
         try:
-            self.cur.execute("INSERT INTO user(jid) VALUES (?)", (user.bare_jid,))
+            self.cur.execute("INSERT INTO user(jid) VALUES (?)", (user.jid.bare,))
         except sqlite3.IntegrityError:
             log.debug("User has already been added.")
         else:
             self.con.commit()
 
     def user_del(self, user: "GatewayUser"):
-        self.cur.execute("DELETE FROM user WHERE jid = ?", (user.bare_jid,))
+        self.cur.execute("DELETE FROM user WHERE jid = ?", (user.jid.bare,))
         self.con.commit()
 
 
@@ -468,7 +468,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
             f"REPLACE INTO {self.table}"
             f"(user_id, {self.key1}, {self.key2}) "
             "VALUES ((SELECT id FROM user WHERE jid = ?), ?, ?)",
-            (self.user.bare_jid, key, value),
+            (self.user.jid.bare, key, value),
         )
         self.db.con.commit()
 
@@ -482,7 +482,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         res = self.db.cur.execute(
             f"SELECT {self.key1} FROM {self.table} "
             f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (item, self.user.bare_jid),
+            (item, self.user.jid.bare),
         ).fetchone()
         return res is not None
 
@@ -491,7 +491,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         res = self.db.cur.execute(
             f"SELECT {self.key2} FROM {self.table} "
             f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (item, self.user.bare_jid),
+            (item, self.user.jid.bare),
         ).fetchone()
         if res is None:
             return res

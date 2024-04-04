@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import importlib
 import logging
@@ -33,6 +34,7 @@ from slidge import (
 from slidge.command.categories import ADMINISTRATION
 from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
+from slidge.core.session import _sessions
 from slidge.util.sql import db
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
@@ -42,6 +44,12 @@ text_received_by_juliet = []
 composing_chat_states_received_by_juliet = []
 unregistered = []
 reactions_received_by_juliet = []
+
+
+class ClearSessionMixin:
+    def tearDown(self):
+        super().tearDown()
+        _sessions.clear()
 
 
 class Gateway(BaseGateway):
@@ -93,7 +101,7 @@ class Session(BaseSession):
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
-        assert self.user.bare_jid == "romeo@montague.lit"
+        assert self.user.jid.bare == "romeo@montague.lit"
         assert self.user.jid == JID("romeo@montague.lit")
         chat.send_text("I love you")
         return 0
@@ -152,12 +160,12 @@ class Bookmarks(LegacyBookmarks):
         await self.by_legacy_id("room2")
 
 
-class Base(SlidgeTest):
+class Base(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         self.get_romeo_session().logged = True
@@ -1108,12 +1116,12 @@ class TestAimShakespeareBase(Base):
         )
 
 
-class TestPrivilegeOld(SlidgeTest):
+class TestPrivilegeOld(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
         )
 
@@ -1199,12 +1207,12 @@ class TestPrivilegeOld(SlidgeTest):
         )
 
 
-class TestPrivilege(SlidgeTest):
+class TestPrivilege(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
         )
 
@@ -1290,12 +1298,12 @@ class TestPrivilege(SlidgeTest):
         )
 
 
-class TestContact(SlidgeTest):
+class TestContact(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         self.get_romeo_session().logged = True
@@ -1719,12 +1727,12 @@ class TestContact(SlidgeTest):
         )
 
 
-class TestCarbon(SlidgeTest):
+class TestCarbon(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@shakespeare.lit/gajim"), {"username": "romeo", "city": ""}
         )
         self.recv(  # language=XML

@@ -8,7 +8,7 @@ from ...util.types import MessageOrPresenceTypeVar
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
     from slidge.core.session import BaseSession
-    from slidge.util.db import GatewayUser
+    from slidge.db import GatewayUser
 
 
 class MetaBase(ABCMeta):

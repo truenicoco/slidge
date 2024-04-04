@@ -26,8 +26,8 @@ if TYPE_CHECKING:
     from ..contact import LegacyContact
     from ..core.pubsub import PepItem
     from ..core.session import BaseSession
+    from ..db.models import GatewayUser
     from ..group.participant import LegacyMUC, LegacyParticipant
-    from .db import GatewayUser
 
     AnyBaseSession = BaseSession[Any, Any]
 else:

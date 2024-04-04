@@ -6,7 +6,8 @@ from slixmpp import JID, Iq, register_stanza_plugin
 from slixmpp.plugins.xep_0060.stanza import EventItem
 from slixmpp.plugins.xep_0084 import MetaData
 
-from slidge import BaseGateway, BaseSession, LegacyContact, user_store
+from slidge import BaseGateway, BaseSession, LegacyContact
+from slidge.core.session import _sessions
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LinkPreview
 
@@ -27,15 +28,18 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
         welcome = self.next_sent()
         assert welcome["body"]
-        assert "logging in" in self.next_sent()["status"].lower()
-        assert "syncing contacts" in self.next_sent()["status"].lower()
-        assert "yup" in self.next_sent()["status"].lower()
+        stanza = self.next_sent()
+        assert "logging in" in stanza["status"].lower(), stanza
+        stanza = self.next_sent()
+        assert "syncing contacts" in stanza["status"].lower(), stanza
+        stanza = self.next_sent()
+        assert "yup" in stanza["status"].lower(), stanza
 
         self.xmpp["xep_0060"].map_node_event(MetaData.namespace, "avatar_metadata")
         register_stanza_plugin(EventItem, MetaData)
@@ -58,6 +62,10 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </iq>
             """
         )
+
+    def tearDown(self):
+        super().tearDown()
+        _sessions.clear()
 
     @staticmethod
     def get_romeo_session() -> Session:

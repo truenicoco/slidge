@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from slixmpp import JID
 
-from ..util.db import log, user_store
+from ..util.db import log
+
+if TYPE_CHECKING:
+    from .. import BaseGateway
 
 
 class YesSet(set):
@@ -23,6 +28,9 @@ class RosterBackend:
     This is rudimentary but the only sane way I could come up with so far.
     """
 
+    def __init__(self, xmpp: "BaseGateway"):
+        self.xmpp = xmpp
+
     @staticmethod
     def entries(_owner_jid, _default=None):
         return YesSet()
@@ -31,10 +39,9 @@ class RosterBackend:
     def save(_owner_jid, _jid, _item_state, _db_state):
         pass
 
-    @staticmethod
-    def load(_owner_jid, jid, _db_state):
+    def load(self, _owner_jid, jid, _db_state):
         log.debug("Load %s", jid)
-        user = user_store.get_by_jid(JID(jid))
+        user = self.xmpp.store.users.get(JID(jid))
         log.debug("User %s", user)
         if user is None:
             return {

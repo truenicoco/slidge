@@ -60,7 +60,7 @@ def test_bidict_sql(user):
     assert d.inverse.get("c") == 2
     assert "b" not in d
 
-    user.bare_jid = "test2@test.fr"
+    user.jid.bare = "test2@test.fr"
     d2 = SQLBiDict("test", "key1", "key2", user)
     assert d2.get(1) is None
     assert d2.inverse.get("a") is None

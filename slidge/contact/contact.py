@@ -122,7 +122,7 @@ class LegacyContact(
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
-        self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid.bare}")
+        self.log = logging.getLogger(f"{self.user.jid.bare}:{self.jid.bare}")
         self.participants = set["LegacyParticipant"]()
         self.is_friend: bool = False
         self.__added_to_roster = False

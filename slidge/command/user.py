@@ -76,7 +76,7 @@ class SyncContacts(Command):
     async def sync(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
         if session is None:
             raise RuntimeError
-        roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.bare_jid)
+        roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.jid.bare)
 
         contacts = session.contacts.known_contacts()
 

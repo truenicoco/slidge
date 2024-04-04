@@ -23,7 +23,6 @@ from slixmpp.plugins.xep_0004 import (
 from slixmpp.types import JidStr
 
 from ..core import config
-from ..util.db import user_store
 from ..util.types import AnyBaseSession, FieldType
 
 if TYPE_CHECKING:
@@ -382,7 +381,7 @@ class Command(ABC):
         raise XMPPError("feature-not-implemented")
 
     def _get_session(self, jid: JID) -> Optional["BaseSession[Any, Any]"]:
-        user = user_store.get_by_jid(jid)
+        user = self.xmpp.store.users.get(jid)
         if user is None:
             return None
 

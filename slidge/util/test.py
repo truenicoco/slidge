@@ -20,6 +20,8 @@ from slixmpp.stanza.error import Error
 from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from slidge import (
     BaseGateway,
@@ -29,12 +31,13 @@ from slidge import (
     LegacyMUC,
     LegacyParticipant,
     LegacyRoster,
-    user_store,
 )
 
 from ..command import Command
 from ..core import config
 from ..core.config import _TimedeltaSeconds
+from ..db import SlidgeStore
+from ..db.meta import Base
 
 
 class SlixTestPlus(SlixTest):
@@ -190,7 +193,6 @@ class SlidgeTest(SlixTestPlus):
 
     @classmethod
     def setUpClass(cls):
-        user_store.set_file(Path(tempfile.mkdtemp()) / "test.db")
         for k, v in vars(cls.Config).items():
             setattr(config, k.upper(), v)
 
@@ -210,6 +212,9 @@ class SlidgeTest(SlixTestPlus):
             )
 
         self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+        engine = create_engine("sqlite+pysqlite:///:memory:", echo=True)
+        Base.metadata.create_all(engine)
+        self.xmpp.store = SlidgeStore(engine)
 
         self.xmpp._always_send_everything = True
 
@@ -245,7 +250,6 @@ class SlidgeTest(SlixTestPlus):
     @classmethod
     def tearDownClass(cls):
         reset_subclasses()
-        user_store._users = None
 
 
 def format_stanza(stanza):

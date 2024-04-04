@@ -85,7 +85,7 @@ class LegacyParticipant(
         # this way, event in plugins that don't map "user has joined" events,
         # we send a "join"-presence from the participant before the first message
         self.__presence_sent = False
-        self.log = logging.getLogger(f"{self.user.bare_jid}:{self.jid}")
+        self.log = logging.getLogger(f"{self.user.jid.bare}:{self.jid}")
 
     def __repr__(self):
         return f"<Participant '{self.nickname}'/'{self.jid}' of '{self.muc}'>"
@@ -333,7 +333,7 @@ class LegacyParticipant(
         item["role"] = self.role
         if not self.muc.is_anonymous:
             if self.is_user:
-                item["jid"] = self.user.bare_jid
+                item["jid"] = self.user.jid.bare
             elif self.contact:
                 item["jid"] = self.contact.jid.bare
             else:
