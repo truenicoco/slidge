@@ -144,12 +144,14 @@ class TestMDS(MDSMixin, BaseMUC):
             """
             <iq id="uuid"
                 to="romeo@montague.lit"
-                from="aim.shakespeare.lit">
+                from="aim.shakespeare.lit"
+                type="set">
               <privileged_iq xmlns="urn:xmpp:privilege:2">
                 <iq xmlns="jabber:client"
                     to="romeo@montague.lit"
                     from="romeo@montague.lit"
-                    id="uuid">
+                    id="uuid"
+                    type="set">
                   <pubsub xmlns="http://jabber.org/protocol/pubsub">
                     <publish node="urn:xmpp:mds:displayed:0">
                       <item id="room-private@aim.shakespeare.lit">
