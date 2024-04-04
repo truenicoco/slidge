@@ -89,7 +89,7 @@ class AvatarFixtureMixin:
 @pytest.fixture
 def user():
     user = MagicMock()
-    user.bare_jid = "test@test.fr"
+    user.jid.bare = "test@test.fr"
     db.user_store(user)
     yield user
     db.user_del(user)
@@ -98,7 +98,7 @@ def user():
 @pytest.fixture(scope="class")
 def user_cls(request):
     user = MagicMock()
-    user.bare_jid = "test@test.fr"
+    user.jid.bare = "test@test.fr"
     db.user_store(user)
     request.cls.user = user
     yield user

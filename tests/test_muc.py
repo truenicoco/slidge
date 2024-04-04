@@ -11,6 +11,7 @@ from conftest import AvatarFixtureMixin
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import xep_0082
+from test_shakespeare import ClearSessionMixin
 
 import slidge.core.mixins.message_maker
 import slidge.group.room
@@ -240,12 +241,12 @@ class Bookmarks(LegacyBookmarks):
         await self.by_legacy_id("coven")
 
 
-class Base(SlidgeTest):
+class Base(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
     def setUp(self):
         super().setUp()
-        user_store.add(
+        self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
         slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = (
@@ -254,6 +255,7 @@ class Base(SlidgeTest):
         self.get_romeo_session().logged = True
 
     def tearDown(self):
+        super().tearDown()
         slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
         slidge.util.sql.db.mam_nuke()
 

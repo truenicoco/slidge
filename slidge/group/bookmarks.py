@@ -37,7 +37,7 @@ class LegacyBookmarks(
         self._user_nick: str = self.session.user.jid.node
 
         super().__init__()
-        self.log = logging.getLogger(f"{self.user.bare_jid}:bookmarks")
+        self.log = logging.getLogger(f"{self.user.jid.bare}:bookmarks")
         self.ready = self.session.xmpp.loop.create_future()
         if not self.xmpp.GROUPS:
             self.ready.set_result(True)

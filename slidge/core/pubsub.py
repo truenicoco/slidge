@@ -26,7 +26,7 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
-from ..util.db import GatewayUser, user_store
+from ..db import GatewayUser
 from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
@@ -315,7 +315,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         self, cls: Type[PepItemType], stanza: Union[Iq, Presence]
     ) -> PepItemType:
         sto = stanza.get_to()
-        user = user_store.get_by_jid(stanza.get_from())
+        user = self.xmpp.store.users.get_by_stanza(stanza)
         item = cls.from_db(sto, user)
         if item is None:
             raise XMPPError("item-not-found")
@@ -428,9 +428,9 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         msg.append(event)
 
         if to is None:
-            for u in user_store.get_all():
+            for u in self.xmpp.store.users.get_all():
                 new_msg = copy(msg)
-                new_msg.set_to(u.bare_jid)
+                new_msg.set_to(u.jid.bare)
                 new_msg.send()
         else:
             msg.set_to(to)
@@ -502,7 +502,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         nickname = PepNick(nick)
         nickname.to_db(jid, user)
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user.bare_jid))
+        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user.jid.bare))
 
     async def broadcast_all(self, from_: JID, to: JID):
         """
@@ -516,7 +516,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
                 )
             else:
                 log.warning("No metadata associated to this cached avatar?!")
-        n = PepNick.from_db(from_, user_store.get_by_jid(to))
+        n = PepNick.from_db(from_, self.xmpp.store.users.get(to))
         if n:
             await self._broadcast(n.nick, from_, to)
 

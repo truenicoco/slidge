@@ -5,8 +5,6 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 from slixmpp.types import OptJid
 
-from ...util.db import user_store
-
 if TYPE_CHECKING:
     from .base import BaseGateway
 
@@ -38,7 +36,7 @@ class Disco:
         if ifrom is None:
             raise XMPPError("subscription-required")
 
-        user = user_store.get_by_jid(ifrom)
+        user = self.xmpp.store.users.get(ifrom)
         if user is None:
             raise XMPPError("registration-required")
         session = self.xmpp.get_session_from_user(user)
@@ -63,7 +61,7 @@ class Disco:
         if jid != self.xmpp.boundjid.bare:
             return DiscoItems()
 
-        user = user_store.get_by_jid(ifrom)
+        user = self.xmpp.store.users.get(ifrom)
         if user is None:
             raise XMPPError("registration-required")
 

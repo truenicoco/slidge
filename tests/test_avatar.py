@@ -191,6 +191,7 @@ class BaseMUC(BaseNoMUC):
         super().setUp()
 
     def tearDown(self):
+        super().tearDown()
         self.patch.stop()
 
     def _assert_send_room_avatar(self, empty=False, url=False):

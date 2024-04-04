@@ -39,3 +39,4 @@ dev/confs/slidge-tg.ini
 *.egg-info
 .coverage
 htmlcov
+/dev/slidge.sqlite

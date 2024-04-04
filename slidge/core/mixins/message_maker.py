@@ -7,8 +7,8 @@ from uuid import uuid4
 from slixmpp import Message
 from slixmpp.types import MessageTypes
 
+from ...db import GatewayUser
 from ...slixfix.link_preview.stanza import LinkPreview as LinkPreviewStanza
-from ...util.db import GatewayUser
 from ...util.types import (
     ChatState,
     LegacyMessageType,

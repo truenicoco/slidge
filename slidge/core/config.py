@@ -48,6 +48,13 @@ HOME_DIR__DOC = (
 )
 HOME_DIR__DYNAMIC_DEFAULT = True
 
+DB_URL: str
+DB_URL__DOC = (
+    "Database URL, see <https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls>. "
+    "Defaults to sqlite:///${HOME_DIR}/slidge.sqlite"
+)
+DB_URL__DYNAMIC_DEFAULT = True
+
 USER_JID_VALIDATOR: str
 USER_JID_VALIDATOR__DOC = (
     "Regular expression to restrict users that can register to the gateway, by JID. "
@@ -70,7 +77,7 @@ UPLOAD_SERVICE__DOC = (
 )
 
 SECRET_KEY: Optional[str] = None
-SECRET_KEY__DOC = "Encryption for disk storage"
+SECRET_KEY__DOC = "Encryption for disk storage. Deprecated."
 
 NO_ROSTER_PUSH = False
 NO_ROSTER_PUSH__DOC = "Do not fill users' rosters with legacy contacts automatically"

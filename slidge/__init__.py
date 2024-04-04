@@ -13,8 +13,8 @@ from .contact import LegacyContact, LegacyRoster  # noqa: F401
 from .core import config as global_config  # noqa: F401
 from .core.gateway import BaseGateway  # noqa: F401
 from .core.session import BaseSession  # noqa: F401
+from .db import GatewayUser  # noqa: F401
 from .group import LegacyBookmarks, LegacyMUC, LegacyParticipant  # noqa: F401
-from .util.db import GatewayUser, user_store  # noqa: F401
 from .util.types import MucType  # noqa: F401
 from .util.util import addLoggingLevel
 
@@ -54,7 +54,6 @@ __all__ = [
     # "FormField",
     # "SearchResult",
     "entrypoint",
-    "user_store",
     "global_config",
 ]
 

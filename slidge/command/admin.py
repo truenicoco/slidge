@@ -7,7 +7,6 @@ from typing import Any, Optional
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
-from ..util.db import user_store
 from ..util.types import AnyBaseSession
 from .base import (
     Command,
@@ -33,13 +32,13 @@ class ListUsers(AdminCommand):
 
     async def run(self, _session, _ifrom, *_):
         items = []
-        for u in user_store.get_all():
+        for u in self.xmpp.store.users.get_all():
             d = u.registration_date
             if d is None:
                 joined = ""
             else:
                 joined = d.isoformat(timespec="seconds")
-            items.append({"jid": u.bare_jid, "joined": joined})
+            items.append({"jid": u.jid.bare, "joined": joined})
         return TableResult(
             description="List of registered users",
             fields=[FormField("jid", type="jid-single"), FormField("joined")],
@@ -114,7 +113,7 @@ class DeleteUser(AdminCommand):
         self, form_values: FormValues, _session: AnyBaseSession, _ifrom: JID
     ) -> Confirmation:
         jid: JID = form_values.get("jid")  # type:ignore
-        user = user_store.get_by_jid(jid)
+        user = self.xmpp.store.users.get(jid)
         if user is None:
             raise XMPPError("item-not-found", text=f"There is no user '{jid}'")
 
@@ -127,7 +126,7 @@ class DeleteUser(AdminCommand):
     async def finish(
         self, _session: Optional[AnyBaseSession], _ifrom: JID, jid: JID
     ) -> None:
-        user = user_store.get_by_jid(jid)
+        user = self.xmpp.store.users.get(jid)
         if user is None:
             raise XMPPError("bad-request", f"{jid} has no account here!")
         await self.xmpp.unregister_user(user)

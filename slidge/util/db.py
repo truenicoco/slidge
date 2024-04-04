@@ -94,10 +94,6 @@ class GatewayUser:
         # """
         return self.registration_form.get(field, default)
 
-    def commit(self):
-        db.user_store(self)
-        user_store.commit(self)
-
 
 class UserStore:
     """
@@ -138,28 +134,8 @@ class UserStore:
         """
         return self._users.values()
 
-    def add(self, jid: JID, registration_form: dict[str, Optional[str]]):
-        """
-        Add a user to the store.
-
-        NB: there is no reason to call this manually, as this should be covered
-        by slixmpp XEP-0077 and XEP-0100 plugins
-
-        :param jid: JID of the gateway user
-        :param registration_form: Content of the registration form (:xep:`0077`)
-        """
-        log.debug("Adding user %s", jid)
-        self._users[jid.bare] = user = GatewayUser(
-            bare_jid=jid.bare,
-            registration_form=registration_form,
-            registration_date=datetime.datetime.now(),
-        )
-        self._users.sync()
-        user.commit()
-        log.debug("Store: %s", self._users)
-
     def commit(self, user: GatewayUser):
-        self._users[user.bare_jid] = user
+        self._users[user.jid.bare] = user
         self._users.sync()
 
     def get(self, _gateway_jid, _node, ifrom: JID, iq) -> Optional[GatewayUser]:
@@ -178,24 +154,6 @@ class UserStore:
             ifrom = iq["from"]
         log.debug("Getting user %s", ifrom.bare)
         return self._users.get(ifrom.bare)
-
-    def remove(self, _gateway_jid, _node, ifrom: JID, _iq):
-        """
-        Remove a user from the store
-
-        NB: there is no reason to call this, it is used by SliXMPP internal API
-        """
-        self.remove_by_jid(ifrom)
-
-    def remove_by_jid(self, jid: JID):
-        """
-        Remove a user from the store, by JID
-        """
-        j = jid.bare
-        log.debug("Removing user %s", j)
-        db.user_del(self._users[j])
-        del self._users[j]
-        self._users.sync()
 
     def get_by_jid(self, jid: JID) -> Optional[GatewayUser]:
         """

@@ -25,6 +25,8 @@ import configargparse
 from slidge import BaseGateway
 from slidge.core import config
 from slidge.core.cache import avatar_cache
+from slidge.db import SlidgeStore
+from slidge.db.meta import get_engine
 from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
 from slidge.util.db import user_store
@@ -47,6 +49,9 @@ class MainConfig(ConfigModule):
 
         if args.user_jid_validator is None:
             args.user_jid_validator = ".*@" + args.server
+
+        if args.db_url is None:
+            args.db_url = f"sqlite:///{args.home_dir}/slidge.sqlite"
 
 
 class SigTermInterrupt(Exception):
@@ -151,6 +156,7 @@ def main():
 
     migrate()
 
+    BaseGateway.store = SlidgeStore(get_engine(config.DB_URL))
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
     avatar_cache.http = gateway.http
     gateway.connect()
@@ -181,7 +187,6 @@ def main():
             gateway.loop.run_until_complete(gateway.disconnected)
         else:
             logging.debug("Gateway is not connected, no need to clean up")
-        user_store.close()
         avatar_cache.close()
         gateway.loop.run_until_complete(gateway.http.close())
         logging.info("Successful clean shut down")

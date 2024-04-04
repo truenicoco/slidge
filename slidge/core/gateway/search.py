@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING
 from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
-from ...util.db import user_store
-
 if TYPE_CHECKING:
     from .base import BaseGateway
 
@@ -29,7 +27,7 @@ class Search:
         """
         Prepare the search form using :attr:`.BaseSession.SEARCH_FIELDS`
         """
-        user = user_store.get_by_jid(ifrom)
+        user = self.xmpp.store.users.get(ifrom)
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
@@ -47,7 +45,7 @@ class Search:
         """
         Handles a search request
         """
-        user = user_store.get_by_jid(ifrom)
+        user = self.xmpp.store.users.get(ifrom)
         if user is None:
             raise XMPPError(text="Search is only allowed for registered users")
 
@@ -70,7 +68,7 @@ class Search:
         if iq.get_to() != self.xmpp.boundjid.bare:
             raise XMPPError("bad-request", "This can only be used on the component JID")
 
-        user = user_store.get_by_jid(iq.get_from())
+        user = self.xmpp.store.users.get(iq.get_from())
         if user is None:
             raise XMPPError("not-authorized", "Register to the gateway first")
 

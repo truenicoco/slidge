@@ -15,7 +15,7 @@ from slixmpp import JID, Iq
 from slixmpp.exceptions import XMPPError
 
 from ..core import config
-from ..util.db import GatewayUser
+from ..db import GatewayUser
 from .base import Command, CommandAccess, Form, FormField, FormValues
 
 
@@ -67,7 +67,7 @@ class Register(Command):
     SUCCESS_MESSAGE = "Success, welcome!"
 
     def _finalize(self, user: GatewayUser):
-        user.commit()
+        # user.commit()
         self.xmpp.event("user_register", Iq(sfrom=user.jid))
         return self.SUCCESS_MESSAGE
 
@@ -113,7 +113,7 @@ class Register(Command):
 
         elif self.xmpp.REGISTRATION_TYPE == RegistrationType.QRCODE:
             self.xmpp.qr_pending_registrations[  # type:ignore
-                user.bare_jid
+                user.jid.bare
             ] = (
                 self.xmpp.loop.create_future()
             )
@@ -165,7 +165,7 @@ class Register(Command):
     async def qr(self, _form_values: FormValues, _session, _ifrom, user: GatewayUser):
         try:
             await asyncio.wait_for(
-                self.xmpp.qr_pending_registrations[user.bare_jid],  # type:ignore
+                self.xmpp.qr_pending_registrations[user.jid.bare],  # type:ignore
                 config.QR_TIMEOUT,
             )
         except asyncio.TimeoutError:

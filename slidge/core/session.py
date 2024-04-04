@@ -18,10 +18,10 @@ from slixmpp.types import PresenceShows
 
 from ..command import SearchResult
 from ..contact import LegacyContact, LegacyRoster
+from ..db.models import GatewayUser
 from ..group.bookmarks import LegacyBookmarks
 from ..group.room import LegacyMUC
 from ..util import ABCSubclassableOnceAtMost
-from ..util.db import GatewayUser, user_store
 from ..util.sql import SQLBiDict
 from ..util.types import (
     LegacyGroupIdType,
@@ -92,7 +92,7 @@ class BaseSession(
     """
 
     def __init__(self, user: GatewayUser):
-        self.log = logging.getLogger(user.bare_jid)
+        self.log = logging.getLogger(user.jid.bare)
 
         self.user = user
         self.sent = SQLBiDict[LegacyMessageType, str](
@@ -571,9 +571,9 @@ class BaseSession(
             log.debug("user not found", stack_info=True)
             raise XMPPError(text="User not found", condition="subscription-required")
 
-        session = _sessions.get(user)
+        session = _sessions.get(user.jid.bare)
         if session is None:
-            _sessions[user] = session = cls(user)
+            _sessions[user.jid.bare] = session = cls(user)
         return session
 
     @classmethod
@@ -590,7 +590,7 @@ class BaseSession(
         # :param s:
         # :return:
         # """
-        return cls._from_user_or_none(user_store.get_by_stanza(s))
+        return cls.from_jid(s.get_from())
 
     @classmethod
     def from_jid(cls, jid: JID) -> "BaseSession":
@@ -602,7 +602,8 @@ class BaseSession(
         # :param jid:
         # :return:
         # """
-        return cls._from_user_or_none(user_store.get_by_jid(jid))
+        user = cls.xmpp.store.users.get(jid)
+        return cls._from_user_or_none(user)
 
     @classmethod
     async def kill_by_jid(cls, jid: JID):
@@ -615,16 +616,21 @@ class BaseSession(
         # :return:
         # """
         log.debug("Killing session of %s", jid)
-        for user, session in _sessions.items():
-            if user.jid == jid.bare:
+        for user_jid, session in _sessions.items():
+            if user_jid == jid.bare:
                 break
         else:
             log.debug("Did not find a session for %s", jid)
             return
         for c in session.contacts:
             c.unsubscribe()
+        user = cls.xmpp.store.users.get(jid)
+        if user is None:
+            log.warning("User not found during unregistration")
+            return
         await cls.xmpp.unregister(user)
-        del _sessions[user]
+        cls.xmpp.store.users.delete(user.jid)
+        del _sessions[user.jid.bare]
         del user
         del session
 
@@ -649,7 +655,7 @@ class BaseSession(
         """
         self.__cached_presence = CachedPresence(status, show, kwargs)
         self.xmpp.send_presence(
-            pto=self.user.bare_jid, pstatus=status, pshow=show, **kwargs
+            pto=self.user.jid.bare, pstatus=status, pshow=show, **kwargs
         )
 
     def send_cached_presence(self, to: JID):
@@ -764,5 +770,6 @@ class BaseSession(
             )
 
 
-_sessions: dict[GatewayUser, BaseSession] = {}
+# keys = user.jid.bare
+_sessions: dict[str, BaseSession] = {}
 log = logging.getLogger(__name__)

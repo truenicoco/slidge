@@ -87,10 +87,11 @@ class TestPubSubNickname(SlixTest):
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
         self.xmpp.get_session_from_jid = lambda j: MockSession
         self.user = MagicMock()
-        self.user.bare_jid = "kenny@south.park"
+        self.user.jid.bare = "kenny@south.park"
         db.user_store(self.user)
 
     def tearDown(self):
+        super().tearDown()
         db.user_del(self.user)
 
     def test_new_nick(self):
@@ -147,11 +148,12 @@ class TestPubSubAvatar(SlixTestPlus):
         self.xmpp.get_session_from_stanza = lambda j: MockSession
         self.temp_dir = tempfile.TemporaryDirectory()
         avatar_cache.dir = Path(self.temp_dir.name)
-        self.user_store_patch = patch("slidge.core.pubsub.user_store")
-        self.user_store_patch.start()
+        # self.user_store_patch = patch("slidge.core.pubsub.user_store")
+        # self.user_store_patch.start()
+        self.xmpp.store = MagicMock()
 
     def tearDown(self):
-        self.user_store_patch.stop()
+        # self.user_store_patch.stop()
         super().tearDown()
 
     def advertise_avatar(self):

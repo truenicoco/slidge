@@ -126,7 +126,7 @@ class LegacyMUC(
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
         self.user = session.user
-        self.log = logging.getLogger(f"{self.user.bare_jid}:muc:{jid}")
+        self.log = logging.getLogger(f"{self.user.jid.bare}:muc:{jid}")
 
         self.legacy_id = legacy_id
         self.jid = jid
@@ -238,7 +238,7 @@ class LegacyMUC(
             return
 
         pfrom = p.get_from()
-        if pfrom.bare != self.user.bare_jid:
+        if pfrom.bare != self.user.jid.bare:
             return
         if (resource := pfrom.resource) in (resources := self.user_resources):
             if pto.resource != self.user_nick:
