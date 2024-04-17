@@ -481,6 +481,10 @@ class SessionDispatcher:
         session = await self.__get_session(msg, timeout=None)
 
         chat_jid = msg["pubsub_event"]["items"]["item"]["id"]
+
+        if chat_jid == self.xmpp.boundjid.bare:
+            return
+
         chat = await session.get_contact_or_group_or_participant(JID(chat_jid))
         if not isinstance(chat, LegacyMUC):
             session.log.debug("Ignoring non-groupchat MDS event")
