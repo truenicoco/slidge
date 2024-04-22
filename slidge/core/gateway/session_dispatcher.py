@@ -3,7 +3,7 @@ from copy import copy
 from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
 
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
-from slixmpp.exceptions import XMPPError
+from slixmpp.exceptions import IqError, XMPPError
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0084.stanza import Info
 
@@ -511,9 +511,13 @@ class SessionDispatcher:
         session.avatar_hash = hash_
 
         if hash_:
-            iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
-                session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
-            )
+            try:
+                iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
+                    session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
+                )
+            except IqError as e:
+                session.log.warning("Could not fetch the user's avatar: %s", e)
+                return
             bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
             type_ = info["type"]
             height = info["height"]
