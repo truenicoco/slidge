@@ -732,7 +732,7 @@ async def _get_entity(session: "BaseSession", m: Message) -> RecipientType:
         muc = await session.bookmarks.by_jid(m.get_to())
         r = m.get_from().resource
         if r not in muc.user_resources:
-            session.xmpp.loop.create_task(muc.kick_resource(r))
+            session.create_task(muc.kick_resource(r))
             raise XMPPError("not-acceptable", "You are not connected to this chat")
         return muc
     else:

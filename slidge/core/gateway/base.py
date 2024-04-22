@@ -399,7 +399,7 @@ class BaseGateway(
                 pto=user.bare_jid, ptype="probe"
             )  # ensure we get all resources for user
             session = self.session_cls.from_user(user)
-            self.loop.create_task(self.__login_wrap(session))
+            session.create_task(self.__login_wrap(session))
 
         log.info("Slidge has successfully started")
 
@@ -490,7 +490,7 @@ class BaseGateway(
             session.send_gateway_status(status, show="chat")
         # If we stored users avatars (or their hash) persistently across slidge
         # restarts, we would not need to fetch it on startup
-        self.loop.create_task(self.__fetch_user_avatar(session))
+        session.create_task(self.__fetch_user_avatar(session))
 
     async def __fetch_user_avatar(self, session: BaseSession):
         try:
@@ -620,10 +620,11 @@ class BaseGateway(
 
     def re_login(self, session: "BaseSession"):
         async def w():
+            session.cancel_all_tasks()
             await session.logout()
             await self.__login_wrap(session)
 
-        self.loop.create_task(w())
+        session.create_task(w())
 
     async def make_registration_form(self, _jid, _node, _ifrom, iq: Iq):
         self.raise_if_not_allowed_jid(iq.get_from())
@@ -814,7 +815,7 @@ class BaseGateway(
             qr.save(f.name)
             await self.send_file(f.name, **msg_kwargs)
 
-    def shutdown(self):
+    def shutdown(self) -> list[asyncio.Task]:
         # """
         # Called by the slidge entrypoint on normal exit.
         #
@@ -823,9 +824,11 @@ class BaseGateway(
         # No need to call this manually, :func:`slidge.__main__.main` should take care of it.
         # """
         log.debug("Shutting down")
+        tasks = []
         for user in user_store.get_all():
-            self.session_cls.from_jid(user.jid).shutdown()
+            tasks.append(self.session_cls.from_jid(user.jid).shutdown())
             self.send_presence(ptype="unavailable", pto=user.jid)
+        return tasks
 
 
 KICKABLE_ERRORS = {

@@ -129,7 +129,7 @@ class MarkerMixin(MessageMaker):
             **kwargs,
         )
         if getattr(self, "is_user", False):
-            self.xmpp.loop.create_task(self.__send_mds(legacy_msg_id))
+            self.session.create_task(self.__send_mds(legacy_msg_id))
 
     async def __send_mds(self, legacy_msg_id: LegacyMessageType):
         # Send a MDS displayed marker on behalf of the user for a group chat

@@ -326,7 +326,7 @@ class LegacyContact(
             # we only broadcast pubsub events for contacts added to the roster
             # so if something was set before, we need to push it now
             self.__added_to_roster = True
-            self.xmpp.loop.create_task(self.__broadcast_pubsub_items())
+            self.session.create_task(self.__broadcast_pubsub_items())
             self.send_last_presence()
 
     async def __broadcast_pubsub_items(self):

@@ -13,6 +13,7 @@ An example configuration file is available at
 https://git.sr.ht/~nicoco/slidge/tree/master/item/dev/confs/slidge-example.ini
 """
 
+import asyncio
 import importlib
 import logging
 import os
@@ -170,7 +171,7 @@ def main():
             return_code = 3
         if gateway.is_connected():
             logging.debug("Gateway is connected, cleaning up")
-            gateway.shutdown()
+            gateway.loop.run_until_complete(asyncio.gather(*gateway.shutdown()))
             gateway.disconnect()
             gateway.loop.run_until_complete(gateway.disconnected)
         else:

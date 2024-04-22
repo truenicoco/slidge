@@ -124,6 +124,22 @@ class BaseSession(
 
         self.avatar_hash: Optional[str] = None
 
+        self.__tasks = set[asyncio.Task]()
+
+    def __remove_task(self, fut):
+        self.log.debug("Removing fut %s", fut)
+        self.__tasks.remove(fut)
+
+    def create_task(self, coro) -> None:
+        task = self.xmpp.loop.create_task(coro)
+        self.__tasks.add(task)
+        self.log.debug("Creating task %s", task)
+        task.add_done_callback(lambda _: self.__remove_task(task))
+
+    def cancel_all_tasks(self):
+        for task in self.__tasks:
+            task.cancel()
+
     async def login(self) -> Optional[str]:
         """
         Logs in the gateway user to the legacy network.
@@ -493,12 +509,12 @@ class BaseSession(
     def __repr__(self):
         return f"<Session of {self.user}>"
 
-    def shutdown(self):
+    def shutdown(self) -> asyncio.Task:
         for c in self.contacts:
             c.offline()
         for m in self.bookmarks:
             m.shutdown()
-        self.xmpp.loop.create_task(self.logout())
+        return self.xmpp.loop.create_task(self.logout())
 
     @staticmethod
     def legacy_to_xmpp_msg_id(legacy_msg_id: LegacyMessageType) -> str:
