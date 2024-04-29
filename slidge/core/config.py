@@ -168,6 +168,13 @@ FIX_FILENAME_SUFFIX_MIME_TYPE__DOC = (
 LOG_FILE: Optional[Path] = None
 LOG_FILE__DOC = "Log to a file instead of stdout/err"
 
+LOG_FORMAT: str = "%(levelname)s:%(name)s:%(message)s"
+LOG_FORMAT__DOC = (
+    "Optionally, a format string for logging messages. Refer to "
+    "https://docs.python.org/3/library/logging.html#logrecord-attributes "
+    "for available options."
+)
+
 MAM_MAX_DAYS = 7
 MAM_MAX_DAYS__DOC = (
     "Maximum number of days for group archive retention. "
