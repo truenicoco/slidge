@@ -106,6 +106,7 @@ jids = {
     333: "not-in-roster",
     666: "imposter",
     667: "imposter2",
+    777: "offline-guy",
     999: "weirdguy🎉",
 }
 legacy = {v: k for k, v in jids.items()}
@@ -131,6 +132,8 @@ class Roster(LegacyRoster):
 
 class Contact(LegacyContact):
     async def update_info(self):
+        if self.legacy_id == 777:
+            self.offline()
         if self.legacy_id in (666, 667):
             self.name = "firstwitch"
             return
@@ -181,11 +184,11 @@ class MUC(slidge.LegacyMUC):
             first = await self.get_participant_by_legacy_id(999)
             second = await self.get_participant("secondwitch")
 
-        first.affiliation = "owner"
-        first.role = "moderator"
+        first._affiliation = "owner"
+        first._role = "moderator"
 
-        second.affiliation = "admin"
-        second.role = "moderator"
+        second._affiliation = "admin"
+        second._role = "moderator"
         await self.get_user_participant()
 
     async def update_info(self):
@@ -274,11 +277,18 @@ class Base(SlidgeTest):
         return muc
 
     def get_participant(
-        self, nickname="firstwitch", room="room=private", resources=("gajim",)
-    ):
+        self,
+        nickname="firstwitch",
+        room="room=private",
+        resources=("gajim",),
+        presence_sent=True,
+        **kwargs,
+    ) -> LegacyParticipant:
         muc = self.get_private_muc(resources=resources)
-        participant: LegacyParticipant = self.run_coro(muc.get_participant(nickname))
-        participant._LegacyParticipant__presence_sent = True
+        participant: LegacyParticipant = self.run_coro(
+            muc.get_participant(nickname, **kwargs)
+        )
+        participant._LegacyParticipant__presence_sent = presence_sent
         return participant
 
 
@@ -852,13 +862,13 @@ class TestMuc(Base):
             f"""
             <message type="groupchat"
                      to="romeo@montague.lit/gajim"
-                     from="room-private@aim.shakespeare.lit/unknown">
+                     from="room-private@aim.shakespeare.lit">
               <delay xmlns="urn:xmpp:delay"
                      stamp="{now_fmt}"
                      from="room-private@aim.shakespeare.lit" />
               <subject>Private Subject</subject>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                           id="uuid" />
+                           id="room" />
               <stanza-id xmlns="urn:xmpp:sid:0"
                          id="uuid"
                          by="room-private@aim.shakespeare.lit" />
@@ -3146,9 +3156,31 @@ class TestMuc(Base):
 
 
 class TestRoleAffiliation(Base):
+    def setUp(self):
+        super().setUp()
+        muc = self.get_private_muc()
+        muc._LegacyMUC__participants_filled = True
+
     def test_role_change(self):
-        part = self.get_participant("a-new-one")
+        part = self.get_participant("a-new-one", role="visitor")
+        self.send(  # language=XML
+            f"""
+            <message from="room-private@aim.shakespeare.lit/a-new-one"
+                     to="romeo@montague.lit/gajim"
+                     type="normal">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+            </message>
+            """
+        )
         part.role = "visitor"
+        part.online()
         self.send(  # language=XML
             f"""
             <presence from="room-private@aim.shakespeare.lit/a-new-one"
@@ -3168,6 +3200,22 @@ class TestRoleAffiliation(Base):
 
     def test_affiliation_change(self):
         part = self.get_participant("a-new-one")
+        self.send(  # language=XML
+            f"""
+            <message from="room-private@aim.shakespeare.lit/a-new-one"
+                     to="romeo@montague.lit/gajim"
+                     type="normal">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+            </message>
+            """
+        )
         part.affiliation = "admin"
         self.send(  # language=XML
             f"""
@@ -3184,6 +3232,26 @@ class TestRoleAffiliation(Base):
         )
         self.send(None)
         part.affiliation = "admin"
+        self.send(None)
+
+    def test_affiliation_change_new_part(self):
+        part = self.get_participant("a-newer-one", presence_sent=False)
+        self.send(  # language=XML
+            f"""
+            <message from="room-private@aim.shakespeare.lit/a-newer-one"
+                     to="romeo@montague.lit/gajim"
+                     type="normal">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="uuid" />
+              <stanza-id xmlns="urn:xmpp:sid:0"
+                         id="uuid"
+                         by="room-private@aim.shakespeare.lit" />
+            </message>
+            """
+        )
         self.send(None)
 
 

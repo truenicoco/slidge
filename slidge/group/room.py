@@ -141,7 +141,7 @@ class LegacyMUC(
 
         self._subject = ""
         self.subject_setter: Union[str, "LegacyContact", "LegacyParticipant"] = (
-            "unknown"
+            self.get_system_participant()
         )
 
         self.archive: MessageArchive = MessageArchive(str(self.jid), self.user)
@@ -545,7 +545,6 @@ class LegacyMUC(
         if t := self._set_avatar_task:
             await t
         self._send_room_presence(user_full_jid)
-        self.user_resources.add(client_resource)
 
     async def get_user_participant(self, **kwargs) -> "LegacyParticipantType":
         """
@@ -603,6 +602,14 @@ class LegacyMUC(
             p = self.Participant(self, nickname, **kwargs)
             if store:
                 self.__store_participant(p)
+            if (
+                not self.get_lock("fill participants")
+                and not self.get_lock("fill history")
+                and self.__participants_filled
+                and not p.is_user
+                and not p.is_system
+            ):
+                p.send_affiliation_change()
         return p
 
     def get_system_participant(self) -> "LegacyParticipantType":

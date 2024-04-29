@@ -60,6 +60,8 @@ class LegacyParticipant(
         nickname: Optional[str] = None,
         is_user=False,
         is_system=False,
+        role: MucRole = "participant",
+        affiliation: MucAffiliation = "member",
     ):
         super().__init__()
         self._hats = list[Hat]()
@@ -67,8 +69,8 @@ class LegacyParticipant(
         self.session = session = muc.session
         self.user = session.user
         self.xmpp = session.xmpp
-        self._role: MucRole = "participant"
-        self._affiliation: MucAffiliation = "member"
+        self._role = role
+        self._affiliation = affiliation
         self.is_user: bool = is_user
         self.is_system: bool = is_system
 
@@ -100,6 +102,20 @@ class LegacyParticipant(
         if not self.__presence_sent:
             return
         self.send_last_presence(force=True, no_cache_online=True)
+
+    def send_affiliation_change(self):
+        # internal use by slidge
+        msg = self._make_message()
+        msg["muc"]["affiliation"] = self._affiliation
+        msg["type"] = "normal"
+        if not self.muc.is_anonymous:
+            if self.contact:
+                msg["muc"]["jid"] = self.contact.jid
+            else:
+                warnings.warn(
+                    f"Private group but no 1:1 JID associated to '{self}'",
+                )
+        self._send(msg)
 
     @property
     def role(self):
@@ -262,6 +278,8 @@ class LegacyParticipant(
         ):
             return
         if isinstance(stanza, Message):
+            if stanza.get_plugin("muc", check=True):
+                return
             self.send_initial_presence(full_jid)
 
     @cached_property
