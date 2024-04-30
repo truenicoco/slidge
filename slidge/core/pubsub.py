@@ -26,7 +26,6 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
-from ..db import GatewayUser
 from ..util.sql import db
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
@@ -40,10 +39,10 @@ VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 class PepItem:
     @staticmethod
-    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepItem"]:
+    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepItem"]:
         raise NotImplementedError
 
-    def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
+    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
         raise NotImplementedError
 
 
@@ -132,7 +131,7 @@ class PepAvatar(PepItem):
         self._avatar_data_path = cached_avatar.path
 
     @staticmethod
-    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepAvatar"]:
+    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepAvatar"]:
         cached_id = db.avatar_get(jid)
         if cached_id is None:
             return None
@@ -164,18 +163,18 @@ class PepNick(PepItem):
         self.__nick_str = nick
 
     @staticmethod
-    def from_db(jid: JID, user: Optional[GatewayUser] = None) -> Optional["PepNick"]:
-        if user is None:
+    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepNick"]:
+        if user_jid is None:
             raise XMPPError("not-allowed")
-        nick = db.nick_get(jid, user)
+        nick = db.nick_get(jid, user_jid)
         if nick is None:
             return None
         return PepNick(nick)
 
-    def to_db(self, jid: JID, user: Optional[GatewayUser] = None):
-        if user is None:
+    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
+        if user_jid is None:
             raise XMPPError("not-allowed")
-        db.nick_store(jid, str(self.__nick_str), user)
+        db.nick_store(jid, str(self.__nick_str), user_jid)
 
 
 class PubSubComponent(NamedLockMixin, BasePlugin):
@@ -315,8 +314,8 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         self, cls: Type[PepItemType], stanza: Union[Iq, Presence]
     ) -> PepItemType:
         sto = stanza.get_to()
-        user = self.xmpp.store.users.get_by_stanza(stanza)
-        item = cls.from_db(sto, user)
+        # user = self.xmpp.store.users.get_by_stanza(stanza)
+        item = cls.from_db(sto, stanza.get_from())
         if item is None:
             raise XMPPError("item-not-found")
 
@@ -494,15 +493,15 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
 
     def set_nick(
         self,
-        user: GatewayUser,
+        user_jid: JID,
         jid: JidStr,
         nick: Optional[str] = None,
     ):
         jid = JID(jid)
         nickname = PepNick(nick)
-        nickname.to_db(jid, user)
+        nickname.to_db(jid, user_jid)
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user.jid.bare))
+        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user_jid.bare))
 
     async def broadcast_all(self, from_: JID, to: JID):
         """
@@ -516,7 +515,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
                 )
             else:
                 log.warning("No metadata associated to this cached avatar?!")
-        n = PepNick.from_db(from_, self.xmpp.store.users.get(to))
+        n = PepNick.from_db(from_, to)
         if n:
             await self._broadcast(n.nick, from_, to)
 

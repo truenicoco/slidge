@@ -94,13 +94,13 @@ class BaseSession(
     def __init__(self, user: GatewayUser):
         self.log = logging.getLogger(user.jid.bare)
 
-        self.user = user
+        self.user_jid = user.jid
         self.sent = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent", "legacy_id", "xmpp_id", self.user
+            "session_message_sent", "legacy_id", "xmpp_id", user.jid
         )
         # message ids (*not* stanza-ids), needed for last msg correction
         self.muc_sent_msg_ids = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent_muc", "legacy_id", "xmpp_id", self.user
+            "session_message_sent_muc", "legacy_id", "xmpp_id", user.jid
         )
 
         self.ignore_messages = set[str]()
@@ -116,7 +116,7 @@ class BaseSession(
         self.http = self.xmpp.http
 
         self.threads = SQLBiDict[str, LegacyThreadType](  # type:ignore
-            "session_thread_sent_muc", "legacy_id", "xmpp_id", self.user
+            "session_thread_sent_muc", "legacy_id", "xmpp_id", user.jid
         )
         self.thread_creation_lock = asyncio.Lock()
 
@@ -507,7 +507,7 @@ class BaseSession(
                 self.ready.set_result(True)
 
     def __repr__(self):
-        return f"<Session of {self.user}>"
+        return f"<Session of {self.user_jid}>"
 
     def shutdown(self) -> asyncio.Task:
         for c in self.contacts:
@@ -655,7 +655,7 @@ class BaseSession(
         """
         self.__cached_presence = CachedPresence(status, show, kwargs)
         self.xmpp.send_presence(
-            pto=self.user.jid.bare, pstatus=status, pshow=show, **kwargs
+            pto=self.user_jid.bare, pstatus=status, pshow=show, **kwargs
         )
 
     def send_cached_presence(self, to: JID):
@@ -677,7 +677,7 @@ class BaseSession(
 
         :param text: A text
         """
-        self.xmpp.send_text(text, mto=self.user.jid, **msg_kwargs)
+        self.xmpp.send_text(text, mto=self.user_jid, **msg_kwargs)
 
     def send_gateway_invite(
         self,
@@ -692,7 +692,7 @@ class BaseSession(
         :param reason:
         :param password:
         """
-        self.xmpp.invite_to(muc, reason=reason, password=password, mto=self.user.jid)
+        self.xmpp.invite_to(muc, reason=reason, password=password, mto=self.user_jid)
 
     async def input(self, text: str, **msg_kwargs):
         """
@@ -704,7 +704,7 @@ class BaseSession(
         :param msg_kwargs: Extra attributes
         :return:
         """
-        return await self.xmpp.input(self.user.jid, text, **msg_kwargs)
+        return await self.xmpp.input(self.user_jid, text, **msg_kwargs)
 
     async def send_qr(self, text: str):
         """
@@ -713,7 +713,7 @@ class BaseSession(
 
         :param text: Text to encode as a QR code
         """
-        await self.xmpp.send_qr(text, mto=self.user.jid)
+        await self.xmpp.send_qr(text, mto=self.user_jid)
 
     def re_login(self):
         # Logout then re-login

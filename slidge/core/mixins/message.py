@@ -111,7 +111,7 @@ class MarkerMixin(MessageMaker):
                 self.xmpp.delivery_receipt.make_ack(
                     self._legacy_to_xmpp(legacy_msg_id),
                     mfrom=self.jid,
-                    mto=self.user.jid,
+                    mto=self.user_jid,
                 )
             )
         self._send(
@@ -144,7 +144,7 @@ class MarkerMixin(MessageMaker):
             # We'll see if we need to implement that later
             return
         xmpp_msg_id = self._legacy_to_xmpp(legacy_msg_id)
-        iq = Iq(sto=self.user.jid.bare, sfrom=self.user.jid.bare, stype="set")
+        iq = Iq(sto=self.user_jid.bare, sfrom=self.user_jid.bare, stype="set")
         iq["pubsub"]["publish"]["node"] = self.xmpp["xep_0490"].stanza.NS
         iq["pubsub"]["publish"]["item"]["id"] = muc_jid
         displayed = self.xmpp["xep_0490"].stanza.Displayed()

@@ -8,7 +8,6 @@ from ...util.types import MessageOrPresenceTypeVar
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
     from slidge.core.session import BaseSession
-    from slidge.db import GatewayUser
 
 
 class MetaBase(ABCMeta):
@@ -18,10 +17,13 @@ class MetaBase(ABCMeta):
 class Base:
     session: "BaseSession" = NotImplemented
     xmpp: "BaseGateway" = NotImplemented
-    user: "GatewayUser" = NotImplemented
 
     jid: JID = NotImplemented
     name: str = NotImplemented
+
+    @property
+    def user_jid(self):
+        return self.session.user_jid
 
 
 class BaseSender(Base):

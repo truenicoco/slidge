@@ -47,7 +47,7 @@ class PresenceHandlerMixin:
             contact = await self.__get_contact(pres)
         except _IsDirectedAtComponent as e:
             e.session.send_gateway_message("Bye bye!")
-            await e.session.kill_by_jid(e.session.user.jid)
+            await e.session.kill_by_jid(e.session.user_jid)
             return
 
         contact.is_friend = False

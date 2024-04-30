@@ -34,7 +34,7 @@ class UserStore(EngineMixin):
         with self._session(expire_on_commit=False) as session:
             session.add(user)
             session.commit()
-        db.user_store(user)  # TODO: remove this temporary SQLite db nonsense
+        db.user_store(user.jid)  # TODO: remove this temporary SQLite db nonsense
         return user
 
     def update(self, user: GatewayUser):

@@ -29,10 +29,10 @@ class PresenceMixin(BaseSender):
         self.send_last_presence(force=True, no_cache_online=False)
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
-        return db.presence_get(self.jid, self.user)
+        return db.presence_get(self.jid, self.user_jid)
 
     def _store_last_presence(self, new: CachedPresence):
-        return db.presence_store(self.jid, new, self.user)
+        return db.presence_store(self.jid, new, self.user_jid)
 
     def _make_presence(
         self,
@@ -55,7 +55,7 @@ class PresenceMixin(BaseSender):
             )
             if old != new:
                 if hasattr(self, "muc") and ptype == "unavailable":
-                    db.presence_delete(self.jid, self.user)
+                    db.presence_delete(self.jid, self.user_jid)
                 else:
                     self._store_last_presence(new)
             if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:

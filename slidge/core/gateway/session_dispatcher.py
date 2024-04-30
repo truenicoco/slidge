@@ -170,7 +170,7 @@ class SessionDispatcher:
             else:
                 reply_to_jid = JID(msg["reply"]["to"])
                 if msg["type"] == "chat":
-                    if reply_to_jid.bare != session.user.jid.bare:
+                    if reply_to_jid.bare != session.user_jid.bare:
                         try:
                             reply_to = await session.contacts.by_jid(reply_to_jid)
                         except XMPPError:
@@ -552,7 +552,7 @@ class SessionDispatcher:
         if hash_:
             try:
                 iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
-                    session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
+                    session.user_jid, hash_, ifrom=self.xmpp.boundjid.bare
                 )
             except IqError as e:
                 session.log.warning("Could not fetch the user's avatar: %s", e)

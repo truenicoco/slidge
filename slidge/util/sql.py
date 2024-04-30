@@ -7,16 +7,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from time import time
-from typing import (
-    TYPE_CHECKING,
-    Collection,
-    Generic,
-    Iterator,
-    NamedTuple,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import Collection, Generic, Iterator, NamedTuple, Optional, TypeVar, Union
 
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -24,9 +15,6 @@ from slixmpp.types import PresenceShows, PresenceTypes
 
 from ..core import config
 from .archive_msg import HistoryMessage
-
-if TYPE_CHECKING:
-    from ..db import GatewayUser
 
 KeyType = TypeVar("KeyType")
 ValueType = TypeVar("ValueType")
@@ -85,7 +73,7 @@ class MAMMixin(Base):
         self.cur.execute("DELETE FROM mam_message")
         self.con.commit()
 
-    def mam_add_muc(self, jid: str, user: "GatewayUser"):
+    def mam_add_muc(self, jid: str, user_jid: JID):
         try:
             self.cur.execute(
                 "INSERT INTO "
@@ -94,14 +82,16 @@ class MAMMixin(Base):
                 "  ?, "
                 "  (SELECT id FROM user WHERE jid = ?)"
                 ")",
-                (jid, user.jid.bare),
+                (jid, user_jid.bare),
             )
         except sqlite3.IntegrityError:
-            log.debug("Tried to add a MUC that was already here: (%s, %s)", user, jid)
+            log.debug(
+                "Tried to add a MUC that was already here: (%s, %s)", user_jid, jid
+            )
         else:
             self.con.commit()
 
-    def mam_add_msg(self, muc_jid: str, msg: "HistoryMessage", user: "GatewayUser"):
+    def mam_add_msg(self, muc_jid: str, msg: "HistoryMessage", user_jid: JID):
         self.cur.execute(
             "REPLACE INTO "
             "mam_message(message_id, sender_jid, sent_on, xml, muc_id, user_id)"
@@ -115,7 +105,7 @@ class MAMMixin(Base):
                 msg.when.timestamp(),
                 str(msg.stanza),
                 muc_jid,
-                user.jid.bare,
+                user_jid.bare,
             ),
         )
         self.con.commit()
@@ -134,14 +124,14 @@ class MAMMixin(Base):
         )
         self.con.commit()
 
-    def __mam_get_sent_on(self, muc_jid: str, mid: str, user: "GatewayUser"):
+    def __mam_get_sent_on(self, muc_jid: str, mid: str, user_jid: JID):
         res = self.cur.execute(
             "SELECT sent_on "
             "FROM mam_message "
             "WHERE message_id = ? "
             "AND muc_id = (SELECT id FROM muc WHERE jid = ?) "
             "AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (mid, muc_jid, user.jid.bare),
+            (mid, muc_jid, user_jid.bare),
         )
         row = res.fetchone()
         if row is None:
@@ -151,13 +141,13 @@ class MAMMixin(Base):
     def __mam_bound(
         self,
         muc_jid: str,
-        user: "GatewayUser",
+        user_jid: JID,
         date: Optional[datetime] = None,
         id_: Optional[str] = None,
         comparator=min,
     ):
         if id_ is not None:
-            after_id_sent_on = self.__mam_get_sent_on(muc_jid, id_, user)
+            after_id_sent_on = self.__mam_get_sent_on(muc_jid, id_, user_jid)
             if date:
                 timestamp = comparator(after_id_sent_on, date.timestamp())
             else:
@@ -170,7 +160,7 @@ class MAMMixin(Base):
 
     def mam_get_messages(
         self,
-        user: "GatewayUser",
+        user_jid: JID,
         muc_jid: str,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
@@ -186,17 +176,17 @@ class MAMMixin(Base):
             "WHERE muc_id = (SELECT id FROM muc WHERE jid = ?) "
             "AND user_id = (SELECT id FROM user WHERE jid = ?) "
         )
-        params: list[Union[str, float, int]] = [muc_jid, user.jid.bare]
+        params: list[Union[str, float, int]] = [muc_jid, user_jid.bare]
 
         if start_date or after_id:
             subquery, timestamp = self.__mam_bound(
-                muc_jid, user, start_date, after_id, max
+                muc_jid, user_jid, start_date, after_id, max
             )
             query += subquery
             params.append(timestamp)
         if end_date or before_id:
             subquery, timestamp = self.__mam_bound(
-                muc_jid, user, end_date, before_id, min
+                muc_jid, user_jid, end_date, before_id, min
             )
             query += subquery
             params.append(timestamp)
@@ -319,20 +309,20 @@ class AttachmentMixin(Base):
 
 
 class NickMixin(Base):
-    def nick_get(self, jid: JID, user: "GatewayUser"):
+    def nick_get(self, jid: JID, user_jid: JID):
         res = self.cur.execute(
             "SELECT nick FROM nick "
             "WHERE jid = ? "
             "AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (str(jid), user.jid.bare),
+            (str(jid), user_jid.bare),
         )
         return first_of_tuple_or_none(res.fetchone())
 
-    def nick_store(self, jid: JID, nick: str, user: "GatewayUser"):
+    def nick_store(self, jid: JID, nick: str, user_jid: JID):
         self.cur.execute(
             "REPLACE INTO nick(jid, nick, user_id) "
             "VALUES (?,?,(SELECT id FROM user WHERE jid = ?))",
-            (str(jid), nick, user.jid.bare),
+            (str(jid), nick, user_jid.bare),
         )
         self.con.commit()
 
@@ -382,7 +372,7 @@ class PresenceMixin(Base):
         self.cur.execute("DELETE FROM presence")
         self.con.commit()
 
-    def presence_store(self, jid: JID, presence: CachedPresence, user: "GatewayUser"):
+    def presence_store(self, jid: JID, presence: CachedPresence, user_jid: JID):
         self.cur.execute(
             "REPLACE INTO presence(jid, last_seen, ptype, pstatus, pshow, user_id) "
             "VALUES (?,?,?,?,?,(SELECT id FROM user WHERE jid = ?))",
@@ -390,37 +380,37 @@ class PresenceMixin(Base):
                 str(jid),
                 presence[0].timestamp() if presence[0] else None,
                 *presence[1:],
-                user.jid.bare,
+                user_jid.bare,
             ),
         )
         self.con.commit()
 
-    def presence_delete(self, jid: JID, user: "GatewayUser"):
+    def presence_delete(self, jid: JID, user_jid: JID):
         self.cur.execute(
             "DELETE FROM presence WHERE (jid = ? and user_id = (SELECT id FROM user WHERE jid = ?))",
-            (str(jid), user.jid.bare),
+            (str(jid), user_jid.bare),
         )
         self.con.commit()
 
-    def presence_get(self, jid: JID, user: "GatewayUser") -> Optional[CachedPresence]:
+    def presence_get(self, jid: JID, user_jid: JID) -> Optional[CachedPresence]:
         return self.__cur.execute(
             "SELECT last_seen, ptype, pstatus, pshow FROM presence "
             "WHERE jid = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (str(jid), user.jid.bare),
+            (str(jid), user_jid.bare),
         ).fetchone()
 
 
 class UserMixin(Base):
-    def user_store(self, user: "GatewayUser"):
+    def user_store(self, user_jid: JID):
         try:
-            self.cur.execute("INSERT INTO user(jid) VALUES (?)", (user.jid.bare,))
+            self.cur.execute("INSERT INTO user(jid) VALUES (?)", (user_jid.bare,))
         except sqlite3.IntegrityError:
             log.debug("User has already been added.")
         else:
             self.con.commit()
 
-    def user_del(self, user: "GatewayUser"):
-        self.cur.execute("DELETE FROM user WHERE jid = ?", (user.jid.bare,))
+    def user_del(self, user_jid: JID):
+        self.cur.execute("DELETE FROM user WHERE jid = ?", (user_jid.bare,))
         self.con.commit()
 
 
@@ -436,7 +426,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         table: str,
         key1: str,
         key2: str,
-        user: "GatewayUser",
+        user_jid: JID,
         sql: Optional[Base] = None,
         create_table=False,
         is_inverse=False,
@@ -447,7 +437,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         self.table = table
         self.key1 = key1
         self.key2 = key2
-        self.user = user
+        self.user_jid = user_jid
         if create_table:
             sql.cur.execute(
                 f"CREATE TABLE {table} (id "
@@ -460,7 +450,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         if is_inverse:
             return
         self.inverse = SQLBiDict[ValueType, KeyType](
-            table, key2, key1, user, sql=sql, is_inverse=True
+            table, key2, key1, user_jid, sql=sql, is_inverse=True
         )
 
     def __setitem__(self, key: KeyType, value: ValueType):
@@ -468,7 +458,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
             f"REPLACE INTO {self.table}"
             f"(user_id, {self.key1}, {self.key2}) "
             "VALUES ((SELECT id FROM user WHERE jid = ?), ?, ?)",
-            (self.user.jid.bare, key, value),
+            (self.user_jid.bare, key, value),
         )
         self.db.con.commit()
 
@@ -482,7 +472,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         res = self.db.cur.execute(
             f"SELECT {self.key1} FROM {self.table} "
             f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (item, self.user.jid.bare),
+            (item, self.user_jid.bare),
         ).fetchone()
         return res is not None
 
@@ -491,7 +481,7 @@ class SQLBiDict(Generic[KeyType, ValueType]):
         res = self.db.cur.execute(
             f"SELECT {self.key2} FROM {self.table} "
             f"WHERE {self.key1} = ? AND user_id = (SELECT id FROM user WHERE jid = ?)",
-            (item, self.user.jid.bare),
+            (item, self.user_jid.bare),
         ).fetchone()
         if res is None:
             return res
