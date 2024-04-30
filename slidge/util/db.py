@@ -123,7 +123,7 @@ class UserStore:
         else:
             self._users = shelve.open(str(filename))
         for user in self._users.values():
-            db.user_store(user)
+            db.user_store(user.jid)
         log.info("Registered users in the DB: %s", list(self._users.keys()))
 
     def get_all(self) -> Iterable[GatewayUser]:

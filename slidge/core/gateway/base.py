@@ -303,7 +303,7 @@ class BaseGateway(
                 continue
             if cls is Exec:
                 if config.DEV_MODE:
-                    log.warning("/!\ DEV MODE ENABLED /!\\")
+                    log.warning(r"/!\ DEV MODE ENABLED /!\\")
                 else:
                     continue
             c = cls(self)
@@ -460,7 +460,7 @@ class BaseGateway(
         try:
             status = await session.login()
         except Exception as e:
-            log.warning("Login problem for %s", session.user, exc_info=e)
+            log.warning("Login problem for %s", session.user_jid, exc_info=e)
             log.exception(e)
             session.send_gateway_status(f"Could not login: {e}", show="busy")
             session.send_gateway_message(
@@ -469,7 +469,7 @@ class BaseGateway(
             )
             return
 
-        log.info("Login success for %s", session.user)
+        log.info("Login success for %s", session.user_jid)
         session.logged = True
         session.send_gateway_status("Syncing contacts…", show="dnd")
         await session.contacts.fill()
@@ -483,7 +483,7 @@ class BaseGateway(
         for c in session.contacts:
             # we need to receive presences directed at the contacts, in
             # order to send pubsub events for their +notify features
-            self.send_presence(pfrom=c.jid, pto=session.user.jid.bare, ptype="probe")
+            self.send_presence(pfrom=c.jid, pto=session.user_jid.bare, ptype="probe")
         if status is None:
             session.send_gateway_status("Logged in", show="chat")
         else:
@@ -495,7 +495,7 @@ class BaseGateway(
     async def __fetch_user_avatar(self, session: BaseSession):
         try:
             iq = await self.xmpp.plugin["xep_0060"].get_items(
-                session.user.jid.bare,
+                session.user_jid.bare,
                 self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
                 ifrom=self.boundjid.bare,
             )

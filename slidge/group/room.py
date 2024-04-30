@@ -125,8 +125,7 @@ class LegacyMUC(
 
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
-        self.user = session.user
-        self.log = logging.getLogger(f"{self.user.jid.bare}:muc:{jid}")
+        self.log = logging.getLogger(f"{self.user_jid.bare}:muc:{jid}")
 
         self.legacy_id = legacy_id
         self.jid = jid
@@ -144,7 +143,7 @@ class LegacyMUC(
             self.get_system_participant()
         )
 
-        self.archive: MessageArchive = MessageArchive(str(self.jid), self.user)
+        self.archive: MessageArchive = MessageArchive(str(self.jid), self.user_jid)
         self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
@@ -156,6 +155,10 @@ class LegacyMUC(
         self._description = ""
         super().__init__()
 
+    @property
+    def user_jid(self):
+        return self.session.user_jid
+
     def __repr__(self):
         return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
 
@@ -165,11 +168,7 @@ class LegacyMUC(
 
     @property
     def user_nick(self):
-        return (
-            self._user_nick
-            or self.session.bookmarks.user_nick
-            or self.session.user.jid.node
-        )
+        return self._user_nick or self.session.bookmarks.user_nick or self.user_jid.node
 
     @user_nick.setter
     def user_nick(self, nick: str):
@@ -238,7 +237,7 @@ class LegacyMUC(
             return
 
         pfrom = p.get_from()
-        if pfrom.bare != self.user.jid.bare:
+        if pfrom.bare != self.user_jid.bare:
             return
         if (resource := pfrom.resource) in (resources := self.user_resources):
             if pto.resource != self.user_nick:
@@ -416,7 +415,7 @@ class LegacyMUC(
 
     def user_full_jids(self):
         for r in self.user_resources:
-            j = copy(self.user.jid)
+            j = copy(self.user_jid)
             j.resource = r
             yield j
 
@@ -491,7 +490,7 @@ class LegacyMUC(
         self.log.debug(
             "Resource %s of %s wants to join room %s with nickname %s",
             client_resource,
-            self.user,
+            self.user_jid,
             self.legacy_id,
             requested_nickname,
         )
@@ -849,7 +848,7 @@ class LegacyMUC(
 
         :param r: The resource to kick
         """
-        pto = self.user.jid
+        pto = self.user_jid
         pto.resource = r
         p = self.xmpp.make_presence(
             pfrom=(await self.get_user_participant()).jid, pto=pto
@@ -882,7 +881,7 @@ class LegacyMUC(
         item = Item()
         item["id"] = self.jid
 
-        iq = Iq(stype="get", sfrom=self.user.jid, sto=self.user.jid)
+        iq = Iq(stype="get", sfrom=self.user_jid, sto=self.user_jid)
         iq["pubsub"]["items"]["node"] = self.xmpp["xep_0402"].stanza.NS
         iq["pubsub"]["items"].append(item)
 
@@ -912,7 +911,7 @@ class LegacyMUC(
             item["conference"]["autojoin"] = auto_join
 
         item["conference"]["nick"] = self.user_nick
-        iq = Iq(stype="set", sfrom=self.user.jid, sto=self.user.jid)
+        iq = Iq(stype="set", sfrom=self.user_jid, sto=self.user_jid)
         iq["pubsub"]["publish"]["node"] = self.xmpp["xep_0402"].stanza.NS
         iq["pubsub"]["publish"].append(item)
 

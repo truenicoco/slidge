@@ -7,7 +7,7 @@ from uuid import uuid4
 from slixmpp import Message
 from slixmpp.types import MessageTypes
 
-from ...db import GatewayUser
+from ...db.models import GatewayUser
 from ...slixfix.link_preview.stanza import LinkPreview as LinkPreviewStanza
 from ...util.types import (
     ChatState,
@@ -110,16 +110,23 @@ class MessageMaker(BaseSender):
         muc = getattr(self, "muc", None)
 
         if entity := reply_to.author:
-            if isinstance(entity, GatewayUser):
+            if entity == "user" or isinstance(entity, GatewayUser):
+                if isinstance(entity, GatewayUser):
+                    warnings.warn(
+                        "Using a GatewayUser as the author of a "
+                        "MessageReference is deprecated. Use the string 'user' "
+                        "instead.",
+                        DeprecationWarning,
+                    )
                 if muc:
                     jid = copy(muc.jid)
                     jid.resource = fallback_nick = muc.user_nick
                     msg["reply"]["to"] = jid
                 else:
-                    msg["reply"]["to"] = entity.jid
+                    msg["reply"]["to"] = self.session.user_jid
                     # TODO: here we should use preferably use the PEP nick of the user
                     # (but it doesn't matter much)
-                    fallback_nick = entity.jid.local
+                    fallback_nick = self.session.user_jid.local
             else:
                 if muc:
                     if hasattr(entity, "muc"):

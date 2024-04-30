@@ -48,7 +48,10 @@ class AdhocProvider:
     async def __handle_category_list(
         self, category: str, iq: Iq, adhoc_session: AdhocSessionType
     ) -> AdhocSessionType:
-        session = self.xmpp.get_session_from_stanza(iq)
+        try:
+            session = self.xmpp.get_session_from_stanza(iq)
+        except XMPPError:
+            session = None
         commands = []
         for command in self._categories[category]:
             try:
@@ -56,6 +59,10 @@ class AdhocProvider:
             except XMPPError:
                 continue
             commands.append(command)
+        if len(commands) == 0:
+            raise XMPPError(
+                "not-authorized", "There is no command you can run in this category"
+            )
         return await self.__handle_result(
             session,
             Form(

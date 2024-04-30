@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 from slixmpp.stanza import Error
 from slixmpp.test import SlixTest
@@ -86,16 +87,15 @@ class TestPubSubNickname(SlixTest):
         )
         self.pubsub: PubSubComponent = self.xmpp["pubsub"]
         self.xmpp.get_session_from_jid = lambda j: MockSession
-        self.user = MagicMock()
-        self.user.jid.bare = "kenny@south.park"
-        db.user_store(self.user)
+        self.user_jid = JID("kenny@south.park")
+        db.user_store(self.user_jid)
 
     def tearDown(self):
         super().tearDown()
-        db.user_del(self.user)
+        db.user_del(self.user_jid)
 
     def test_new_nick(self):
-        self.pubsub.set_nick(self.user, "stan@pubsub.south.park", "BUBU")
+        self.pubsub.set_nick(self.user_jid, "stan@pubsub.south.park", "BUBU")
         self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"
@@ -115,7 +115,7 @@ class TestPubSubNickname(SlixTest):
         )
 
     def test_no_nick(self):
-        self.pubsub.set_nick(self.user, "stan@pubsub.south.park", None)
+        self.pubsub.set_nick(self.user_jid, "stan@pubsub.south.park", None)
         self.send(  # language=XML
             """
             <message xmlns="jabber:component:accept"

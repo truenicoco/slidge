@@ -27,17 +27,17 @@ class LegacyBookmarks(
     def __init__(self, session: "BaseSession"):
         self.session = session
         self.xmpp = session.xmpp
-        self.user = session.user
+        self.user_jid = session.user_jid
 
         self._mucs_by_legacy_id = dict[LegacyGroupIdType, LegacyMUCType]()
         self._mucs_by_bare_jid = dict[str, LegacyMUCType]()
 
         self._muc_class: Type[LegacyMUCType] = LegacyMUC.get_self_or_unique_subclass()
 
-        self._user_nick: str = self.session.user.jid.node
+        self._user_nick: str = self.session.user_jid.node
 
         super().__init__()
-        self.log = logging.getLogger(f"{self.user.jid.bare}:bookmarks")
+        self.log = logging.getLogger(f"{self.user_jid.bare}:bookmarks")
         self.ready = self.session.xmpp.loop.create_future()
         if not self.xmpp.GROUPS:
             self.ready.set_result(True)
@@ -54,7 +54,7 @@ class LegacyBookmarks(
         return iter(self._mucs_by_legacy_id.values())
 
     def __repr__(self):
-        return f"<Bookmarks of {self.user}>"
+        return f"<Bookmarks of {self.user_jid}>"
 
     async def __finish_init_muc(self, legacy_id: LegacyGroupIdType, jid: JID):
         muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)

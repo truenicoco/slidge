@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from ..contact import LegacyContact
     from ..core.pubsub import PepItem
     from ..core.session import BaseSession
-    from ..db.models import GatewayUser
     from ..group.participant import LegacyMUC, LegacyParticipant
 
     AnyBaseSession = BaseSession[Any, Any]
@@ -84,13 +83,16 @@ class MessageReference(Generic[LegacyMessageType]):
 
     At the very minimum, the legacy message ID attribute must be set, but to
     ensure that the quote is displayed in all XMPP clients, the author must also
-    be set.
+    be set (use the string "user" if the slidge user is the author of the referenced
+    message).
     The body is used as a fallback for XMPP clients that do not support :xep:`0461`
     of that failed to find the referenced message.
     """
 
     legacy_id: LegacyMessageType
-    author: Optional[Union["GatewayUser", "LegacyParticipant", "LegacyContact"]] = None
+    author: Optional[Union[Literal["user"], "LegacyParticipant", "LegacyContact"]] = (
+        None
+    )
     body: Optional[str] = None
 
 

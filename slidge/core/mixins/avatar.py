@@ -90,7 +90,7 @@ class AvatarMixin:
             jid=self.__avatar_jid,
             avatar=a,
             unique_id=None if isinstance(uid, URL) else uid,
-            broadcast_to=self.session.user.jid.bare,
+            broadcast_to=self.session.user_jid.bare,
             broadcast=self._avatar_pubsub_broadcast,
         )
         self._post_avatar_update()
@@ -162,6 +162,6 @@ class AvatarMixin:
         await self.session.xmpp.pubsub.set_avatar_from_cache(
             self.__avatar_jid,
             new_id is None and cached_id is not None,
-            self.session.user.jid.bare,
+            self.session.user_jid.bare,
             self._avatar_pubsub_broadcast,
         )

@@ -19,7 +19,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
         self.recv(  # language=XML
             f"""
             <iq type='get'
-                from='{juliet.user.jid}/client'
+                from='{juliet.user_jid}/client'
                 to='{juliet.jid.bare}'
                 id='retrieve1'>
               <pubsub xmlns='http://jabber.org/protocol/pubsub'>
@@ -35,7 +35,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
             <iq xmlns="jabber:component:accept"
                 type="error"
                 from="juliet@aim.shakespeare.lit"
-                to="{juliet.user.jid}/client"
+                to="{juliet.user_jid}/client"
                 id="retrieve1">
               <error type="cancel">
                 <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
@@ -213,7 +213,7 @@ class BaseMUC(BaseNoMUC):
         session = self.get_romeo_session()
         self.recv(  # language=XML
             f"""
-            <presence from="{session.user.jid}/gajim"
+            <presence from="{session.user_jid}/gajim"
                       to="room@{session.xmpp.boundjid.bare}/romeo">
               <x xmlns='http://jabber.org/protocol/muc' />
             </presence>
@@ -362,7 +362,7 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
             """
         )
         self.send(  # language=XML
-            """
+            f"""
             <presence from="room@aim.shakespeare.lit/juliet-1934e"
                       to="romeo@montague.lit/gajim">
               <x xmlns="http://jabber.org/protocol/muc#user">
@@ -371,7 +371,7 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
                       jid="juliet@aim.shakespeare.lit/slidge" />
               </x>
               <x xmlns="vcard-temp:x:update">
-                <photo>630e98ce280a370dd1c7933289ce7a0338b8b3f1</photo>
+                <photo>{self.avatar_sha1}</photo>
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="juliet@aim.shakespeare.lit/slidge" />

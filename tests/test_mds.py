@@ -115,7 +115,7 @@ class TestMDS(MDSMixin, BaseMUC):
         with unittest.mock.patch("test_muc.Session.on_displayed") as on_displayed:
             self.recv(  # language=XML
                 f"""
-            <message from='{session.user.jid}'
+            <message from='{session.user_jid}'
                      to='{self.xmpp.boundjid.bare}'
                      type='headline'
                      id='new-displayed-pep-event'>

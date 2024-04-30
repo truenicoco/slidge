@@ -67,7 +67,6 @@ class LegacyParticipant(
         self._hats = list[Hat]()
         self.muc = muc
         self.session = session = muc.session
-        self.user = session.user
         self.xmpp = session.xmpp
         self._role = role
         self._affiliation = affiliation
@@ -85,7 +84,11 @@ class LegacyParticipant(
         # this way, event in plugins that don't map "user has joined" events,
         # we send a "join"-presence from the participant before the first message
         self.__presence_sent = False
-        self.log = logging.getLogger(f"{self.user.jid.bare}:{self.jid}")
+        self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid}")
+
+    @property
+    def user_jid(self):
+        return self.session.user_jid
 
     def __repr__(self):
         return f"<Participant '{self.nickname}'/'{self.jid}' of '{self.muc}'>"
@@ -240,14 +243,14 @@ class LegacyParticipant(
                 if user_full_jid:
                     p["muc"]["jid"] = user_full_jid
                 else:
-                    jid = copy(self.user.jid)
+                    jid = copy(self.user_jid)
                     try:
                         jid.resource = next(
                             iter(self.muc.user_resources)  # type:ignore
                         )
                     except StopIteration:
                         jid.resource = "pseudo-resource"
-                    p["muc"]["jid"] = self.user.jid
+                    p["muc"]["jid"] = self.user_jid
                 codes.add(100)
             elif self.contact:
                 p["muc"]["jid"] = self.contact.jid
@@ -333,7 +336,7 @@ class LegacyParticipant(
         item["role"] = self.role
         if not self.muc.is_anonymous:
             if self.is_user:
-                item["jid"] = self.user.jid.bare
+                item["jid"] = self.user_jid.bare
             elif self.contact:
                 item["jid"] = self.contact.jid.bare
             else:

@@ -46,7 +46,7 @@ def test_subclass():
 
 
 def test_bidict_sql(user):
-    d = SQLBiDict("test", "key1", "key2", user, create_table=True)
+    d = SQLBiDict("test", "key1", "key2", user.jid, create_table=True)
     d[1] = "a"
     d[2] = "b"
 
@@ -61,7 +61,7 @@ def test_bidict_sql(user):
     assert "b" not in d
 
     user.jid.bare = "test2@test.fr"
-    d2 = SQLBiDict("test", "key1", "key2", user)
+    d2 = SQLBiDict("test", "key1", "key2", user.jid)
     assert d2.get(1) is None
     assert d2.inverse.get("a") is None
 

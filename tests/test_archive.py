@@ -26,17 +26,17 @@ def stanzas():
 
 
 def test_insertion(stanzas, user):
-    x = MessageArchive("1", user)
+    x = MessageArchive("1", user.jid)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive("2", user)
+    x = MessageArchive("2", user.jid)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1
 
-    x = MessageArchive("3", user)
+    x = MessageArchive("3", user.jid)
     assert len(list(x.get_all())) == 0
     x.add(stanzas[0])
     assert len(list(x.get_all())) == 1

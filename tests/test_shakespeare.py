@@ -101,8 +101,8 @@ class Session(BaseSession):
     ):
         if chat.jid_username == "juliet":
             text_received_by_juliet.append((text, chat))
-        assert self.user.jid.bare == "romeo@montague.lit"
-        assert self.user.jid == JID("romeo@montague.lit")
+        assert self.user_jid.bare == "romeo@montague.lit"
+        assert self.user_jid == JID("romeo@montague.lit")
         chat.send_text("I love you")
         return 0
 
@@ -737,8 +737,12 @@ class TestAimShakespeareBase(Base):
         config.ADMINS = ()
 
     def test_adhoc_forbidden_non_admin(self):
-        self.recv(  # language=XML
-            f"""
+        with unittest.mock.patch(
+            "slixmpp.plugins.xep_0050.adhoc.XEP_0050.new_session",
+            return_value="session-id",
+        ):
+            self.recv(  # language=XML
+                f"""
             <iq type="set"
                 from="test@localhost/gajim"
                 to="{self.xmpp.boundjid.bare}"
@@ -748,18 +752,33 @@ class TestAimShakespeareBase(Base):
                        node="{ADMINISTRATION}" />
             </iq>
             """
-        )
+            )
         self.send(  # language=XML
             """
-            <iq xmlns="jabber:component:accept"
-                type="error"
+            <iq type="result"
                 from="aim.shakespeare.lit"
                 to="test@localhost/gajim"
                 id="123">
-              <error type="auth">
-                <subscription-required xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">User not found</text>
-              </error>
+              <command xmlns="http://jabber.org/protocol/commands"
+                       node="🛷️ Slidge administration"
+                       sessionid="session-id"
+                       status="executing">
+                <actions>
+                  <next />
+                </actions>
+                <x xmlns="jabber:x:data"
+                   type="form">
+                  <title>🛷️ Slidge administration</title>
+                  <field var="command"
+                         label="Command"
+                         type="list-single">
+                    <option label="ℹ️ Server information">
+                      <value>0</value>
+                    </option>
+                    <value />
+                  </field>
+                </x>
+              </command>
             </iq>
             """,
             use_values=False,

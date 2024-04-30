@@ -1226,9 +1226,7 @@ class TestMuc(Base):
         participant.send_text(
             "the body",
             legacy_msg_id="legacy-XXX",
-            reply_to=MessageReference(
-                legacy_id="legacy-REPLY-TO", author=muc.session.user
-            ),
+            reply_to=MessageReference(legacy_id="legacy-REPLY-TO", author="user"),
         )
         self.send(  # language=XML
             f"""
@@ -2602,7 +2600,7 @@ class TestMuc(Base):
         m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
         m["body"] = "something"
 
-        a = MessageArchive("blop", self.user)
+        a = MessageArchive("blop", self.get_romeo_session().user_jid)
         slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
@@ -2615,7 +2613,7 @@ class TestMuc(Base):
         ) - datetime.timedelta(days=2)
         m["body"] = "something"
 
-        a = MessageArchive("blip", self.user)
+        a = MessageArchive("blip", self.get_romeo_session().user_jid)
         slidge.util.sql.db.mam_cleanup()
         assert len(list(a.get_all())) == 0
         a.add(m)
@@ -3455,7 +3453,7 @@ class TestMUCAdmin(Base):
         )
         self.user_participant = self.run_coro(muc.get_user_participant())
         self.user_participant._LegacyParticipant__presence_sent = True
-        self.user_jid = self.get_romeo_session().user.jid
+        self.user_jid = self.get_romeo_session().user_jid
 
     def test_moderation_not_implemented(self):
         self.recv(  # language=XML
@@ -3730,7 +3728,7 @@ class TestJoinAway(Base):
             name="room-moderation-test", resources=("gajim",)
         )
         self.user_participant = self.run_coro(muc.get_user_participant())
-        self.user_jid = self.get_romeo_session().user.jid
+        self.user_jid = self.get_romeo_session().user_jid
         self.juliet = self.run_coro(self.get_romeo_session().contacts.by_legacy_id(123))
 
     def get_juliet_participant(self):
@@ -3815,7 +3813,7 @@ class TestMentions(Base):
         with unittest.mock.patch("test_muc.Session.on_text") as on_text:
             self.recv(  # language=XML
                 f"""
-            <message from='{session.user.jid}/gajim'
+            <message from='{session.user_jid}/gajim'
                      to='{muc.jid}'
                      type='groupchat'>
               <body>I am {muc.user_nick} I want weirdguy🎉 to kiss me</body>
@@ -3886,7 +3884,7 @@ class TestNickChange(Base):
         muc = self.get_private_muc("room-private", ("gajim",))
         self.recv(  # language=XML
             f"""
-            <presence from='{muc.user.jid}/gajim'
+            <presence from='{muc.user_jid}/gajim'
                       id='nick-change'
                       to='{muc.jid}/new-nick' />
             """
@@ -3895,7 +3893,7 @@ class TestNickChange(Base):
             f"""
             <presence from='{muc.jid}/{muc.user_nick}'
                       id='nick-change'
-                      to='{muc.user.jid}/gajim'
+                      to='{muc.user_jid}/gajim'
                       type='error'>
               <error by='{muc.jid}'
                      type='cancel'>
@@ -3912,7 +3910,7 @@ class TestNickChange(Base):
         muc = self.get_private_muc("room-private", ("gajim",))
         self.recv(  # language=XML
             f"""
-            <presence from='{muc.user.jid}/gajim'
+            <presence from='{muc.user_jid}/gajim'
                       id='nick-change'
                       to='{muc.jid}/{muc.user_nick}'
                       show='away' />

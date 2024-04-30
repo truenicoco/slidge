@@ -4,9 +4,8 @@ from copy import copy
 from datetime import datetime
 from typing import TYPE_CHECKING, Collection, Optional
 
-from slixmpp import Iq, Message
+from slixmpp import JID, Iq, Message
 
-from ..db import GatewayUser
 from ..util.archive_msg import HistoryMessage
 from ..util.sql import db
 
@@ -15,10 +14,10 @@ if TYPE_CHECKING:
 
 
 class MessageArchive:
-    def __init__(self, db_id: str, user: GatewayUser):
+    def __init__(self, db_id: str, user_jid: JID):
         self.db_id = db_id
-        self.user = user
-        db.mam_add_muc(db_id, user)
+        self.user_jid = user_jid
+        db.mam_add_muc(db_id, user_jid)
 
     def add(
         self,
@@ -40,7 +39,7 @@ class MessageArchive:
             if participant.contact:
                 new_msg["muc"]["jid"] = participant.contact.jid.bare
             elif participant.is_user:
-                new_msg["muc"]["jid"] = participant.user.jid.bare
+                new_msg["muc"]["jid"] = participant.user_jid.bare
             elif participant.is_system:
                 new_msg["muc"]["jid"] = participant.muc.jid
             else:
@@ -49,7 +48,7 @@ class MessageArchive:
                     "jid"
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        db.mam_add_msg(self.db_id, HistoryMessage(new_msg), self.user)
+        db.mam_add_msg(self.db_id, HistoryMessage(new_msg), self.user_jid)
 
     def __iter__(self):
         return iter(self.get_all())
@@ -66,7 +65,7 @@ class MessageArchive:
         flip=False,
     ):
         for msg in db.mam_get_messages(
-            self.user,
+            self.user_jid,
             self.db_id,
             before_id=before_id,
             after_id=after_id,

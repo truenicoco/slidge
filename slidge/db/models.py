@@ -1,3 +1,4 @@
+import warnings
 from datetime import datetime
 
 import sqlalchemy as sa
@@ -31,3 +32,10 @@ class GatewayUser(Base):
         # :return: Value of the field
         # """
         return self.legacy_module_data.get(field, default)
+
+    @property
+    def registration_form(self):
+        warnings.warn(
+            "GatewayUser.registration_form is deprecated.", DeprecationWarning
+        )
+        return self.legacy_module_data

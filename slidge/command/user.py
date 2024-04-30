@@ -76,7 +76,7 @@ class SyncContacts(Command):
     async def sync(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
         if session is None:
             raise RuntimeError
-        roster_iq = await self.xmpp["xep_0356"].get_roster(session.user.jid.bare)
+        roster_iq = await self.xmpp["xep_0356"].get_roster(session.user_jid.bare)
 
         contacts = session.contacts.known_contacts()
 
@@ -90,13 +90,13 @@ class SyncContacts(Command):
                 if contact is None:
                     if len(groups) == 1:
                         await self.xmpp["xep_0356"].set_roster(
-                            session.user.jid, {item["jid"]: {"subscription": "remove"}}
+                            session.user_jid, {item["jid"]: {"subscription": "remove"}}
                         )
                         removed += 1
                     else:
                         groups.remove(self.xmpp.ROSTER_GROUP)
                         await self.xmpp["xep_0356"].set_roster(
-                            session.user.jid,
+                            session.user_jid,
                             {
                                 item["jid"]: {
                                     "subscription": item["subscription"],
@@ -246,5 +246,7 @@ class Unregister(Command):
 
     async def unregister(self, session: Optional[AnyBaseSession], _ifrom: JID) -> str:
         assert session is not None
-        await self.xmpp.unregister_user(session.user)
+        user = self.xmpp.store.users.get(session.user_jid)
+        assert user is not None
+        await self.xmpp.unregister_user(user)
         return "OK"

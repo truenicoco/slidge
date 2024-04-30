@@ -44,7 +44,7 @@ class VCardTemp:
         if not hash_:
             raise XMPPError("item-not-found", "This participant has no contact")
         meta_iq = await self.xmpp.plugin["xep_0060"].get_item(
-            session.user.jid,
+            session.user_jid,
             MetaData.namespace,
             hash_,
             ifrom=self.xmpp.boundjid.bare,
@@ -52,7 +52,7 @@ class VCardTemp:
         info = meta_iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]
         type_ = info["type"]
         data_iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
-            session.user.jid, hash_, ifrom=self.xmpp.boundjid.bare
+            session.user_jid, hash_, ifrom=self.xmpp.boundjid.bare
         )
         bytes_ = data_iq["pubsub"]["items"]["item"]["avatar_data"]["value"]
         return bytes_, type_

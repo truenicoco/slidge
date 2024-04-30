@@ -100,7 +100,6 @@ class LegacyContact(
         """
         super().__init__()
         self.session = session
-        self.user = session.user
         self.legacy_id: LegacyUserIdType = legacy_id
         """
         The legacy identifier of the :term:`Legacy Contact`.
@@ -122,10 +121,14 @@ class LegacyContact(
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
-        self.log = logging.getLogger(f"{self.user.jid.bare}:{self.jid.bare}")
+        self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid.bare}")
         self.participants = set["LegacyParticipant"]()
         self.is_friend: bool = False
         self.__added_to_roster = False
+
+    @property
+    def user_jid(self):
+        return self.session.user_jid
 
     def __repr__(self):
         return f"<Contact '{self.legacy_id}'/'{self.jid.bare}'>"
@@ -170,7 +173,7 @@ class LegacyContact(
     ) -> MessageOrPresenceTypeVar:
         if carbon and isinstance(stanza, Message):
             stanza["to"] = self.jid.bare
-            stanza["from"] = self.user.jid
+            stanza["from"] = self.user_jid
             self._privileged_send(stanza)
             return stanza  # type:ignore
 
@@ -187,7 +190,7 @@ class LegacyContact(
             stanza.append(n)
         if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
             self._sent_order.append(stanza["id"])
-        stanza["to"] = self.user.jid
+        stanza["to"] = self.user_jid
         stanza.send()
         return stanza
 
@@ -229,7 +232,7 @@ class LegacyContact(
         for p in self.participants:
             p.nickname = n
         self._name = n
-        self.xmpp.pubsub.set_nick(user=self.user, jid=self.jid.bare, nick=n)
+        self.xmpp.pubsub.set_nick(user_jid=self.user_jid, jid=self.jid.bare, nick=n)
 
     def _post_avatar_update(self):
         for p in self.participants:
@@ -283,7 +286,7 @@ class LegacyContact(
         elif country:
             vcard.add_address(country, locality)
 
-        self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user.jid.bare})
+        self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user_jid.bare})
 
     async def add_to_roster(self, force=False):
         """
@@ -303,7 +306,7 @@ class LegacyContact(
         if (n := self.name) is not None:
             item["name"] = n
         kw = dict(
-            jid=self.user.jid,
+            jid=self.user_jid,
             roster_items={self.jid.bare: item},
         )
         try:
@@ -330,7 +333,7 @@ class LegacyContact(
             self.send_last_presence()
 
     async def __broadcast_pubsub_items(self):
-        await self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user.jid)
+        await self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user_jid)
 
     async def _set_roster(self, **kw):
         try:
@@ -415,7 +418,7 @@ class LegacyContact(
         their 'friends'".
         """
         for ptype in "unsubscribe", "unsubscribed", "unavailable":
-            self.xmpp.send_presence(pfrom=self.jid, pto=self.user.jid.bare, ptype=ptype)  # type: ignore
+            self.xmpp.send_presence(pfrom=self.jid, pto=self.user_jid.bare, ptype=ptype)  # type: ignore
 
     async def update_info(self):
         """
