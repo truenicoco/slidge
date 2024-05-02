@@ -450,21 +450,45 @@ class SessionDispatcher:
     async def on_presence(self, p: Presence):
         session = await self.__get_session(p)
 
-        if p.get_to() != self.xmpp.boundjid.bare:
+        pto = p.get_to()
+        if pto == self.xmpp.boundjid.bare:
+            # NB: get_type() returns either a proper presence type or
+            #     a presence show if available. Weird, weird, weird slix.
+            if (ptype := p.get_type()) not in _USEFUL_PRESENCES:
+                return
+            resources = self.xmpp.roster[self.xmpp.boundjid.bare][
+                p.get_from()
+            ].resources
+            session.log.debug("Received a presence from %s", p.get_from())
+            await session.on_presence(
+                p.get_from().resource,
+                ptype,  # type: ignore
+                p["status"],
+                resources,
+                merge_resources(resources),
+            )
             return
-        # NB: get_type() returns either a proper presence type or
-        #     a presence show if available. Weird, weird, weird slix.
-        if (ptype := p.get_type()) not in _USEFUL_PRESENCES:
+
+        muc = session.bookmarks._mucs_by_bare_jid.get(pto.bare)
+        if muc is None or p.get_from().resource not in muc.user_resources:
             return
-        resources = self.xmpp.roster[self.xmpp.boundjid.bare][p.get_from()].resources
-        session.log.debug("Received a presence from %s", p.get_from())
-        await session.on_presence(
-            p.get_from().resource,
-            ptype,  # type: ignore
-            p["status"],
-            resources,
-            merge_resources(resources),
-        )
+
+        # We can't use XMPPError here because from must be room@slidge/VALID-USER-NICK
+
+        error_from = JID(muc.jid)
+        error_from.resource = muc.user_nick
+        error_stanza = p.error()
+        error_stanza.set_to(p.get_from())
+        error_stanza.set_from(error_from)
+        error_stanza.enable("muc_join")
+        error_stanza.enable("error")
+        error_stanza["error"]["type"] = "cancel"
+        error_stanza["error"]["by"] = muc.jid
+        error_stanza["error"]["condition"] = "not-acceptable"
+        error_stanza["error"][
+            "text"
+        ] = "Slidge does not let you change your nickname in groups."
+        error_stanza.send()
 
     async def on_groupchat_join(self, p: Presence):
         if not self.xmpp.GROUPS:

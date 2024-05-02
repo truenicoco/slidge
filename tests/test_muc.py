@@ -3875,3 +3875,30 @@ class TestHats(Base):
             </presence>
             """
         )
+
+
+class TestNickChange(Base):
+    def test_user_nick_change(self):
+        muc = self.get_private_muc("room-private", ("gajim",))
+        self.recv(  # language=XML
+            f"""
+            <presence from='{muc.user.jid}/gajim'
+                      id='nick-change'
+                      to='{muc.jid}/new-nick' />
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <presence from='{muc.jid}/{muc.user_nick}'
+                      id='nick-change'
+                      to='{muc.user.jid}/gajim'
+                      type='error'>
+              <error by='{muc.jid}'
+                     type='cancel'>
+                <not-acceptable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Slidge does not let you change your nickname in groups.</text>
+              </error>
+              <x xmlns='http://jabber.org/protocol/muc' />
+            </presence>
+            """
+        )
