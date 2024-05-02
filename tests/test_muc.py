@@ -984,7 +984,8 @@ class TestMuc(Base):
             """
             <presence xmlns="jabber:component:accept"
                       to="romeo@montague.lit/gajim"
-                      from="room-private@aim.shakespeare.lit/thirdwitch">
+                      from="room-private@aim.shakespeare.lit/thirdwitch"
+                      type="unavailable">
               <x xmlns="http://jabber.org/protocol/muc#user">
                 <item affiliation="none"
                       role="none" />

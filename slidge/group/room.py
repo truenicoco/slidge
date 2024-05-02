@@ -854,6 +854,7 @@ class LegacyMUC(
         p = self.xmpp.make_presence(
             pfrom=(await self.get_user_participant()).jid, pto=pto
         )
+        p["type"] = "unavailable"
         p["muc"]["affiliation"] = "none"
         p["muc"]["role"] = "none"
         p["muc"]["status_codes"] = {110, 333}
