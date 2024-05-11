@@ -2,9 +2,10 @@
 User actions
 """
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Iterable, Optional, Union
 
 from slidge import BaseSession, GatewayUser
+from slidge.util.types import LinkPreview, Mention
 
 from .group import MUC, Participant
 from .legacy_client import SuperDuperClient
@@ -26,7 +27,7 @@ class Session(BaseSession[str, Recipient]):
         await self.legacy_client.login()
         return "Success!"
 
-    async def send_text(
+    async def on_text(
         self,
         chat: Recipient,
         text: str,
@@ -35,6 +36,8 @@ class Session(BaseSession[str, Recipient]):
         reply_to_fallback_text: Optional[str] = None,
         reply_to: Optional[Sender] = None,  # type:ignore
         thread: Optional[str] = None,  # type:ignore
+        link_previews: Iterable[LinkPreview] = (),
+        mentions: Optional[list[Mention]] = None,
     ) -> Optional[str]:
         if chat.is_group:
             assert isinstance(chat, MUC)
