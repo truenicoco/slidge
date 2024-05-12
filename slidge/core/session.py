@@ -126,6 +126,10 @@ class BaseSession(
 
         self.__tasks = set[asyncio.Task]()
 
+    @property
+    def user(self):
+        return self.xmpp.store.users.get(self.user_jid)
+
     def __remove_task(self, fut):
         self.log.debug("Removing fut %s", fut)
         self.__tasks.remove(fut)

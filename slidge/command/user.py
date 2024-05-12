@@ -1,10 +1,11 @@
 # Commands available to users
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 from slixmpp import JID  # type:ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
 
-from ..util.types import AnyBaseSession, LegacyGroupIdType
+from ..util.types import AnyBaseSession, LegacyGroupIdType, UserPreferences
 from .base import (
     Command,
     CommandAccess,
@@ -227,6 +228,39 @@ class CreateGroup(Command):
             items=[{"name": muc.name, "jid": muc.jid}],
             jids_are_mucs=True,
         )
+
+
+class Preferences(Command):
+    NAME = "⚙️ Preferences"
+    HELP = "Customize the gateway behaviour to your liking"
+    NODE = CHAT_COMMAND = "preferences"
+    ACCESS = CommandAccess.USER
+
+    async def run(
+        self, session: Optional[AnyBaseSession], _ifrom: JID, *_: Any
+    ) -> Form:
+        fields = deepcopy(self.xmpp.PREFERENCES)
+        assert session is not None
+        current = session.user.preferences
+        for field in fields:
+            field.value = current.get(field.var)
+        return Form(
+            title="Preferences",
+            instructions=self.HELP,
+            fields=fields,
+            handler=self.finish,  # type:ignore
+        )
+
+    async def finish(
+        self, form_values: UserPreferences, session: Optional[AnyBaseSession], *_
+    ) -> str:
+        assert session is not None
+        user = session.user
+        user.preferences.update(form_values)
+        self.xmpp.store.users.update(user)
+        if form_values["sync_avatar"]:
+            await self.xmpp.fetch_user_avatar(session)
+        return "Your preferences have been updated."
 
 
 class Unregister(Command):

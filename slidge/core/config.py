@@ -218,6 +218,3 @@ DEV_MODE__DOC = (
     "Enables an interactive python shell via chat commands, for admins."
     "Not safe to use in prod, but great during dev."
 )
-
-SYNC_AVATAR = True
-SYNC_AVATAR__DOC = "Sync the user XMPP avatar to legacy network (if supported)."

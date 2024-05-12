@@ -6,7 +6,6 @@ step for a JID to become a slidge :term:`User`.
 import asyncio
 import functools
 import tempfile
-from datetime import datetime
 from enum import IntEnum
 from typing import Any
 
@@ -16,7 +15,9 @@ from slixmpp.exceptions import XMPPError
 
 from ..core import config
 from ..db import GatewayUser
+from ..util.types import UserPreferences
 from .base import Command, CommandAccess, Form, FormField, FormValues
+from .user import Preferences
 
 
 class RegistrationType(IntEnum):
@@ -66,9 +67,12 @@ class Register(Command):
 
     SUCCESS_MESSAGE = "Success, welcome!"
 
-    def _finalize(self, user: GatewayUser):
-        # user.commit()
-        self.xmpp.event("user_register", Iq(sfrom=user.jid))
+    def _finalize(
+        self, form_values: UserPreferences, _session, ifrom: JID, user: GatewayUser, *_
+    ) -> str:
+        user.preferences = form_values  # type: ignore
+        self.xmpp.store.users.update(user)
+        self.xmpp.event("user_register", Iq(sfrom=ifrom.bare))
         return self.SUCCESS_MESSAGE
 
     async def run(self, _session, _ifrom, *_):
@@ -92,16 +96,15 @@ class Register(Command):
                 raise
 
         user = GatewayUser(
-            bare_jid=ifrom.bare,
-            registration_form=form_values,
-            registration_date=datetime.now(),
+            jid=ifrom.bare,
+            legacy_module_data=form_values,
         )
 
         if self.xmpp.REGISTRATION_TYPE == RegistrationType.SINGLE_STEP_FORM or (
             self.xmpp.REGISTRATION_TYPE == RegistrationType.TWO_FACTOR_CODE
             and not two_fa_needed
         ):
-            return self._finalize(user)
+            return await self.preferences(user)
 
         if self.xmpp.REGISTRATION_TYPE == RegistrationType.TWO_FACTOR_CODE:
             return Form(
@@ -160,7 +163,7 @@ class Register(Command):
     ):
         assert isinstance(form_values["code"], str)
         await self.xmpp.validate_two_factor_code(user, form_values["code"])
-        return self._finalize(user)
+        return await self.preferences(user)
 
     async def qr(self, _form_values: FormValues, _session, _ifrom, user: GatewayUser):
         try:
@@ -176,4 +179,12 @@ class Register(Command):
                     "or you took too much time"
                 ),
             )
-        return self._finalize(user)
+        return await self.preferences(user)
+
+    async def preferences(self, user: GatewayUser) -> Form:
+        return Form(
+            title="Preferences",
+            instructions=Preferences.HELP,
+            fields=self.xmpp.PREFERENCES,
+            handler=functools.partial(self._finalize, user=user),  # type:ignore
+        )

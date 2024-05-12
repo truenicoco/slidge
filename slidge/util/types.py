@@ -180,3 +180,8 @@ class Mention(NamedTuple):
 class Hat(NamedTuple):
     uri: str
     title: str
+
+
+class UserPreferences(TypedDict):
+    sync_avatar: bool
+    sync_presence: bool
