@@ -3903,3 +3903,17 @@ class TestNickChange(Base):
             </presence>
             """
         )
+        self.send(None)
+
+    def test_user_gets_away(self):
+        muc = self.get_private_muc("room-private", ("gajim",))
+        self.recv(  # language=XML
+            f"""
+            <presence from='{muc.user.jid}/gajim'
+                      id='nick-change'
+                      to='{muc.jid}/{muc.user_nick}'
+                      show='away' />
+            """
+        )
+
+        self.send(None)

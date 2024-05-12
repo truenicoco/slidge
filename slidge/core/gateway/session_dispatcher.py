@@ -473,6 +473,12 @@ class SessionDispatcher:
         if muc is None or p.get_from().resource not in muc.user_resources:
             return
 
+        if pto.resource == muc.user_nick:
+            # Ignore presence stanzas with the valid nick.
+            # even if joined to the group, we might receive those from clients,
+            # when setting a status message, or going away, etc.
+            return
+
         # We can't use XMPPError here because from must be room@slidge/VALID-USER-NICK
 
         error_from = JID(muc.jid)
