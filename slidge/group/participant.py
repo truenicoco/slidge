@@ -108,7 +108,7 @@ class LegacyParticipant(
         msg = self._make_message()
         msg["muc"]["affiliation"] = self._affiliation
         msg["type"] = "normal"
-        if not self.muc.is_anonymous:
+        if not self.muc.is_anonymous and not self.is_system:
             if self.contact:
                 msg["muc"]["jid"] = self.contact.jid
             else:
@@ -235,7 +235,7 @@ class LegacyParticipant(
         codes = status_codes or set()
         if self.is_user:
             codes.add(110)
-        if not self.muc.is_anonymous:
+        if not self.muc.is_anonymous and not self.is_system:
             if self.is_user:
                 if user_full_jid:
                     p["muc"]["jid"] = user_full_jid
