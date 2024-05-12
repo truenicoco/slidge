@@ -461,14 +461,17 @@ class SessionDispatcher:
 
         pto = p.get_to()
         if pto == self.xmpp.boundjid.bare:
-            # NB: get_type() returns either a proper presence type or
-            #     a presence show if available. Weird, weird, weird slix.
+            session.log.debug("Received a presence from %s", p.get_from())
             if (ptype := p.get_type()) not in _USEFUL_PRESENCES:
                 return
+            if not session.user.preferences.get("sync_presence", False):
+                session.log.debug("User does not want to sync their presence")
+                return
+            # NB: get_type() returns either a proper presence type or
+            #     a presence show if available. Weird, weird, weird slix.
             resources = self.xmpp.roster[self.xmpp.boundjid.bare][
                 p.get_from()
             ].resources
-            session.log.debug("Received a presence from %s", p.get_from())
             await session.on_presence(
                 p.get_from().resource,
                 ptype,  # type: ignore
@@ -533,10 +536,10 @@ class SessionDispatcher:
         await session.on_displayed(chat, _xmpp_msg_id_to_legacy(session, stanza_id))
 
     async def on_avatar_metadata_publish(self, m: Message):
-        if not config.SYNC_AVATAR:
-            return
-
         session = await self.__get_session(m, timeout=None)
+        if not session.user.preferences.get("sync_avatar", False):
+            session.log.debug("User does not want to sync their avatar")
+            return
         info = m["pubsub_event"]["items"]["item"]["avatar_metadata"]["info"]
 
         await self.on_avatar_metadata_info(session, info)

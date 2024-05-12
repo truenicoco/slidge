@@ -165,9 +165,11 @@ class Base(ClearSessionMixin, SlidgeTest):
 
     def setUp(self):
         super().setUp()
-        self.xmpp.store.users.new(
+        user = self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
+        user.preferences = {"sync_avatar": True, "sync_presence": True}
+        self.xmpp.store.users.update(user)
         self.get_romeo_session().logged = True
 
     @staticmethod
@@ -661,6 +663,9 @@ class TestAimShakespeareBase(Base):
                       node="👥 Groups"
                       name="👥 Groups" />
                 <item jid="aim.shakespeare.lit"
+                      node="preferences"
+                      name="⚙️ Preferences" />
+                <item jid="aim.shakespeare.lit"
                       node="unregister"
                       name="❌ Unregister from the gateway" />
               </query>
@@ -694,6 +699,9 @@ class TestAimShakespeareBase(Base):
                 <item jid="aim.shakespeare.lit"
                       node="re-login"
                       name="🔐 Re-login to the legacy network" />
+                <item jid="aim.shakespeare.lit"
+                      node="preferences"
+                      name="⚙️ Preferences" />
                 <item jid="aim.shakespeare.lit"
                       node="unregister"
                       name="❌ Unregister from the gateway" />
