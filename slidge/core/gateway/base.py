@@ -521,7 +521,7 @@ class BaseGateway(
             self.send_message(
                 mto=jid,
                 mbody=f"{iq.get_from()} has registered",
-                mtype="headline",
+                mtype="chat",
                 mfrom=self.boundjid.bare,
             )
         session.send_gateway_message(self.WELCOME_MESSAGE)
