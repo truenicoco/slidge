@@ -6,6 +6,8 @@ authors = ["Nicolas Cedilnik <nicoco@nicoco.fr>"]
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 homepage = "https://sr.ht/~nicoco/slidge/"
+repository = "https://git.sr.ht/~nicoco/slidge/"
+documentation = "https://slidge.im/"
 include = ["slidge/util/schema.sql"]
 
 [tool.poetry.dependencies]

@@ -1,4 +1,4 @@
-![Slidge logo](./dev/assets/slidge-color-small.png)
+![Slidge logo](https://git.sr.ht/~nicoco/slidge/blob/master/dev/assets/slidge-color-small.png)
 
 [Home](https://sr.ht/~nicoco/slidge) |
 [Docs](https://slidge.im/core) |
@@ -42,8 +42,7 @@ bundle.
 Status
 ------
 
-Slidge is **beta**-grade software for 1:1 chats.
-Group chat support is **experimental**.
+Slidge is **beta**-grade software. It support groups and 1:1 chats.
 
 Try slidge and give us some
 feedback, through the [MUC](xmpp:slidge@conference.nicoco.fr?join), the
