@@ -448,6 +448,15 @@ class SessionDispatcher:
                 entity.react(legacy_id, emojis, xmpp_id=xmpp_id, carbon=True)
 
     async def on_presence(self, p: Presence):
+        if p.get_plugin("muc_join", check=True):
+            # handled in on_groupchat_join
+            # without this early return, since we switch from and to in this
+            # presence stanza, on_groupchat_join ends up trying to instantiate
+            # a MUC with the user's JID, which in turn leads to slidge sending
+            # a (error) presence from=the user's JID, which terminates the
+            # XML stream.
+            return
+
         session = await self.__get_session(p)
 
         pto = p.get_to()
