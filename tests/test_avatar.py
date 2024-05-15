@@ -356,6 +356,7 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="juliet@aim.shakespeare.lit/slidge" />
+              <nick xmlns="http://jabber.org/protocol/nick">juliet🎉</nick>
             </presence>
             """
         )
@@ -373,6 +374,7 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="juliet@aim.shakespeare.lit/slidge" />
+              <nick xmlns="http://jabber.org/protocol/nick">juliet🎉</nick>
             </presence>
             """
         )

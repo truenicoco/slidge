@@ -2927,6 +2927,7 @@ class TestMuc(Base):
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="{p.contact.jid}" />
+              <nick xmlns="http://jabber.org/protocol/nick">a forbidden emoji 🎉</nick>
             </presence>
             """
         )

@@ -143,6 +143,7 @@ class LegacyParticipant(
 
         if self.is_system:
             self.jid = j
+            self._nickname_no_illegal = ""
             return
 
         nickname = unescaped_nickname
@@ -213,7 +214,6 @@ class LegacyParticipant(
 
         kwargs["status_codes"] = set()
         p = self._make_presence(ptype="available", last_seen=last_seen, **kwargs)
-        self.__add_nick_element(p)
         self._send(p)
 
         if old:
@@ -301,6 +301,7 @@ class LegacyParticipant(
         **send_kwargs,
     ) -> MessageOrPresenceTypeVar:
         stanza["occupant-id"]["id"] = self.__occupant_id
+        self.__add_nick_element(stanza)
         if isinstance(stanza, Presence):
             if stanza["type"] == "unavailable" and not self.__presence_sent:
                 return stanza  # type:ignore
@@ -344,11 +345,11 @@ class LegacyParticipant(
                 )
         return item
 
-    def __add_nick_element(self, p: Presence):
+    def __add_nick_element(self, stanza: Union[Presence, Message]):
         if (nick := self._nickname_no_illegal) != self.jid.resource:
             n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
             n["nick"] = nick
-            p.append(n)
+            stanza.append(n)
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
         own = super()._get_last_presence()
@@ -400,7 +401,6 @@ class LegacyParticipant(
         )
         if presence_id:
             p["id"] = presence_id
-        self.__add_nick_element(p)
         self._send(p, full_jid)
 
     def leave(self):
