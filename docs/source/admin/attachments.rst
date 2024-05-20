@@ -15,7 +15,7 @@ At the minimum, you need to set up no-upload-path to a local directory, no-uploa
 for details on how to set these options).
 
 Make sure that ``no-upload-path`` is writeable by slidge and readable by
-your HTTP server. You may use ``no-upload-read-others=true`` to do that easily,
+your HTTP server. You may use ``no-upload-file-read-others=true`` to do that easily,
 but you might want to restrict which users can read this directory.
 
 .. warning::
