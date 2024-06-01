@@ -40,8 +40,12 @@ class Registration:
         log.debug("User validate: %s", ifrom.bare)
         form_dict = {f.var: iq.get(f.var) for f in xmpp.REGISTRATION_FIELDS}
         xmpp.raise_if_not_allowed_jid(ifrom)
-        await xmpp.user_prevalidate(ifrom, form_dict)
-        user = self.xmpp.store.users.new(jid=ifrom, legacy_module_data=form_dict)
+        legacy_module_data = await xmpp.user_prevalidate(ifrom, form_dict)
+        if legacy_module_data is None:
+            legacy_module_data = form_dict
+        user = self.xmpp.store.users.new(
+            jid=ifrom, legacy_module_data=legacy_module_data
+        )
         log.info("New user: %s", user)
 
     async def _user_modify(

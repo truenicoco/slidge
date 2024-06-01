@@ -86,10 +86,11 @@ class Register(Command):
     async def register(self, form_values: dict[str, Any], _session, ifrom: JID):
         two_fa_needed = True
         try:
-            await self.xmpp.user_prevalidate(ifrom, form_values)
+            data = await self.xmpp.user_prevalidate(ifrom, form_values)
         except ValueError as e:
             raise XMPPError("bad-request", str(e))
         except TwoFactorNotRequired:
+            data = None
             if self.xmpp.REGISTRATION_TYPE == RegistrationType.TWO_FACTOR_CODE:
                 two_fa_needed = False
             else:
@@ -97,7 +98,7 @@ class Register(Command):
 
         user = GatewayUser(
             jid=ifrom.bare,
-            legacy_module_data=form_values,
+            legacy_module_data=form_values if data is None else data,
         )
 
         if self.xmpp.REGISTRATION_TYPE == RegistrationType.SINGLE_STEP_FORM or (
@@ -162,12 +163,14 @@ class Register(Command):
         self, form_values: FormValues, _session, _ifrom, user: GatewayUser
     ):
         assert isinstance(form_values["code"], str)
-        await self.xmpp.validate_two_factor_code(user, form_values["code"])
+        data = await self.xmpp.validate_two_factor_code(user, form_values["code"])
+        if data is not None:
+            user.legacy_module_data.update(data)
         return await self.preferences(user)
 
     async def qr(self, _form_values: FormValues, _session, _ifrom, user: GatewayUser):
         try:
-            await asyncio.wait_for(
+            data = await asyncio.wait_for(
                 self.xmpp.qr_pending_registrations[user.jid.bare],  # type:ignore
                 config.QR_TIMEOUT,
             )
@@ -179,6 +182,8 @@ class Register(Command):
                     "or you took too much time"
                 ),
             )
+        if data is not None:
+            user.legacy_module_data.update(data)
         return await self.preferences(user)
 
     async def preferences(self, user: GatewayUser) -> Form:

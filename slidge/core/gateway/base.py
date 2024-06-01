@@ -258,7 +258,7 @@ class BaseGateway(
         self.use_origin_id = False
 
         self.jid_validator: re.Pattern = re.compile(config.USER_JID_VALIDATOR)
-        self.qr_pending_registrations = dict[str, asyncio.Future[bool]]()
+        self.qr_pending_registrations = dict[str, asyncio.Future[Optional[dict]]]()
 
         self.session_cls: BaseSession = BaseSession.get_unique_subclass()
         self.session_cls.xmpp = self
@@ -692,18 +692,20 @@ class BaseGateway(
         reply.set_payload(reg)
         return reply
 
-    async def user_prevalidate(self, ifrom: JID, form_dict: dict[str, Optional[str]]):
+    async def user_prevalidate(
+        self, ifrom: JID, form_dict: dict[str, Optional[str]]
+    ) -> Optional[dict]:
         # Pre validate a registration form using the content of self.REGISTRATION_FIELDS
         # before passing it to the plugin custom validation logic.
         for field in self.REGISTRATION_FIELDS:
             if field.required and not form_dict.get(field.var):
                 raise ValueError(f"Missing field: '{field.label}'")
 
-        await self.validate(ifrom, form_dict)
+        return await self.validate(ifrom, form_dict)
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
-    ):
+    ) -> Optional[dict]:
         """
         Validate a user's initial registration form.
 
@@ -726,10 +728,16 @@ class BaseGateway(
             of the :attr:`.BaseGateway.REGISTRATION_FIELDS` iterable.
             This dict can be modified and will be accessible as the ``legacy_module_data``
             of the
+
+        :return : A dict that will be stored as the persistent "legacy_module_data"
+            for this user. If you don't return anything here, the whole registration_form
+            content will be stored.
         """
         raise NotImplementedError
 
-    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+    async def validate_two_factor_code(
+        self, user: GatewayUser, code: str
+    ) -> Optional[dict]:
         """
         Called when the user enters their 2FA code.
 
@@ -744,6 +752,9 @@ class BaseGateway(
             :attr:`.registration_form` attributes to get what you need.
         :param code: The code they entered, either via "chatbot" message or
             adhoc command
+
+        :return : A dict which keys and values will be added to the persistent "legacy_module_data"
+            for this user.
         """
         raise NotImplementedError
 
@@ -763,7 +774,10 @@ class BaseGateway(
         raise NotImplementedError
 
     async def confirm_qr(
-        self, user_bare_jid: str, exception: Optional[Exception] = None
+        self,
+        user_bare_jid: str,
+        exception: Optional[Exception] = None,
+        legacy_data: Optional[dict] = None,
     ):
         """
         This method is meant to be called to finalize QR code-based registration
@@ -776,10 +790,12 @@ class BaseGateway(
             :class:`GatewayUser` instance
         :param exception: Optionally, an XMPPError to be raised to **not** confirm
             QR code flashing.
+        :param legacy_data: dict which keys and values will be added to the persistent
+            "legacy_module_data" for this user.
         """
         fut = self.qr_pending_registrations[user_bare_jid]
         if exception is None:
-            fut.set_result(True)
+            fut.set_result(legacy_data)
         else:
             fut.set_exception(exception)
 

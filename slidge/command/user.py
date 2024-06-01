@@ -243,7 +243,7 @@ class Preferences(Command):
         assert session is not None
         current = session.user.preferences
         for field in fields:
-            field.value = current.get(field.var)
+            field.value = current.get(field.var)  # type:ignore
         return Form(
             title="Preferences",
             instructions=self.HELP,
@@ -256,7 +256,7 @@ class Preferences(Command):
     ) -> str:
         assert session is not None
         user = session.user
-        user.preferences.update(form_values)
+        user.preferences.update(form_values)  # type:ignore
         self.xmpp.store.users.update(user)
         if form_values["sync_avatar"]:
             await self.xmpp.fetch_user_avatar(session)
