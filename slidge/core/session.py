@@ -127,8 +127,8 @@ class BaseSession(
         self.__tasks = set[asyncio.Task]()
 
     @property
-    def user(self):
-        return self.xmpp.store.users.get(self.user_jid)
+    def user(self) -> GatewayUser:
+        return self.xmpp.store.users.get(self.user_jid)  # type:ignore
 
     def __remove_task(self, fut):
         self.log.debug("Removing fut %s", fut)
@@ -772,6 +772,24 @@ class BaseSession(
                 "recipient-unavailable",
                 "Legacy session is not fully initialized, retry later",
             )
+
+    def legacy_module_data_update(self, data: dict):
+        with self.xmpp.store.session():
+            user = self.user
+            user.legacy_module_data.update(data)
+            self.xmpp.store.users.update(user)
+
+    def legacy_module_data_set(self, data: dict):
+        with self.xmpp.store.session():
+            user = self.user
+            user.legacy_module_data = data
+            self.xmpp.store.users.update(user)
+
+    def legacy_module_data_clear(self):
+        with self.xmpp.store.session():
+            user = self.user
+            user.legacy_module_data.clear()
+            self.xmpp.store.users.update(user)
 
 
 # keys = user.jid.bare
