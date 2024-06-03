@@ -3324,7 +3324,11 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
     def setUp(self):
         super().setUp()
         session = self.get_romeo_session()
-        session.avatar_hash = self.avatar_sha1
+        with self.xmpp.store.session() as orm:
+            user = session.user
+            user.avatar_hash = self.avatar_sha1
+            orm.add(user)
+            orm.commit()
         muc = self.get_private_muc(name="room-user-avatar-test", resources=("gajim",))
         self.user_participant = self.run_coro(muc.get_user_participant())
 

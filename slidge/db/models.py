@@ -1,5 +1,6 @@
 import warnings
 from datetime import datetime
+from typing import Optional
 
 import sqlalchemy as sa
 from slixmpp import JID
@@ -18,6 +19,7 @@ class GatewayUser(Base):
 
     legacy_module_data: Mapped[JSONSerializable] = mapped_column(default={})
     preferences: Mapped[JSONSerializable] = mapped_column(default={})
+    avatar_hash: Mapped[Optional[str]] = mapped_column(default=None)
 
     def __repr__(self) -> str:
         return f"User(id={self.id!r}, jid={self.jid!r})"

@@ -122,8 +122,6 @@ class BaseSession(
 
         self.__cached_presence: Optional[CachedPresence] = None
 
-        self.avatar_hash: Optional[str] = None
-
         self.__tasks = set[asyncio.Task]()
 
     @property

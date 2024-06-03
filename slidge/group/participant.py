@@ -260,7 +260,7 @@ class LegacyParticipant(
                 warnings.warn(
                     f"Private group but no 1:1 JID associated to '{self}'",
                 )
-        if self.is_user and (hash_ := self.session.avatar_hash):
+        if self.is_user and (hash_ := self.session.user.avatar_hash):
             p["vcard_temp_update"]["photo"] = hash_
         p["muc"]["status_codes"] = codes
         return p
