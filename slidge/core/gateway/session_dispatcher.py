@@ -545,12 +545,17 @@ class SessionDispatcher:
         await self.on_avatar_metadata_info(session, info)
 
     async def on_avatar_metadata_info(self, session: BaseSession, info: Info):
-        session.log.debug("Avatar metadata info: %s", info)
         hash_ = info["id"]
 
-        if session.avatar_hash == hash_:
+        if session.user.avatar_hash == hash_:
+            session.log.debug("We already know this avatar hash")
             return
-        session.avatar_hash = hash_
+        with self.xmpp.store.session() as orm_session:
+            user = self.xmpp.store.users.get(session.user_jid)
+            assert user is not None
+            user.avatar_hash = hash_
+            orm_session.add(user)
+            orm_session.commit()
 
         if hash_:
             try:

@@ -40,9 +40,11 @@ class VCardTemp:
             return await self.__handle_set_vcard_temp(iq)
 
     async def __fetch_user_avatar(self, session: BaseSession):
-        hash_ = session.avatar_hash
+        hash_ = session.user.avatar_hash
         if not hash_:
-            raise XMPPError("item-not-found", "This participant has no contact")
+            raise XMPPError(
+                "item-not-found", "The slidge user does not have any avatar set"
+            )
         meta_iq = await self.xmpp.plugin["xep_0060"].get_item(
             session.user_jid,
             MetaData.namespace,
