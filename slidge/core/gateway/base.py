@@ -505,9 +505,8 @@ class BaseGateway(
             session.send_gateway_status("Logged in", show="chat")
         else:
             session.send_gateway_status(status, show="chat")
-        # If we stored users avatars (or their hash) persistently across slidge
-        # restarts, we would not need to fetch it on startup
-        session.create_task(self.fetch_user_avatar(session))
+        if session.user.preferences.get("sync_avatar", False):
+            session.create_task(self.fetch_user_avatar(session))
 
     async def fetch_user_avatar(self, session: BaseSession):
         try:
