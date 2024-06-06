@@ -340,6 +340,7 @@ class LegacyMUC(
             "vcard-temp",
             "urn:xmpp:ping",
             "urn:xmpp:occupant-id:0",
+            "jabber:iq:register",
             self.xmpp.plugin["xep_0425"].stanza.NS,
         ]
         if self.type == MucType.GROUP:

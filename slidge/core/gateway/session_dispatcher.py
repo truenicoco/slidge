@@ -62,6 +62,13 @@ class SessionDispatcher:
                 _exceptions_to_xmpp_errors(self.on_muc_owner_set),  # type: ignore
             )
         )
+        xmpp.register_handler(
+            CoroutineCallback(
+                "ibr_remove",
+                StanzaPath("/iq/register"),
+                _exceptions_to_xmpp_errors(self.on_ibr_remove),  # type: ignore
+            )
+        )
 
         for event in (
             "legacy_message",
@@ -725,6 +732,21 @@ class SessionDispatcher:
                 "Use the room configuration to update its name or description",
             )
         await muc.on_set_subject(msg["subject"])
+
+    async def on_ibr_remove(self, iq: Iq):
+        if iq.get_to() == self.xmpp.boundjid.bare:
+            return
+
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+
+        if iq["type"] == "set" and iq["register"]["remove"]:
+            muc = await session.bookmarks.by_jid(iq.get_to())
+            await session.on_leave_group(muc.legacy_id)
+            iq.reply().send()
+            return
+
+        raise XMPPError("feature-not-implemented")
 
 
 def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):

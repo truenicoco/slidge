@@ -358,6 +358,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
                 <feature var="urn:xmpp:message-moderate:0" />
+                <feature var="jabber:iq:register" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -440,6 +441,7 @@ class TestMuc(Base):
                 <feature var="muc_public" />
                 <feature var="urn:xmpp:occupant-id:0" />
                 <feature var="urn:xmpp:message-moderate:0" />
+                <feature var="jabber:iq:register" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -526,6 +528,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
                 <feature var="urn:xmpp:message-moderate:0" />
+                <feature var="jabber:iq:register" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -657,6 +660,7 @@ class TestMuc(Base):
                 <feature var="urn:xmpp:ping" />
                 <feature var="urn:xmpp:occupant-id:0" />
                 <feature var="urn:xmpp:message-moderate:0" />
+                <feature var="jabber:iq:register" />
                 <x xmlns="jabber:x:data"
                    type="result">
                   <field var="FORM_TYPE"
@@ -3922,3 +3926,107 @@ class TestNickChange(Base):
         )
 
         self.send(None)
+
+
+class TestMUCRegistration(Base):
+    def test_request_registration_form_unknown_muc(self):
+        session = self.get_romeo_session()
+        self.recv(  # language=XML
+            f"""
+            <iq from='{session.user_jid}/gajim'
+                to='some-id@{session.xmpp.boundjid.bare}'
+                type='get'
+                id="1">
+              <query xmlns='jabber:iq:register' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq to='{session.user_jid}/gajim'
+                from='some-id@{session.xmpp.boundjid.bare}'
+                type='error'
+                id="1">
+              <error type='cancel'>
+                <feature-not-implemented xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
+              </error>
+            </iq>
+            """
+        )
+
+    def test_request_registration_form_known_muc(self):
+        muc = self.get_private_muc("room-private", ("gajim",))
+        self.recv(  # language=XML
+            f"""
+            <iq from='{muc.user_jid}/gajim'
+                to='{muc.jid}'
+                type='get'
+                id="1">
+              <query xmlns='jabber:iq:register' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            f"""
+            <iq to='{muc.user_jid}/gajim'
+                from='{muc.jid}'
+                type='error'
+                id="1">
+              <error type='cancel'>
+                <feature-not-implemented xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' />
+              </error>
+            </iq>
+            """
+        )
+
+    def test_request_remove_known_muc(self):
+        muc = self.get_private_muc("room-private", ("gajim",))
+        with unittest.mock.patch(
+            "slidge.core.session.BaseSession.on_leave_group"
+        ) as olg:
+            self.recv(  # language=XML
+                f"""
+            <iq from='{muc.user_jid}/gajim'
+                to='{muc.jid}'
+                type='set'
+                id='1'>
+              <query xmlns='jabber:iq:register'>
+                <remove />
+              </query>
+            </iq>
+            """
+            )
+            olg.assert_awaited_once_with(muc.legacy_id)
+        self.send(  # language=XML
+            f"""
+            <iq to='{muc.user_jid}/gajim'
+                from='{muc.jid}'
+                type='result'
+                id="1" />
+            """
+        )
+        self.recv(  # language=XML
+            f"""
+            <iq from='{muc.user_jid}/gajim'
+                to='{muc.jid}'
+                type='set'
+                id='1'>
+              <query xmlns='jabber:iq:register'>
+                <remove />
+              </query>
+            </iq>
+            """,
+        )
+        self.send(  # language=XML
+            f"""
+            <iq from="room-private@aim.shakespeare.lit"
+                to="romeo@montague.lit/gajim"
+                type="error"
+                id="1">
+              <error type="cancel">
+                <feature-not-implemented xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Not implemented by the legacy module</text>
+              </error>
+            </iq>
+            """
+        )

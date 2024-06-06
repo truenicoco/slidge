@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union, cast
 from slixmpp import JID  # type:ignore[attr-defined]
 from slixmpp.exceptions import XMPPError
 
+from ..group.room import LegacyMUC
 from ..util.types import AnyBaseSession, LegacyGroupIdType, UserPreferences
 from .base import (
     Command,
@@ -284,3 +285,46 @@ class Unregister(Command):
         assert user is not None
         await self.xmpp.unregister_user(user)
         return "OK"
+
+
+class LeaveGroup(Command):
+    NAME = HELP = "❌ Leave a legacy group"
+    NODE = CHAT_COMMAND = "leave-group"
+    ACCESS = CommandAccess.USER_LOGGED
+    CATEGORY = GROUPS
+
+    async def run(self, session, _ifrom, *_):
+        assert session is not None
+        await session.bookmarks.fill()
+        groups = sorted(session.bookmarks, key=lambda g: g.DISCO_NAME.casefold())
+        return Form(
+            title="Leave a group",
+            instructions="Select the group you want to leave",
+            fields=[
+                FormField(
+                    "group",
+                    "Group name",
+                    options=[{"label": g.name, "value": g.name} for g in groups],
+                )
+            ],
+            handler=self.confirm,  # type:ignore
+            handler_args=(groups,),
+        )
+
+    async def confirm(
+        self,
+        form_values: FormValues,
+        _session: AnyBaseSession,
+        _ifrom,
+        groups: list[LegacyMUC],
+    ):
+        group = groups[int(form_values["group"])]  # type:ignore
+        return Confirmation(
+            prompt=f"Are you sure you want to leave the group '{group.name}'?",
+            handler=self.finish,  # type:ignore
+            handler_args=(group,),
+        )
+
+    @staticmethod
+    async def finish(session: AnyBaseSession, _ifrom, group: LegacyMUC):
+        await session.on_leave_group(group.legacy_id)

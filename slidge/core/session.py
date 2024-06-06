@@ -490,6 +490,17 @@ class BaseSession(
         """
         await muc.on_set_affiliation(contact, "member", reason, None)
 
+    async def on_leave_group(self, muc: LegacyMUC):
+        """
+        Triggered when the user leaves a group via the dedicated slidge command
+        or the :xep:`0077` ``<remove />`` mechanism.
+
+        This should be interpreted as definitely leaving the group.
+
+        :param muc: The group to leave
+        """
+        raise NotImplementedError
+
     def __reset_ready(self):
         self.ready = self.xmpp.loop.create_future()
 
@@ -604,6 +615,9 @@ class BaseSession(
         # :param jid:
         # :return:
         # """
+        session = _sessions.get(jid.bare)
+        if session is not None:
+            return session
         user = cls.xmpp.store.users.get(jid)
         return cls._from_user_or_none(user)
 
