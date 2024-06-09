@@ -8,7 +8,15 @@ import re
 import tempfile
 from copy import copy
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Collection, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Collection,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import aiohttp
 import qrcode
@@ -693,7 +701,7 @@ class BaseGateway(
 
     async def user_prevalidate(
         self, ifrom: JID, form_dict: dict[str, Optional[str]]
-    ) -> Optional[dict]:
+    ) -> Optional[Mapping]:
         # Pre validate a registration form using the content of self.REGISTRATION_FIELDS
         # before passing it to the plugin custom validation logic.
         for field in self.REGISTRATION_FIELDS:
@@ -704,7 +712,7 @@ class BaseGateway(
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
-    ) -> Optional[dict]:
+    ) -> Optional[Mapping]:
         """
         Validate a user's initial registration form.
 

@@ -44,7 +44,8 @@ class Registration:
         if legacy_module_data is None:
             legacy_module_data = form_dict
         user = self.xmpp.store.users.new(
-            jid=ifrom, legacy_module_data=legacy_module_data
+            jid=ifrom,
+            legacy_module_data=legacy_module_data,  # type:ignore
         )
         log.info("New user: %s", user)
 
