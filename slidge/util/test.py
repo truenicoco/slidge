@@ -21,7 +21,6 @@ from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 from slidge import (
     BaseGateway,
