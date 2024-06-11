@@ -3,9 +3,8 @@ import shutil
 import sys
 from pathlib import Path
 
-from alembic.config import Config
-
 from alembic import command
+from alembic.config import Config
 
 from .core import config
 

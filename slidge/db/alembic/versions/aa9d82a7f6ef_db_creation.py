@@ -12,9 +12,9 @@ import logging
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from alembic import op
 
 import slidge.db.meta
-from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "aa9d82a7f6ef"

@@ -1,4 +1,5 @@
 from alembic import context
+
 from slidge import global_config
 from slidge.db.meta import Base, get_engine
 
