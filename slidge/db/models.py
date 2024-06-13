@@ -41,3 +41,21 @@ class GatewayUser(Base):
             "GatewayUser.registration_form is deprecated.", DeprecationWarning
         )
         return self.legacy_module_data
+
+
+class Avatar(Base):
+    __tablename__ = "avatar"
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    jid: Mapped[JID] = mapped_column(unique=True, index=True)
+
+    filename: Mapped[str] = mapped_column(unique=True)
+    hash: Mapped[str] = mapped_column(unique=True)
+    height: Mapped[int] = mapped_column()
+    width: Mapped[int] = mapped_column()
+
+    legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
+
+    url: Mapped[Optional[str]] = mapped_column(default=None)
+    etag: Mapped[Optional[str]] = mapped_column(default=None)
+    last_modified: Mapped[Optional[str]] = mapped_column(default=None)

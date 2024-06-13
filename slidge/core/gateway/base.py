@@ -10,6 +10,7 @@ from copy import copy
 from datetime import datetime
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Collection,
     Mapping,
@@ -228,6 +229,16 @@ class BaseGateway(
     is_group = False
     _can_send_carbon = False
     store: SlidgeStore
+
+    AVATAR_ID_TYPE: Callable[[str], Any] = str
+    """
+    Modify this if the legacy network uses unique avatar IDs that are not strings.
+
+    This is required because we store those IDs as TEXT in the persistent SQL DB.
+    The callable specified here will receive is responsible for converting the
+    serialised-as-text version of the avatar unique ID back to the proper type.
+    Common example: ``int``.
+    """
 
     def __init__(self):
         self.datetime_started = datetime.now()

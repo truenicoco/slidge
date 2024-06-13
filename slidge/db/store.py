@@ -8,7 +8,8 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, attributes
 
 from ..util.sql import db
-from .models import GatewayUser
+from ..util.types import URL
+from .models import Avatar, GatewayUser
 
 
 class EngineMixin:
@@ -31,6 +32,7 @@ class SlidgeStore(EngineMixin):
     def __init__(self, engine: Engine):
         super().__init__(engine)
         self.users = UserStore(engine)
+        self.avatars = AvatarStore(engine)
 
 
 class UserStore(EngineMixin):
@@ -69,3 +71,19 @@ class UserStore(EngineMixin):
         with self.session() as session:
             session.delete(self.get(jid))
             session.commit()
+
+
+class AvatarStore(EngineMixin):
+    def get_by_url(self, url: URL) -> Optional[Avatar]:
+        with self.session() as session:
+            return session.execute(select(Avatar).where(Avatar.url == url)).scalar()
+
+    def get_by_legacy_id(self, legacy_id: str) -> Optional[Avatar]:
+        with self.session() as session:
+            return session.execute(
+                select(Avatar).where(Avatar.legacy_id == legacy_id)
+            ).scalar()
+
+    def get_by_jid(self, jid: JID) -> Optional[Avatar]:
+        with self.session() as session:
+            return session.execute(select(Avatar).where(Avatar.jid == jid)).scalar()

@@ -2,19 +2,21 @@ import asyncio
 import hashlib
 import io
 import logging
-import shelve
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import aiohttp
+from black import Any
 from multidict import CIMultiDictProxy
 from PIL import Image
 from slixmpp import JID
 
+from ..db.models import Avatar
+from ..db.store import AvatarStore
 from ..util.types import URL, LegacyFileIdType
 from . import config
 
@@ -37,12 +39,26 @@ class CachedAvatar:
     def path(self):
         return self.root / self.filename
 
+    @staticmethod
+    def from_store(stored: Avatar, root_dir: Path):
+        return CachedAvatar(
+            filename=stored.filename,
+            hash=stored.hash,
+            height=stored.height,
+            width=stored.width,
+            etag=stored.etag,
+            root=root_dir,
+            last_modified=stored.last_modified,
+        )
+
 
 class AvatarCache:
     _shelf_path: str
     _jid_to_legacy_path: str
     dir: Path
     http: aiohttp.ClientSession
+    store: AvatarStore
+    legacy_avatar_type: Callable[[str], Any] = str
 
     def __init__(self):
         self._thread_pool = ThreadPoolExecutor(config.AVATAR_RESAMPLING_THREADS)
@@ -50,13 +66,11 @@ class AvatarCache:
     def set_dir(self, path: Path):
         self.dir = path
         self.dir.mkdir(exist_ok=True)
-        self._shelf_path = str(path / "slidge_avatar_cache.shelf")
-        self._jid_to_legacy_path = str(path / "jid_to_avatar_unique_id.shelf")
 
     def close(self):
         self._thread_pool.shutdown(cancel_futures=True)
 
-    def __get_http_headers(self, cached: Optional[CachedAvatar]):
+    def __get_http_headers(self, cached: Optional[CachedAvatar | Avatar]):
         headers = {}
         if cached and (self.dir / cached.filename).exists():
             if last_modified := cached.last_modified:
@@ -95,8 +109,7 @@ class AvatarCache:
             )
 
     async def url_has_changed(self, url: URL):
-        with shelve.open(self._shelf_path) as s:
-            cached = s.get(url)
+        cached = self.store.get_by_url(url)
         if cached is None:
             return True
         headers = self.__get_http_headers(cached)
@@ -104,23 +117,35 @@ class AvatarCache:
             return response.status != HTTPStatus.NOT_MODIFIED
 
     def get(self, unique_id: LegacyFileIdType) -> Optional[CachedAvatar]:
-        with shelve.open(self._shelf_path) as s:
-            return s.get(str(unique_id))
+        stored = self.store.get_by_legacy_id(str(unique_id))
+        if stored is None:
+            return None
+        return CachedAvatar.from_store(stored, self.dir)
 
     def get_cached_id_for(self, jid: JID) -> Optional[LegacyFileIdType]:
-        with shelve.open(self._jid_to_legacy_path) as s:
-            return s.get(str(jid))
+        with self.store.session():
+            stored = self.store.get_by_jid(jid)
+            if stored is None:
+                return None
+            if stored.legacy_id is None:
+                return None
+            return self.legacy_avatar_type(stored.legacy_id)
 
     def store_jid(self, jid: JID, uid: LegacyFileIdType):
-        with shelve.open(self._jid_to_legacy_path) as s:
-            s[str(jid)] = uid
+        with self.store.session() as orm:
+            stored = self.store.get_by_legacy_id(str(uid))
+            assert stored is not None
+            stored.jid = jid
+            orm.add(stored)
+            orm.commit()
 
     def delete_jid(self, jid: JID):
-        try:
-            with shelve.open(self._jid_to_legacy_path) as s:
-                del s[str(jid)]
-        except KeyError:
-            pass
+        with self.store.session() as orm:
+            stored = self.store.get_by_jid(jid)
+            if stored is None:
+                return
+            orm.delete(stored)
+            orm.commit()
 
     async def convert_and_store(
         self,
@@ -157,20 +182,22 @@ class AvatarCache:
 
         hash_ = hashlib.sha1(img_bytes).hexdigest()
 
-        avatar = CachedAvatar(
+        stored = Avatar(
             filename=filename,
             hash=hash_,
             height=img.height,
             width=img.width,
-            root=self.dir,
+            jid=jid,
+            legacy_id=None if unique_id is None else str(unique_id),
+            url=None if response_headers is None else unique_id,
         )
         if response_headers:
-            avatar.etag = response_headers.get("etag")
-            avatar.last_modified = response_headers.get("last-modified")
-        with shelve.open(self._shelf_path) as s:
-            s[str(unique_id)] = avatar
-        self.store_jid(jid, unique_id)
-        return avatar
+            stored.etag = response_headers.get("etag")
+            stored.last_modified = response_headers.get("last-modified")
+        with self.store.session() as orm:
+            orm.add(stored)
+            orm.commit()
+            return CachedAvatar.from_store(stored, self.dir)
 
 
 avatar_cache = AvatarCache()

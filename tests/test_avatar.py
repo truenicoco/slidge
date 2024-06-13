@@ -136,6 +136,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
         juliet = self.juliet
         assert juliet.avatar is None
 
+        avatar_cache.legacy_avatar_type = int
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         self.__assert_publish(rewritten=True)
 
@@ -146,6 +147,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
 
         assert avatar_cache.get_cached_id_for(juliet.jid.bare) == 123
 
+        avatar_cache.legacy_avatar_type = str
         self.run_coro(juliet.set_avatar(self.avatar_path, "123"))
         self.__assert_publish(rewritten=True)
         assert avatar_cache.get_cached_id_for(juliet.jid.bare) == "123"

@@ -115,7 +115,7 @@ def configure():
     db_file = config.HOME_DIR / "slidge.db"
     user_store.set_file(db_file, args.secret_key)
 
-    avatar_cache.set_dir(h / "slidge_avatars_v2")
+    avatar_cache.set_dir(h / "slidge_avatars_v3")
 
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 
@@ -159,6 +159,8 @@ def main():
     BaseGateway.store = SlidgeStore(get_engine(config.DB_URL))
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
     avatar_cache.http = gateway.http
+    avatar_cache.store = gateway.store.avatars
+    avatar_cache.legacy_avatar_type = gateway.AVATAR_ID_TYPE
     gateway.connect()
 
     return_code = 0

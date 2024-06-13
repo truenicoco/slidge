@@ -9,9 +9,12 @@ from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 from slixmpp.stanza import Error
 from slixmpp.test import SlixTest
+from sqlalchemy import create_engine
 
 from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PubSubComponent
+from slidge.db.meta import Base
+from slidge.db.store import AvatarStore
 from slidge.util.sql import db
 from slidge.util.test import SlixTestPlus
 
@@ -147,7 +150,12 @@ class TestPubSubAvatar(SlixTestPlus):
         self.xmpp.get_session_from_jid = lambda j: MockSession
         self.xmpp.get_session_from_stanza = lambda j: MockSession
         self.temp_dir = tempfile.TemporaryDirectory()
+        engine = create_engine("sqlite+pysqlite:///:memory:", echo=True)
+        Base.metadata.create_all(engine)
+        # self.xmpp.store = SlidgeStore(engine)
+        avatar_cache.store = AvatarStore(engine)
         avatar_cache.dir = Path(self.temp_dir.name)
+        # avatar_cache.store =
         # self.user_store_patch = patch("slidge.core.pubsub.user_store")
         # self.user_store_patch.start()
         self.xmpp.store = MagicMock()

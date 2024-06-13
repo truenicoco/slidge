@@ -34,6 +34,7 @@ from slidge import (
 
 from ..command import Command
 from ..core import config
+from ..core.cache import avatar_cache
 from ..core.config import _TimedeltaSeconds
 from ..db import SlidgeStore
 from ..db.meta import Base
@@ -214,7 +215,7 @@ class SlidgeTest(SlixTestPlus):
         engine = create_engine("sqlite+pysqlite:///:memory:", echo=True)
         Base.metadata.create_all(engine)
         self.xmpp.store = SlidgeStore(engine)
-
+        avatar_cache.store = self.xmpp.store.avatars
         self.xmpp._always_send_everything = True
 
         self.xmpp.connection_made(TestTransport(self.xmpp))
