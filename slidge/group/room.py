@@ -143,7 +143,10 @@ class LegacyMUC(
             self.get_system_participant()
         )
 
-        self.archive: MessageArchive = MessageArchive(str(self.jid), self.user_jid)
+        self.pk: Optional[int] = None
+        self.archive: MessageArchive = MessageArchive(
+            str(self.jid), self.user_jid, self.session.user_pk, self.xmpp.store.mam
+        )
         self._user_nick: Optional[str] = None
 
         self._participants_by_nicknames = dict[str, LegacyParticipantType]()
@@ -427,9 +430,9 @@ class LegacyMUC(
         return user_muc_jid
 
     def _legacy_to_xmpp(self, legacy_id: LegacyMessageType):
-        return self.session.sent.get(legacy_id) or self.session.legacy_to_xmpp_msg_id(
-            legacy_id
-        )
+        return self.xmpp.store.sent.get_group_xmpp_id(
+            self.session.user_pk, str(legacy_id)
+        ) or self.session.legacy_to_xmpp_msg_id(legacy_id)
 
     async def echo(
         self, msg: Message, legacy_msg_id: Optional[LegacyMessageType] = None

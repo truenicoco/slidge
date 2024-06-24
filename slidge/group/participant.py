@@ -17,8 +17,8 @@ from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 from ..contact import LegacyContact
 from ..core.mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
 from ..util import SubclassableOnce, strip_illegal_chars
-from ..util.sql import CachedPresence
 from ..util.types import (
+    CachedPresence,
     Hat,
     LegacyMessageType,
     MessageOrPresenceTypeVar,
@@ -63,11 +63,11 @@ class LegacyParticipant(
         role: MucRole = "participant",
         affiliation: MucAffiliation = "member",
     ):
+        self.session = session = muc.session
+        self.xmpp = session.xmpp
         super().__init__()
         self._hats = list[Hat]()
         self.muc = muc
-        self.session = session = muc.session
-        self.xmpp = session.xmpp
         self._role = role
         self._affiliation = affiliation
         self.is_user: bool = is_user

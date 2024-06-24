@@ -9,7 +9,6 @@ from slixmpp.plugins.xep_0084.stanza import Info
 
 from ... import LegacyContact
 from ...group.room import LegacyMUC
-from ...util.sql import db
 from ...util.types import LinkPreview, Recipient, RecipientType
 from ...util.util import (
     dict_to_named_tuple,
@@ -164,7 +163,7 @@ class SessionDispatcher:
         reply_fallback = None
         if msg.get_plugin("reply", check=True):
             try:
-                reply_to_msg_xmpp_id = _xmpp_msg_id_to_legacy(
+                reply_to_msg_xmpp_id = self._xmpp_msg_id_to_legacy(
                     session, msg["reply"]["id"]
                 )
             except XMPPError:
@@ -249,13 +248,17 @@ class SessionDispatcher:
         if isinstance(e, LegacyMUC):
             await e.echo(msg, legacy_msg_id)
             if legacy_msg_id is not None:
-                session.muc_sent_msg_ids[legacy_msg_id] = msg.get_id()
+                self.xmpp.store.sent.set_group_message(
+                    session.user_pk, legacy_msg_id, msg.get_id()
+                )
         else:
             self.__ack(msg)
             if legacy_msg_id is not None:
-                session.sent[legacy_msg_id] = msg.get_id()
+                self.xmpp.store.sent.set_message(
+                    session.user_pk, legacy_msg_id, msg.get_id()
+                )
                 if session.MESSAGE_IDS_ARE_THREAD_IDS and (t := msg["thread"]):
-                    session.threads[t] = legacy_msg_id
+                    self.xmpp.store.sent.set_thread(session.user_pk, t, legacy_msg_id)
 
     async def on_groupchat_message(self, msg: Message):
         await self.on_legacy_message(msg)
@@ -264,9 +267,11 @@ class SessionDispatcher:
         session, entity, thread = await self.__get_session_entity_thread(msg)
         xmpp_id = msg["replace"]["id"]
         if isinstance(entity, LegacyMUC):
-            legacy_id = session.muc_sent_msg_ids.inverse.get(xmpp_id)
+            legacy_id = self.xmpp.store.sent.get_group_legacy_id(
+                session.user_pk, xmpp_id
+            )
         else:
-            legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
+            legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
 
         if isinstance(entity, LegacyMUC):
             mentions = await entity.parse_mentions(msg["body"])
@@ -330,12 +335,16 @@ class SessionDispatcher:
 
         if isinstance(entity, LegacyMUC):
             if new_legacy_msg_id is not None:
-                session.muc_sent_msg_ids[new_legacy_msg_id] = msg.get_id()
+                self.xmpp.store.sent.set_group_message(
+                    session.user_pk, new_legacy_msg_id, msg.get_id()
+                )
             await entity.echo(msg, new_legacy_msg_id)
         else:
             self.__ack(msg)
             if new_legacy_msg_id is not None:
-                session.sent[new_legacy_msg_id] = msg.get_id()
+                self.xmpp.store.sent.set_message(
+                    session.user_pk, new_legacy_msg_id, msg.get_id()
+                )
 
     async def on_message_retract(self, msg: Message):
         session, entity, thread = await self.__get_session_entity_thread(msg)
@@ -345,7 +354,7 @@ class SessionDispatcher:
                 "This legacy service does not support message retraction.",
             )
         xmpp_id: str = msg["retract"]["id"]
-        legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
+        legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
         if legacy_id:
             await session.on_retract(entity, legacy_id, thread=thread)
             if isinstance(entity, LegacyMUC):
@@ -369,7 +378,7 @@ class SessionDispatcher:
             to_mark = [displayed_msg_id]
         for xmpp_id in to_mark:
             await session.on_displayed(
-                e, _xmpp_msg_id_to_legacy(session, xmpp_id), legacy_thread
+                e, self._xmpp_msg_id_to_legacy(session, xmpp_id), legacy_thread
             )
             if isinstance(e, LegacyMUC):
                 await e.echo(msg, None)
@@ -404,7 +413,7 @@ class SessionDispatcher:
         if special_msg:
             legacy_id = react_to
         else:
-            legacy_id = _xmpp_msg_id_to_legacy(session, react_to)
+            legacy_id = self._xmpp_msg_id_to_legacy(session, react_to)
 
         if not legacy_id:
             log.debug("Ignored reaction from user")
@@ -441,9 +450,10 @@ class SessionDispatcher:
         else:
             self.__ack(msg)
 
-        multi = db.attachment_get_associated_xmpp_ids(react_to)
+        multi = self.xmpp.store.multi.get_xmpp_ids(session.user_pk, react_to)
         if not multi:
             return
+        multi = [m for m in multi if react_to != m]
 
         if isinstance(entity, LegacyMUC):
             for xmpp_id in multi:
@@ -540,7 +550,9 @@ class SessionDispatcher:
             return
 
         stanza_id = msg["pubsub_event"]["items"]["item"]["displayed"]["stanza_id"]["id"]
-        await session.on_displayed(chat, _xmpp_msg_id_to_legacy(session, stanza_id))
+        await session.on_displayed(
+            chat, self._xmpp_msg_id_to_legacy(session, stanza_id)
+        )
 
     async def on_avatar_metadata_publish(self, m: Message):
         session = await self.__get_session(m, timeout=None)
@@ -608,7 +620,7 @@ class SessionDispatcher:
                 "Slidge only implements moderation/retraction",
             )
 
-        legacy_id = _xmpp_msg_id_to_legacy(session, xmpp_id)
+        legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
         await session.on_moderate(muc, legacy_id, moderate["reason"] or None)
         iq.reply(clear=True).send()
 
@@ -748,25 +760,24 @@ class SessionDispatcher:
 
         raise XMPPError("feature-not-implemented")
 
+    def _xmpp_msg_id_to_legacy(self, session: "BaseSession", xmpp_id: str):
+        sent = self.xmpp.store.sent.get_legacy_id(session.user_pk, xmpp_id)
+        if sent is not None:
+            return self.xmpp.LEGACY_MSG_ID_TYPE(sent)
 
-def _xmpp_msg_id_to_legacy(session: "BaseSession", xmpp_id: str):
-    sent = session.sent.inverse.get(xmpp_id)
-    if sent:
-        return sent
+        multi = self.xmpp.store.multi.get_legacy_id(session.user_pk, xmpp_id)
+        if multi:
+            return self.xmpp.LEGACY_MSG_ID_TYPE(multi)
 
-    multi = db.attachment_get_legacy_id_for_xmpp_id(xmpp_id)
-    if multi:
-        return multi
-
-    try:
-        return session.xmpp_to_legacy_msg_id(xmpp_id)
-    except XMPPError:
-        raise
-    except Exception as e:
-        log.debug("Couldn't convert xmpp msg ID to legacy ID.", exc_info=e)
-        raise XMPPError(
-            "internal-server-error", "Couldn't convert xmpp msg ID to legacy ID."
-        )
+        try:
+            return session.xmpp_to_legacy_msg_id(xmpp_id)
+        except XMPPError:
+            raise
+        except Exception as e:
+            log.debug("Couldn't convert xmpp msg ID to legacy ID.", exc_info=e)
+            raise XMPPError(
+                "internal-server-error", "Couldn't convert xmpp msg ID to legacy ID."
+            )
 
 
 def _ignore(session: "BaseSession", msg: Message):
@@ -785,14 +796,18 @@ async def _xmpp_to_legacy_thread(
         return
 
     if session.MESSAGE_IDS_ARE_THREAD_IDS:
-        return session.threads.get(xmpp_thread)
+        return session.xmpp.store.sent.get_legacy_thread(session.user_pk, xmpp_thread)
 
     async with session.thread_creation_lock:
-        legacy_thread = session.threads.get(xmpp_thread)
-        if legacy_thread is None:
-            legacy_thread = await recipient.create_thread(xmpp_thread)
-            session.threads[xmpp_thread] = legacy_thread
-    return legacy_thread
+        legacy_thread_str = session.xmpp.store.sent.get_legacy_thread(
+            session.user_pk, xmpp_thread
+        )
+        if legacy_thread_str is None:
+            legacy_thread = str(await recipient.create_thread(xmpp_thread))
+            session.xmpp.store.sent.set_thread(
+                session.user_pk, xmpp_thread, legacy_thread
+            )
+    return session.xmpp.LEGACY_MSG_ID_TYPE(legacy_thread)
 
 
 async def _get_entity(session: "BaseSession", m: Message) -> RecipientType:

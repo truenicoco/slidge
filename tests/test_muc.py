@@ -11,14 +11,14 @@ from conftest import AvatarFixtureMixin
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins import xep_0082
+from sqlalchemy import delete
 from test_shakespeare import ClearSessionMixin
 
 import slidge.core.mixins.message_maker
 import slidge.group.room
-import slidge.util.sql
 from slidge import *
 from slidge import LegacyBookmarks, LegacyContact, LegacyParticipant, LegacyRoster
-from slidge.group.archive import MessageArchive
+from slidge.db.models import ArchivedMessage
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
     Hat,
@@ -257,7 +257,9 @@ class Base(ClearSessionMixin, SlidgeTest):
     def tearDown(self):
         super().tearDown()
         slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
-        slidge.util.sql.db.mam_nuke()
+        with self.xmpp.store.mam.session() as orm:
+            orm.execute(delete(ArchivedMessage))
+            orm.commit()
 
     @staticmethod
     def get_romeo_session() -> Session:
@@ -294,7 +296,7 @@ class Base(ClearSessionMixin, SlidgeTest):
         return participant
 
 
-@pytest.mark.usefixtures("avatar", "user_cls")
+@pytest.mark.usefixtures("avatar")
 class TestMuc(Base):
     def test_disco_non_existing_room(self):
         self.recv(  # language=XML
@@ -2260,6 +2262,10 @@ class TestMuc(Base):
         muc = self.get_private_muc(resources=["gajim"])
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         user_participant: Participant = self.run_coro(muc.get_user_participant())
+        subject_stanza = self.next_sent()
+        if subject_stanza is not None:
+            # inconsistent behaviour whether using the debugger or not
+            assert subject_stanza["subject"]
         user_participant.send_text("blabla", "legacy-666", when=now)
         now_fmt = now.isoformat().replace("+00:00", "Z")
         self.send(  # language=XML
@@ -2593,50 +2599,6 @@ class TestMuc(Base):
             """
         )
         assert self.next_sent() is None
-
-    def test_archive_cleanup(self):
-        from slidge import global_config
-
-        orig = global_config.MAM_MAX_DAYS
-        global_config.MAM_MAX_DAYS = 1
-
-        m = Message()
-        m["delay"]["stamp"] = datetime.datetime.now(tz=datetime.timezone.utc)
-        m["body"] = "something"
-
-        a = MessageArchive("blop", self.get_romeo_session().user_jid)
-        slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 0
-        a.add(m)
-        slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 1
-
-        m = Message()
-        m["delay"]["stamp"] = datetime.datetime.now(
-            tz=datetime.timezone.utc
-        ) - datetime.timedelta(days=2)
-        m["body"] = "something"
-
-        a = MessageArchive("blip", self.get_romeo_session().user_jid)
-        slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 0
-        a.add(m)
-        slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 0
-
-        m = Message()
-        m["delay"]["stamp"] = datetime.datetime.now(
-            tz=datetime.timezone.utc
-        ) - datetime.timedelta(days=0.5)
-        m["body"] = "something"
-        a.add(m)
-        assert len(list(a.get_all())) == 1
-        a.add(m)
-        assert len(list(a.get_all())) == 1
-        slidge.util.sql.db.mam_cleanup()
-        assert len(list(a.get_all())) == 1
-
-        global_config.MAM_MAX_DAYS = orig
 
     def test_moderate_by_room(self):
         muc = self.get_private_muc("room", ["gajim"])
@@ -3261,7 +3223,7 @@ class TestRoleAffiliation(Base):
         self.send(None)
 
 
-@pytest.mark.usefixtures("avatar", "user_cls")
+@pytest.mark.usefixtures("avatar")
 class TestSetAvatar(Base, AvatarFixtureMixin):
     def test_set_avatar(self):
         muc = self.get_private_muc(resources=("gajim",))
@@ -3323,7 +3285,7 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
         self.send(None)
 
 
-@pytest.mark.usefixtures("avatar", "user_cls")
+@pytest.mark.usefixtures("avatar")
 class TestUserAvatar(Base, AvatarFixtureMixin):
     def setUp(self):
         super().setUp()

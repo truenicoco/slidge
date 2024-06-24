@@ -22,7 +22,6 @@ from ..db.models import GatewayUser
 from ..group.bookmarks import LegacyBookmarks
 from ..group.room import LegacyMUC
 from ..util import ABCSubclassableOnceAtMost
-from ..util.sql import SQLBiDict
 from ..util.types import (
     LegacyGroupIdType,
     LegacyMessageType,
@@ -95,13 +94,7 @@ class BaseSession(
         self.log = logging.getLogger(user.jid.bare)
 
         self.user_jid = user.jid
-        self.sent = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent", "legacy_id", "xmpp_id", user.jid
-        )
-        # message ids (*not* stanza-ids), needed for last msg correction
-        self.muc_sent_msg_ids = SQLBiDict[LegacyMessageType, str](
-            "session_message_sent_muc", "legacy_id", "xmpp_id", user.jid
-        )
+        self.user_pk = user.id
 
         self.ignore_messages = set[str]()
 
@@ -115,9 +108,6 @@ class BaseSession(
 
         self.http = self.xmpp.http
 
-        self.threads = SQLBiDict[str, LegacyThreadType](  # type:ignore
-            "session_thread_sent_muc", "legacy_id", "xmpp_id", user.jid
-        )
         self.thread_creation_lock = asyncio.Lock()
 
         self.__cached_presence: Optional[CachedPresence] = None

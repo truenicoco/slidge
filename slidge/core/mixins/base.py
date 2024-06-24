@@ -25,6 +25,10 @@ class Base:
     def user_jid(self):
         return self.session.user_jid
 
+    @property
+    def user_pk(self):
+        return self.session.user_pk
+
 
 class BaseSender(Base):
     def _send(

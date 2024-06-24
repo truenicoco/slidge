@@ -12,7 +12,6 @@ from slidge.util import (
     is_valid_phone_number,
 )
 from slidge.util.db import EncryptedShelf
-from slidge.util.sql import SQLBiDict
 from slidge.util.types import Mention
 from slidge.util.util import merge_resources, replace_mentions
 
@@ -43,27 +42,6 @@ def test_subclass():
 
     # fmt: on
     SubclassableOnce.TEST_MODE = True
-
-
-def test_bidict_sql(user):
-    d = SQLBiDict("test", "key1", "key2", user.jid, create_table=True)
-    d[1] = "a"
-    d[2] = "b"
-
-    assert d.inverse.get("a") == 1
-    assert d.inverse.get("b") == 2
-    assert 1 in d
-    assert 2 in d
-
-    d[2] = "c"
-    assert d[2] == "c"
-    assert d.inverse.get("c") == 2
-    assert "b" not in d
-
-    user.jid.bare = "test2@test.fr"
-    d2 = SQLBiDict("test", "key1", "key2", user.jid)
-    assert d2.get(1) is None
-    assert d2.inverse.get("a") is None
 
 
 def test_encrypted_shelf(tmp_path):

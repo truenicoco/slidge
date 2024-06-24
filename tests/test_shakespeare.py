@@ -21,6 +21,7 @@ from slixmpp.plugins.xep_0356.permissions import (
     PresencePermission,
     RosterAccess,
 )
+from sqlalchemy import delete
 
 from slidge import *
 from slidge import (
@@ -35,7 +36,7 @@ from slidge.command.categories import ADMINISTRATION
 from slidge.core import config
 from slidge.core.mixins.attachment import AttachmentMixin
 from slidge.core.session import _sessions
-from slidge.util.sql import db
+from slidge.db.models import Contact
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LegacyAttachment, LegacyContactType, LegacyMessageType
 
@@ -1335,7 +1336,9 @@ class TestContact(ClearSessionMixin, SlidgeTest):
         )
         self.get_romeo_session().logged = True
         self.get_romeo_session().contacts.ready.set_result(True)
-        db.presence_nuke()
+        with self.xmpp.store.session() as session:
+            session.execute(delete(Contact))
+        # db.presence_nuke()
 
     @staticmethod
     def get_romeo_session() -> Session:

@@ -37,7 +37,6 @@ from ...db import GatewayUser, SlidgeStore
 from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
-from ...util.sql import db
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
 from ..mixins import MessageMixin
@@ -239,6 +238,17 @@ class BaseGateway(
     serialised-as-text version of the avatar unique ID back to the proper type.
     Common example: ``int``.
     """
+    # FIXME: do we really need this since we have session.xmpp_to_legacy_msg_id?
+    #        (maybe we do)
+    LEGACY_MSG_ID_TYPE: Callable[[str], Any] = str
+    """
+    Modify this if the legacy network uses unique message IDs that are not strings.
+
+    This is required because we store those IDs as TEXT in the persistent SQL DB.
+    The callable specified here will receive is responsible for converting the
+    serialised-as-text version of the message unique ID back to the proper type.
+    Common example: ``int``.
+    """
 
     def __init__(self):
         self.datetime_started = datetime.now()
@@ -330,7 +340,14 @@ class BaseGateway(
 
         self.__register_commands()
 
-        db.mam_launch_cleanup_task(self.loop)
+        self.__mam_cleanup_task = self.loop.create_task(self.__mam_cleanup())
+
+    async def __mam_cleanup(self):
+        if not config.MAM_MAX_DAYS:
+            return
+        while True:
+            await asyncio.sleep(3600 * 6)
+            self.store.mam.nuke_older_than(config.MAM_MAX_DAYS)
 
     def __register_commands(self):
         for cls in Command.subclasses:

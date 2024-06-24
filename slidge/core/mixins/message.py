@@ -169,8 +169,8 @@ class ContentMessageMixin(AttachmentMixin):
 
     def __replace_id(self, legacy_msg_id: LegacyMessageType):
         if self.mtype == "groupchat":
-            return self.session.muc_sent_msg_ids.get(
-                legacy_msg_id
+            return self.xmpp.store.sent.get_group_xmpp_id(
+                self.session.user_pk, str(legacy_msg_id)
             ) or self._legacy_to_xmpp(legacy_msg_id)
         else:
             return self._legacy_to_xmpp(legacy_msg_id)
@@ -215,14 +215,18 @@ class ContentMessageMixin(AttachmentMixin):
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
         if carbon:
-            if not correction and legacy_msg_id in self.session.sent:
+            if not correction and self.xmpp.store.sent.was_sent_by_user(
+                self.session.user_pk, str(legacy_msg_id)
+            ):
                 log.warning(
                     "Carbon message for a message an XMPP has sent? This is a bug! %s",
                     legacy_msg_id,
                 )
                 return
-            self.session.sent[legacy_msg_id] = self.session.legacy_to_xmpp_msg_id(
-                legacy_msg_id
+            self.xmpp.store.sent.set_message(
+                self.session.user_pk,
+                str(legacy_msg_id),
+                self.session.legacy_to_xmpp_msg_id(legacy_msg_id),
             )
         hints = self.__default_hints(hints)
         msg = self._make_message(

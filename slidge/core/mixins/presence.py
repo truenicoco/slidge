@@ -5,7 +5,7 @@ from typing import Optional
 
 from slixmpp.types import PresenceShows, PresenceTypes
 
-from ...util.sql import CachedPresence, db
+from ...util.types import CachedPresence
 from .. import config
 from .base import BaseSender
 
@@ -29,10 +29,12 @@ class PresenceMixin(BaseSender):
         self.send_last_presence(force=True, no_cache_online=False)
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
-        return db.presence_get(self.jid, self.user_jid)
+        # TODO: use contact PK instead of JID
+        return self.xmpp.store.contacts.get_presence(self.jid, self.user_pk)
 
     def _store_last_presence(self, new: CachedPresence):
-        return db.presence_store(self.jid, new, self.user_jid)
+        # TODO: use contact PK instead of JID
+        self.xmpp.store.contacts.set_presence(self.jid, self.user_pk, new)
 
     def _make_presence(
         self,
@@ -55,7 +57,8 @@ class PresenceMixin(BaseSender):
             )
             if old != new:
                 if hasattr(self, "muc") and ptype == "unavailable":
-                    db.presence_delete(self.jid, self.user_jid)
+                    # TODO: use contact PK instead of JID
+                    self.xmpp.store.contacts.reset_presence(self.jid, self.user_pk)
                 else:
                     self._store_last_presence(new)
             if old and not force and self._ONLY_SEND_PRESENCE_CHANGES:

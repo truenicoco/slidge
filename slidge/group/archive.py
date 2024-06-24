@@ -1,23 +1,24 @@
 import logging
 import uuid
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import JID, Iq, Message
 
+from ..db.store import MAMStore
 from ..util.archive_msg import HistoryMessage
-from ..util.sql import db
 
 if TYPE_CHECKING:
     from .participant import LegacyParticipant
 
 
 class MessageArchive:
-    def __init__(self, db_id: str, user_jid: JID):
+    def __init__(self, db_id: str, user_jid: JID, user_pk: int, store: MAMStore):
         self.db_id = db_id
         self.user_jid = user_jid
-        db.mam_add_muc(db_id, user_jid)
+        self.user_pk = user_pk
+        self.__store = store
 
     def add(
         self,
@@ -48,7 +49,7 @@ class MessageArchive:
                     "jid"
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        db.mam_add_msg(self.db_id, HistoryMessage(new_msg), self.user_jid)
+        self.__store.add_message(self.db_id, HistoryMessage(new_msg), self.user_pk)
 
     def __iter__(self):
         return iter(self.get_all())
@@ -64,8 +65,8 @@ class MessageArchive:
         sender: Optional[str] = None,
         flip=False,
     ):
-        for msg in db.mam_get_messages(
-            self.user_jid,
+        for msg in self.__store.get_messages(
+            self.user_pk,
             self.db_id,
             before_id=before_id,
             after_id=after_id,
@@ -86,11 +87,13 @@ class MessageArchive:
         :return:
         """
         reply = iq.reply()
-        messages = db.mam_get_first_and_last(self.db_id)
+        messages = self.__store.get_first_and_last(self.db_id, self.user_pk)
         if messages:
             for x, m in [("start", messages[0]), ("end", messages[-1])]:
                 reply["mam_metadata"][x]["id"] = m.id
-                reply["mam_metadata"][x]["timestamp"] = m.sent_on
+                reply["mam_metadata"][x]["timestamp"] = m.sent_on.replace(
+                    tzinfo=timezone.utc
+                )
         else:
             reply.enable("mam_metadata")
         reply.send()

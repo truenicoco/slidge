@@ -43,7 +43,7 @@ PORT__SHORT = "p"
 
 HOME_DIR: Path
 HOME_DIR__DOC = (
-    "Shelve file used to store persistent user data. "
+    "Directory where slidge will writes it persistent data and cache. "
     "Defaults to /var/lib/slidge/${SLIDGE_JID}. "
 )
 HOME_DIR__DYNAMIC_DEFAULT = True
