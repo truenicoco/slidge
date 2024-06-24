@@ -1,4 +1,5 @@
 import asyncio
+import random
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from slixmpp.exceptions import XMPPError
 
-from slidge.util.types import MessageReference
+from slidge.util.types import Hat, MessageReference
 
 from .util import ASSETS_DIR, later
 
@@ -115,12 +116,42 @@ class SuperDuperClient:
 
     async def on_contact_message(self, msg: DirectMessage):
         contact = await self.session.contacts.by_legacy_id(msg.sender)
-        contact.send_text(msg.text, msg.id, reply_to=MessageReference(msg.reply_to))
+        contact.send_text(
+            msg.text,
+            msg.id,
+            reply_to=MessageReference(msg.reply_to, author="user"),
+        )
 
     async def on_group_message(self, msg: GroupMessage):
         muc = await self.session.bookmarks.by_legacy_id(msg.group_id)
-        participant = await muc.get_participant_by_legacy_id(msg.sender)
-        participant.send_text(msg.text, msg.id, reply_to=MessageReference(msg.reply_to))
+        participant = await muc.get_participant_by_legacy_id(0)
+        participant.send_text(
+            msg.text,
+            msg.id,
+            reply_to=MessageReference(msg.reply_to, author="user"),
+        )
+        await asyncio.sleep(1)
+        participant.send_text(
+            msg.text + " (correction)",
+            msg.id,
+            reply_to=MessageReference(msg.reply_to, author="user"),
+            correction=True,
+        )
+        user = await muc.get_user_participant()
+        if random.random() < 0.5:
+            user.set_hats([("prout", "prout")])
+            participant.set_hats([])
+        else:
+            user.set_hats([])
+            participant.set_hats(
+                [
+                    Hat("12", "gloup"),
+                    Hat(
+                        str(random.randint(0, 256)),
+                        "gloup" + str(random.randint(0, 256)),
+                    ),
+                ]
+            )
 
 
 _PROFILES = {

@@ -7,13 +7,14 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import aiohttp
-from black import Any
 from multidict import CIMultiDictProxy
 from PIL import Image
 from slixmpp import JID
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from ..db.models import Avatar
 from ..db.store import AvatarStore
@@ -53,8 +54,6 @@ class CachedAvatar:
 
 
 class AvatarCache:
-    _shelf_path: str
-    _jid_to_legacy_path: str
     dir: Path
     http: aiohttp.ClientSession
     store: AvatarStore
@@ -79,7 +78,7 @@ class AvatarCache:
                 headers["If-None-Match"] = etag
         return headers
 
-    async def get_avatar_from_url_alone(self, url: str, jid: JID):
+    async def get_avatar_from_url_alone(self, url: str):
         """
         Used when no avatar unique ID is passed. Store and use http headers
         to avoid fetching ut
@@ -87,24 +86,22 @@ class AvatarCache:
         cached = self.get(url)
         headers = self.__get_http_headers(cached)
         async with _download_lock:
-            return await self.__download(cached, url, headers, jid)
+            return await self.__download(cached, url, headers)
 
     async def __download(
         self,
         cached: Optional[CachedAvatar],
         url: str,
         headers: dict[str, str],
-        jid: JID,
     ):
         async with self.http.get(url, headers=headers) as response:
             if response.status == HTTPStatus.NOT_MODIFIED:
-                log.debug("Using avatar cache for %s", jid)
+                log.debug("Using avatar cache for %s", url)
                 return cached
-            log.debug("Download avatar for %s", jid)
+            log.debug("Download avatar for %s", url)
             return await self.convert_and_store(
                 Image.open(io.BytesIO(await response.read())),
                 url,
-                jid,
                 response.headers,
             )
 
@@ -131,14 +128,6 @@ class AvatarCache:
                 return None
             return self.legacy_avatar_type(stored.legacy_id)
 
-    def store_jid(self, jid: JID, uid: LegacyFileIdType):
-        with self.store.session() as orm:
-            stored = self.store.get_by_legacy_id(str(uid))
-            assert stored is not None
-            stored.jid = jid
-            orm.add(stored)
-            orm.commit()
-
     def delete_jid(self, jid: JID):
         with self.store.session() as orm:
             stored = self.store.get_by_jid(jid)
@@ -151,52 +140,62 @@ class AvatarCache:
         self,
         img: Image.Image,
         unique_id: LegacyFileIdType,
-        jid: JID,
         response_headers: Optional[CIMultiDictProxy[str]] = None,
     ) -> CachedAvatar:
-        resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
-        if resize:
-            await asyncio.get_event_loop().run_in_executor(
-                self._thread_pool, img.thumbnail, (size, size)
-            )
-            log.debug("Resampled image to %s", img.size)
-
-        filename = str(uuid.uuid1()) + ".png"
-        file_path = self.dir / filename
-
-        if (
-            not resize
-            and img.format == "PNG"
-            and isinstance(unique_id, str)
-            and (path := Path(unique_id))
-            and path.exists()
-        ):
-            img_bytes = path.read_bytes()
-        else:
-            with io.BytesIO() as f:
-                img.save(f, format="PNG")
-                img_bytes = f.getvalue()
-
-        with file_path.open("wb") as file:
-            file.write(img_bytes)
-
-        hash_ = hashlib.sha1(img_bytes).hexdigest()
-
-        stored = Avatar(
-            filename=filename,
-            hash=hash_,
-            height=img.height,
-            width=img.width,
-            jid=jid,
-            legacy_id=None if unique_id is None else str(unique_id),
-            url=None if response_headers is None else unique_id,
-        )
-        if response_headers:
-            stored.etag = response_headers.get("etag")
-            stored.last_modified = response_headers.get("last-modified")
         with self.store.session() as orm:
+            stored = orm.execute(
+                select(Avatar).where(Avatar.legacy_id == str(unique_id))
+            ).scalar()
+            if stored is not None and stored.url is None:
+                return CachedAvatar.from_store(stored, self.dir)
+
+            resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
+            if resize:
+                await asyncio.get_event_loop().run_in_executor(
+                    self._thread_pool, img.thumbnail, (size, size)
+                )
+                log.debug("Resampled image to %s", img.size)
+
+            filename = str(uuid.uuid1()) + ".png"
+            file_path = self.dir / filename
+
+            if (
+                not resize
+                and img.format == "PNG"
+                and isinstance(unique_id, str)
+                and (path := Path(unique_id))
+                and path.exists()
+            ):
+                img_bytes = path.read_bytes()
+            else:
+                with io.BytesIO() as f:
+                    img.save(f, format="PNG")
+                    img_bytes = f.getvalue()
+
+            with file_path.open("wb") as file:
+                file.write(img_bytes)
+
+            hash_ = hashlib.sha1(img_bytes).hexdigest()
+
+            stored = Avatar(
+                filename=filename,
+                hash=hash_,
+                height=img.height,
+                width=img.width,
+                legacy_id=None if unique_id is None else str(unique_id),
+                url=None if response_headers is None else unique_id,
+            )
+            if response_headers:
+                stored.etag = response_headers.get("etag")
+                stored.last_modified = response_headers.get("last-modified")
+
             orm.add(stored)
-            orm.commit()
+            try:
+                orm.commit()
+            except IntegrityError:
+                # happens when an avatar without legacy ID is passed
+                # several times
+                pass
             return CachedAvatar.from_store(stored, self.dir)
 
 

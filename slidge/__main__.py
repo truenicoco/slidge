@@ -25,6 +25,7 @@ import configargparse
 from slidge import BaseGateway
 from slidge.core import config
 from slidge.core.cache import avatar_cache
+from slidge.core.pubsub import PepAvatar, PepNick
 from slidge.db import SlidgeStore
 from slidge.db.meta import get_engine
 from slidge.migration import migrate
@@ -161,6 +162,10 @@ def main():
     avatar_cache.http = gateway.http
     avatar_cache.store = gateway.store.avatars
     avatar_cache.legacy_avatar_type = gateway.AVATAR_ID_TYPE
+
+    PepAvatar.store = gateway.store
+    PepNick.contact_store = gateway.store.contacts
+
     gateway.connect()
 
     return_code = 0

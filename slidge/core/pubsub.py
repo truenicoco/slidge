@@ -26,7 +26,7 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
-from ..util.sql import db
+from ..db.store import ContactStore, SlidgeStore
 from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
 from .mixins.lock import NamedLockMixin
@@ -47,6 +47,8 @@ class PepItem:
 
 
 class PepAvatar(PepItem):
+    store: SlidgeStore
+
     def __init__(self, jid: JID):
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
@@ -76,7 +78,6 @@ class PepAvatar(PepItem):
     @staticmethod
     async def _get_image(avatar: AvatarType) -> PILImage:
         if isinstance(avatar, str):
-            # async with aiohttp.ClientSession() as session:
             async with avatar_cache.http.get(avatar) as response:
                 return Image.open(io.BytesIO(await response.read()))
         elif isinstance(avatar, bytes):
@@ -100,21 +101,13 @@ class PepAvatar(PepItem):
     async def _set_avatar_from_unique_id(
         self, avatar: AvatarType, unique_id: LegacyFileIdType
     ):
-        cached_avatar = avatar_cache.get(unique_id)
-        if cached_avatar:
-            # this shouldn't be necessary but here to re-use avatars downloaded
-            # before the change introducing the JID to unique ID mapping
-            avatar_cache.store_jid(self.jid, unique_id)
-        else:
-            img = await self._get_image(avatar)
-            cached_avatar = await avatar_cache.convert_and_store(
-                img, unique_id, self.jid
-            )
+        img = await self._get_image(avatar)
+        cached_avatar = await avatar_cache.convert_and_store(img, unique_id)
 
         self._set_avatar_from_cache(cached_avatar)
 
     async def _set_avatar_from_url_alone(self, url: str):
-        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url, self.jid)
+        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url)
         self._set_avatar_from_cache(cached_avatar)
 
     def _set_avatar_from_cache(self, cached_avatar: CachedAvatar):
@@ -132,29 +125,29 @@ class PepAvatar(PepItem):
 
     @staticmethod
     def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepAvatar"]:
-        cached_id = db.avatar_get(jid)
-        if cached_id is None:
+        if user_jid is not None:
+            if not PepAvatar.store.contacts.is_contact_of(jid, user_jid):
+                raise XMPPError("item-not-found")
+        cached = PepAvatar.store.avatars.get_by_jid(jid)
+        if cached is None:
             return None
         item = PepAvatar(jid)
-        cached_avatar = avatar_cache.get(cached_id)
+        avatar_id = cached.legacy_id or cached.url
+        assert avatar_id is not None
+        cached_avatar = avatar_cache.get(avatar_id)
         if cached_avatar is None:
             raise XMPPError("internal-server-error")
         item._set_avatar_from_cache(cached_avatar)
         return item
 
-    def to_db(self, jid: JID, user=None):
-        cached_id = avatar_cache.get_cached_id_for(jid)
-        if cached_id is None:
-            log.warning("Could not store avatar for %s", jid)
-            return
-        db.avatar_store(jid, cached_id)
-
-    @staticmethod
-    def remove_from_db(jid: JID):
-        db.avatar_delete(jid)
+    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
+        assert self.id is not None
+        self.store.avatars.store_jid(self.id, jid)
 
 
 class PepNick(PepItem):
+    contact_store: ContactStore
+
     def __init__(self, nick: Optional[str] = None):
         nickname = UserNick()
         if nick is not None:
@@ -166,15 +159,15 @@ class PepNick(PepItem):
     def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepNick"]:
         if user_jid is None:
             raise XMPPError("not-allowed")
-        nick = db.nick_get(jid, user_jid)
-        if nick is None:
+        contact = PepNick.contact_store.get(jid, user_jid)
+        if contact is None or contact.nick is None:
             return None
-        return PepNick(nick)
+        return PepNick(contact.nick)
 
     def to_db(self, jid: JID, user_jid: Optional[JID] = None):
         if user_jid is None:
             raise XMPPError("not-allowed")
-        db.nick_store(jid, str(self.__nick_str), user_jid)
+        PepNick.contact_store.update_nick(jid, user_jid, self.__nick_str)
 
 
 class PubSubComponent(NamedLockMixin, BasePlugin):
@@ -314,7 +307,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         self, cls: Type[PepItemType], stanza: Union[Iq, Presence]
     ) -> PepItemType:
         sto = stanza.get_to()
-        # user = self.xmpp.store.users.get_by_stanza(stanza)
         item = cls.from_db(sto, stanza.get_from())
         if item is None:
             raise XMPPError("item-not-found")
@@ -445,7 +437,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
     ):
         jid = JID(jid)
         if avatar is None:
-            PepAvatar.remove_from_db(jid)
             await self._broadcast(AvatarMetadata(), jid, broadcast_to)
             avatar_cache.delete_jid(jid)
         else:

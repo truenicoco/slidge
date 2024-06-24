@@ -22,7 +22,6 @@ from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0385.stanza import Sims
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
-from ...util.sql import db
 from ...util.types import (
     LegacyAttachment,
     LegacyMessageType,
@@ -36,6 +35,10 @@ from .message_maker import MessageMaker
 
 
 class AttachmentMixin(MessageMaker):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.__store = self.xmpp.store.attachments
+
     def send_text(self, *_, **k) -> Optional[Message]:
         raise NotImplementedError
 
@@ -146,13 +149,13 @@ class AttachmentMixin(MessageMaker):
         legacy_file_id: Optional[Union[str, int]] = None,
     ) -> tuple[bool, Optional[Path], str]:
         if legacy_file_id:
-            cache = db.attachment_get_url(legacy_file_id)
+            cache = self.__store.get_url(str(legacy_file_id))
             if cache is not None:
                 async with self.session.http.head(cache) as r:
                     if r.status < 400:
                         return False, None, cache
                     else:
-                        db.attachment_remove(legacy_file_id)
+                        self.__store.remove(str(legacy_file_id))
 
         if file_url and config.USE_ATTACHMENT_ORIGINAL_URLS:
             return False, None, file_url
@@ -198,7 +201,7 @@ class AttachmentMixin(MessageMaker):
             local_path = file_path
             new_url = await self.__upload(file_path, file_name, content_type)
         if legacy_file_id:
-            db.attachment_store_url(legacy_file_id, new_url)
+            self.__store.set_url(self.session.user_pk, str(legacy_file_id), new_url)
 
         return is_temp, local_path, new_url
 
@@ -211,7 +214,7 @@ class AttachmentMixin(MessageMaker):
         caption: Optional[str] = None,
         file_name: Optional[str] = None,
     ):
-        cache = db.attachment_get_sims(uploaded_url)
+        cache = self.__store.get_sims(uploaded_url)
         if cache:
             msg.append(Sims(xml=ET.fromstring(cache)))
             return
@@ -238,7 +241,7 @@ class AttachmentMixin(MessageMaker):
                 thumbnail["media-type"] = "image/blurhash"
                 thumbnail["uri"] = "data:image/blurhash," + urlquote(h)
 
-        db.attachment_store_sims(uploaded_url, str(sims))
+        self.__store.set_sims(uploaded_url, str(sims))
 
         msg.append(sims)
 
@@ -251,7 +254,7 @@ class AttachmentMixin(MessageMaker):
         caption: Optional[str] = None,
         file_name: Optional[str] = None,
     ):
-        cache = db.attachment_get_sfs(uploaded_url)
+        cache = self.__store.get_sfs(uploaded_url)
         if cache:
             msg.append(StatelessFileSharing(xml=ET.fromstring(cache)))
             return
@@ -262,7 +265,7 @@ class AttachmentMixin(MessageMaker):
         sfs = self.xmpp["xep_0447"].get_sfs(path, [uploaded_url], content_type, caption)
         if file_name:
             sfs["file"]["name"] = file_name
-        db.attachment_store_sfs(uploaded_url, str(sfs))
+        self.__store.set_sfs(uploaded_url, str(sfs))
 
         msg.append(sfs)
 
@@ -472,7 +475,9 @@ class AttachmentMixin(MessageMaker):
                 ids.append(stanza_id["id"])
             else:
                 ids.append(msg.get_id())
-        db.attachment_store_legacy_to_multi_xmpp_msg_ids(legacy_msg_id, ids)
+        self.xmpp.store.multi.set_xmpp_ids(
+            self.session.user_pk, str(legacy_msg_id), ids
+        )
 
 
 def get_blurhash(path: Path, n=9) -> tuple[str, int, int]:
