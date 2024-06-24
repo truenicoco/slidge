@@ -9,6 +9,7 @@ from ..contact.roster import ESCAPE_TABLE
 from ..core.mixins.lock import NamedLockMixin
 from ..util import SubclassableOnce
 from ..util.types import LegacyGroupIdType, LegacyMUCType
+from .archive import MessageArchive
 from .room import LegacyMUC
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ class LegacyBookmarks(
         self.session = session
         self.xmpp = session.xmpp
         self.user_jid = session.user_jid
+        self.__store = self.xmpp.store.rooms
 
         self._mucs_by_legacy_id = dict[LegacyGroupIdType, LegacyMUCType]()
         self._mucs_by_bare_jid = dict[str, LegacyMUCType]()
@@ -58,7 +60,10 @@ class LegacyBookmarks(
 
     async def __finish_init_muc(self, legacy_id: LegacyGroupIdType, jid: JID):
         muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)
-        await muc.avatar_wrap_update_info()
+        with self.__store.session():
+            muc.pk = self.__store.add(self.session.user_pk, str(muc.legacy_id), muc.jid)
+            muc.archive = MessageArchive(muc.pk, self.xmpp.store.mam)
+            await muc.avatar_wrap_update_info()
         if not muc.user_nick:
             muc.user_nick = self._user_nick
         self.log.debug("MUC created: %r", muc)

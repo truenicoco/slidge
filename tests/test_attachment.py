@@ -154,7 +154,7 @@ class TestAttachmentUpload(Base):
         self.http_upload.assert_called_with(**upload_kwargs)
         self._assert_file()
 
-    def __test_reuse(self, attachment: LegacyAttachment, upload_kwargs: dict):
+    def _test_reuse(self, attachment: LegacyAttachment, upload_kwargs: dict):
         """
         Basic test the no new file is uploaded when the same attachment is used
         twice.
@@ -190,7 +190,7 @@ class TestAttachmentUpload(Base):
         )
 
     def test_path_and_id(self):
-        self.__test_reuse(
+        self._test_reuse(
             LegacyAttachment(path=self.avatar_path, legacy_file_id=1235),
             dict(
                 filename=self.avatar_path,
@@ -214,7 +214,7 @@ class TestAttachmentUpload(Base):
 
     def test_bytes_and_id(self):
         with patch("pathlib.Path.stat", return_value=os.stat(self.avatar_path)):
-            self.__test_reuse(
+            self._test_reuse(
                 LegacyAttachment(
                     data=self.avatar_path.read_bytes(),
                     legacy_file_id=123,
@@ -278,6 +278,7 @@ class TestAttachmentNoUpload(Base):
         )
 
     def test_multi(self):
+        self.xmpp.LEGACY_MSG_ID_TYPE = int
         self.xmpp.use_message_ids = True
         self.run_coro(
             self.juliet.send_files(
@@ -338,3 +339,4 @@ class TestAttachmentNoUpload(Base):
 
             mock.assert_called_once_with(self.juliet, 6666, ["👋", "🐢"], thread=None)
         self.xmpp.use_message_ids = False
+        self.xmpp.LEGACY_MSG_ID_TYPE = True

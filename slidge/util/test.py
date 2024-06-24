@@ -36,6 +36,7 @@ from ..command import Command
 from ..core import config
 from ..core.cache import avatar_cache
 from ..core.config import _TimedeltaSeconds
+from ..core.pubsub import PepAvatar, PepNick
 from ..db import SlidgeStore
 from ..db.meta import Base
 
@@ -215,6 +216,8 @@ class SlidgeTest(SlixTestPlus):
         engine = create_engine("sqlite+pysqlite:///:memory:", echo=True)
         Base.metadata.create_all(engine)
         self.xmpp.store = SlidgeStore(engine)
+        PepNick.contact_store = self.xmpp.store.contacts
+        PepAvatar.store = self.xmpp.store
         avatar_cache.store = self.xmpp.store.avatars
         self.xmpp._always_send_everything = True
 

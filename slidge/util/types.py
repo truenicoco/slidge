@@ -3,6 +3,7 @@ Typing stuff
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
 from typing import (
@@ -20,7 +21,7 @@ from typing import (
 )
 
 from slixmpp import Message, Presence
-from slixmpp.types import PresenceShows
+from slixmpp.types import PresenceShows, PresenceTypes
 
 if TYPE_CHECKING:
     from ..contact import LegacyContact
@@ -185,3 +186,15 @@ class Hat(NamedTuple):
 class UserPreferences(TypedDict):
     sync_avatar: bool
     sync_presence: bool
+
+
+class MamMetadata(NamedTuple):
+    id: str
+    sent_on: datetime
+
+
+class CachedPresence(NamedTuple):
+    last_seen: Optional[datetime] = None
+    ptype: Optional[PresenceTypes] = None
+    pstatus: Optional[str] = None
+    pshow: Optional[PresenceShows] = None

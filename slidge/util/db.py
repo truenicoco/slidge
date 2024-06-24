@@ -15,8 +15,6 @@ from typing import Iterable, Optional, Union
 from pickle_secure import Pickler, Unpickler
 from slixmpp import JID, Iq, Message, Presence
 
-from .sql import db
-
 
 # noinspection PyUnresolvedReferences
 class EncryptedShelf(shelve.DbfilenameShelf):
@@ -122,8 +120,6 @@ class UserStore:
             self._users = EncryptedShelf(filename, key=secret_key)
         else:
             self._users = shelve.open(str(filename))
-        for user in self._users.values():
-            db.user_store(user.jid)
         log.info("Registered users in the DB: %s", list(self._users.keys()))
 
     def get_all(self) -> Iterable[GatewayUser]:

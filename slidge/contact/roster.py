@@ -6,6 +6,7 @@ from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..core.mixins.lock import NamedLockMixin
+from ..db.store import ContactStore
 from ..util import SubclassableOnce
 from ..util.types import LegacyContactType, LegacyUserIdType
 from .contact import LegacyContact
@@ -43,6 +44,7 @@ class LegacyRoster(
             LegacyContact.get_self_or_unique_subclass()
         )
         self._contact_cls.xmpp = session.xmpp
+        self.__store: ContactStore = session.xmpp.store.contacts
 
         self.session = session
         self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
@@ -66,7 +68,11 @@ class LegacyRoster(
             if legacy_id in self._contacts_by_legacy_id:
                 self.log.debug("Already updated %s", c)
                 return c
-            await c.avatar_wrap_update_info()
+            with self.__store.session():
+                c.contact_pk = self.__store.add(
+                    self.session.user_pk, c.legacy_id, c.jid
+                )
+                await c.avatar_wrap_update_info()
             self._contacts_by_legacy_id[legacy_id] = c
             self._contacts_by_bare_jid[c.jid.bare] = c
         return c
