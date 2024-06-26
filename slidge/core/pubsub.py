@@ -1,12 +1,8 @@
-import hashlib
-import io
 import logging
 from copy import copy
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Union
 
-from PIL import Image, UnidentifiedImageError
-from PIL.Image import Image as PILImage
 from slixmpp import (
     JID,
     CoroutineCallback,
@@ -27,7 +23,6 @@ from slixmpp.types import JidStr, OptJidStr
 from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
 from ..db.store import ContactStore, SlidgeStore
-from ..util.types import AvatarType, LegacyFileIdType, PepItemType
 from .cache import CachedAvatar, avatar_cache
 from .mixins.lock import NamedLockMixin
 
@@ -38,21 +33,15 @@ VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
 
 class PepItem:
-    @staticmethod
-    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepItem"]:
-        raise NotImplementedError
-
-    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
-        raise NotImplementedError
+    pass
 
 
 class PepAvatar(PepItem):
     store: SlidgeStore
 
-    def __init__(self, jid: JID):
+    def __init__(self):
         self.metadata: Optional[AvatarMetadata] = None
         self.id: Optional[str] = None
-        self.jid = jid
         self._avatar_data_path: Optional[Path] = None
 
     @property
@@ -63,54 +52,7 @@ class PepAvatar(PepItem):
         data.set_value(self._avatar_data_path.read_bytes())
         return data
 
-    @staticmethod
-    def _sha(b: bytes):
-        return hashlib.sha1(b).hexdigest()
-
-    def _get_weak_unique_id(self, avatar: AvatarType):
-        if isinstance(avatar, str):
-            return avatar  # url
-        elif isinstance(avatar, bytes):
-            return self._sha(avatar)
-        elif isinstance(avatar, Path):
-            return self._sha(avatar.read_bytes())
-
-    @staticmethod
-    async def _get_image(avatar: AvatarType) -> PILImage:
-        if isinstance(avatar, str):
-            async with avatar_cache.http.get(avatar) as response:
-                return Image.open(io.BytesIO(await response.read()))
-        elif isinstance(avatar, bytes):
-            return Image.open(io.BytesIO(avatar))
-        elif isinstance(avatar, Path):
-            return Image.open(avatar)
-        else:
-            raise TypeError("Avatar must be bytes, a Path or a str (URL)", avatar)
-
-    async def set_avatar(
-        self, avatar: AvatarType, unique_id: Optional[LegacyFileIdType] = None
-    ):
-        if unique_id is None:
-            if isinstance(avatar, str):
-                await self._set_avatar_from_url_alone(avatar)
-                return
-            unique_id = self._get_weak_unique_id(avatar)
-
-        await self._set_avatar_from_unique_id(avatar, unique_id)
-
-    async def _set_avatar_from_unique_id(
-        self, avatar: AvatarType, unique_id: LegacyFileIdType
-    ):
-        img = await self._get_image(avatar)
-        cached_avatar = await avatar_cache.convert_and_store(img, unique_id)
-
-        self._set_avatar_from_cache(cached_avatar)
-
-    async def _set_avatar_from_url_alone(self, url: str):
-        cached_avatar = await avatar_cache.get_avatar_from_url_alone(url)
-        self._set_avatar_from_cache(cached_avatar)
-
-    def _set_avatar_from_cache(self, cached_avatar: CachedAvatar):
+    def set_avatar_from_cache(self, cached_avatar: CachedAvatar):
         metadata = AvatarMetadata()
         self.id = cached_avatar.hash
         metadata.add_info(
@@ -123,27 +65,6 @@ class PepAvatar(PepItem):
         self.metadata = metadata
         self._avatar_data_path = cached_avatar.path
 
-    @staticmethod
-    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepAvatar"]:
-        if user_jid is not None:
-            if not PepAvatar.store.contacts.is_contact_of(jid, user_jid):
-                raise XMPPError("item-not-found")
-        cached = PepAvatar.store.avatars.get_by_jid(jid)
-        if cached is None:
-            return None
-        item = PepAvatar(jid)
-        avatar_id = cached.legacy_id or cached.url
-        assert avatar_id is not None
-        cached_avatar = avatar_cache.get(avatar_id)
-        if cached_avatar is None:
-            raise XMPPError("internal-server-error")
-        item._set_avatar_from_cache(cached_avatar)
-        return item
-
-    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
-        assert self.id is not None
-        self.store.avatars.store_jid(self.id, jid)
-
 
 class PepNick(PepItem):
     contact_store: ContactStore
@@ -155,20 +76,6 @@ class PepNick(PepItem):
         self.nick = nickname
         self.__nick_str = nick
 
-    @staticmethod
-    def from_db(jid: JID, user_jid: Optional[JID] = None) -> Optional["PepNick"]:
-        if user_jid is None:
-            raise XMPPError("not-allowed")
-        contact = PepNick.contact_store.get(jid, user_jid)
-        if contact is None or contact.nick is None:
-            return None
-        return PepNick(contact.nick)
-
-    def to_db(self, jid: JID, user_jid: Optional[JID] = None):
-        if user_jid is None:
-            raise XMPPError("not-allowed")
-        PepNick.contact_store.update_nick(jid, user_jid, self.__nick_str)
-
 
 class PubSubComponent(NamedLockMixin, BasePlugin):
     xmpp: "BaseGateway"
@@ -178,7 +85,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
     dependencies = {
         "xep_0030",
         "xep_0060",
-        # "xep_0084",
         "xep_0115",
         "xep_0163",
     }
@@ -268,7 +174,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             else:
                 if pep_avatar.metadata is None:
                     raise XMPPError("internal-server-error", "Avatar but no metadata?")
-                await self._broadcast(
+                await self.broadcast(
                     data=pep_avatar.metadata,
                     from_=p.get_to(),
                     to=from_,
@@ -280,7 +186,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             except XMPPError:
                 pass
             else:
-                await self._broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
+                await self.broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
         if VCARD4_NAMESPACE + "+notify" in features:
             await self.broadcast_vcard_event(p.get_to(), to=from_)
@@ -295,7 +201,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         # but movim expects it to be here, and I guess
 
         log.debug("Broadcast vcard4 event: %s", vcard)
-        await self._broadcast(
+        await self.broadcast(
             data=vcard,
             from_=JID(from_).bare,
             to=to,
@@ -303,25 +209,34 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             node=VCARD4_NAMESPACE,
         )
 
-    async def _get_authorized_item(
-        self, cls: Type[PepItemType], stanza: Union[Iq, Presence]
-    ) -> PepItemType:
-        sto = stanza.get_to()
-        item = cls.from_db(sto, stanza.get_from())
-        if item is None:
-            raise XMPPError("item-not-found")
-
-        if sto != self.xmpp.boundjid.bare:
-            session = self.xmpp.get_session_from_stanza(stanza)
-            await session.contacts.by_jid(sto)
-
-        return item  # type:ignore
-
     async def _get_authorized_avatar(self, stanza: Union[Iq, Presence]) -> PepAvatar:
-        return await self._get_authorized_item(PepAvatar, stanza)
+        if stanza.get_to() == self.xmpp.boundjid.bare:
+            item = PepAvatar()
+            item.set_avatar_from_cache(avatar_cache.get_by_pk(self.xmpp.avatar_pk))
+            return item
+
+        session = self.xmpp.get_session_from_stanza(stanza)
+        entity = await session.get_contact_or_group_or_participant(stanza.get_to())
+
+        item = PepAvatar()
+        avatar_id = entity.avatar_id
+        if avatar_id is not None:
+            stored = avatar_cache.get(str(avatar_id))
+            assert stored is not None
+            item.set_avatar_from_cache(stored)
+        return item
 
     async def _get_authorized_nick(self, stanza: Union[Iq, Presence]) -> PepNick:
-        return await self._get_authorized_item(PepNick, stanza)
+        if stanza.get_to() == self.xmpp.boundjid.bare:
+            return PepNick(self.xmpp.COMPONENT_NAME)
+
+        session = self.xmpp.get_session_from_stanza(stanza)
+        entity = await session.get_contact_or_group_or_participant(stanza.get_to())
+
+        if entity.name is not None:
+            return PepNick(entity.name)
+        else:
+            return PepNick()
 
     async def _get_avatar_data(self, iq: Iq):
         pep_avatar = await self._get_authorized_avatar(iq)
@@ -364,10 +279,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         self._reply_with_payload(iq, vcard, "current", VCARD4_NAMESPACE)
 
     @staticmethod
-    def get_avatar(jid: JID):
-        return PepAvatar.from_db(jid)
-
-    @staticmethod
     def _reply_with_payload(
         iq: Iq,
         payload: Optional[Union[AvatarMetadata, AvatarData, VCard4]],
@@ -385,7 +296,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         result["pubsub"]["items"].append(item)
         result.send()
 
-    async def _broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
+    async def broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
         from_ = JID(from_)
         if from_ != self.xmpp.boundjid.bare and to is not None:
             to = JID(to)
@@ -427,62 +338,20 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             msg.set_to(to)
             msg.send()
 
-    async def set_avatar(
-        self,
-        jid: JidStr,
-        avatar: Optional[AvatarType] = None,
-        broadcast_to: OptJidStr = None,
-        unique_id=None,
-        broadcast=True,
-    ):
-        jid = JID(jid)
-        if avatar is None:
-            await self._broadcast(AvatarMetadata(), jid, broadcast_to)
-            avatar_cache.delete_jid(jid)
-        else:
-            pep_avatar = PepAvatar(jid)
-            try:
-                await pep_avatar.set_avatar(avatar, unique_id)
-            except (UnidentifiedImageError, FileNotFoundError) as e:
-                log.warning("Failed to set avatar for %s: %r", self, e)
-                return
-            pep_avatar.to_db(jid)
-            if pep_avatar.metadata is None:
-                raise RuntimeError
-            if not broadcast:
-                return
-            await self._broadcast(
-                pep_avatar.metadata,
-                jid,
-                broadcast_to,
-                id=pep_avatar.metadata["info"]["id"],
-            )
-
-    async def set_avatar_from_cache(
-        self, jid: JID, send_empty: bool, broadcast_to: OptJidStr = None, broadcast=True
-    ):
-        uid = avatar_cache.get_cached_id_for(jid)
-        if uid is None:
-            if not send_empty:
-                return
-            self.xmpp.loop.create_task(
-                self.set_avatar(jid, None, broadcast_to, uid, broadcast)
-            )
-            return
-        cached_avatar = avatar_cache.get(str(uid))
+    async def broadcast_avatar(
+        self, from_: JidStr, to: JidStr, cached_avatar: Optional[CachedAvatar]
+    ) -> None:
         if cached_avatar is None:
-            # should not happen but well…
-            log.warning(
-                "Something is wrong with the avatar, %s won't have an "
-                "avatar because avatar not found in cache",
-                jid,
+            await self.broadcast(AvatarMetadata(), from_, to)
+        else:
+            pep_avatar = PepAvatar()
+            pep_avatar.set_avatar_from_cache(cached_avatar)
+            assert pep_avatar.metadata is not None
+            await self.broadcast(
+                pep_avatar.metadata, from_, to, id=pep_avatar.metadata["info"]["id"]
             )
-            return
-        self.xmpp.loop.create_task(
-            self.set_avatar(jid, cached_avatar.path, broadcast_to, uid, broadcast)
-        )
 
-    def set_nick(
+    def broadcast_nick(
         self,
         user_jid: JID,
         jid: JidStr,
@@ -490,25 +359,8 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
     ):
         jid = JID(jid)
         nickname = PepNick(nick)
-        nickname.to_db(jid, user_jid)
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self._broadcast(nickname.nick, jid, user_jid.bare))
-
-    async def broadcast_all(self, from_: JID, to: JID):
-        """
-        Force push avatar and nick for a stored JID.
-        """
-        a = PepAvatar.from_db(from_)
-        if a:
-            if a.metadata:
-                await self._broadcast(
-                    a.metadata, from_, to, id=a.metadata["info"]["id"]
-                )
-            else:
-                log.warning("No metadata associated to this cached avatar?!")
-        n = PepNick.from_db(from_, to)
-        if n:
-            await self._broadcast(n.nick, from_, to)
+        self.xmpp.loop.create_task(self.broadcast(nickname.nick, jid, user_jid.bare))
 
 
 log = logging.getLogger(__name__)

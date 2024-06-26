@@ -232,9 +232,19 @@ class LegacyContact(
         for p in self.participants:
             p.nickname = n
         self._name = n
-        self.xmpp.pubsub.set_nick(user_jid=self.user_jid, jid=self.jid.bare, nick=n)
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.update_nick(self.contact_pk, n)
+        self.xmpp.pubsub.broadcast_nick(
+            user_jid=self.user_jid, jid=self.jid.bare, nick=n
+        )
+
+    def _get_cached_avatar_id(self):
+        assert self.contact_pk is not None
+        return self.xmpp.store.contacts.get_avatar_legacy_id(self.contact_pk)
 
     def _post_avatar_update(self):
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_avatar(self.contact_pk, self._avatar_pk)
         for p in self.participants:
             self.log.debug("Propagating new avatar to %s", p.muc)
             p.send_last_presence(force=True, no_cache_online=True)
@@ -333,7 +343,21 @@ class LegacyContact(
             self.send_last_presence()
 
     async def __broadcast_pubsub_items(self):
-        await self.xmpp.pubsub.broadcast_all(JID(self.jid.bare), self.user_jid)
+        cached_avatar = self.get_cached_avatar()
+        if cached_avatar is not None:
+            await self.xmpp.pubsub.broadcast_avatar(
+                self.jid.bare, self.session.user_jid, cached_avatar
+            )
+        nick = self.name
+        from ..core.pubsub import PepNick
+
+        if nick is not None:
+            pep_nick = PepNick(nick)
+            await self.xmpp.pubsub.broadcast(
+                pep_nick.nick,
+                self.jid.bare,
+                self.session.user_jid,
+            )
 
     async def _set_roster(self, **kw):
         try:

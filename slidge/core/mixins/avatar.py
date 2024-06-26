@@ -12,7 +12,7 @@ from ...util.types import (
     AvatarType,
     LegacyFileIdType,
 )
-from ..cache import avatar_cache
+from ..cache import CachedAvatar, avatar_cache
 
 if TYPE_CHECKING:
     from ..pubsub import PepAvatar
@@ -34,7 +34,9 @@ class AvatarMixin:
     def __init__(self) -> None:
         super().__init__()
         self._set_avatar_task: Optional[Task] = None
+        self.__broadcast_task: Optional[Task] = None
         self.__avatar_unique_id: Optional[AvatarIdType] = None
+        self._avatar_pk: Optional[int] = None
 
     @property
     def __avatar_jid(self):
@@ -86,13 +88,22 @@ class AvatarMixin:
 
     async def __set_avatar(self, a: Optional[AvatarType], uid: Optional[AvatarIdType]):
         self.__avatar_unique_id = uid
-        await self.session.xmpp.pubsub.set_avatar(
-            jid=self.__avatar_jid,
-            avatar=a,
-            unique_id=None if isinstance(uid, URL) else uid,
-            broadcast_to=self.session.user_jid.bare,
-            broadcast=self._avatar_pubsub_broadcast,
-        )
+
+        if a is None:
+            cached_avatar = None
+            self._avatar_pk = None
+        else:
+            cached_avatar = await avatar_cache.convert_or_get(
+                URL(a) if isinstance(a, URL) else a,
+                None if isinstance(uid, URL) else uid,
+            )
+            self._avatar_pk = cached_avatar.pk
+
+        if self._avatar_pubsub_broadcast:
+            await self.session.xmpp.pubsub.broadcast_avatar(
+                self.__avatar_jid, self.session.user_jid, cached_avatar
+            )
+
         self._post_avatar_update()
 
     async def _no_change(self, a: Optional[AvatarType], uid: Optional[AvatarIdType]):
@@ -103,7 +114,7 @@ class AvatarMixin:
         if isinstance(uid, URL):
             if self.__avatar_unique_id != uid:
                 return False
-            return not await avatar_cache.url_has_changed(uid)
+            return not await avatar_cache.url_modified(uid)
         return self.__avatar_unique_id == uid
 
     async def set_avatar(
@@ -136,32 +147,54 @@ class AvatarMixin:
         if blocking:
             await awaitable
 
-    def get_avatar(self) -> Optional["PepAvatar"]:
+    def get_cached_avatar(self) -> Optional["CachedAvatar"]:
         if not self.__avatar_unique_id:
             return None
-        return self.session.xmpp.pubsub.get_avatar(self.__avatar_jid)
+        return avatar_cache.get(self.__avatar_unique_id)
+
+    def get_avatar(self) -> Optional["PepAvatar"]:
+        cached_avatar = self.get_cached_avatar()
+        if cached_avatar is None:
+            return None
+        from ..pubsub import PepAvatar
+
+        item = PepAvatar()
+        item.set_avatar_from_cache(cached_avatar)
+        return item
 
     def _post_avatar_update(self) -> None:
         return
 
+    def __get_cached_avatar_id(self):
+        i = self._get_cached_avatar_id()
+        if i is None:
+            return None
+        return self.session.xmpp.AVATAR_ID_TYPE(i)
+
+    def _get_cached_avatar_id(self) -> Optional[str]:
+        raise NotImplementedError
+
     async def avatar_wrap_update_info(self):
-        cached_id = avatar_cache.get_cached_id_for(self.__avatar_jid)
+        cached_id = self.__get_cached_avatar_id()
         self.__avatar_unique_id = cached_id
         try:
             await self.update_info()  # type:ignore
         except NotImplementedError:
             return
         new_id = self.avatar
-        if isinstance(new_id, URL) and not await avatar_cache.url_has_changed(new_id):
+        if isinstance(new_id, URL) and not await avatar_cache.url_modified(new_id):
             return
         elif new_id != cached_id:
             # at this point it means that update_info set the avatar, and we don't
             # need to do anything else
             return
 
-        await self.session.xmpp.pubsub.set_avatar_from_cache(
-            self.__avatar_jid,
-            new_id is None and cached_id is not None,
-            self.session.user_jid.bare,
-            self._avatar_pubsub_broadcast,
-        )
+        if self._avatar_pubsub_broadcast:
+            if new_id is None and cached_id is None:
+                return
+            cached_avatar = avatar_cache.get(cached_id)
+            self.__broadcast_task = self.session.xmpp.loop.create_task(
+                self.session.xmpp.pubsub.broadcast_avatar(
+                    self.__avatar_jid, self.session.user_jid, cached_avatar
+                )
+            )

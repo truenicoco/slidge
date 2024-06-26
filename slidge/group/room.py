@@ -459,7 +459,14 @@ class LegacyMUC(
 
             msg.send()
 
+    def _get_cached_avatar_id(self):
+        assert self.pk is not None
+        return self.xmpp.store.rooms.get_avatar_legacy_id(self.pk)
+
     def _post_avatar_update(self) -> None:
+        if self.pk is None or self._avatar_pk is None:
+            return
+        self.xmpp.store.rooms.set_avatar(self.pk, self._avatar_pk)
         self.__send_configuration_change((104,))
         self._send_room_presence()
 
