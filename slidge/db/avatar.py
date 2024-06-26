@@ -16,10 +16,10 @@ from PIL.Image import open as open_image
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from ..db.models import Avatar
-from ..db.store import AvatarStore
-from ..util.types import URL, AvatarType, LegacyFileIdType
-from . import config
+from slidge.core import config
+from slidge.db.models import Avatar
+from slidge.db.store import AvatarStore
+from slidge.util.types import URL, AvatarType, LegacyFileIdType
 
 
 @dataclass

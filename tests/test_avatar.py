@@ -5,7 +5,6 @@ from conftest import AvatarFixtureMixin
 from test_shakespeare import Base as BaseNoMUC
 
 from slidge import LegacyMUC, MucType
-from slidge.core.cache import avatar_cache
 
 
 @pytest.mark.usefixtures("avatar")

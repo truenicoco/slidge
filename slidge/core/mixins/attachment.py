@@ -22,6 +22,7 @@ from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0385.stanza import Sims
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
+from ...db.avatar import avatar_cache
 from ...util.types import (
     LegacyAttachment,
     LegacyMessageType,
@@ -30,7 +31,6 @@ from ...util.types import (
 )
 from ...util.util import fix_suffix
 from .. import config
-from ..cache import avatar_cache
 from .message_maker import MessageMaker
 
 

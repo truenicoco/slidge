@@ -34,12 +34,12 @@ from ...command.base import Command, FormField
 from ...command.chat_command import ChatCommandProvider
 from ...command.register import RegistrationType
 from ...db import GatewayUser, SlidgeStore
+from ...db.avatar import avatar_cache
 from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
-from ..cache import avatar_cache
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession

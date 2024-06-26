@@ -34,10 +34,10 @@ from slidge import (
 
 from ..command import Command
 from ..core import config
-from ..core.cache import avatar_cache
 from ..core.config import _TimedeltaSeconds
 from ..core.pubsub import PepAvatar, PepNick
 from ..db import SlidgeStore
+from ..db.avatar import avatar_cache
 from ..db.meta import Base
 
 
