@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 from slixmpp import JID
 
+from ...db.avatar import CachedAvatar, avatar_cache
 from ...util.types import (
     URL,
     AnyBaseSession,
@@ -12,7 +13,6 @@ from ...util.types import (
     AvatarType,
     LegacyFileIdType,
 )
-from ..cache import CachedAvatar, avatar_cache
 
 if TYPE_CHECKING:
     from ..pubsub import PepAvatar

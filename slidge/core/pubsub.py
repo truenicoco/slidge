@@ -22,8 +22,8 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
+from ..db.avatar import CachedAvatar, avatar_cache
 from ..db.store import ContactStore, SlidgeStore
-from .cache import CachedAvatar, avatar_cache
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:

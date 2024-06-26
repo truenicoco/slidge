@@ -24,9 +24,9 @@ import configargparse
 
 from slidge import BaseGateway
 from slidge.core import config
-from slidge.core.cache import avatar_cache
 from slidge.core.pubsub import PepAvatar, PepNick
 from slidge.db import SlidgeStore
+from slidge.db.avatar import avatar_cache
 from slidge.db.meta import get_engine
 from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
