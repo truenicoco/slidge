@@ -39,6 +39,7 @@ from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from .. import config
+from ..cache import avatar_cache
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
@@ -228,6 +229,7 @@ class BaseGateway(
     is_group = False
     _can_send_carbon = False
     store: SlidgeStore
+    avatar_pk: int
 
     AVATAR_ID_TYPE: Callable[[str], Any] = str
     """
@@ -427,9 +429,13 @@ class BaseGateway(
         await disco.del_feature(feature="urn:xmpp:http:upload:0", jid=self.boundjid)
         await self.plugin["xep_0115"].update_caps(jid=self.boundjid)
 
-        await self.pubsub.set_avatar(
-            jid=self.boundjid.bare, avatar=self.COMPONENT_AVATAR
-        )
+        if self.COMPONENT_AVATAR:
+            cached_avatar = await avatar_cache.convert_or_get(
+                self.COMPONENT_AVATAR, None
+            )
+            self.avatar_pk = cached_avatar.pk
+        else:
+            cached_avatar = None
 
         for user in self.store.users.get_all():
             # TODO: before this, we should check if the user has removed us from their roster
@@ -453,6 +459,10 @@ class BaseGateway(
             )  # ensure we get all resources for user
             session = self.session_cls.from_user(user)
             session.create_task(self.__login_wrap(session))
+            if cached_avatar is not None:
+                await self.pubsub.broadcast_avatar(
+                    self.boundjid.bare, session.user_jid, cached_avatar
+                )
 
         log.info("Slidge has successfully started")
 

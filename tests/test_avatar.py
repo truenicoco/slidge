@@ -136,26 +136,26 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
         juliet = self.juliet
         assert juliet.avatar is None
 
-        avatar_cache.legacy_avatar_type = int
+        self.xmpp.AVATAR_ID_TYPE = int
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         self.__assert_publish(rewritten=True)
 
-        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == 123
+        assert juliet._AvatarMixin__get_cached_avatar_id() == 123
 
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         assert self.next_sent() is None
 
-        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == 123
+        assert juliet._AvatarMixin__get_cached_avatar_id() == 123
 
-        avatar_cache.legacy_avatar_type = str
+        self.xmpp.AVATAR_ID_TYPE = str
         self.run_coro(juliet.set_avatar(self.avatar_path, "123"))
         self.__assert_publish(rewritten=True)
-        assert avatar_cache.get_cached_id_for(juliet.jid.bare) == "123"
+        assert juliet._AvatarMixin__get_cached_avatar_id() == "123"
 
         self.run_coro(juliet.set_avatar(None))
         self.__assert_publish_empty()
 
-        assert avatar_cache.get_cached_id_for(juliet.jid.bare) is None
+        assert juliet._AvatarMixin__get_cached_avatar_id() is None
 
     def test_avatar_with_url(self):
         juliet = self.juliet

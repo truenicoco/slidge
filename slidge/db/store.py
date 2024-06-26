@@ -95,7 +95,7 @@ class UserStore(EngineMixin):
 
 
 class AvatarStore(EngineMixin):
-    def get_by_url(self, url: URL) -> Optional[Avatar]:
+    def get_by_url(self, url: URL | str) -> Optional[Avatar]:
         with self.session() as session:
             return session.execute(select(Avatar).where(Avatar.url == url)).scalar()
 
@@ -129,6 +129,10 @@ class AvatarStore(EngineMixin):
             return session.execute(
                 select(Avatar).where(Avatar.rooms.any(Room.jid == jid))
             ).scalar()
+
+    def get_by_pk(self, pk: int):
+        with self.session() as session:
+            return session.execute(select(Avatar).where(Avatar.id == pk)).scalar()
 
 
 class SentStore(EngineMixin):
@@ -223,22 +227,11 @@ class SentStore(EngineMixin):
 
 
 class ContactStore(EngineMixin):
-    def __get_user_pk(self, user_jid: JID) -> int:
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
         with self.session() as session:
-            return session.execute(
-                select(GatewayUser.id).where(GatewayUser.jid == user_jid.bare)
-            ).one()[0]
-
-    def is_contact_of(self, contact_jid: JID, user_jid: JID) -> bool:
-        with self.session() as session:
-            return (
-                session.execute(
-                    select(Contact)
-                    .where(Contact.jid == contact_jid.bare)
-                    .where(Contact.user_account_id == self.__get_user_pk(user_jid))
-                ).scalar()
-                is not None
-            )
+            session.execute(update(Contact).values(cached_presence=False))
+            session.commit()
 
     def add(self, user_pk: int, legacy_id: str, contact_jid: JID) -> int:
         with self.session() as session:
@@ -261,21 +254,10 @@ class ContactStore(EngineMixin):
             else:
                 return contact.id
 
-    def get(self, contact_jid: JID, user_jid: JID) -> Optional[Contact]:
-        with self.session() as session:
-            return session.execute(
-                select(Contact)
-                .where(Contact.jid == contact_jid.bare)
-                .where(Contact.user_account_id == self.__get_user_pk(user_jid))
-            ).scalar()
-
-    def update_nick(self, contact_jid: JID, user_jid: JID, nick: Optional[str]) -> None:
+    def update_nick(self, contact_pk: int, nick: Optional[str]) -> None:
         with self.session() as session:
             session.execute(
-                update(Contact)
-                .where(Contact.jid == contact_jid.bare)
-                .where(Contact.user_account_id == self.__get_user_pk(user_jid))
-                .values(nick=nick)
+                update(Contact).where(Contact.id == contact_pk).values(nick=nick)
             )
             session.commit()
 
@@ -317,6 +299,24 @@ class ContactStore(EngineMixin):
                 )
             )
             session.commit()
+
+    def set_avatar(self, contact_pk: int, avatar_pk: Optional[int]):
+        with self.session() as session:
+            session.execute(
+                update(Contact)
+                .where(Contact.id == contact_pk)
+                .values(avatar_id=avatar_pk)
+            )
+            session.commit()
+
+    def get_avatar_legacy_id(self, contact_pk: int) -> Optional[str]:
+        with self.session() as session:
+            contact = session.execute(
+                select(Contact).where(Contact.id == contact_pk)
+            ).scalar()
+            if contact is None or contact.avatar is None:
+                return None
+            return contact.avatar.legacy_id
 
 
 class MAMStore(EngineMixin):
@@ -362,7 +362,7 @@ class MAMStore(EngineMixin):
 
     def get_messages(
         self,
-        room_id: int,
+        room_pk: int,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         before_id: Optional[str] = None,
@@ -374,7 +374,7 @@ class MAMStore(EngineMixin):
     ) -> Iterator[HistoryMessage]:
 
         with self.session() as session:
-            q = select(ArchivedMessage).where(ArchivedMessage.room_id == room_id)
+            q = select(ArchivedMessage).where(ArchivedMessage.room_id == room_pk)
             if start_date is not None:
                 q = q.where(ArchivedMessage.timestamp >= start_date)
             if end_date is not None:
@@ -584,6 +584,20 @@ class RoomStore(EngineMixin):
                 ).one()[0]
             else:
                 return room.id
+
+    def set_avatar(self, room_pk: int, avatar_pk: int):
+        with self.session() as session:
+            session.execute(
+                update(Room).where(Room.id == room_pk).values(avatar_id=avatar_pk)
+            )
+            session.commit()
+
+    def get_avatar_legacy_id(self, room_pk: int) -> Optional[str]:
+        with self.session() as session:
+            room = session.execute(select(Room).where(Room.id == room_pk)).scalar()
+            if room is None or room.avatar is None:
+                return None
+            return room.avatar.legacy_id
 
 
 log = logging.getLogger(__name__)

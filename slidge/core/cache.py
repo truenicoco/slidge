@@ -11,19 +11,20 @@ from typing import Any, Callable, Optional
 
 import aiohttp
 from multidict import CIMultiDictProxy
-from PIL import Image
-from slixmpp import JID
+from PIL.Image import Image
+from PIL.Image import open as open_image
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from ..db.models import Avatar
 from ..db.store import AvatarStore
-from ..util.types import URL, LegacyFileIdType
+from ..util.types import URL, AvatarType, LegacyFileIdType
 from . import config
 
 
 @dataclass
 class CachedAvatar:
+    pk: int
     filename: str
     hash: str
     height: int
@@ -43,6 +44,7 @@ class CachedAvatar:
     @staticmethod
     def from_store(stored: Avatar, root_dir: Path):
         return CachedAvatar(
+            pk=stored.id,
             filename=stored.filename,
             hash=stored.hash,
             height=stored.height,
@@ -51,6 +53,10 @@ class CachedAvatar:
             root=root_dir,
             last_modified=stored.last_modified,
         )
+
+
+class NotModified(Exception):
+    pass
 
 
 class AvatarCache:
@@ -78,70 +84,78 @@ class AvatarCache:
                 headers["If-None-Match"] = etag
         return headers
 
-    async def get_avatar_from_url_alone(self, url: str):
-        """
-        Used when no avatar unique ID is passed. Store and use http headers
-        to avoid fetching ut
-        """
-        cached = self.get(url)
-        headers = self.__get_http_headers(cached)
-        async with _download_lock:
-            return await self.__download(cached, url, headers)
-
     async def __download(
         self,
-        cached: Optional[CachedAvatar],
         url: str,
         headers: dict[str, str],
-    ):
+    ) -> tuple[Image, CIMultiDictProxy[str]]:
         async with self.http.get(url, headers=headers) as response:
             if response.status == HTTPStatus.NOT_MODIFIED:
                 log.debug("Using avatar cache for %s", url)
-                return cached
-            log.debug("Download avatar for %s", url)
-            return await self.convert_and_store(
-                Image.open(io.BytesIO(await response.read())),
-                url,
+                raise NotModified
+            return (
+                open_image(io.BytesIO(await response.read())),
                 response.headers,
             )
 
-    async def url_has_changed(self, url: URL):
+    async def __is_modified(self, url, headers) -> bool:
+        async with self.http.head(url, headers=headers) as response:
+            return response.status != HTTPStatus.NOT_MODIFIED
+
+    async def url_modified(self, url: URL) -> bool:
         cached = self.store.get_by_url(url)
         if cached is None:
             return True
         headers = self.__get_http_headers(cached)
-        async with self.http.head(url, headers=headers) as response:
-            return response.status != HTTPStatus.NOT_MODIFIED
+        return await self.__is_modified(url, headers)
 
-    def get(self, unique_id: LegacyFileIdType) -> Optional[CachedAvatar]:
-        stored = self.store.get_by_legacy_id(str(unique_id))
+    def get(self, unique_id: LegacyFileIdType | URL) -> Optional[CachedAvatar]:
+        if isinstance(unique_id, URL):
+            stored = self.store.get_by_url(unique_id)
+        else:
+            stored = self.store.get_by_legacy_id(str(unique_id))
         if stored is None:
             return None
         return CachedAvatar.from_store(stored, self.dir)
 
-    def get_cached_id_for(self, jid: JID) -> Optional[LegacyFileIdType]:
-        with self.store.session():
-            stored = self.store.get_by_jid(jid)
-            if stored is None:
-                return None
-            if stored.legacy_id is None:
-                return None
-            return self.legacy_avatar_type(stored.legacy_id)
+    def get_by_pk(self, pk: int) -> CachedAvatar:
+        return CachedAvatar.from_store(self.store.get_by_pk(pk), self.dir)
 
-    def delete_jid(self, jid: JID):
-        with self.store.session() as orm:
-            stored = self.store.get_by_jid(jid)
-            if stored is None:
-                return
-            orm.delete(stored)
-            orm.commit()
+    @staticmethod
+    async def _get_image(avatar: AvatarType) -> Image:
+        if isinstance(avatar, bytes):
+            return open_image(io.BytesIO(avatar))
+        elif isinstance(avatar, Path):
+            return open_image(avatar)
+        raise TypeError("Avatar must be bytes or a Path", avatar)
 
-    async def convert_and_store(
+    async def convert_or_get(
         self,
-        img: Image.Image,
-        unique_id: LegacyFileIdType,
-        response_headers: Optional[CIMultiDictProxy[str]] = None,
+        avatar: AvatarType,
+        unique_id: Optional[LegacyFileIdType],
     ) -> CachedAvatar:
+        if unique_id is not None:
+            cached = self.get(str(unique_id))
+            if cached is not None:
+                return cached
+
+        if isinstance(avatar, (URL, str)):
+            if unique_id is None:
+                stored = self.store.get_by_url(avatar)
+                try:
+                    img, response_headers = await self.__download(
+                        avatar, self.__get_http_headers(stored)
+                    )
+                except NotModified:
+                    assert stored is not None
+                    return CachedAvatar.from_store(stored, self.dir)
+
+            else:
+                img, _ = await self.__download(avatar, {})
+                response_headers = None
+        else:
+            img = await self._get_image(avatar)
+            response_headers = None
         with self.store.session() as orm:
             stored = orm.execute(
                 select(Avatar).where(Avatar.legacy_id == str(unique_id))
@@ -183,7 +197,7 @@ class AvatarCache:
                 height=img.height,
                 width=img.width,
                 legacy_id=None if unique_id is None else str(unique_id),
-                url=None if response_headers is None else unique_id,
+                url=avatar if isinstance(avatar, (URL, str)) else None,
             )
             if response_headers:
                 stored.etag = response_headers.get("etag")
@@ -193,9 +207,13 @@ class AvatarCache:
             try:
                 orm.commit()
             except IntegrityError:
+                orm.rollback()
                 # happens when an avatar without legacy ID is passed
                 # several times
-                pass
+                stored = orm.execute(
+                    select(Avatar).where(Avatar.hash == hash_)
+                ).scalar()
+                assert stored is not None
             return CachedAvatar.from_store(stored, self.dir)
 
 
