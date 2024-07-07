@@ -730,8 +730,8 @@ class BaseSession(
     async def get_contact_or_group_or_participant(self, jid: JID):
         if jid.bare in (contacts := self.contacts.known_contacts(only_friends=False)):
             return contacts[jid.bare]
-        if jid.bare in (mucs := self.bookmarks._mucs_by_bare_jid):
-            return await self.__get_muc_or_participant(mucs[jid.bare], jid)
+        if (muc := self.bookmarks.by_jid_only_if_exists(JID(jid.bare))) is not None:
+            return await self.__get_muc_or_participant(muc, jid)
         else:
             muc = None
 

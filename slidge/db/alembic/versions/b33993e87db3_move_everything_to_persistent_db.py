@@ -186,7 +186,7 @@ def upgrade() -> None:
 
     try:
         shutil.rmtree(global_config.HOME_DIR / "slidge_avatars_v2")
-    except FileNotFoundError:
+    except (FileNotFoundError, AttributeError):
         pass
 
     # ### end Alembic commands ###

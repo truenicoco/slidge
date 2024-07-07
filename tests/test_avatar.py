@@ -289,15 +289,16 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
         )
 
     def test_romeo_join_empty_room_then_juliet_joins_then_set_avatar(self):
-        muc = self.get_muc(joined=True)
+        self.get_muc(joined=True)
         session = self.get_romeo_session()
 
         session.contacts.ready.set_result(True)
-        juliet = self.juliet
-        self.run_coro(muc.get_participant_by_contact(juliet))
+        muc = self.get_muc(joined=False)
+        self.run_coro(muc.get_participant_by_contact(self.juliet))
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
 
+        juliet = self.juliet
         juliet.avatar = self.avatar_path
         # no broadcast of the contact avatar because not added to roster,
         # only the participant
@@ -305,24 +306,25 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
         self._assert_juliet_presence_avatar()
         assert self.next_sent() is None
 
-        juliet.avatar = self.avatar_path
+        self.juliet.avatar = self.avatar_path
         assert self.next_sent() is None
 
+        juliet = self.juliet
         juliet.avatar = None
         self.run_coro(juliet._set_avatar_task)
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
 
     def test_romeo_join_empty_room_then_juliet_joins_then_set_avatar_with_url(self):
-        muc = self.get_muc(joined=True)
+        self.get_muc(joined=True)
         session = self.get_romeo_session()
 
         session.contacts.ready.set_result(True)
         juliet = self.juliet
-        self.run_coro(muc.get_participant_by_contact(juliet))
+        self.run_coro(self.get_muc(joined=False).get_participant_by_contact(juliet))
         self._assert_juliet_presence_no_avatar()
         assert self.next_sent() is None
-
+        juliet = self.juliet
         juliet.avatar = self.avatar_url
         # no broadcast of the contact avatar because not added to roster,
         # only the participant
@@ -340,28 +342,13 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
         assert self.next_sent() is None
 
     def test_avatar_forbidden_emoji_in_participant_nickname(self):
-        muc = self.get_muc(joined=True)
+        self.get_muc(joined=True)
         session = self.get_romeo_session()
         juliet = self.juliet
         juliet.name = "juliet🎉"
         juliet.avatar = self.avatar_url
         session.contacts.ready.set_result(True)
-        self.run_coro(muc.get_participant_by_contact(juliet))
-        self.send(  # language=XML
-            """
-            <presence from="room@aim.shakespeare.lit/juliet-1934e"
-                      to="romeo@montague.lit/gajim">
-              <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="member"
-                      role="participant"
-                      jid="juliet@aim.shakespeare.lit/slidge" />
-              </x>
-              <occupant-id xmlns="urn:xmpp:occupant-id:0"
-                           id="juliet@aim.shakespeare.lit/slidge" />
-              <nick xmlns="http://jabber.org/protocol/nick">juliet🎉</nick>
-            </presence>
-            """
-        )
+        self.run_coro(self.get_muc(False).get_participant_by_contact(juliet))
         self.send(  # language=XML
             f"""
             <presence from="room@aim.shakespeare.lit/juliet-1934e"
@@ -410,8 +397,9 @@ class TestParticipantAvatar(BaseMUC, AvatarFixtureMixin):
 @pytest.mark.usefixtures("avatar")
 class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):
     def test_room_avatar_change_after_join(self):
-        muc = self.get_muc(joined=True)
+        self.get_muc(joined=True)
         self._assert_send_room_avatar(empty=True)
+        muc = self.get_muc(joined=False)
         muc.avatar = self.avatar_path
         self.run_coro(muc._set_avatar_task)
         self.send(  # language=XML

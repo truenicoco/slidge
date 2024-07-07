@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Generic, Optional, Type
+from typing import TYPE_CHECKING, Generic, Iterator, Optional, Type
 
 from slixmpp import JID
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
@@ -47,8 +47,6 @@ class LegacyRoster(
         self.__store: ContactStore = session.xmpp.store.contacts
 
         self.session = session
-        self._contacts_by_bare_jid: dict[str, LegacyContactType] = {}
-        self._contacts_by_legacy_id: dict[LegacyUserIdType, LegacyContactType] = {}
         self.log = logging.getLogger(f"{self.session.user_jid.bare}:roster")
         self.user_legacy_id: Optional[LegacyUserIdType] = None
         self.ready: asyncio.Future[bool] = self.session.xmpp.loop.create_future()
@@ -57,30 +55,34 @@ class LegacyRoster(
     def __repr__(self):
         return f"<Roster of {self.session.user_jid}>"
 
-    def __iter__(self):
-        return iter(self._contacts_by_legacy_id.values())
+    def __iter__(self) -> Iterator[LegacyContactType]:
+        with self.__store.session():
+            for stored in self.__store.get_all(user_pk=self.session.user_pk):
+                yield self._contact_cls.from_store(self.session, stored)
 
     async def __finish_init_contact(
         self, legacy_id: LegacyUserIdType, jid_username: str, *args, **kwargs
     ):
         c = self._contact_cls(self.session, legacy_id, jid_username, *args, **kwargs)
-        async with self.lock(("finish", c)):
-            if legacy_id in self._contacts_by_legacy_id:
-                self.log.debug("Already updated %s", c)
-                return c
+        async with self.lock(("finish", c.legacy_id)):
             with self.__store.session():
+                stored = self.__store.get_by_legacy_id(
+                    self.session.user_pk, str(legacy_id)
+                )
+                if stored is not None and stored.updated:
+                    self.log.debug("Already updated %s", c)
+                    return self._contact_cls.from_store(self.session, stored)
                 c.contact_pk = self.__store.add(
                     self.session.user_pk, c.legacy_id, c.jid
                 )
                 await c.avatar_wrap_update_info()
-            self._contacts_by_legacy_id[legacy_id] = c
-            self._contacts_by_bare_jid[c.jid.bare] = c
+                self.__store.update(c)
         return c
 
     def known_contacts(self, only_friends=True) -> dict[str, LegacyContactType]:
         if only_friends:
-            return {j: c for j, c in self._contacts_by_bare_jid.items() if c.is_friend}
-        return self._contacts_by_bare_jid
+            return {j: c for j, c in self if c.is_friend}  # type:ignore
+        return {c.jid.bare: c for c in self}
 
     async def by_jid(self, contact_jid: JID) -> LegacyContactType:
         # """
@@ -95,16 +97,17 @@ class LegacyRoster(
         # """
         username = contact_jid.node
         async with self.lock(("username", username)):
-            bare = contact_jid.bare
-            c = self._contacts_by_bare_jid.get(bare)
-            if c is None:
-                legacy_id = await self.jid_username_to_legacy_id(username)
-                log.debug("Contact %s not found", contact_jid)
-                if self.get_lock(("legacy_id", legacy_id)):
-                    log.debug("Already updating %s", contact_jid)
-                    return await self.by_legacy_id(legacy_id)
-                c = await self.__finish_init_contact(legacy_id, username)
-            return c
+            with self.__store.session():
+                stored = self.__store.get_by_jid(self.session.user_pk, contact_jid)
+                if stored is not None and stored.updated:
+                    return self._contact_cls.from_store(self.session, stored)
+
+            legacy_id = await self.jid_username_to_legacy_id(username)
+            log.debug("Contact %s not found", contact_jid)
+            if self.get_lock(("legacy_id", legacy_id)):
+                log.debug("Already updating %s", contact_jid)
+                return await self.by_legacy_id(legacy_id)
+            return await self.__finish_init_contact(legacy_id, username)
 
     async def by_legacy_id(
         self, legacy_id: LegacyUserIdType, *args, **kwargs
@@ -127,20 +130,26 @@ class LegacyRoster(
         if legacy_id == self.user_legacy_id:
             raise ContactIsUser
         async with self.lock(("legacy_id", legacy_id)):
-            c = self._contacts_by_legacy_id.get(legacy_id)
-            if c is None:
-                username = await self.legacy_id_to_jid_username(legacy_id)
-                log.debug("Contact %s not found", legacy_id)
-                if self.get_lock(("username", username)):
-                    log.debug("Already updating %s", username)
-                    jid = JID()
-                    jid.node = username
-                    jid.domain = self.session.xmpp.boundjid.bare
-                    return await self.by_jid(jid)
-                c = await self.__finish_init_contact(
-                    legacy_id, username, *args, **kwargs
+            with self.__store.session():
+                stored = self.__store.get_by_legacy_id(
+                    self.session.user_pk, str(legacy_id)
                 )
-            return c
+                if stored is not None and stored.updated:
+                    return self._contact_cls.from_store(
+                        self.session, stored, *args, **kwargs
+                    )
+
+            username = await self.legacy_id_to_jid_username(legacy_id)
+            log.debug("Contact %s not found", legacy_id)
+            if self.get_lock(("username", username)):
+                log.debug("Already updating %s", username)
+                jid = JID()
+                jid.node = username
+                jid.domain = self.session.xmpp.boundjid.bare
+                return await self.by_jid(jid)
+            return await self.__finish_init_contact(
+                legacy_id, username, *args, **kwargs
+            )
 
     async def by_stanza(self, s) -> LegacyContact:
         # """

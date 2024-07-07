@@ -5,9 +5,11 @@ from typing import Optional
 
 import sqlalchemy as sa
 from slixmpp import JID
+from slixmpp.types import MucAffiliation, MucRole
 from sqlalchemy import ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..util.types import MucType
 from .meta import Base, JSONSerializable, JSONSerializableTypes
 
 
@@ -45,8 +47,12 @@ class GatewayUser(Base):
     legacy network
     """
 
-    contacts: Mapped[list["Contact"]] = relationship(cascade="all, delete-orphan")
-    rooms: Mapped[list["Room"]] = relationship(cascade="all, delete-orphan")
+    contacts: Mapped[list["Contact"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    rooms: Mapped[list["Room"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     xmpp_to_legacy: Mapped[list["XmppToLegacyIds"]] = relationship(
         cascade="all, delete-orphan"
     )
@@ -140,6 +146,34 @@ class Contact(Base):
     pstatus: Mapped[Optional[str]] = mapped_column(nullable=True)
     pshow: Mapped[Optional[str]] = mapped_column(nullable=True)
 
+    is_friend: Mapped[bool] = mapped_column(default=False)
+    added_to_roster: Mapped[bool] = mapped_column(default=False)
+    sent_order: Mapped[list["ContactSent"]] = relationship(back_populates="contact")
+
+    extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(
+        default=None, nullable=True
+    )
+    updated: Mapped[bool] = mapped_column(default=False)
+
+    participants: Mapped[list["Participant"]] = relationship(back_populates="contact")
+
+
+class ContactSent(Base):
+    """
+    Keep track of XMPP msg ids sent by a specific contact for networks in which
+    all messages need to be marked as read.
+
+    (XMPP displayed markers convey a "read up to here" semantic.)
+    """
+
+    __tablename__ = "contact_sent"
+    __table_args__ = (UniqueConstraint("contact_id", "msg_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contact_id: Mapped[int] = mapped_column(ForeignKey("contact.id"))
+    contact: Mapped[Contact] = relationship(back_populates="sent_order")
+    msg_id: Mapped[str] = mapped_column()
+
 
 class Room(Base):
     """
@@ -158,6 +192,19 @@ class Room(Base):
     avatar: Mapped[Avatar] = relationship(back_populates="rooms")
 
     name: Mapped[Optional[str]] = mapped_column(nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(nullable=True)
+    subject: Mapped[Optional[str]] = mapped_column(nullable=True)
+    subject_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    muc_type: Mapped[Optional[MucType]] = mapped_column(default=MucType.GROUP)
+
+    user_resources: Mapped[Optional[str]] = mapped_column(nullable=True)
+
+    participants_filled: Mapped[bool] = mapped_column(default=False)
+
+    extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(default=None)
+    updated: Mapped[bool] = mapped_column(default=False)
+
+    participants: Mapped[list["Participant"]] = relationship(back_populates="room")
 
 
 class ArchivedMessage(Base):
@@ -255,3 +302,51 @@ class XmppIdsMulti(Base):
 
     legacy_ids_multi_id: Mapped[int] = mapped_column(ForeignKey("legacy_ids_multi.id"))
     legacy_ids_multi: Mapped[LegacyIdsMulti] = relationship(back_populates="xmpp_ids")
+
+
+participant_hats = sa.Table(
+    "participant_hats",
+    Base.metadata,
+    sa.Column("participant_id", ForeignKey("participant.id"), primary_key=True),
+    sa.Column("hat_id", ForeignKey("hat.id"), primary_key=True),
+)
+
+
+class Hat(Base):
+    __tablename__ = "hat"
+    __table_args__ = (UniqueConstraint("title", "uri"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column()
+    uri: Mapped[str] = mapped_column()
+    participants: Mapped[list["Participant"]] = relationship(
+        secondary=participant_hats, back_populates="hats"
+    )
+
+
+class Participant(Base):
+    __tablename__ = "participant"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    room_id: Mapped[int] = mapped_column(ForeignKey("room.id"), nullable=False)
+    room: Mapped[Room] = relationship(back_populates="participants")
+
+    contact_id: Mapped[int] = mapped_column(ForeignKey("contact.id"), nullable=True)
+    contact: Mapped[Contact] = relationship(back_populates="participants")
+
+    is_user: Mapped[bool] = mapped_column(default=False)
+
+    affiliation: Mapped[MucAffiliation] = mapped_column(default="member")
+    role: Mapped[MucRole] = mapped_column(default="participant")
+
+    presence_sent: Mapped[bool] = mapped_column(default=False)
+
+    resource: Mapped[Optional[str]] = mapped_column(default=None)
+    nickname: Mapped[str] = mapped_column(nullable=True, default=None)
+
+    hats: Mapped[list["Hat"]] = relationship(
+        secondary=participant_hats, back_populates="participants"
+    )
+
+    extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(default=None)

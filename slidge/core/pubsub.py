@@ -231,7 +231,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             return PepNick(self.xmpp.COMPONENT_NAME)
 
         session = self.xmpp.get_session_from_stanza(stanza)
-        entity = await session.get_contact_or_group_or_participant(stanza.get_to())
+        entity = await session.contacts.by_jid(stanza.get_to())
 
         if entity.name is not None:
             return PepNick(entity.name)

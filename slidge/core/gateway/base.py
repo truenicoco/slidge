@@ -251,6 +251,24 @@ class BaseGateway(
     serialised-as-text version of the message unique ID back to the proper type.
     Common example: ``int``.
     """
+    LEGACY_CONTACT_ID_TYPE: Callable[[str], Any] = str
+    """
+    Modify this if the legacy network uses unique contact IDs that are not strings.
+
+    This is required because we store those IDs as TEXT in the persistent SQL DB.
+    The callable specified here is responsible for converting the
+    serialised-as-text version of the contact unique ID back to the proper type.
+    Common example: ``int``.
+    """
+    LEGACY_ROOM_ID_TYPE: Callable[[str], Any] = str
+    """
+    Modify this if the legacy network uses unique room IDs that are not strings.
+
+    This is required because we store those IDs as TEXT in the persistent SQL DB.
+    The callable specified here is responsible for converting the
+    serialised-as-text version of the room unique ID back to the proper type.
+    Common example: ``int``.
+    """
 
     def __init__(self):
         self.datetime_started = datetime.now()
@@ -293,6 +311,10 @@ class BaseGateway(
 
         self.session_cls: BaseSession = BaseSession.get_unique_subclass()
         self.session_cls.xmpp = self
+
+        from ...group.room import LegacyMUC
+
+        LegacyMUC.get_unique_subclass().xmpp = self
 
         self.get_session_from_stanza: Callable[
             [Union[Message, Presence, Iq]], BaseSession
@@ -411,7 +433,7 @@ class BaseGateway(
         mfrom = msg.get_from()
         resource = mfrom.resource
         try:
-            muc.user_resources.remove(resource)
+            muc.remove_user_resource(resource)
         except KeyError:
             # this actually happens quite frequently on for both beagle and monal
             # (not sure why?), but is of no consequence

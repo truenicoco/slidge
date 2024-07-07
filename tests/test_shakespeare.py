@@ -61,6 +61,8 @@ class Gateway(BaseGateway):
 
     GROUPS = True
 
+    LEGACY_CONTACT_ID_TYPE = int
+
     async def unregister(self, user: GatewayUser):
         unregistered.append(user)
 
@@ -977,7 +979,7 @@ class TestAimShakespeareBase(Base):
         juliet: LegacyContact = self.run_coro(
             session.contacts.by_jid(JID("juliet@aim.shakespeare.lit"))
         )
-        juliet.REACTIONS_SINGLE_EMOJI = True
+        LegacyContact.REACTIONS_SINGLE_EMOJI = True
         self.recv(  # language=XML
             f"""
             <iq type="get"
@@ -1023,7 +1025,7 @@ class TestAimShakespeareBase(Base):
             </iq>
             """,
         )
-        juliet.REACTIONS_SINGLE_EMOJI = False
+        LegacyContact.REACTIONS_SINGLE_EMOJI = False
 
     def test_non_existing_contact(self):
         self.recv(  # language=XML
@@ -1056,14 +1058,14 @@ class TestAimShakespeareBase(Base):
 
         ids = []
 
-        async def send_file(file_path, legacy_msg_id=None, *_a, **_k):
+        async def send_file(self, file_path, legacy_msg_id=None, *_a, **_k):
             ids.append(legacy_msg_id)
             m = Message()
             m.set_id(legacy_msg_id)
             return "", [m]
 
-        self.juliet.send_file = send_file
-
+        orig = LegacyContact.send_file
+        LegacyContact.send_file = send_file
         self.loop(self.juliet.send_files([], body="Hey"))
         assert not self.next_sent().get_id()
 
@@ -1125,6 +1127,8 @@ class TestAimShakespeareBase(Base):
 
         self.loop(self.juliet.send_files([a], legacy_msg_id="leg"))
         assert ids.pop(-1) == "leg"
+
+        LegacyContact.send_file = orig
 
     def test_gateway_message(self):
         session = self.get_romeo_session()
@@ -1383,10 +1387,10 @@ class TestContact(ClearSessionMixin, SlidgeTest):
         )
 
     def test_caps_extended(self):
+        LegacyContact.REACTIONS_SINGLE_EMOJI = True
+        LegacyContact.CORRECTION = False
         juliet = self.get_juliet()
-        juliet.REACTIONS_SINGLE_EMOJI = True
-        juliet.CORRECTION = False
-        juliet.reset_caps_cache()
+        # juliet.reset_caps_cache()
         juliet.is_friend = True
         juliet.online()
         self.send(  # language=XML
@@ -1402,6 +1406,8 @@ class TestContact(ClearSessionMixin, SlidgeTest):
             </presence>
             """
         )
+        LegacyContact.REACTIONS_SINGLE_EMOJI = False
+        LegacyContact.CORRECTION = True
 
     def test_vcard_temp(self):
         juliet = self.get_juliet()
@@ -1498,6 +1504,7 @@ class TestContact(ClearSessionMixin, SlidgeTest):
     def test_user_subscribe_to_non_friend_accept(self):
         juliet = self.get_juliet()
         juliet.is_friend = False
+
         sub = self.get_presence("subscribe")
 
         with unittest.mock.patch(
