@@ -2,7 +2,7 @@ import datetime
 import logging
 import warnings
 from datetime import date
-from typing import TYPE_CHECKING, Generic, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Generic, Iterable, Optional, Self, Union
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
@@ -10,10 +10,10 @@ from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import MessageTypes
 
 from ..core import config
-from ..core.mixins import FullCarbonMixin
-from ..core.mixins.avatar import AvatarMixin
+from ..core.mixins import AvatarMixin, FullCarbonMixin, StoredAttributeMixin
 from ..core.mixins.disco import ContactAccountDiscoMixin
 from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
+from ..db.models import Contact
 from ..util import SubclassableOnce
 from ..util.types import LegacyUserIdType, MessageOrPresenceTypeVar
 
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 class LegacyContact(
     Generic[LegacyUserIdType],
+    StoredAttributeMixin,
     AvatarMixin,
     ContactAccountDiscoMixin,
     FullCarbonMixin,
@@ -115,16 +116,36 @@ class LegacyContact(
 
         self._name: Optional[str] = None
 
-        if self.xmpp.MARK_ALL_MESSAGES:
-            self._sent_order = list[str]()
-
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
         self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid.bare}")
-        self.participants = set["LegacyParticipant"]()
-        self.is_friend: bool = False
-        self.__added_to_roster = False
+        self._is_friend: bool = False
+        self.added_to_roster = False
+
+    @property
+    def is_friend(self):
+        return self._is_friend
+
+    @is_friend.setter
+    def is_friend(self, value: bool):
+        if value == self._is_friend:
+            return
+        self._is_friend = value
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_friend(self.contact_pk, value)
+
+    @property
+    def participants(self) -> list["LegacyParticipant"]:
+        assert self.contact_pk is not None
+        from ..group.participant import LegacyParticipant
+
+        return [
+            LegacyParticipant.get_self_or_unique_subclass().from_store(
+                self.session, stored
+            )
+            for stored in self.xmpp.store.participants.get_for_contact(self.contact_pk)
+        ]
 
     @property
     def user_jid(self):
@@ -189,12 +210,13 @@ class LegacyContact(
             n["nick"] = self.name
             stanza.append(n)
         if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
-            self._sent_order.append(stanza["id"])
+            assert self.contact_pk is not None
+            self.xmpp.store.contacts.add_to_sent(self.contact_pk, stanza["id"])
         stanza["to"] = self.user_jid
         stanza.send()
         return stanza
 
-    def get_msg_xmpp_id_up_to(self, horizon_xmpp_id: str):
+    def get_msg_xmpp_id_up_to(self, horizon_xmpp_id: str) -> list[str]:
         """
         Return XMPP msg ids sent by this contact up to a given XMPP msg id.
 
@@ -208,15 +230,8 @@ class LegacyContact(
         :param horizon_xmpp_id: The latest message
         :return: A list of XMPP ids or None if horizon_xmpp_id was not found
         """
-        for i, xmpp_id in enumerate(self._sent_order):
-            if xmpp_id == horizon_xmpp_id:
-                break
-        else:
-            return
-        i += 1
-        res = self._sent_order[:i]
-        self._sent_order = self._sent_order[i:]
-        return res
+        assert self.contact_pk is not None
+        return self.xmpp.store.contacts.pop_sent_up_to(self.contact_pk, horizon_xmpp_id)
 
     @property
     def name(self):
@@ -304,7 +319,7 @@ class LegacyContact(
 
         :param force: add even if the contact was already added successfully
         """
-        if self.__added_to_roster and not force:
+        if self.added_to_roster and not force:
             return
         if config.NO_ROSTER_PUSH:
             log.debug("Roster push request by plugin ignored (--no-roster-push)")
@@ -338,7 +353,7 @@ class LegacyContact(
         else:
             # we only broadcast pubsub events for contacts added to the roster
             # so if something was set before, we need to push it now
-            self.__added_to_roster = True
+            self.added_to_roster = True
             self.session.create_task(self.__broadcast_pubsub_items())
             self.send_last_presence()
 
@@ -377,6 +392,8 @@ class LegacyContact(
         :param text: Optional message from the friend to the user
         """
         self.is_friend = True
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_friend(self.contact_pk, True)
         self.log.debug("Accepting friend request")
         presence = self._make_presence(ptype="subscribed", pstatus=text, bare=True)
         self._send(presence, nick=True)
@@ -468,6 +485,24 @@ class LegacyContact(
         :return:
         """
         pass
+
+    @classmethod
+    def from_store(cls, session, stored: Contact, *args, **kwargs) -> Self:
+        contact = cls(
+            session,
+            cls.xmpp.LEGACY_CONTACT_ID_TYPE(stored.legacy_id),
+            stored.jid.username,  # type: ignore
+            *args,  # type: ignore
+            **kwargs,  # type: ignore
+        )
+        contact.contact_pk = stored.id
+        contact._name = stored.nick
+        contact._is_friend = stored.is_friend
+        contact.added_to_roster = stored.added_to_roster
+        if (data := stored.extra_attributes) is not None:
+            contact.deserialize_extra_attributes(data)
+        contact._set_avatar_from_store(stored)
+        return contact
 
 
 def is_markable(stanza: Union[Message, Presence]):

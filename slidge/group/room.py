@@ -1,10 +1,11 @@
+import json
 import logging
 import re
 import string
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Generic, Optional, Union
+from typing import TYPE_CHECKING, Generic, Optional, Self, Union
 from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
@@ -17,10 +18,12 @@ from slixmpp.xmlstream import ET
 
 from ..contact.roster import ContactIsUser
 from ..core import config
+from ..core.mixins import StoredAttributeMixin
 from ..core.mixins.avatar import AvatarMixin
 from ..core.mixins.disco import ChatterDiscoMixin
 from ..core.mixins.lock import NamedLockMixin
 from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
+from ..db.models import Room
 from ..util import ABCSubclassableOnceAtMost
 from ..util.types import (
     LegacyGroupIdType,
@@ -46,6 +49,7 @@ class LegacyMUC(
     Generic[
         LegacyGroupIdType, LegacyMessageType, LegacyParticipantType, LegacyUserIdType
     ],
+    StoredAttributeMixin,
     AvatarMixin,
     NamedLockMixin,
     ChatterDiscoMixin,
@@ -60,8 +64,6 @@ class LegacyMUC(
     on the user's :py:class:`slidge.core.session.BaseSession`.
     """
 
-    subject_date: Optional[datetime] = None
-    n_participants: Optional[int] = None
     max_history_fetch = 100
 
     type = MucType.CHANNEL
@@ -131,13 +133,9 @@ class LegacyMUC(
         self.legacy_id = legacy_id
         self.jid = jid
 
-        self.user_resources = set[str]()
+        self._user_resources = set[str]()
 
         self.Participant = LegacyParticipant.get_self_or_unique_subclass()
-
-        self.xmpp.add_event_handler(
-            "presence_unavailable", self._on_presence_unavailable
-        )
 
         self._subject = ""
         self.subject_setter: Union[str, "LegacyContact", "LegacyParticipant"] = (
@@ -147,14 +145,29 @@ class LegacyMUC(
         self.pk: Optional[int] = None
         self._user_nick: Optional[str] = None
 
-        self._participants_by_nicknames = dict[str, LegacyParticipantType]()
-        self._participants_by_escaped_nicknames = dict[str, LegacyParticipantType]()
-        self._participants_by_contacts = dict["LegacyContact", LegacyParticipantType]()
-
-        self.__participants_filled = False
+        self._participants_filled = False
         self.__history_filled = False
         self._description = ""
+        self._subject_date: Optional[datetime] = None
+
+        self.__participants_store = self.xmpp.store.participants
+        self.__store = self.xmpp.store.rooms
+
+        self._n_participants: Optional[int] = None
+
         super().__init__()
+
+    @property
+    def n_participants(self):
+        return self._n_participants
+
+    @n_participants.setter
+    def n_participants(self, n_participants: Optional[int]):
+        if self._n_participants == n_participants:
+            return
+        self._n_participants = n_participants
+        assert self.pk is not None
+        self.__store.update_n_participants(self.pk, n_participants)
 
     @property
     def user_jid(self):
@@ -162,6 +175,16 @@ class LegacyMUC(
 
     def __repr__(self):
         return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
+
+    @property
+    def subject_date(self) -> Optional[datetime]:
+        return self._subject_date
+
+    @subject_date.setter
+    def subject_date(self, when: Optional[datetime]) -> None:
+        self._subject_date = when
+        assert self.pk is not None
+        self.__store.update_subject_date(self.pk, when)
 
     def __send_configuration_change(self, codes):
         part = self.get_system_participant()
@@ -175,11 +198,24 @@ class LegacyMUC(
     def user_nick(self, nick: str):
         self._user_nick = nick
 
+    def add_user_resource(self, resource: str) -> None:
+        self._user_resources.add(resource)
+        assert self.pk is not None
+        self.__store.set_resource(self.pk, self._user_resources)
+
+    def get_user_resources(self) -> set[str]:
+        return self._user_resources
+
+    def remove_user_resource(self, resource: str) -> None:
+        self._user_resources.remove(resource)
+        assert self.pk is not None
+        self.__store.set_resource(self.pk, self._user_resources)
+
     async def __fill_participants(self):
         async with self.lock("fill participants"):
-            if self.__participants_filled:
+            if self._participants_filled:
                 return
-            self.__participants_filled = True
+            self._participants_filled = True
             try:
                 await self.fill_participants()
             except NotImplementedError:
@@ -230,9 +266,11 @@ class LegacyMUC(
         if self._description == d:
             return
         self._description = d
+        assert self.pk is not None
+        self.__store.update_description(self.pk, d)
         self.__send_configuration_change((104,))
 
-    def _on_presence_unavailable(self, p: Presence):
+    def on_presence_unavailable(self, p: Presence):
         pto = p.get_to()
         if pto.bare != self.jid.bare:
             return
@@ -240,12 +278,12 @@ class LegacyMUC(
         pfrom = p.get_from()
         if pfrom.bare != self.user_jid.bare:
             return
-        if (resource := pfrom.resource) in (resources := self.user_resources):
+        if (resource := pfrom.resource) in self._user_resources:
             if pto.resource != self.user_nick:
                 self.log.debug(
                     "Received 'leave group' request but with wrong nickname. %s", p
                 )
-            resources.remove(resource)
+            self.remove_user_resource(resource)
         else:
             self.log.debug(
                 "Received 'leave group' request but resource was not listed. %s", p
@@ -308,6 +346,8 @@ class LegacyMUC(
             )
         )
         self._subject = s
+        assert self.pk is not None
+        self.__store.update_subject(self.pk, s)
 
     @property
     def is_anonymous(self):
@@ -365,10 +405,10 @@ class LegacyMUC(
         form.add_field("muc#maxhistoryfetch", value=str(self.max_history_fetch))
         form.add_field("muc#roominfo_subjectmod", "boolean", value=False)
 
-        if self._ALL_INFO_FILLED_ON_STARTUP or self.__participants_filled:
+        if self._ALL_INFO_FILLED_ON_STARTUP or self._participants_filled:
             n: Optional[int] = len(await self.get_participants())
         else:
-            n = self.n_participants
+            n = self._n_participants
         if n is not None:
             form.add_field("muc#roominfo_occupants", value=str(n))
 
@@ -416,7 +456,7 @@ class LegacyMUC(
             presence.send()
 
     def user_full_jids(self):
-        for r in self.user_resources:
+        for r in self._user_resources:
             j = copy(self.user_jid)
             j.resource = r
             yield j
@@ -488,10 +528,10 @@ class LegacyMUC(
         requested_nickname = join_presence.get_to().resource
         client_resource = user_full_jid.resource
 
-        if client_resource in self.user_resources:
+        if client_resource in self._user_resources:
             self.log.debug("Received join from a resource that is already joined.")
 
-        self.user_resources.add(client_resource)
+        self.add_user_resource(client_resource)
 
         if not requested_nickname or not client_resource:
             raise XMPPError("jid-malformed", by=self.jid)
@@ -506,11 +546,11 @@ class LegacyMUC(
 
         await self.__fill_participants()
 
-        for participant in self._participants_by_nicknames.values():
-            if participant.is_user:  # type:ignore
-                continue
-            if participant.is_system:  # type:ignore
-                continue
+        assert self.pk is not None
+        for db_participant in self.xmpp.store.participants.get_all(
+            self.pk, user_included=False
+        ):
+            participant = self.Participant.from_store(self.session, db_participant)
             participant.send_initial_presence(full_jid=user_full_jid)
 
         user_nick = self.user_nick
@@ -566,13 +606,13 @@ class LegacyMUC(
         self.__store_participant(p)
         return p
 
-    def __store_participant(self, p: "LegacyParticipantType"):
+    def __store_participant(self, p: "LegacyParticipantType") -> None:
         # we don't want to update the participant list when we're filling history
         if not self.KEEP_BACKFILLED_PARTICIPANTS and self.get_lock("fill history"):
             return
-        self._participants_by_nicknames[p.nickname] = p  # type:ignore
-        if p.contact:
-            self._participants_by_contacts[p.contact] = p
+        assert self.pk is not None
+        p.pk = self.__participants_store.add(self.pk, p.nickname)
+        self.__participants_store.update(p)
 
     async def get_participant(
         self,
@@ -601,23 +641,27 @@ class LegacyMUC(
         """
         if fill_first:
             await self.__fill_participants()
-        p = self._participants_by_nicknames.get(
-            nickname
-        ) or self._participants_by_escaped_nicknames.get(nickname)
-        if p is None:
-            if raise_if_not_found:
-                raise XMPPError("item-not-found")
-            p = self.Participant(self, nickname, **kwargs)
-            if store:
-                self.__store_participant(p)
-            if (
-                not self.get_lock("fill participants")
-                and not self.get_lock("fill history")
-                and self.__participants_filled
-                and not p.is_user
-                and not p.is_system
-            ):
-                p.send_affiliation_change()
+        assert self.pk is not None
+        with self.xmpp.store.session():
+            stored = self.__participants_store.get_by_nickname(
+                self.pk, nickname
+            ) or self.__participants_store.get_by_resource(self.pk, nickname)
+            if stored is not None:
+                return self.Participant.from_store(self.session, stored)
+
+        if raise_if_not_found:
+            raise XMPPError("item-not-found")
+        p = self.Participant(self, nickname, **kwargs)
+        if store:
+            self.__store_participant(p)
+        if (
+            not self.get_lock("fill participants")
+            and not self.get_lock("fill history")
+            and self._participants_filled
+            and not p.is_user
+            and not p.is_system
+        ):
+            p.send_affiliation_change()
         return p
 
     def get_system_participant(self) -> "LegacyParticipantType":
@@ -646,25 +690,28 @@ class LegacyMUC(
         :return:
         """
         await self.session.contacts.ready
-        p = self._participants_by_contacts.get(c)
-        if p is None:
-            nickname = c.name or _unescape_node(c.jid_username)
-            if nickname in self._participants_by_nicknames:
-                self.log.debug("Nickname conflict")
-                nickname = f"{nickname} ({c.jid_username})"
-            p = self.Participant(self, nickname, **kwargs)
-            p.contact = c
-            c.participants.add(p)
-            # FIXME: this is not great but given the current design,
-            #        during participants fill and history backfill we do not
-            #        want to send presence, because we might update affiliation
-            #        and role afterwards.
-            # We need a refactor of the MUC class… later™
-            if not self.get_lock("fill participants") and not self.get_lock(
-                "fill history"
-            ):
-                p.send_last_presence(force=True, no_cache_online=True)
-            self.__store_participant(p)
+        assert self.pk is not None
+        assert c.contact_pk is not None
+        with self.__store.session():
+            stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)
+            if stored is not None:
+                return self.Participant.from_store(self.session, stored)
+
+        nickname = c.name or _unescape_node(c.jid_username)
+        if not self.__store.nickname_is_available(self.pk, nickname):
+            self.log.debug("Nickname conflict")
+            nickname = f"{nickname} ({c.jid_username})"
+        p = self.Participant(self, nickname, **kwargs)
+        p.contact = c
+
+        # FIXME: this is not great but given the current design,
+        #        during participants fill and history backfill we do not
+        #        want to send presence, because we might update affiliation
+        #        and role afterwards.
+        # We need a refactor of the MUC class… later™
+        self.__store_participant(p)
+        if not self.get_lock("fill participants") and not self.get_lock("fill history"):
+            p.send_last_presence(force=True, no_cache_online=True)
         return p
 
     async def get_participant_by_legacy_id(
@@ -676,15 +723,20 @@ class LegacyMUC(
             return await self.get_user_participant(**kwargs)
         return await self.get_participant_by_contact(c, **kwargs)
 
-    async def get_participants(self):
+    async def get_participants(self, fill_first=True):
         """
         Get all known participants of the group, ensure :meth:`.LegacyMUC.fill_participants`
         has been awaited once before. Plugins should not use that, internal
         slidge use only.
         :return:
         """
-        await self.__fill_participants()
-        return list(self._participants_by_nicknames.values())
+        if fill_first:
+            await self.__fill_participants()
+        assert self.pk is not None
+        return [
+            self.Participant.from_store(self.session, s)
+            for s in self.__participants_store.get_all(self.pk)
+        ]
 
     def remove_participant(self, p: "LegacyParticipantType", kick=False, ban=False):
         """
@@ -696,19 +748,7 @@ class LegacyMUC(
         """
         if kick and ban:
             raise TypeError("Either kick or ban")
-        if p.contact is not None:
-            try:
-                del self._participants_by_contacts[p.contact]
-            except KeyError:
-                self.log.warning(
-                    "Removed a participant we didn't know was here?, %s", p
-                )
-            else:
-                p.contact.participants.remove(p)
-        try:
-            del self._participants_by_nicknames[p.nickname]  # type:ignore
-        except KeyError:
-            self.log.warning("Removed a participant we didn't know was here?, %s", p)
+        self.__participants_store.delete(p.pk)
         if kick:
             codes = {307}
         elif ban:
@@ -721,14 +761,15 @@ class LegacyMUC(
         p._send(presence)
 
     def rename_participant(self, old_nickname: str, new_nickname: str):
-        try:
-            p = self._participants_by_nicknames.pop(old_nickname)
-        except KeyError:
-            # when called by participant.nickname.setter
-            return
-        self._participants_by_nicknames[new_nickname] = p
-        if p.nickname == old_nickname:
-            p.nickname = new_nickname
+        assert self.pk is not None
+        with self.xmpp.store.session():
+            stored = self.__participants_store.get_by_nickname(self.pk, old_nickname)
+            if stored is None:
+                self.log.debug("Tried to rename a participant that we didn't know")
+                return
+            p = self.Participant.from_store(self.session, stored)
+            if p.nickname == old_nickname:
+                p.nickname = new_nickname
 
     async def __old_school_history(
         self,
@@ -1023,30 +1064,39 @@ class LegacyMUC(
         raise NotImplementedError
 
     async def parse_mentions(self, text: str) -> list[Mention]:
-        await self.__fill_participants()
+        with self.__store.session():
+            await self.__fill_participants()
+            assert self.pk is not None
+            participants = {
+                p.nickname: p for p in self.__participants_store.get_all(self.pk)
+            }
 
-        if len(self._participants_by_nicknames) == 0:
-            return []
+            if len(participants) == 0:
+                return []
 
-        result = []
-        for match in re.finditer(
-            "|".join(
-                sorted(
-                    [re.escape(nick) for nick in self._participants_by_nicknames],
-                    key=lambda nick: len(nick),
-                    reverse=True,
-                )
-            ),
-            text,
-        ):
-            span = match.span()
-            nick = match.group()
-            if span[0] != 0 and text[span[0] - 1] not in _WHITESPACE_OR_PUNCTUATION:
-                continue
-            if span[1] == len(text) or text[span[1]] in _WHITESPACE_OR_PUNCTUATION:
-                participant = self._participants_by_nicknames[nick]
-                if contact := participant.contact:
-                    result.append(Mention(contact=contact, start=span[0], end=span[1]))
+            result = []
+            for match in re.finditer(
+                "|".join(
+                    sorted(
+                        [re.escape(nick) for nick in participants.keys()],
+                        key=lambda nick: len(nick),
+                        reverse=True,
+                    )
+                ),
+                text,
+            ):
+                span = match.span()
+                nick = match.group()
+                if span[0] != 0 and text[span[0] - 1] not in _WHITESPACE_OR_PUNCTUATION:
+                    continue
+                if span[1] == len(text) or text[span[1]] in _WHITESPACE_OR_PUNCTUATION:
+                    participant = self.Participant.from_store(
+                        self.session, participants[nick]
+                    )
+                    if contact := participant.contact:
+                        result.append(
+                            Mention(contact=contact, start=span[0], end=span[1])
+                        )
         return result
 
     async def on_set_subject(self, subject: str) -> None:
@@ -1059,6 +1109,34 @@ class LegacyMUC(
         :param subject: The new subject for this room.
         """
         raise NotImplementedError
+
+    @classmethod
+    def from_store(cls, session, stored: Room, *args, **kwargs) -> Self:
+        muc = cls(
+            session,
+            cls.xmpp.LEGACY_ROOM_ID_TYPE(stored.legacy_id),
+            stored.jid,
+            *args,  # type: ignore
+            **kwargs,  # type: ignore
+        )
+        muc.pk = stored.id
+        muc.type = stored.muc_type  # type: ignore
+        if stored.name:
+            muc.DISCO_NAME = stored.name
+        if stored.description:
+            muc._description = stored.description
+        if (data := stored.extra_attributes) is not None:
+            muc.deserialize_extra_attributes(data)
+        muc._subject = stored.subject or ""
+        if stored.subject_date is not None:
+            muc._subject_date = stored.subject_date.replace(tzinfo=timezone.utc)
+        muc._participants_filled = stored.participants_filled
+        muc.__history_filled = True
+        if stored.user_resources is not None:
+            muc._user_resources = set(json.loads(stored.user_resources))
+        muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
+        muc._set_avatar_from_store(stored)
+        return muc
 
 
 def set_origin_id(msg: Message, origin_id: str):

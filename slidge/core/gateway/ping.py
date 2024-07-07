@@ -59,7 +59,7 @@ class Ping:
 
     @staticmethod
     def __handle_muc_ping(muc: LegacyMUC, iq: Iq):
-        if iq.get_from().resource in muc.user_resources:
+        if iq.get_from().resource in muc.get_user_resources():
             iq.reply().send()
         else:
             raise XMPPError("not-acceptable", etype="cancel", by=muc.jid)

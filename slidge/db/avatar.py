@@ -14,7 +14,6 @@ from multidict import CIMultiDictProxy
 from PIL.Image import Image
 from PIL.Image import open as open_image
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from slidge.core import config
 from slidge.db.models import Avatar
@@ -119,7 +118,9 @@ class AvatarCache:
         return CachedAvatar.from_store(stored, self.dir)
 
     def get_by_pk(self, pk: int) -> CachedAvatar:
-        return CachedAvatar.from_store(self.store.get_by_pk(pk), self.dir)
+        stored = self.store.get_by_pk(pk)
+        assert stored is not None
+        return CachedAvatar.from_store(stored, self.dir)
 
     @staticmethod
     async def _get_image(avatar: AvatarType) -> Image:
@@ -191,6 +192,11 @@ class AvatarCache:
 
             hash_ = hashlib.sha1(img_bytes).hexdigest()
 
+            stored = orm.execute(select(Avatar).where(Avatar.hash == hash_)).scalar()
+
+            if stored is not None:
+                return CachedAvatar.from_store(stored, self.dir)
+
             stored = Avatar(
                 filename=filename,
                 hash=hash_,
@@ -204,16 +210,7 @@ class AvatarCache:
                 stored.last_modified = response_headers.get("last-modified")
 
             orm.add(stored)
-            try:
-                orm.commit()
-            except IntegrityError:
-                orm.rollback()
-                # happens when an avatar without legacy ID is passed
-                # several times
-                stored = orm.execute(
-                    select(Avatar).where(Avatar.hash == hash_)
-                ).scalar()
-                assert stored is not None
+            orm.commit()
             return CachedAvatar.from_store(stored, self.dir)
 
 

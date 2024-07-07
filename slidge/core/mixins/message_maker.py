@@ -60,8 +60,9 @@ class MessageMaker(BaseSender):
             msg["body"] = body
             state = "active"
         if thread:
-            known_threads = self.session.threads.inverse  # type:ignore
-            msg["thread"] = known_threads.get(thread) or str(thread)
+            msg["thread"] = self.xmpp.store.sent.get_legacy_thread(
+                self.user_pk, str(thread)
+            ) or str(thread)
         if state:
             msg["chat_state"] = state
         for hint in hints:

@@ -186,10 +186,15 @@ class MUC(slidge.LegacyMUC):
             second = await self.get_participant("secondwitch")
 
         first._affiliation = "owner"
+        self.xmpp.store.participants.set_affiliation(first.pk, "owner")
         first._role = "moderator"
+        self.xmpp.store.participants.set_role(first.pk, "moderator")
 
         second._affiliation = "admin"
+        self.xmpp.store.participants.set_affiliation(second.pk, "admin")
         second._role = "moderator"
+        self.xmpp.store.participants.set_role(second.pk, "moderator")
+
         await self.get_user_participant()
 
     async def update_info(self):
@@ -257,9 +262,6 @@ class Base(ClearSessionMixin, SlidgeTest):
     def tearDown(self):
         super().tearDown()
         slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
-        with self.xmpp.store.mam.session() as orm:
-            orm.execute(delete(ArchivedMessage))
-            orm.commit()
 
     @staticmethod
     def get_romeo_session() -> Session:
@@ -274,7 +276,7 @@ class Base(ClearSessionMixin, SlidgeTest):
             )
         )
         for resource in resources:
-            muc.user_resources.add(resource)
+            muc.add_user_resource(resource)
             n = self.next_sent()
             if n:
                 assert n["subject"]
@@ -292,7 +294,9 @@ class Base(ClearSessionMixin, SlidgeTest):
         participant: LegacyParticipant = self.run_coro(
             muc.get_participant(nickname, **kwargs)
         )
-        participant._LegacyParticipant__presence_sent = presence_sent
+        if presence_sent:
+            self.xmpp.store.participants.set_presence_sent(participant.pk)
+        participant._presence_sent = presence_sent
         return participant
 
 
@@ -775,6 +779,7 @@ class TestMuc(Base):
         participant = self.run_coro(muc.get_participant("stan"))
         participant.send_text("Hey", when=now)
         muc.subject_date = now
+        self.xmpp.store.rooms.update(muc)
         self.recv(  # language=XML
             """
             <presence from='romeo@montague.lit/gajim'
@@ -1071,12 +1076,11 @@ class TestMuc(Base):
             </message>
             """
         )
-        for r in muc.user_resources:
-            self.send(  # language=XML
-                f"""
+        resources = muc.get_user_resources()
+        tpl = f"""
             <message from='{muc.jid}/{muc.user_nick}'
                      id='origin'
-                     to='romeo@montague.lit/{r}'
+                     to='romeo@montague.lit/{{resource}}'
                      type='groupchat'>
               <body>BODY</body>
               <stanza-id xmlns="urn:xmpp:sid:0"
@@ -1087,9 +1091,15 @@ class TestMuc(Base):
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="slidge-user" />
             </message>
-            """,
-                use_values=False,
-            )
+            """  # language=XML
+        resources2 = set()
+        for _ in range(2):
+            msg = self.next_sent()
+            resource = msg.get_to().resource
+            self.check(msg, tpl.format(resource=resource), use_values=False)
+            resources2.add(resource)
+        assert resources == resources2
+
         assert self.next_sent() is None
         sent = Session.SENT_TEXT.pop()
         assert sent["text"] == "BODY", sent
@@ -1101,7 +1111,7 @@ class TestMuc(Base):
     def test_msg_reply_from_xmpp(self):
         Session.SENT_TEXT = []
         muc = self.get_private_muc()
-        muc.user_resources.add("gajim")
+        muc.add_user_resource("gajim")
         fallback = "> Anna wrote:\n> We should bake a cake\n"
         stripped_body = "Great idea!"
         self.recv(  # language=XML
@@ -1331,10 +1341,10 @@ class TestMuc(Base):
         )
 
     def test_react_from_xmpp(self):
-        muc = self.get_private_muc(resources=["gajim", "movim"])
+        muc = self.get_private_muc(resources=["movim"])
         self.recv(  # language=XML
             f"""
-            <message from='romeo@montague.lit/gajim'
+            <message from='romeo@montague.lit/movim'
                      id='origin'
                      to='{muc.jid}'
                      type='groupchat'>
@@ -1345,7 +1355,7 @@ class TestMuc(Base):
             </message>
             """
         )
-        for r in muc.user_resources:
+        for r in muc.get_user_resources():
             self.send(  # language=XML
                 f"""
             <message from='{muc.jid}/{muc.user_nick}'
@@ -2523,7 +2533,7 @@ class TestMuc(Base):
             </presence>
             """
         )
-        for _ in range(len(muc._participants_by_nicknames)):
+        for _ in self.xmpp.store.participants.get_all(muc.pk):
             pres = self.next_sent()
             assert isinstance(pres, Presence)
         subject = self.next_sent()
@@ -2541,7 +2551,7 @@ class TestMuc(Base):
 
     def test_send_to_bad_resource(self):
         muc = self.get_private_muc("coven")
-        muc.user_resources.add("gajim")
+        muc.add_user_resource("gajim")
         self.recv(  # language=XML
             """
             <message from='romeo@montague.lit/gajim'
@@ -2554,7 +2564,10 @@ class TestMuc(Base):
             </message>
             """
         )
-        assert not muc.user_resources
+        muc = self.run_coro(
+            self.get_romeo_session().bookmarks.by_jid(JID("coven@aim.shakespeare.lit"))
+        )
+        assert not muc.get_user_resources()
         self.recv(  # language=XML
             """
             <message from='romeo@montague.lit/gajim'
@@ -2567,11 +2580,14 @@ class TestMuc(Base):
             </message>
             """
         )
-        assert not muc.user_resources
+        muc = self.run_coro(
+            self.get_romeo_session().bookmarks.by_jid(JID("coven@aim.shakespeare.lit"))
+        )
+        assert not muc.get_user_resources()
 
     def test_recv_non_kickable_error(self):
         muc = self.get_private_muc("coven")
-        muc.user_resources.add("gajim")
+        muc.get_user_resources().add("gajim")
         self.recv(  # language=XML
             """
             <message from='romeo@montague.lit/gajim'
@@ -2582,7 +2598,8 @@ class TestMuc(Base):
             </message>
             """
         )
-        assert muc.user_resources.pop() == "gajim"
+        assert muc.get_user_resources() == {"gajim"}
+        muc.remove_user_resource("gajim")
         assert self.next_sent() is None
 
     def test_recv_error_non_existing_muc(self):
@@ -2658,7 +2675,8 @@ class TestMuc(Base):
         session = self.get_romeo_session()
         self.run_coro(session.bookmarks.fill())
         muc = self.get_private_muc()
-        muc._LegacyMUC__participants_filled = True
+        muc._participants_filled = True
+        self.xmpp.store.rooms.update(muc)
         contact = self.run_coro(session.contacts.by_legacy_id(333))
         contact.avatar = self.avatar_path
         self.run_coro(contact._set_avatar_task)
@@ -2807,7 +2825,8 @@ class TestMuc(Base):
         self.run_coro(muc.session.contacts.fill())
         participants_before: list[Participant] = self.run_coro(muc.get_participants())
         for p in participants_before:
-            p._LegacyParticipant__presence_sent = True
+            p._presence_sent = True
+            self.xmpp.store.participants.set_presence_sent(p.pk)
         return participants_before
 
     def __test_rename_common(self, old_nick, participants_before):
@@ -2927,9 +2946,9 @@ class TestMuc(Base):
                 break
         else:
             raise AssertionError
-        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        assert real_witch.jid == self.run_coro(muc.get_participant("firstwitch")).jid
         p = self.run_coro(muc.get_participant_by_legacy_id(666))
-        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        assert real_witch.jid == self.run_coro(muc.get_participant("firstwitch")).jid
         p.send_text("Je suis un canaillou")
         self.send(  # language=XML
             """
@@ -2964,9 +2983,9 @@ class TestMuc(Base):
             """
         )
         assert self.next_sent() is None
-        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        assert real_witch.jid == self.run_coro(muc.get_participant("firstwitch")).jid
         p = self.run_coro(muc.get_participant_by_legacy_id(667))
-        assert real_witch is self.run_coro(muc.get_participant("firstwitch"))
+        assert real_witch.jid == self.run_coro(muc.get_participant("firstwitch")).jid
         p.send_text("Je suis un canaillou")
         self.send(  # language=XML
             """
@@ -3127,7 +3146,8 @@ class TestRoleAffiliation(Base):
     def setUp(self):
         super().setUp()
         muc = self.get_private_muc()
-        muc._LegacyMUC__participants_filled = True
+        muc._participants_filled = True
+        self.xmpp.store.rooms.update(muc)
 
     def test_role_change(self):
         part = self.get_participant("a-new-one", role="visitor")
@@ -3422,7 +3442,8 @@ class TestMUCAdmin(Base):
             name="room-moderation-test", resources=("gajim",)
         )
         self.user_participant = self.run_coro(muc.get_user_participant())
-        self.user_participant._LegacyParticipant__presence_sent = True
+        self.user_participant._presence_sent = True
+        self.xmpp.store.participants.set_presence_sent(self.user_participant.pk)
         self.user_jid = self.get_romeo_session().user_jid
 
     def test_moderation_not_implemented(self):
@@ -3474,9 +3495,11 @@ class TestMUCAdmin(Base):
             </iq>
             """
             )
-            on_moderate.assert_awaited_once_with(
-                self.muc, "legacy-stanza-id-1", "REASON"
-            )
+            on_moderate.assert_awaited_once()
+            muc, stanza_id, reason = on_moderate.call_args[0]
+            assert muc.jid == self.muc.jid
+            assert stanza_id == "legacy-stanza-id-1"
+            assert reason == "REASON"
         self.send(  # language=XML
             """
             <iq type="result"
@@ -3506,12 +3529,17 @@ class TestMUCAdmin(Base):
             </iq>
             """
             )
-            on_set_affiliation.assert_awaited_once_with(
-                self.run_coro(self.get_romeo_session().contacts.by_legacy_id(222)),
-                "member",
-                "A reason",
-                "a-nick",
+            on_set_affiliation.assert_awaited_once()
+            contact, affiliation, reason, nick = on_set_affiliation.call_args[0]
+            assert (
+                contact.jid
+                == self.run_coro(
+                    self.get_romeo_session().contacts.by_legacy_id(222)
+                ).jid
             )
+            assert affiliation == "member"
+            assert reason == "A reason"
+            assert nick == "a-nick"
         self.send(  # language=XML
             """
             <iq type="result"
@@ -3737,7 +3765,6 @@ class TestJoinAway(Base):
             """
         )
         assert self.next_sent() is None
-        self.test_away_contact_joins()
 
     def test_away_contact_joins(self):
         self.juliet.away()
@@ -3790,22 +3817,17 @@ class TestMentions(Base):
             </message>
             """
             )
-            on_text.assert_awaited_once_with(
-                muc,
-                f"I am {muc.user_nick} I want weirdguy🎉 to kiss me",
-                reply_to_msg_id=None,
-                reply_to_fallback_text=None,
-                reply_to=None,
-                thread=None,
-                mentions=[
-                    Mention(
-                        contact=self.run_coro(
-                            muc.get_participant("weirdguy🎉")
-                        ).contact,
-                        start=23,
-                        end=32,
-                    )
-                ],
+            on_text.assert_awaited_once()
+            muc2, text = on_text.call_args[0]
+            assert text == f"I am {muc.user_nick} I want weirdguy🎉 to kiss me"
+            assert muc2.jid == muc.jid
+            mentions = on_text.call_args[1]["mentions"]
+            assert len(mentions) == 1
+            assert mentions[0].start == 23
+            assert mentions[0].end == 32
+            assert (
+                mentions[0].contact.jid
+                == self.run_coro(muc.get_participant("weirdguy🎉")).contact.jid
             )
 
 

@@ -198,3 +198,12 @@ class AvatarMixin:
                     self.__avatar_jid, self.session.user_jid, cached_avatar
                 )
             )
+
+    def _set_avatar_from_store(self, stored):
+        if stored.avatar_id is None:
+            return
+        self.__avatar_unique_id = (
+            stored.avatar.legacy_id
+            if stored.avatar.legacy_id is not None
+            else URL(stored.avatar.url)
+        )

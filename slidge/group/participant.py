@@ -15,7 +15,13 @@ from slixmpp.types import MessageTypes, OptJid
 from slixmpp.util.stringprep_profiles import StringPrepError, prohibit_output
 
 from ..contact import LegacyContact
-from ..core.mixins import ChatterDiscoMixin, MessageMixin, PresenceMixin
+from ..core.mixins import (
+    ChatterDiscoMixin,
+    MessageMixin,
+    PresenceMixin,
+    StoredAttributeMixin,
+)
+from ..db.models import Participant
 from ..util import SubclassableOnce, strip_illegal_chars
 from ..util.types import (
     CachedPresence,
@@ -40,6 +46,7 @@ def strip_non_printable(nickname: str):
 
 
 class LegacyParticipant(
+    StoredAttributeMixin,
     PresenceMixin,
     MessageMixin,
     ChatterDiscoMixin,
@@ -53,6 +60,7 @@ class LegacyParticipant(
     _can_send_carbon = False
     USE_STANZA_ID = True
     STRIP_SHORT_DELAY = False
+    pk: int
 
     def __init__(
         self,
@@ -83,8 +91,9 @@ class LegacyParticipant(
         # if we didn't, we send it before the first message.
         # this way, event in plugins that don't map "user has joined" events,
         # we send a "join"-presence from the participant before the first message
-        self.__presence_sent = False
+        self._presence_sent: bool = False
         self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid}")
+        self.__part_store = self.xmpp.store.participants
 
     @property
     def contact_pk(self) -> Optional[int]:  # type:ignore
@@ -108,7 +117,8 @@ class LegacyParticipant(
         if self._affiliation == affiliation:
             return
         self._affiliation = affiliation
-        if not self.__presence_sent:
+        self.__part_store.set_affiliation(self.pk, affiliation)
+        if not self._presence_sent:
             return
         self.send_last_presence(force=True, no_cache_online=True)
 
@@ -135,7 +145,8 @@ class LegacyParticipant(
         if self._role == role:
             return
         self._role = role
-        if not self.__presence_sent:
+        self.__part_store.set_role(self.pk, role)
+        if not self._presence_sent:
             return
         self.send_last_presence(force=True, no_cache_online=True)
 
@@ -143,7 +154,8 @@ class LegacyParticipant(
         if self._hats == hats:
             return
         self._hats = hats
-        if not self.__presence_sent:
+        self.__part_store.set_hats(self.pk, hats)
+        if not self._presence_sent:
             return
         self.send_last_presence(force=True, no_cache_online=True)
 
@@ -179,9 +191,6 @@ class LegacyParticipant(
             j.resource = nickname
         except InvalidJID:
             j.resource = strip_non_printable(nickname)
-
-        if nickname != unescaped_nickname:
-            self.muc._participants_by_escaped_nicknames[nickname] = self  # type:ignore
 
         self.jid = j
 
@@ -225,9 +234,6 @@ class LegacyParticipant(
         p = self._make_presence(ptype="available", last_seen=last_seen, **kwargs)
         self._send(p)
 
-        if old:
-            self.muc.rename_participant(old, new_nickname)
-
     def _make_presence(
         self,
         *,
@@ -252,7 +258,7 @@ class LegacyParticipant(
                     jid = copy(self.user_jid)
                     try:
                         jid.resource = next(
-                            iter(self.muc.user_resources)  # type:ignore
+                            iter(self.muc.get_user_resources())  # type:ignore
                         )
                     except StopIteration:
                         jid.resource = "pseudo-resource"
@@ -282,7 +288,7 @@ class LegacyParticipant(
             archive_only
             or self.is_system
             or self.is_user
-            or self.__presence_sent
+            or self._presence_sent
             or stanza["subject"]
         ):
             return
@@ -312,9 +318,10 @@ class LegacyParticipant(
         stanza["occupant-id"]["id"] = self.__occupant_id
         self.__add_nick_element(stanza)
         if isinstance(stanza, Presence):
-            if stanza["type"] == "unavailable" and not self.__presence_sent:
+            if stanza["type"] == "unavailable" and not self._presence_sent:
                 return stanza  # type:ignore
-            self.__presence_sent = True
+            self._presence_sent = True
+            self.__part_store.set_presence_sent(self.pk)
         if full_jid:
             stanza["to"] = full_jid
             self.__send_presence_if_needed(stanza, full_jid, archive_only)
@@ -462,6 +469,31 @@ class LegacyParticipant(
             msg["delay"]["from"] = self.muc.jid
         msg["subject"] = subject or str(self.muc.name)
         self._send(msg, full_jid)
+
+    @classmethod
+    def from_store(cls, session, stored: Participant):
+        from slidge.group.room import LegacyMUC
+
+        muc = LegacyMUC.get_self_or_unique_subclass().from_store(session, stored.room)
+        part = cls(
+            muc,
+            stored.nickname,
+            role=stored.role,
+            affiliation=stored.affiliation,
+        )
+        part.pk = stored.id
+        if stored.contact is not None:
+            contact = LegacyContact.get_self_or_unique_subclass().from_store(
+                session, stored.contact
+            )
+            part.contact = contact
+
+        part.is_user = stored.is_user
+        if (data := stored.extra_attributes) is not None:
+            muc.deserialize_extra_attributes(data)
+        part._presence_sent = stored.presence_sent
+        part._hats = [Hat(h.uri, h.title) for h in stored.hats]
+        return part
 
 
 log = logging.getLogger(__name__)

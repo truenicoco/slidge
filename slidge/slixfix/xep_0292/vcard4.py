@@ -26,6 +26,7 @@ class VCard4Provider(BasePlugin):
 
     def __init__(self, *a, **k):
         super(VCard4Provider, self).__init__(*a, **k)
+        # TODO: store that in DB and not in RAM
         self._vcards = dict[JidStr, StoredVCard]()
 
     def plugin_init(self):

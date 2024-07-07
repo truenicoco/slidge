@@ -5,9 +5,11 @@ from conftest import AvatarFixtureMixin
 from slixmpp import JID, Iq, register_stanza_plugin
 from slixmpp.plugins.xep_0060.stanza import EventItem
 from slixmpp.plugins.xep_0084 import MetaData
+from sqlalchemy import delete
 
 from slidge import BaseGateway, BaseSession, LegacyContact
 from slidge.core.session import _sessions
+from slidge.db.models import Contact
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LinkPreview
 
@@ -33,6 +35,11 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         )
         user.preferences = {"sync_avatar": True, "sync_presence": True}
         self.xmpp.store.users.update(user)
+
+        with self.xmpp.store.session() as session:
+            session.execute(delete(Contact))
+            session.commit()
+
         self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
         welcome = self.next_sent()
         assert welcome["body"]
@@ -230,10 +237,12 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </message>
             """
             )
-            on_invitation.assert_awaited_once_with(
-                self.juliet,
-                self.room,
-                "Hey Hecate, this is the place for all good witches!",
+            on_invitation.assert_awaited_once()
+            assert on_invitation.call_args[0][0].jid == self.juliet.jid
+            assert on_invitation.call_args[0][1].jid == self.room.jid
+            assert (
+                on_invitation.call_args[0][2]
+                == "Hey Hecate, this is the place for all good witches!"
             )
 
     def test_link_preview(self):
@@ -256,9 +265,15 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </message>
             """
             )
-            on_text.assert_awaited_once_with(
-                self.juliet,
-                "I wanted to mention https://the.link.example.com/what-was-linked-to",
+            on_text.assert_awaited_once()
+            args, kwargs = on_text.call_args
+            assert args[0].jid == self.juliet.jid
+            assert (
+                args[1]
+                == "I wanted to mention https://the.link.example.com/what-was-linked-to"
+            )
+            # kwargs = on_text.c
+            assert kwargs == dict(
                 reply_to_msg_id=None,
                 reply_to_fallback_text=None,
                 reply_to=None,

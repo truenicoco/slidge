@@ -498,8 +498,12 @@ class SessionDispatcher:
             )
             return
 
-        muc = session.bookmarks._mucs_by_bare_jid.get(pto.bare)
-        if muc is None or p.get_from().resource not in muc.user_resources:
+        muc = session.bookmarks.by_jid_only_if_exists(JID(pto.bare))
+
+        if muc is not None and p.get_type() == "unavailable":
+            return muc.on_presence_unavailable(p)
+
+        if muc is None or p.get_from().resource not in muc.get_user_resources():
             return
 
         if pto.resource == muc.user_nick:
@@ -815,7 +819,7 @@ async def _get_entity(session: "BaseSession", m: Message) -> RecipientType:
     if m.get_type() == "groupchat":
         muc = await session.bookmarks.by_jid(m.get_to())
         r = m.get_from().resource
-        if r not in muc.user_resources:
+        if r not in muc.get_user_resources():
             session.create_task(muc.kick_resource(r))
             raise XMPPError("not-acceptable", "You are not connected to this chat")
         return muc

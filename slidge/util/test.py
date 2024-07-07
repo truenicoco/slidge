@@ -250,6 +250,15 @@ class SlidgeTest(SlixTestPlus):
         self.xmpp.use_presence_ids = False
         Error.namespace = "jabber:component:accept"
 
+    def tearDown(self):
+        super().tearDown()
+        import slidge.db.store
+
+        if slidge.db.store._session is not None:
+            slidge.db.store._session.commit()
+            slidge.db.store._session = None
+        Base.metadata.drop_all(self.xmpp.store._engine)
+
     @classmethod
     def tearDownClass(cls):
         reset_subclasses()

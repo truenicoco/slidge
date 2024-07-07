@@ -133,9 +133,10 @@ class TestMDS(MDSMixin, BaseMUC):
             </message>
             """
             )
-            on_displayed.assert_awaited_once_with(muc, "legacy-1337")
+            on_displayed.assert_awaited_once()
+            assert on_displayed.call_args[0][0].jid == muc.jid
+            assert on_displayed.call_args[0][1] == "legacy-1337"
 
-    # class TestSendMDS(MDSMixin, BaseMUC):
     def test_send_mds(self):
         muc = self.get_private_muc()
         participant = self.run_coro(muc.get_user_participant())

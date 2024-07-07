@@ -337,6 +337,10 @@ class TestAttachmentNoUpload(Base):
                 reac = self.next_sent()
                 assert reac["privilege"]["forwarded"]["message"]["reactions"]["id"] == j
 
-            mock.assert_called_once_with(self.juliet, 6666, ["👋", "🐢"], thread=None)
+            mock.assert_awaited_once()
+            assert mock.call_args[0][0].jid == self.juliet.jid
+            assert mock.call_args[0][1] == 6666
+            assert mock.call_args[0][2] == ["👋", "🐢"]
+            assert mock.call_args[1] == dict(thread=None)
         self.xmpp.use_message_ids = False
         self.xmpp.LEGACY_MSG_ID_TYPE = True

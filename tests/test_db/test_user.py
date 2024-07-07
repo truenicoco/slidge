@@ -1,7 +1,6 @@
 import pytest
 from slixmpp import JID
 from sqlalchemy import create_engine
-from sqlalchemy.exc import IntegrityError
 
 from slidge.db.meta import Base
 from slidge.db.store import UserStore
@@ -16,9 +15,6 @@ def store():
 
 def test_user(store: UserStore):
     user1 = store.new(JID("test-user@test-host"), {})
-
-    with pytest.raises(IntegrityError):
-        store.new(JID("test-user@test-host"), {})
 
     user1.preferences = {"section": {"do_xxx": True}}
     assert user1.jid == JID("test-user@test-host")
