@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 from slixmpp import JID
 
-from slidge import __main__ as main
+from slidge import main
 from slidge.core import config
 from slidge.util.conf import ConfigModule
 
