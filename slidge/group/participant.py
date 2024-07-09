@@ -6,7 +6,7 @@ import warnings
 from copy import copy
 from datetime import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Self, Union
 
 from slixmpp import JID, InvalidJID, Message, Presence
 from slixmpp.plugins.xep_0045.stanza import MUCAdminItem
@@ -471,10 +471,19 @@ class LegacyParticipant(
         self._send(msg, full_jid)
 
     @classmethod
-    def from_store(cls, session, stored: Participant):
+    def from_store(
+        cls,
+        session,
+        stored: Participant,
+        contact: Optional[LegacyContact] = None,
+        muc: Optional["LegacyMUC"] = None,
+    ) -> Self:
         from slidge.group.room import LegacyMUC
 
-        muc = LegacyMUC.get_self_or_unique_subclass().from_store(session, stored.room)
+        if muc is None:
+            muc = LegacyMUC.get_self_or_unique_subclass().from_store(
+                session, stored.room
+            )
         part = cls(
             muc,
             stored.nickname,
@@ -482,7 +491,9 @@ class LegacyParticipant(
             affiliation=stored.affiliation,
         )
         part.pk = stored.id
-        if stored.contact is not None:
+        if contact is not None:
+            part.contact = contact
+        elif stored.contact is not None:
             contact = LegacyContact.get_self_or_unique_subclass().from_store(
                 session, stored.contact
             )

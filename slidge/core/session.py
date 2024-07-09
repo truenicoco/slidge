@@ -122,11 +122,12 @@ class BaseSession(
         self.log.debug("Removing fut %s", fut)
         self.__tasks.remove(fut)
 
-    def create_task(self, coro) -> None:
+    def create_task(self, coro) -> asyncio.Task:
         task = self.xmpp.loop.create_task(coro)
         self.__tasks.add(task)
         self.log.debug("Creating task %s", task)
         task.add_done_callback(lambda _: self.__remove_task(task))
+        return task
 
     def cancel_all_tasks(self):
         for task in self.__tasks:

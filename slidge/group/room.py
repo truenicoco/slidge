@@ -137,8 +137,8 @@ class LegacyMUC(
         self.Participant = LegacyParticipant.get_self_or_unique_subclass()
 
         self._subject = ""
-        self.subject_setter: Union[str, "LegacyContact", "LegacyParticipant"] = (
-            self.get_system_participant()
+        self._subject_setter: Union[str, None, "LegacyContact", "LegacyParticipant"] = (
+            None
         )
 
         self.pk: Optional[int] = None
@@ -337,7 +337,7 @@ class LegacyMUC(
     def subject(self, s: str):
         if s == self._subject:
             return
-        self.xmpp.loop.create_task(
+        self.session.create_task(
             self.__get_subject_setter_participant()
         ).add_done_callback(
             lambda task: task.result().set_room_subject(
@@ -351,6 +351,15 @@ class LegacyMUC(
     @property
     def is_anonymous(self):
         return self.type == MucType.CHANNEL
+
+    @property
+    def subject_setter(self):
+        return self._subject_setter
+
+    @subject_setter.setter
+    def subject_setter(self, subject_setter):
+        self._subject_setter = subject_setter
+        self.__store.update(self)
 
     async def __get_subject_setter_participant(self):
         who = self.subject_setter
@@ -690,7 +699,9 @@ class LegacyMUC(
         with self.__store.session():
             stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)
             if stored is not None:
-                return self.Participant.from_store(self.session, stored)
+                return self.Participant.from_store(
+                    self.session, stored, muc=self, contact=c
+                )
 
         nickname = c.name or _unescape_node(c.jid_username)
         if not self.__store.nickname_is_available(self.pk, nickname):
@@ -1129,6 +1140,14 @@ class LegacyMUC(
         muc.__history_filled = True
         if stored.user_resources is not None:
             muc._user_resources = set(json.loads(stored.user_resources))
+        if stored.subject_setter is not None:
+            muc.subject_setter = (
+                LegacyParticipant.get_self_or_unique_subclass().from_store(
+                    session,
+                    stored.subject_setter,
+                    muc=muc,
+                )
+            )
         muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
         muc._set_avatar_from_store(stored)
         return muc
