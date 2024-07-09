@@ -672,6 +672,14 @@ class AttachmentStore(EngineMixin):
 class RoomStore(UpdatedMixin):
     model = Room
 
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        with self.session() as session:
+            session.execute(
+                update(Room).values(subject_setter_id=None, user_resources=None)
+            )
+            session.commit()
+
     def add(self, user_pk: int, legacy_id: str, jid: JID) -> int:
         if jid.resource:
             raise TypeError
@@ -721,7 +729,20 @@ class RoomStore(UpdatedMixin):
             ).scalar()
 
     def update(self, room: "LegacyMUC"):
+        from slidge.contact import LegacyContact
+
         with self.session() as session:
+            if room.subject_setter is None:
+                subject_setter_id = None
+            elif isinstance(room.subject_setter, str):
+                subject_setter_id = None
+            elif isinstance(room.subject_setter, LegacyContact):
+                subject_setter_id = None
+            elif room.subject_setter.is_system:
+                subject_setter_id = None
+            else:
+                subject_setter_id = room.subject_setter.pk
+
             session.execute(
                 update(Room)
                 .where(Room.id == room.pk)
@@ -738,6 +759,7 @@ class RoomStore(UpdatedMixin):
                     muc_type=room.type,
                     subject=room.subject,
                     subject_date=room.subject_date,
+                    subject_setter_id=subject_setter_id,
                     participants_filled=room._participants_filled,
                 )
             )

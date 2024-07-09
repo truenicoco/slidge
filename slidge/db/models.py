@@ -195,6 +195,13 @@ class Room(Base):
     description: Mapped[Optional[str]] = mapped_column(nullable=True)
     subject: Mapped[Optional[str]] = mapped_column(nullable=True)
     subject_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    subject_setter_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("participant.id"), nullable=True
+    )
+    subject_setter: Mapped["Participant"] = relationship(
+        foreign_keys="Room.subject_setter_id"
+    )
+
     muc_type: Mapped[Optional[MucType]] = mapped_column(default=MucType.GROUP)
 
     user_resources: Mapped[Optional[str]] = mapped_column(nullable=True)
@@ -204,7 +211,9 @@ class Room(Base):
     extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(default=None)
     updated: Mapped[bool] = mapped_column(default=False)
 
-    participants: Mapped[list["Participant"]] = relationship(back_populates="room")
+    participants: Mapped[list["Participant"]] = relationship(
+        back_populates="room", primaryjoin="Participant.room_id == Room.id"
+    )
 
 
 class ArchivedMessage(Base):
@@ -330,7 +339,9 @@ class Participant(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     room_id: Mapped[int] = mapped_column(ForeignKey("room.id"), nullable=False)
-    room: Mapped[Room] = relationship(back_populates="participants")
+    room: Mapped[Room] = relationship(
+        back_populates="participants", primaryjoin=Room.id == room_id
+    )
 
     contact_id: Mapped[int] = mapped_column(ForeignKey("contact.id"), nullable=True)
     contact: Mapped[Contact] = relationship(back_populates="participants")

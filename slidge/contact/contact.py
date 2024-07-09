@@ -142,7 +142,7 @@ class LegacyContact(
 
         return [
             LegacyParticipant.get_self_or_unique_subclass().from_store(
-                self.session, stored
+                self.session, stored, contact=self
             )
             for stored in self.xmpp.store.participants.get_for_contact(self.contact_pk)
         ]

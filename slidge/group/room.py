@@ -321,7 +321,7 @@ class LegacyMUC(
     def subject(self, s: str):
         if s == self._subject:
             return
-        self.xmpp.loop.create_task(
+        self.session.create_task(
             self.__get_subject_setter_participant()
         ).add_done_callback(
             lambda task: task.result().set_room_subject(
@@ -329,6 +329,7 @@ class LegacyMUC(
             )
         )
         self._subject = s
+        self.__store.update(self)
 
     @property
     def is_anonymous(self):
@@ -672,7 +673,9 @@ class LegacyMUC(
         with self.__store.session():
             stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)
             if stored is not None:
-                return self.Participant.from_store(self.session, stored)
+                return self.Participant.from_store(
+                    self.session, stored, muc=self, contact=c
+                )
 
         nickname = c.name or _unescape_node(c.jid_username)
         if not self.__store.nickname_is_available(self.pk, nickname):
@@ -1111,6 +1114,14 @@ class LegacyMUC(
         muc.__history_filled = True
         if stored.user_resources is not None:
             muc._user_resources = set(json.loads(stored.user_resources))
+        if stored.subject_setter is not None:
+            muc.subject_setter = (
+                LegacyParticipant.get_self_or_unique_subclass().from_store(
+                    session,
+                    stored.subject_setter,
+                    muc=muc,
+                )
+            )
         muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
         muc._set_avatar_from_store(stored)
         return muc
