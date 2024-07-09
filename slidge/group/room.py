@@ -16,6 +16,7 @@ from slixmpp.plugins.xep_0060.stanza import Item
 from slixmpp.plugins.xep_0082 import parse as str_to_datetime
 from slixmpp.xmlstream import ET
 
+from ..contact.contact import LegacyContact
 from ..contact.roster import ContactIsUser
 from ..core import config
 from ..core.mixins import StoredAttributeMixin
@@ -36,9 +37,9 @@ from ..util.types import (
 )
 from ..util.util import deprecated
 from .archive import MessageArchive
+from .participant import LegacyParticipant
 
 if TYPE_CHECKING:
-    from ..contact import LegacyContact
     from ..core.gateway import BaseGateway
     from ..core.session import BaseSession
 
@@ -125,8 +126,6 @@ class LegacyMUC(
     archive: MessageArchive
 
     def __init__(self, session: "BaseSession", legacy_id: LegacyGroupIdType, jid: JID):
-        from .participant import LegacyParticipant
-
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
         self.log = logging.getLogger(f"{self.user_jid.bare}:muc:{jid}")
@@ -336,10 +335,6 @@ class LegacyMUC(
         return self.type == MucType.CHANNEL
 
     async def __get_subject_setter_participant(self):
-        from slidge.contact import LegacyContact
-
-        from .participant import LegacyParticipant
-
         who = self.subject_setter
 
         if isinstance(who, LegacyParticipant):
