@@ -15,10 +15,9 @@ from .core.gateway import BaseGateway  # noqa: F401
 from .core.session import BaseSession  # noqa: F401
 from .db import GatewayUser  # noqa: F401
 from .group import LegacyBookmarks, LegacyMUC, LegacyParticipant  # noqa: F401
+from .main import main as main_func
 from .util.types import MucType  # noqa: F401
 from .util.util import addLoggingLevel
-
-from .__main__ import main  # isort: skip
 
 
 def entrypoint(module_name: str) -> None:
@@ -29,7 +28,7 @@ def entrypoint(module_name: str) -> None:
     :param module_name: An importable :term:`Legacy Module`.
     """
     sys.argv.extend(["--legacy", module_name])
-    main()
+    main_func()
 
 
 def formatwarning(message, category, filename, lineno, line=""):

@@ -53,7 +53,7 @@ class SlidgeInfo(AdminCommand):
     ACCESS = CommandAccess.ANY
 
     async def run(self, _session, _ifrom, *_):
-        from ..__main__ import __version__
+        from slidge.__version__ import __version__
 
         start = self.xmpp.datetime_started
         uptime = datetime.now() - start
