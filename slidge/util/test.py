@@ -191,6 +191,7 @@ class SlidgeTest(SlixTestPlus):
         no_roster_push = False
         upload_requester = None
         ignore_delay_threshold = _TimedeltaSeconds("300")
+        last_seen_fallback = True
 
     @classmethod
     def setUpClass(cls):
