@@ -142,11 +142,13 @@ PARTIAL_REGISTRATION_TIMEOUT__DOC = (
     "a single step registration process is not enough."
 )
 
-LAST_SEEN_FALLBACK = True
+LAST_SEEN_FALLBACK = False
 LAST_SEEN_FALLBACK__DOC = (
     "When using XEP-0319 (Last User Interaction in Presence), use the presence status"
     " to display the last seen information in the presence status. Useful for clients"
-    " that do not implement XEP-0319."
+    " that do not implement XEP-0319. Because of implementation details, this can increase"
+    " RAM usage and might be deprecated in the future. Ask your client dev for XEP-0319"
+    " support ;o)."
 )
 
 QR_TIMEOUT = 60

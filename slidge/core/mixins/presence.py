@@ -23,6 +23,8 @@ class PresenceMixin(BaseSender):
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
+        # FIXME: this should not be an attribute of this mixin to allow garbage
+        #        collection of instances
         self.__update_last_seen_fallback_task: Optional[Task] = None
 
     async def __update_last_seen_fallback(self):
