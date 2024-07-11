@@ -93,10 +93,16 @@ class AvatarMixin:
             cached_avatar = None
             self._avatar_pk = None
         else:
-            cached_avatar = await avatar_cache.convert_or_get(
-                URL(a) if isinstance(a, URL) else a,
-                None if isinstance(uid, URL) else uid,
-            )
+            try:
+                cached_avatar = await avatar_cache.convert_or_get(
+                    URL(a) if isinstance(a, URL) else a,
+                    None if isinstance(uid, URL) else uid,
+                )
+            except Exception as e:
+                self.session.log.error("Failed to set avatar %s", a, exc_info=e)
+                self._avatar_pk = None
+                self.__avatar_unique_id = uid
+                return
             self._avatar_pk = cached_avatar.pk
 
         if self._avatar_pubsub_broadcast:
