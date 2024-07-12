@@ -335,6 +335,8 @@ class BaseGateway(
         # with this we receive user avatar updates
         self.plugin["xep_0030"].add_feature("urn:xmpp:avatar:metadata+notify")
 
+        self.plugin["xep_0030"].add_feature("urn:xmpp:chat-markers:0")
+
         if self.GROUPS:
             self.plugin["xep_0030"].add_feature("http://jabber.org/protocol/muc")
             self.plugin["xep_0030"].add_feature("urn:xmpp:mam:2")

@@ -99,7 +99,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
               <c xmlns="http://jabber.org/protocol/caps"
                  node="http://slixmpp.com/ver/1.8.5"
                  hash="sha-1"
-                 ver="MQesQ734HJbCNJOF87C/MoVNllM=" />
+                 ver="AuL8MdHJviOT17Bh1mfkW7IM7NU=" />
             </presence>
             """
         )

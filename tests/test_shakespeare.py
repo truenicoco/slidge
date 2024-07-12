@@ -843,6 +843,7 @@ class TestAimShakespeareBase(Base):
                 <feature var="urn:xmpp:hats:0" />
                 <feature var="urn:xmpp:mds:displayed:0+notify" />
                 <feature var="urn:xmpp:mds:displayed:0" />
+                <feature var='urn:xmpp:chat-markers:0' />
               </query>
             </iq>
             """
