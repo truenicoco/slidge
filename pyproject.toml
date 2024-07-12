@@ -11,7 +11,7 @@ documentation = "https://slidge.im/"
 include = ["slidge/util/schema.sql"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 qrcode = "^7.4.1"
 Pillow = "^10"
 aiohttp = {version = "^3.8.3", extras = ["speedups"]}
