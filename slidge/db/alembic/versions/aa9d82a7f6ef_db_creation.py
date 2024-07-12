@@ -9,6 +9,7 @@ Create Date: 2024-04-17 20:57:01.357041
 """
 
 import logging
+from datetime import datetime
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -43,7 +44,11 @@ def upgrade() -> None:
         sa.UniqueConstraint("jid"),
     )
     # ### end Alembic commands ###
-    migrate_from_shelf(accounts)
+    try:
+        migrate_from_shelf(accounts)
+    except Exception:
+        downgrade()
+        raise
 
 
 def downgrade() -> None:
@@ -67,7 +72,11 @@ def migrate_from_shelf(accounts: sa.Table) -> None:
         [
             {
                 "jid": user.jid,
-                "registration_date": user.registration_date,
+                "registration_date": (
+                    user.registration_date
+                    if user.registration_date is not None
+                    else datetime.now()
+                ),
                 "legacy_module_data": user.registration_form,
                 "preferences": {},
             }
