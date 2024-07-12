@@ -142,15 +142,15 @@ class AvatarCache:
 
         if isinstance(avatar, (URL, str)):
             if unique_id is None:
-                stored = self.store.get_by_url(avatar)
-                try:
-                    img, response_headers = await self.__download(
-                        avatar, self.__get_http_headers(stored)
-                    )
-                except NotModified:
-                    assert stored is not None
-                    return CachedAvatar.from_store(stored, self.dir)
-
+                with self.store.session():
+                    stored = self.store.get_by_url(avatar)
+                    try:
+                        img, response_headers = await self.__download(
+                            avatar, self.__get_http_headers(stored)
+                        )
+                    except NotModified:
+                        assert stored is not None
+                        return CachedAvatar.from_store(stored, self.dir)
             else:
                 img, _ = await self.__download(avatar, {})
                 response_headers = None
