@@ -762,6 +762,7 @@ class RoomStore(UpdatedMixin):
                     subject_setter_id=subject_setter_id,
                     participants_filled=room._participants_filled,
                     n_participants=room._n_participants,
+                    user_nick=room.user_nick,
                 )
             )
             session.commit()

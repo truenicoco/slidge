@@ -206,6 +206,7 @@ class Room(Base):
 
     muc_type: Mapped[Optional[MucType]] = mapped_column(default=MucType.GROUP)
 
+    user_nick: Mapped[Optional[str]] = mapped_column()
     user_resources: Mapped[Optional[str]] = mapped_column(nullable=True)
 
     participants_filled: Mapped[bool] = mapped_column(default=False)

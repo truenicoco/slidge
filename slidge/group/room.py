@@ -1127,6 +1127,7 @@ class LegacyMUC(
         )
         muc.pk = stored.id
         muc.type = stored.muc_type  # type: ignore
+        muc.user_nick = stored.user_nick
         if stored.name:
             muc.DISCO_NAME = stored.name
         if stored.description:
