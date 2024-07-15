@@ -422,6 +422,11 @@ class ContactStore(UpdatedMixin):
             )
             session.commit()
 
+    def delete(self, contact_pk: int) -> None:
+        with self.session() as session:
+            session.execute(delete(Contact).where(Contact.id == contact_pk))
+            session.commit()
+
 
 class MAMStore(EngineMixin):
     def nuke_older_than(self, days: int) -> None:

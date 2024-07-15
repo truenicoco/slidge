@@ -3,6 +3,7 @@ import logging
 from typing import TYPE_CHECKING, Generic, Iterator, Optional, Type
 
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 from slixmpp.jid import _unescape_node
 
 from ..contact.roster import ESCAPE_TABLE
@@ -61,7 +62,12 @@ class LegacyBookmarks(
         with self.__store.session():
             muc.pk = self.__store.add(self.session.user_pk, str(muc.legacy_id), muc.jid)
             muc.archive = MessageArchive(muc.pk, self.xmpp.store.mam)
-            await muc.avatar_wrap_update_info()
+            try:
+                await muc.avatar_wrap_update_info()
+            except Exception as e:
+                self.log.debug("Deleting %s because of %r", legacy_id, e)
+                self.__store.delete(muc.pk)
+                raise XMPPError("internal-server-error", str(e))
             if not muc.user_nick:
                 muc.user_nick = self._user_nick
             self.log.debug("MUC created: %r", muc)

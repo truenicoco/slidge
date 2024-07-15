@@ -3,6 +3,7 @@ import logging
 from typing import TYPE_CHECKING, Generic, Iterator, Optional, Type
 
 from slixmpp import JID
+from slixmpp.exceptions import XMPPError
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..core.mixins.lock import NamedLockMixin
@@ -75,7 +76,12 @@ class LegacyRoster(
                 c.contact_pk = self.__store.add(
                     self.session.user_pk, c.legacy_id, c.jid
                 )
-                await c.avatar_wrap_update_info()
+                try:
+                    await c.avatar_wrap_update_info()
+                except Exception as e:
+                    self.log.debug("Deleting %s because of %r", legacy_id, e)
+                    self.__store.delete(c.contact_pk)
+                    raise XMPPError("internal-server-error", str(e))
                 self.__store.update(c)
         return c
 
