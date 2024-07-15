@@ -87,7 +87,7 @@ class LegacyRoster(
 
     def known_contacts(self, only_friends=True) -> dict[str, LegacyContactType]:
         if only_friends:
-            return {j: c for j, c in self if c.is_friend}  # type:ignore
+            return {c.jid.bare: c for c in self if c.is_friend}
         return {c.jid.bare: c for c in self}
 
     async def by_jid(self, contact_jid: JID) -> LegacyContactType:
