@@ -57,6 +57,8 @@ class VCard4Provider(BasePlugin):
         if not hasattr(self.xmpp, "get_session_from_jid"):
             return None
         jid = JID(jid)
+        if not jid.local:
+            return None
         requested_by = JID(requested_by)
         session = self.xmpp.get_session_from_jid(requested_by)
         if session is None:
