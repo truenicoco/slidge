@@ -63,6 +63,9 @@ class UpdatedMixin(EngineMixin):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         with self.session() as session:
+            session.execute(
+                delete(self.model).where(~self.model.updated)  # type:ignore
+            )
             session.execute(update(self.model).values(updated=False))  # type:ignore
             session.commit()
 
