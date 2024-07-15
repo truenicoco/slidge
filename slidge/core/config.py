@@ -185,10 +185,7 @@ LOG_FORMAT__DOC = (
 )
 
 MAM_MAX_DAYS = 7
-MAM_MAX_DAYS__DOC = (
-    "Maximum number of days for group archive retention. "
-    "Since all text content stored in RAM right now, "
-)
+MAM_MAX_DAYS__DOC = "Maximum number of days for group archive retention."
 
 CORRECTION_EMPTY_BODY_AS_RETRACTION = True
 CORRECTION_EMPTY_BODY_AS_RETRACTION__DOC = (
