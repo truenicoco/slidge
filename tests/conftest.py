@@ -25,11 +25,6 @@ def MockRE():
     return MockRE
 
 
-@pytest.fixture(autouse=True)
-def cache_dir(tmp_path):
-    avatar_cache.set_dir(tmp_path)
-
-
 @pytest.fixture(scope="class")
 def avatar(request):
     path = Path(__file__).parent.parent / "dev" / "assets" / "5x5.png"

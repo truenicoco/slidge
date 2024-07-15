@@ -70,6 +70,17 @@ class AvatarCache:
     def set_dir(self, path: Path):
         self.dir = path
         self.dir.mkdir(exist_ok=True)
+        with self.store.session():
+            for stored in self.store.get_all():
+                avatar = CachedAvatar.from_store(stored, root_dir=path)
+                if avatar.path.exists():
+                    continue
+                log.warning(
+                    "Removing avatar %s from store because %s does not exist",
+                    avatar.hash,
+                    avatar.path,
+                )
+                self.store.delete_by_pk(stored.id)
 
     def close(self):
         self._thread_pool.shutdown(cancel_futures=True)

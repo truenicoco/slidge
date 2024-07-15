@@ -66,6 +66,12 @@ class UpdatedMixin(EngineMixin):
             session.execute(update(self.model).values(updated=False))  # type:ignore
             session.commit()
 
+    def get_by_pk(self, pk: int) -> Optional[Base]:
+        with self.session() as session:
+            return session.execute(
+                select(self.model).where(self.model.id == pk)  # type:ignore
+            ).scalar()
+
 
 class SlidgeStore(EngineMixin):
     def __init__(self, engine: Engine):
@@ -162,6 +168,15 @@ class AvatarStore(EngineMixin):
     def get_by_pk(self, pk: int) -> Optional[Avatar]:
         with self.session() as session:
             return session.execute(select(Avatar).where(Avatar.id == pk)).scalar()
+
+    def delete_by_pk(self, pk: int):
+        with self.session() as session:
+            session.execute(delete(Avatar).where(Avatar.id == pk))
+            session.commit()
+
+    def get_all(self) -> Iterator[Avatar]:
+        with self.session() as session:
+            yield from session.execute(select(Avatar)).scalars()
 
 
 class SentStore(EngineMixin):

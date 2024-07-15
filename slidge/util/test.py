@@ -220,6 +220,7 @@ class SlidgeTest(SlixTestPlus):
         PepNick.contact_store = self.xmpp.store.contacts
         PepAvatar.store = self.xmpp.store
         avatar_cache.store = self.xmpp.store.avatars
+        avatar_cache.set_dir(Path(tempfile.mkdtemp()))
         self.xmpp._always_send_everything = True
 
         self.xmpp.connection_made(TestTransport(self.xmpp))
