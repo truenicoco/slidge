@@ -30,6 +30,6 @@ Common config
 -------------
 
 .. argparse::
-   :module: slidge.__main__
+   :module: slidge.main
    :func: get_parser
    :prog: slidge
