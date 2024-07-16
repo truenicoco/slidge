@@ -11,6 +11,7 @@ from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import XMPPError
 from sqlalchemy import Engine, delete, select, update
 from sqlalchemy.orm import Session, attributes
+from sqlalchemy.sql.functions import count
 
 from ..util.archive_msg import HistoryMessage
 from ..util.types import URL, CachedPresence
@@ -994,6 +995,12 @@ class ParticipantStore(EngineMixin):
     def delete(self, participant_pk: int) -> None:
         with self.session() as session:
             session.execute(delete(Participant).where(Participant.id == participant_pk))
+
+    def get_count(self, room_pk: int) -> int:
+        with self.session() as session:
+            return session.query(
+                count(Participant.id).filter(Participant.room_id == room_pk)
+            ).scalar()
 
 
 log = logging.getLogger(__name__)

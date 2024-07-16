@@ -410,7 +410,8 @@ class LegacyMUC(
         form.add_field("muc#roominfo_subjectmod", "boolean", value=False)
 
         if self._ALL_INFO_FILLED_ON_STARTUP or self._participants_filled:
-            n: Optional[int] = len(await self.get_participants())
+            assert self.pk is not None
+            n: Optional[int] = self.__participants_store.get_count(self.pk)
         else:
             n = self._n_participants
         if n is not None:
