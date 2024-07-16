@@ -16,7 +16,8 @@ tasks:
       docker buildx create --use
   - build: |
       cd slidge
-      ARGS="--push --platform linux/amd64,linux/arm64"
+      ARGS="--platform linux/amd64,linux/arm64"
+      [ -e ~/.docker/config.json ] && ARGS="--push $ARGS"
       if [ $( git rev-parse HEAD) = $(git rev-parse master) ]; then
         TAG=latest
       else

@@ -19,7 +19,7 @@ tasks:
   - install: |
       cd $PROJECT
       poetry install
-      poetry run c3p0 $PROJECT
+      [ -e /home/build/.c3p0 ] && poetry run c3p0 $PROJECT
       poetry run set_version
       poetry build
       cp dist/*.tar.gz ~/package.tar.gz
