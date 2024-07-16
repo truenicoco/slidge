@@ -9,7 +9,7 @@ import warnings
 from datetime import datetime
 from mimetypes import guess_type
 from pathlib import Path
-from typing import IO, Collection, Optional, Sequence, Union
+from typing import IO, AsyncIterator, Collection, Optional, Sequence, Union
 from urllib.parse import quote as urlquote
 from uuid import uuid4
 from xml.etree import ElementTree as ET
@@ -141,6 +141,7 @@ class AttachmentMixin(MessageMaker):
     async def __get_url(
         self,
         file_path: Optional[Path] = None,
+        async_data_stream: Optional[AsyncIterator[bytes]] = None,
         data_stream: Optional[IO[bytes]] = None,
         data: Optional[bytes] = None,
         file_url: Optional[str] = None,
@@ -176,12 +177,21 @@ class AttachmentMixin(MessageMaker):
                     with file_path.open("wb") as f:
                         f.write(await r.read())
 
-            else:
-                if data_stream is not None:
-                    data = data_stream.read()
+            elif data_stream is not None:
+                data = data_stream.read()
                 if data is None:
                     raise RuntimeError
 
+                with file_path.open("wb") as f:
+                    f.write(data)
+            elif async_data_stream is not None:
+                # TODO: patch slixmpp to allow this as data source for
+                #       upload_file() so we don't even have to write anything
+                #       to disk.
+                with file_path.open("wb") as f:
+                    async for chunk in async_data_stream:
+                        f.write(chunk)
+            elif data is not None:
                 with file_path.open("wb") as f:
                     f.write(data)
 
@@ -296,6 +306,7 @@ class AttachmentMixin(MessageMaker):
         file_path: Optional[Union[Path, str]] = None,
         legacy_msg_id: Optional[LegacyMessageType] = None,
         *,
+        async_data_stream: Optional[AsyncIterator[bytes]] = None,
         data_stream: Optional[IO[bytes]] = None,
         data: Optional[bytes] = None,
         file_url: Optional[str] = None,
@@ -312,6 +323,7 @@ class AttachmentMixin(MessageMaker):
         Send a single file from this :term:`XMPP Entity`.
 
         :param file_path: Path to the attachment
+        :param async_data_stream: Alternatively (and ideally) an AsyncIterator yielding bytes
         :param data_stream: Alternatively, a stream of bytes (such as a File object)
         :param data: Alternatively, a bytes object
         :param file_url: Alternatively, a URL
@@ -342,6 +354,7 @@ class AttachmentMixin(MessageMaker):
 
         is_temp, local_path, new_url = await self.__get_url(
             Path(file_path) if file_path else None,
+            async_data_stream,
             data_stream,
             data,
             file_url,
