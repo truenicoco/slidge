@@ -1139,6 +1139,7 @@ class LegacyMUC(
         if stored.subject_date is not None:
             muc._subject_date = stored.subject_date.replace(tzinfo=timezone.utc)
         muc._participants_filled = stored.participants_filled
+        muc._n_participants = stored.n_participants
         muc.__history_filled = True
         if stored.user_resources is not None:
             muc._user_resources = set(json.loads(stored.user_resources))
