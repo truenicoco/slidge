@@ -451,7 +451,7 @@ class MAMStore(EngineMixin):
         with self.session() as session:
             session.execute(
                 delete(ArchivedMessage).where(
-                    ArchivedMessage.timestamp > datetime.now() - timedelta(days=days)
+                    ArchivedMessage.timestamp < datetime.now() - timedelta(days=days)
                 )
             )
             session.commit()
