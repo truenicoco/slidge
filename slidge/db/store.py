@@ -814,6 +814,11 @@ class RoomStore(UpdatedMixin):
             )
             session.commit()
 
+    def update_name(self, room_pk: int, name: Optional[str]) -> None:
+        with self.session() as session:
+            session.execute(update(Room).where(Room.id == room_pk).values(name=name))
+            session.commit()
+
     def update_n_participants(self, room_pk: int, n: Optional[int]) -> None:
         with self.session() as session:
             session.execute(

@@ -5,6 +5,8 @@ import string
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
+from functools import wraps
+from time import time
 from typing import TYPE_CHECKING, Generic, Optional, Self, Union
 from uuid import uuid4
 
@@ -44,6 +46,26 @@ if TYPE_CHECKING:
     from ..core.session import BaseSession
 
 ADMIN_NS = "http://jabber.org/protocol/muc#admin"
+
+
+def with_session(func):
+    @wraps(func)
+    async def wrapped(self, *args, **kwargs):
+        with self.xmpp.store.session():
+            return await func(self, *args, **kwargs)
+
+    return wrapped
+
+
+def timeit(func):
+    @wraps(func)
+    async def wrapped(self, *args, **kwargs):
+        start = time()
+        r = await func(self, *args, **kwargs)
+        self.log.warning("%s took %s ms", func.__name__, round((time() - start) * 1000))
+        return r
+
+    return wrapped
 
 
 class LegacyMUC(
@@ -254,6 +276,8 @@ class LegacyMUC(
         if self.DISCO_NAME == n:
             return
         self.DISCO_NAME = n
+        assert self.pk is not None
+        self.__store.update_name(self.pk, n)
         self.__send_configuration_change((104,))
 
     @property
@@ -528,6 +552,8 @@ class LegacyMUC(
                 p["vcard_temp_update"]["photo"] = ""
             p.send()
 
+    @timeit
+    @with_session
     async def join(self, join_presence: Presence):
         user_full_jid = join_presence.get_from()
         requested_nickname = join_presence.get_to().resource
