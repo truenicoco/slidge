@@ -3718,6 +3718,39 @@ class TestMUCAdmin(Base):
             on_set_subject.assert_awaited_once_with("Fire Burn and Cauldron Bubble!")
         self.send(None)
 
+    def test_kick(self):
+        part = self.run_coro(self.muc.get_participant_by_legacy_id(111))
+        self.next_sent()
+        assert part.contact
+        with unittest.mock.patch("slidge.LegacyMUC.on_kick") as on_kick:
+            self.recv(  # language=XML
+                f"""
+            <iq type='set'
+                to='{self.muc.jid}'
+                id='kick-1'
+                from='{self.user_jid}'>
+              <query xmlns='http://jabber.org/protocol/muc#admin'>
+                <item nick="{part.contact.name}"
+                      role="none">
+                  <reason>kick-reason</reason>
+                </item>
+              </query>
+            </iq>
+            """
+            )
+            on_kick.assert_awaited_once()
+            contact, reason = on_kick.call_args[0]
+        assert contact.jid == part.contact.jid
+        assert reason == "kick-reason"
+        self.send(  # language=XML
+            """
+            <iq type="result"
+                to="romeo@montague.lit"
+                id="kick-1"
+                from="room-moderation-test@aim.shakespeare.lit"></iq>
+            """
+        )
+
 
 class TestJoinAway(Base):
     def setUp(self):

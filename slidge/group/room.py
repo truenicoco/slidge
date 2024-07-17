@@ -1030,15 +1030,24 @@ class LegacyMUC(
     ):
         """
         Triggered when the user requests changing the affiliation of a contact
-        for this group,
+        for this group.
 
-        Examples: promotion them to moderator, kick (affiliation=none),
-        ban (affiliation=outcast).
+        Examples: promotion them to moderator, ban (affiliation=outcast).
 
         :param contact: The contact whose affiliation change is requested
         :param affiliation: The new affiliation
         :param reason: A reason for this affiliation change
         :param nickname:
+        """
+        raise NotImplementedError
+
+    async def on_kick(self, contact: "LegacyContact", reason: Optional[str]):
+        """
+        Triggered when the user requests changing the role of a contact
+        to "none" for this group. Action commonly known as "kick".
+
+        :param contact: Contact to be kicked
+        :param reason: A reason for this kick
         """
         raise NotImplementedError
 

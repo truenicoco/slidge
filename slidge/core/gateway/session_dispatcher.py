@@ -632,14 +632,28 @@ class SessionDispatcher:
         session = await self.__get_session(iq)
         session.raise_if_not_logged()
 
-        item = iq["mucadmin_query"]["item"]
-        contact = await session.contacts.by_jid(JID(item["jid"]))
-
         muc = await session.bookmarks.by_jid(iq.get_to())
 
-        await muc.on_set_affiliation(
-            contact, item["affiliation"], item["reason"] or None, item["nick"] or None
-        )
+        item = iq["mucadmin_query"]["item"]
+        if item["jid"]:
+            contact = await session.contacts.by_jid(JID(item["jid"]))
+        else:
+            part = await muc.get_participant(
+                item["nick"], fill_first=True, raise_if_not_found=True
+            )
+            assert part.contact is not None
+            contact = part.contact
+
+        if item["affiliation"]:
+            await muc.on_set_affiliation(
+                contact,
+                item["affiliation"],
+                item["reason"] or None,
+                item["nick"] or None,
+            )
+        elif item["role"] == "none":
+            await muc.on_kick(contact, item["reason"] or None)
+
         iq.reply(clear=True).send()
 
     async def on_groupchat_direct_invite(self, msg: Message):
