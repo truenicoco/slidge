@@ -11,6 +11,7 @@ from slixmpp.types import MessageTypes
 
 from ..core import config
 from ..core.mixins import AvatarMixin, FullCarbonMixin, StoredAttributeMixin
+from ..core.mixins.db import UpdateInfoMixin
 from ..core.mixins.disco import ContactAccountDiscoMixin
 from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 from ..db.models import Contact
@@ -30,6 +31,7 @@ class LegacyContact(
     FullCarbonMixin,
     ReactionRecipientMixin,
     ThreadRecipientMixin,
+    UpdateInfoMixin,
     metaclass=SubclassableOnce,
 ):
     """
@@ -132,8 +134,26 @@ class LegacyContact(
         if value == self._is_friend:
             return
         self._is_friend = value
+        if self._updating_info:
+            return
         assert self.contact_pk is not None
         self.xmpp.store.contacts.set_friend(self.contact_pk, value)
+
+    @property
+    def added_to_roster(self):
+        return self._added_to_roster
+
+    @added_to_roster.setter
+    def added_to_roster(self, value: bool):
+        if value == self._added_to_roster:
+            return
+        self._added_to_roster = value
+        if self._updating_info:
+            return
+        if self.contact_pk is None:
+            # during LegacyRoster.fill()
+            return
+        self.xmpp.store.contacts.set_added_to_roster(self.contact_pk, value)
 
     @property
     def participants(self) -> list["LegacyParticipant"]:
@@ -152,7 +172,7 @@ class LegacyContact(
         return self.session.user_jid
 
     def __repr__(self):
-        return f"<Contact '{self.legacy_id}'/'{self.jid.bare}'>"
+        return f"<Contact {self.jid.bare} - {self.name or self.legacy_id}'>"
 
     def __get_subscription_string(self):
         if self.is_friend:
@@ -198,7 +218,7 @@ class LegacyContact(
             self._privileged_send(stanza)
             return stanza  # type:ignore
 
-        if isinstance(stanza, Presence):
+        if not self._updating_info and isinstance(stanza, Presence):
             self.__propagate_to_participants(stanza)
             if (
                 not self.is_friend
@@ -209,7 +229,11 @@ class LegacyContact(
             n = self.xmpp.plugin["xep_0172"].stanza.UserNick()
             n["nick"] = self.name
             stanza.append(n)
-        if self.xmpp.MARK_ALL_MESSAGES and is_markable(stanza):
+        if (
+            not self._updating_info
+            and self.xmpp.MARK_ALL_MESSAGES
+            and is_markable(stanza)
+        ):
             assert self.contact_pk is not None
             self.xmpp.store.contacts.add_to_sent(self.contact_pk, stanza["id"])
         stanza["to"] = self.user_jid
@@ -244,21 +268,31 @@ class LegacyContact(
     def name(self, n: Optional[str]):
         if self._name == n:
             return
-        for p in self.participants:
-            p.nickname = n
         self._name = n
-        assert self.contact_pk is not None
-        self.xmpp.store.contacts.update_nick(self.contact_pk, n)
         self.xmpp.pubsub.broadcast_nick(
             user_jid=self.user_jid, jid=self.jid.bare, nick=n
         )
-
-    def _get_cached_avatar_id(self):
+        if self._updating_info:
+            # means we're in update_info(), so no participants, and no need
+            # to write to DB now, it will be called in Roster.__finish_init_contact
+            return
+        for p in self.participants:
+            p.nickname = n
         assert self.contact_pk is not None
+        self.xmpp.store.contacts.update_nick(self.contact_pk, n)
+
+    def _get_cached_avatar_id(self) -> Optional[str]:
+        if self.contact_pk is None:
+            return None
         return self.xmpp.store.contacts.get_avatar_legacy_id(self.contact_pk)
 
     def _post_avatar_update(self):
-        assert self.contact_pk is not None
+        if self._updating_info:
+            return
+        if self.contact_pk is None:
+            # happens in LegacyRoster.fill(), the contact primary key is not
+            # set yet, but this will eventually be called in LegacyRoster.__finish_init_contact
+            return
         self.xmpp.store.contacts.set_avatar(self.contact_pk, self._avatar_pk)
         for p in self.participants:
             self.log.debug("Propagating new avatar to %s", p.muc)
@@ -313,6 +347,15 @@ class LegacyContact(
 
         self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user_jid.bare})
 
+    def get_roster_item(self):
+        item = {
+            "subscription": self.__get_subscription_string(),
+            "groups": [self.xmpp.ROSTER_GROUP],
+        }
+        if (n := self.name) is not None:
+            item["name"] = n
+        return {self.jid.bare: item}
+
     async def add_to_roster(self, force=False):
         """
         Add this contact to the user roster using :xep:`0356`
@@ -324,18 +367,10 @@ class LegacyContact(
         if config.NO_ROSTER_PUSH:
             log.debug("Roster push request by plugin ignored (--no-roster-push)")
             return
-        item = {
-            "subscription": self.__get_subscription_string(),
-            "groups": [self.xmpp.ROSTER_GROUP],
-        }
-        if (n := self.name) is not None:
-            item["name"] = n
-        kw = dict(
-            jid=self.user_jid,
-            roster_items={self.jid.bare: item},
-        )
         try:
-            await self._set_roster(**kw)
+            await self._set_roster(
+                jid=self.user_jid, roster_items=self.get_roster_item()
+            )
         except PermissionError:
             warnings.warn(
                 "Slidge does not have privileges to add contacts to the roster. Refer"
@@ -376,9 +411,9 @@ class LegacyContact(
 
     async def _set_roster(self, **kw):
         try:
-            return await self.xmpp["xep_0356"].set_roster(**kw)
+            await self.xmpp["xep_0356"].set_roster(**kw)
         except PermissionError:
-            return await self.xmpp["xep_0356_old"].set_roster(**kw)
+            await self.xmpp["xep_0356_old"].set_roster(**kw)
 
     def send_friend_request(self, text: Optional[str] = None):
         presence = self._make_presence(ptype="subscribe", pstatus=text, bare=True)
@@ -393,7 +428,6 @@ class LegacyContact(
         """
         self.is_friend = True
         assert self.contact_pk is not None
-        self.xmpp.store.contacts.set_friend(self.contact_pk, True)
         self.log.debug("Accepting friend request")
         presence = self._make_presence(ptype="subscribed", pstatus=text, bare=True)
         self._send(presence, nick=True)

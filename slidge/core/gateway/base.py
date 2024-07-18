@@ -401,7 +401,7 @@ class BaseGateway(
         log.debug("Context in the exception handler: %s", context)
         exc = context.get("exception")
         if exc is None:
-            log.warning("No exception in this context: %s", context)
+            log.debug("No exception in this context: %s", context)
         elif isinstance(exc, SystemExit):
             log.debug("SystemExit called in an asyncio task")
         else:

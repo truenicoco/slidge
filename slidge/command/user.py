@@ -131,7 +131,6 @@ class ListContacts(Command):
         self, session: Optional[AnyBaseSession], _ifrom: JID, *_
     ) -> TableResult:
         assert session is not None
-        await session.contacts.fill()
         contacts = sorted(
             session.contacts, key=lambda c: c.name.casefold() if c.name else ""
         )

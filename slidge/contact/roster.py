@@ -1,9 +1,10 @@
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Generic, Iterator, Optional, Type
+import warnings
+from typing import TYPE_CHECKING, AsyncIterator, Generic, Iterator, Optional, Type
 
 from slixmpp import JID
-from slixmpp.exceptions import XMPPError
+from slixmpp.exceptions import IqError, XMPPError
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..core.mixins.lock import NamedLockMixin
@@ -64,25 +65,32 @@ class LegacyRoster(
     async def __finish_init_contact(
         self, legacy_id: LegacyUserIdType, jid_username: str, *args, **kwargs
     ):
-        c = self._contact_cls(self.session, legacy_id, jid_username, *args, **kwargs)
-        async with self.lock(("finish", c.legacy_id)):
+        async with self.lock(("finish", legacy_id)):
             with self.__store.session():
                 stored = self.__store.get_by_legacy_id(
                     self.session.user_pk, str(legacy_id)
                 )
-                if stored is not None and stored.updated:
-                    self.log.debug("Already updated %s", c)
-                    return self._contact_cls.from_store(self.session, stored)
-                c.contact_pk = self.__store.add(
-                    self.session.user_pk, c.legacy_id, c.jid
-                )
+                if stored is not None:
+                    if stored.updated:
+                        return self._contact_cls.from_store(self.session, stored)
+                    c: LegacyContact = self._contact_cls(
+                        self.session, legacy_id, jid_username, *args, **kwargs
+                    )
+                    c.contact_pk = stored.id
+                else:
+                    c = self._contact_cls(
+                        self.session, legacy_id, jid_username, *args, **kwargs
+                    )
                 try:
-                    await c.avatar_wrap_update_info()
+                    with c.updating_info():
+                        await c.avatar_wrap_update_info()
                 except Exception as e:
-                    self.log.debug("Deleting %s because of %r", legacy_id, e)
-                    self.__store.delete(c.contact_pk)
                     raise XMPPError("internal-server-error", str(e))
-                self.__store.update(c)
+                c._caps_ver = await c.get_caps_ver(c.jid)
+                need_avatar = c.contact_pk is None
+                c.contact_pk = self.__store.update(c, commit=not self.__filling)
+                if need_avatar:
+                    c._post_avatar_update()
         return c
 
     def known_contacts(self, only_friends=True) -> dict[str, LegacyContactType]:
@@ -195,18 +203,63 @@ class LegacyRoster(
         """
         return _unescape_node(jid_username)
 
-    async def fill(self):
+    async def _fill(self):
+        try:
+            if hasattr(self.session.xmpp, "TEST_MODE"):
+                # dirty hack to avoid mocking xmpp server replies to this
+                # during tests
+                raise PermissionError
+            iq = await self.session.xmpp["xep_0356"].get_roster(
+                self.session.user_jid.bare
+            )
+            user_roster = iq["roster"]["items"]
+        except (PermissionError, IqError):
+            user_roster = None
+
+        with self.__store.session() as orm:
+            self.__filling = True
+            async for contact in self.fill():
+                if user_roster is None:
+                    continue
+                item = contact.get_roster_item()
+                old = user_roster.get(contact.jid.bare)
+                if old is not None and all(
+                    old[k] == item[contact.jid.bare][k]
+                    for k in ("subscription", "groups", "name")
+                ):
+                    self.log.debug("No need to update roster")
+                    continue
+                self.log.debug("Updating roster")
+                try:
+                    await self.session.xmpp["xep_0356"].set_roster(
+                        self.session.user_jid.bare,
+                        item,
+                    )
+                except (PermissionError, IqError) as e:
+                    warnings.warn(f"Could not add to roster: {e}")
+                else:
+                    contact._added_to_roster = True
+            orm.commit()
+        self.__filling = False
+
+    async def fill(self) -> AsyncIterator[LegacyContact]:
         """
         Populate slidge's "virtual roster".
 
-        Override this and in it, ``await self.by_legacy_id(contact_id)``
-        for the every legacy contacts of the user for which you'd like to
-        set an avatar, nickname, vcard…
+        This should yield contacts that are meant to be added to the user's
+        roster, typically by using ``await self.by_legacy_id(contact_id)``.
+        Setting the contact nicknames, avatar, etc. should be in
+        :meth:`LegacyContact.update_info()`
 
-        Await ``Contact.add_to_roster()`` in here to add the contact to the
-        user's XMPP roster.
+        It's not mandatory to override this method, but it is recommended way
+        to populate "friends" of the user. Calling
+        ``await (await self.by_legacy_id(contact_id)).add_to_roster()``
+        accomplishes the same thing, but doing it in here allows to batch
+        DB queries and is better performance-wise.
+
         """
-        pass
+        return
+        yield
 
 
 ESCAPE_TABLE = "".maketrans({v: k for k, v in JID_UNESCAPE_TRANSFORMATIONS.items()})

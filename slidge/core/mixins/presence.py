@@ -19,27 +19,30 @@ _FRIEND_REQUEST_PRESENCES = {"subscribe", "unsubscribe", "subscribed", "unsubscr
 
 class PresenceMixin(BaseSender):
     _ONLY_SEND_PRESENCE_CHANGES = False
-    contact_pk: Optional[int]
+    contact_pk: Optional[int] = None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         # FIXME: this should not be an attribute of this mixin to allow garbage
         #        collection of instances
         self.__update_last_seen_fallback_task: Optional[Task] = None
+        # this is only used when a presence is set during Contact.update_info(),
+        # when the contact does not have a DB primary key yet, and is written
+        # to DB at the end of update_info()
+        self.cached_presence: Optional[CachedPresence] = None
 
     async def __update_last_seen_fallback(self):
         await sleep(3600 * 7)
         self.send_last_presence(force=True, no_cache_online=False)
 
     def _get_last_presence(self) -> Optional[CachedPresence]:
-        # TODO: use contact PK instead of JID
         if self.contact_pk is None:
             return None
         return self.xmpp.store.contacts.get_presence(self.contact_pk)
 
     def _store_last_presence(self, new: CachedPresence):
-        # TODO: use contact PK instead of JID
         if self.contact_pk is None:
+            self.cached_presence = new
             return
         self.xmpp.store.contacts.set_presence(self.contact_pk, new)
 

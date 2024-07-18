@@ -95,6 +95,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
         assert juliet.avatar is None
 
         juliet.avatar = None
+        self.run_coro(juliet._set_avatar_task)
         assert self.next_sent() is None
 
         self.__assert_not_found()

@@ -133,10 +133,11 @@ class AvatarMixin:
         """
         Set an avatar for this entity
 
-        :param a:
-        :param avatar_unique_id:
-        :param blocking:
-        :param cancel:
+        :param a: The avatar, in one of the types slidge supports
+        :param avatar_unique_id: A globally unique ID for the avatar on the
+            legacy network
+        :param blocking: Internal use by slidge for tests, do not use!
+        :param cancel: Internal use by slidge, do not use!
         """
         if avatar_unique_id is None and a is not None:
             avatar_unique_id = self.__get_uid(a)

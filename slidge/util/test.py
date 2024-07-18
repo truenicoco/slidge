@@ -214,7 +214,8 @@ class SlidgeTest(SlixTestPlus):
             )
 
         self.xmpp = BaseGateway.get_self_or_unique_subclass()()
-        engine = create_engine("sqlite+pysqlite:///:memory:", echo=True)
+        self.xmpp.TEST_MODE = True
+        engine = self.db_engine = create_engine("sqlite+pysqlite:///:memory:")
         Base.metadata.create_all(engine)
         self.xmpp.store = SlidgeStore(engine)
         PepNick.contact_store = self.xmpp.store.contacts
@@ -222,6 +223,7 @@ class SlidgeTest(SlixTestPlus):
         avatar_cache.store = self.xmpp.store.avatars
         avatar_cache.set_dir(Path(tempfile.mkdtemp()))
         self.xmpp._always_send_everything = True
+        engine.echo = True
 
         self.xmpp.connection_made(TestTransport(self.xmpp))
         self.xmpp.session_bind_event.set()
@@ -253,6 +255,7 @@ class SlidgeTest(SlixTestPlus):
         Error.namespace = "jabber:component:accept"
 
     def tearDown(self):
+        self.db_engine.echo = False
         super().tearDown()
         import slidge.db.store
 

@@ -292,22 +292,6 @@ class ContactStore(UpdatedMixin):
             session.execute(update(Contact).values(cached_presence=False))
             session.commit()
 
-    def add(self, user_pk: int, legacy_id: str, contact_jid: JID) -> int:
-        with self.session() as session:
-            existing = session.execute(
-                select(Contact)
-                .where(Contact.legacy_id == legacy_id)
-                .where(Contact.jid == contact_jid.bare)
-            ).scalar()
-            if existing is not None:
-                return existing.id
-            contact = Contact(
-                jid=contact_jid.bare, legacy_id=legacy_id, user_account_id=user_pk
-            )
-            session.add(contact)
-            session.commit()
-            return contact.id
-
     def get_all(self, user_pk: int) -> Iterator[Contact]:
         with self.session() as session:
             yield from session.execute(
@@ -394,20 +378,34 @@ class ContactStore(UpdatedMixin):
                 return None
             return contact.avatar.legacy_id
 
-    def update(self, contact: "LegacyContact"):
+    def update(self, contact: "LegacyContact") -> int:
         with self.session() as session:
-            session.execute(
-                update(Contact)
-                .where(Contact.id == contact.contact_pk)
-                .values(
-                    nick=contact.name,
-                    is_friend=contact.is_friend,
-                    added_to_roster=contact.added_to_roster,
-                    updated=True,
-                    extra_attributes=contact.serialize_extra_attributes(),
+            if contact.contact_pk is None:
+                if contact.cached_presence is not None:
+                    presence_kwargs = contact.cached_presence._asdict()
+                    presence_kwargs["cached_presence"] = True
+                else:
+                    presence_kwargs = {}
+                row = Contact(
+                    jid=contact.jid.bare,
+                    legacy_id=str(contact.legacy_id),
+                    user_account_id=contact.user_pk,
+                    **presence_kwargs,
                 )
-            )
+            else:
+                row = (
+                    session.query(Contact)
+                    .filter(Contact.id == contact.contact_pk)
+                    .one()
+                )
+            row.nick = contact.name
+            row.is_friend = contact.is_friend
+            row.added_to_roster = contact.added_to_roster
+            row.updated = True
+            row.extra_attributes = contact.serialize_extra_attributes()
+            session.add(row)
             session.commit()
+            return row.id
 
     def add_to_sent(self, contact_pk: int, msg_id: str) -> None:
         with self.session() as session:

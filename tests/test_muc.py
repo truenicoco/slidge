@@ -2819,10 +2819,14 @@ class TestMuc(Base):
         )
         slixmpp.plugins.xep_0356.privilege.uuid.uuid4 = o
 
+    async def __fill_roster(self):
+        async for _ in self.get_romeo_session().contacts.fill():
+            continue
+
     def __get_participants(self):
         muc = self.get_private_muc(resources=["movim"])
         # muc.user_resources.add("movim")
-        self.run_coro(muc.session.contacts.fill())
+        self.run_coro(self.__fill_roster())
         participants_before: list[Participant] = self.run_coro(muc.get_participants())
         for p in participants_before:
             p._presence_sent = True
