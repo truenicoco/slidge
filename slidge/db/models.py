@@ -195,12 +195,7 @@ class Room(Base):
     description: Mapped[Optional[str]] = mapped_column(nullable=True)
     subject: Mapped[Optional[str]] = mapped_column(nullable=True)
     subject_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    subject_setter_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("participant.id"), nullable=True
-    )
-    subject_setter: Mapped["Participant"] = relationship(
-        foreign_keys="Room.subject_setter_id"
-    )
+    subject_setter: Mapped[Optional[str]] = mapped_column(nullable=True)
 
     n_participants: Mapped[Optional[int]] = mapped_column(default=None)
 

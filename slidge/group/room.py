@@ -23,6 +23,7 @@ from ..contact.roster import ContactIsUser
 from ..core import config
 from ..core.mixins import StoredAttributeMixin
 from ..core.mixins.avatar import AvatarMixin
+from ..core.mixins.db import UpdateInfoMixin
 from ..core.mixins.disco import ChatterDiscoMixin
 from ..core.mixins.lock import NamedLockMixin
 from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
@@ -68,10 +69,14 @@ def timeit(func):
     return wrapped
 
 
+SubjectSetterType = Union[str, None, "LegacyContact", "LegacyParticipant"]
+
+
 class LegacyMUC(
     Generic[
         LegacyGroupIdType, LegacyMessageType, LegacyParticipantType, LegacyUserIdType
     ],
+    UpdateInfoMixin,
     StoredAttributeMixin,
     AvatarMixin,
     NamedLockMixin,
@@ -159,9 +164,7 @@ class LegacyMUC(
         self.Participant = LegacyParticipant.get_self_or_unique_subclass()
 
         self._subject = ""
-        self._subject_setter: Union[str, None, "LegacyContact", "LegacyParticipant"] = (
-            None
-        )
+        self._subject_setter: Optional[str] = None
 
         self.pk: Optional[int] = None
         self._user_nick: Optional[str] = None
@@ -187,6 +190,8 @@ class LegacyMUC(
         if self._n_participants == n_participants:
             return
         self._n_participants = n_participants
+        if self._updating_info:
+            return
         assert self.pk is not None
         self.__store.update_n_participants(self.pk, n_participants)
 
@@ -204,6 +209,8 @@ class LegacyMUC(
     @subject_date.setter
     def subject_date(self, when: Optional[datetime]) -> None:
         self._subject_date = when
+        if self._updating_info:
+            return
         assert self.pk is not None
         self.__store.update_subject_date(self.pk, when)
 
@@ -241,6 +248,8 @@ class LegacyMUC(
                 await self.fill_participants()
             except NotImplementedError:
                 pass
+            assert self.pk is not None
+            self.__store.set_participants_filled(self.pk)
 
     async def __fill_history(self):
         async with self.lock("fill history"):
@@ -276,9 +285,11 @@ class LegacyMUC(
         if self.DISCO_NAME == n:
             return
         self.DISCO_NAME = n
+        self.__send_configuration_change((104,))
+        if self._updating_info:
+            return
         assert self.pk is not None
         self.__store.update_name(self.pk, n)
-        self.__send_configuration_change((104,))
 
     @property
     def description(self):
@@ -289,9 +300,11 @@ class LegacyMUC(
         if self._description == d:
             return
         self._description = d
+        self.__send_configuration_change((104,))
+        if self._updating_info:
+            return
         assert self.pk is not None
         self.__store.update_description(self.pk, d)
-        self.__send_configuration_change((104,))
 
     def on_presence_unavailable(self, p: Presence):
         pto = p.get_to()
@@ -361,14 +374,13 @@ class LegacyMUC(
     def subject(self, s: str):
         if s == self._subject:
             return
-        self.session.create_task(
-            self.__get_subject_setter_participant()
-        ).add_done_callback(
-            lambda task: task.result().set_room_subject(
-                s, None, self.subject_date, False
-            )
+        self.__get_subject_setter_participant().set_room_subject(
+            s, None, self.subject_date, False
         )
+
         self._subject = s
+        if self._updating_info:
+            return
         assert self.pk is not None
         self.__store.update_subject(self.pk, s)
 
@@ -377,25 +389,29 @@ class LegacyMUC(
         return self.type == MucType.CHANNEL
 
     @property
-    def subject_setter(self):
+    def subject_setter(self) -> Optional[str]:
         return self._subject_setter
 
     @subject_setter.setter
-    def subject_setter(self, subject_setter):
+    def subject_setter(self, subject_setter: SubjectSetterType) -> None:
+        if isinstance(subject_setter, LegacyContact):
+            subject_setter = subject_setter.name
+        elif isinstance(subject_setter, LegacyParticipant):
+            subject_setter = subject_setter.nickname
+
+        if subject_setter == self._subject_setter:
+            return
+        assert isinstance(subject_setter, str)
         self._subject_setter = subject_setter
-        self.__store.update(self)
+        if self._updating_info:
+            return
+        assert self.pk is not None
+        self.__store.update_subject_setter(self.pk, subject_setter)
 
-    async def __get_subject_setter_participant(self):
-        who = self.subject_setter
-
-        if isinstance(who, LegacyParticipant):
-            return who
-        elif isinstance(who, str):
-            return await self.get_participant(who, store=False)
-        elif isinstance(self.subject_setter, LegacyContact):
-            return await self.get_participant_by_contact(who)
-        else:
+    def __get_subject_setter_participant(self) -> LegacyParticipant:
+        if self._subject_setter is None:
             return self.get_system_participant()
+        return self.Participant(self, self._subject_setter)
 
     def features(self):
         features = [
@@ -529,12 +545,14 @@ class LegacyMUC(
             msg.send()
 
     def _get_cached_avatar_id(self):
-        assert self.pk is not None
+        if self.pk is None:
+            return None
         return self.xmpp.store.rooms.get_avatar_legacy_id(self.pk)
 
     def _post_avatar_update(self) -> None:
-        if self.pk is None or self._avatar_pk is None:
+        if self.pk is None:
             return
+        assert self.pk is not None
         self.xmpp.store.rooms.set_avatar(self.pk, self._avatar_pk)
         self.__send_configuration_change((104,))
         self._send_room_presence()
@@ -616,7 +634,7 @@ class LegacyMUC(
                 maxstanzas=maxstanzas,
                 since=since,
             )
-        (await self.__get_subject_setter_participant()).set_room_subject(
+        self.__get_subject_setter_participant().set_room_subject(
             self._subject if self.HAS_SUBJECT else (self.description or self.name),
             user_full_jid,
             self.subject_date,
@@ -672,18 +690,18 @@ class LegacyMUC(
         """
         if fill_first:
             await self.__fill_participants()
-        assert self.pk is not None
-        with self.xmpp.store.session():
-            stored = self.__participants_store.get_by_nickname(
-                self.pk, nickname
-            ) or self.__participants_store.get_by_resource(self.pk, nickname)
-            if stored is not None:
-                return self.Participant.from_store(self.session, stored)
+        if self.pk is not None:
+            with self.xmpp.store.session():
+                stored = self.__participants_store.get_by_nickname(
+                    self.pk, nickname
+                ) or self.__participants_store.get_by_resource(self.pk, nickname)
+                if stored is not None:
+                    return self.Participant.from_store(self.session, stored)
 
         if raise_if_not_found:
             raise XMPPError("item-not-found")
         p = self.Participant(self, nickname, **kwargs)
-        if store:
+        if store and not self._updating_info:
             self.__store_participant(p)
         if (
             not self.get_lock("fill participants")
@@ -721,29 +739,41 @@ class LegacyMUC(
         :return:
         """
         await self.session.contacts.ready
-        assert self.pk is not None
-        assert c.contact_pk is not None
-        with self.__store.session():
-            stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)
-            if stored is not None:
-                return self.Participant.from_store(
-                    self.session, stored, muc=self, contact=c
-                )
+
+        if self.pk is not None:
+            assert c.contact_pk is not None
+            with self.__store.session():
+                stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)
+                if stored is not None:
+                    return self.Participant.from_store(
+                        self.session, stored, muc=self, contact=c
+                    )
 
         nickname = c.name or _unescape_node(c.jid_username)
-        if not self.__store.nickname_is_available(self.pk, nickname):
+
+        if self.pk is None:
+            nick_available = True
+        else:
+            nick_available = self.__store.nickname_is_available(self.pk, nickname)
+
+        if not nick_available:
             self.log.debug("Nickname conflict")
             nickname = f"{nickname} ({c.jid_username})"
         p = self.Participant(self, nickname, **kwargs)
         p.contact = c
 
+        if not self._updating_info:
+            self.__store_participant(p)
         # FIXME: this is not great but given the current design,
         #        during participants fill and history backfill we do not
-        #        want to send presence, because we might update affiliation
+        #        want to send presence, because we might :update affiliation
         #        and role afterwards.
         # We need a refactor of the MUC class… later™
-        self.__store_participant(p)
-        if not self.get_lock("fill participants") and not self.get_lock("fill history"):
+        if (
+            not self._updating_info
+            and not self.get_lock("fill participants")
+            and not self.get_lock("fill history")
+        ):
             p.send_last_presence(force=True, no_cache_online=True)
         return p
 
@@ -1178,14 +1208,7 @@ class LegacyMUC(
         muc.__history_filled = True
         if stored.user_resources is not None:
             muc._user_resources = set(json.loads(stored.user_resources))
-        if stored.subject_setter is not None:
-            muc.subject_setter = (
-                LegacyParticipant.get_self_or_unique_subclass().from_store(
-                    session,
-                    stored.subject_setter,
-                    muc=muc,
-                )
-            )
+        muc._subject_setter = stored.subject_setter
         muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
         muc._set_avatar_from_store(stored)
         return muc

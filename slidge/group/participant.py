@@ -331,7 +331,7 @@ class LegacyParticipant(
             else:
                 stanza.send()
         else:
-            if isinstance(stanza, Message):
+            if hasattr(self.muc, "archive") and isinstance(stanza, Message):
                 self.muc.archive.add(stanza, self)
             if archive_only:
                 return stanza
@@ -460,7 +460,7 @@ class LegacyParticipant(
     ):
         if update_muc:
             self.muc._subject = subject  # type: ignore
-            self.muc.subject_setter = self
+            self.muc.subject_setter = self.nickname
             self.muc.subject_date = when
 
         msg = self._make_message()

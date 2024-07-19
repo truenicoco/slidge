@@ -698,27 +698,11 @@ class RoomStore(UpdatedMixin):
         super().__init__(*a, **kw)
         with self.session() as session:
             session.execute(
-                update(Room).values(subject_setter_id=None, user_resources=None)
+                update(Room).values(subject_setter=None, user_resources=None)
             )
             session.commit()
 
-    def add(self, user_pk: int, legacy_id: str, jid: JID) -> int:
-        if jid.resource:
-            raise TypeError
-        with self.session() as session:
-            existing = session.execute(
-                select(Room.id)
-                .where(Room.user_account_id == user_pk)
-                .where(Room.legacy_id == legacy_id)
-            ).scalar()
-            if existing is not None:
-                return existing
-            room = Room(jid=jid, user_account_id=user_pk, legacy_id=legacy_id)
-            session.add(room)
-            session.commit()
-            return room.id
-
-    def set_avatar(self, room_pk: int, avatar_pk: int) -> None:
+    def set_avatar(self, room_pk: int, avatar_pk: int | None) -> None:
         with self.session() as session:
             session.execute(
                 update(Room).where(Room.id == room_pk).values(avatar_id=avatar_pk)
@@ -750,44 +734,45 @@ class RoomStore(UpdatedMixin):
                 .where(Room.legacy_id == legacy_id)
             ).scalar()
 
-    def update(self, room: "LegacyMUC"):
-        from slidge.contact import LegacyContact
-
+    def update_subject_setter(self, room_pk: int, subject_setter: str | None):
         with self.session() as session:
-            if room.subject_setter is None:
-                subject_setter_id = None
-            elif isinstance(room.subject_setter, str):
-                subject_setter_id = None
-            elif isinstance(room.subject_setter, LegacyContact):
-                subject_setter_id = None
-            elif room.subject_setter.is_system:
-                subject_setter_id = None
-            else:
-                subject_setter_id = room.subject_setter.pk
-
             session.execute(
                 update(Room)
-                .where(Room.id == room.pk)
-                .values(
-                    updated=True,
-                    extra_attributes=room.serialize_extra_attributes(),
-                    name=room.name,
-                    description=room.description,
-                    user_resources=(
-                        None
-                        if not room._user_resources
-                        else json.dumps(list(room._user_resources))
-                    ),
-                    muc_type=room.type,
-                    subject=room.subject,
-                    subject_date=room.subject_date,
-                    subject_setter_id=subject_setter_id,
-                    participants_filled=room._participants_filled,
-                    n_participants=room._n_participants,
-                    user_nick=room.user_nick,
-                )
+                .where(Room.id == room_pk)
+                .values(subject_setter=subject_setter)
             )
             session.commit()
+
+    def update(self, muc: "LegacyMUC") -> int:
+        with self.session() as session:
+            if muc.pk is None:
+                row = Room(
+                    jid=muc.jid,
+                    legacy_id=str(muc.legacy_id),
+                    user_account_id=muc.user_pk,
+                )
+            else:
+                row = session.query(Room).filter(Room.id == muc.pk).one()
+
+            row.updated = True
+            row.extra_attributes = muc.serialize_extra_attributes()
+            row.name = muc.name
+            row.description = muc.description
+            row.user_resources = (
+                None
+                if not muc._user_resources
+                else json.dumps(list(muc._user_resources))
+            )
+            row.muc_type = muc.type
+            row.subject = muc.subject
+            row.subject_date = muc.subject_date
+            row.subject_setter = muc.subject_setter
+            row.participants_filled = muc._participants_filled
+            row.n_participants = muc._n_participants
+            row.user_nick = muc.user_nick
+            session.add(row)
+            session.commit()
+            return row.id
 
     def update_subject_date(
         self, room_pk: int, subject_date: Optional[datetime]
@@ -853,6 +838,13 @@ class RoomStore(UpdatedMixin):
                 ).scalar()
                 is None
             )
+
+    def set_participants_filled(self, room_pk: int, val=True) -> None:
+        with self.session() as session:
+            session.execute(
+                update(Room).where(Room.id == room_pk).values(participants_filled=val)
+            )
+            session.commit()
 
     def get_all(self, user_pk: int) -> Iterator[Room]:
         with self.session() as session:

@@ -35,10 +35,11 @@ class MUC(LegacyMUC):
         self.description = "Cool description"
         self.type = MucType.CHANNEL_NON_ANONYMOUS
         self.subject = "Cool subject"
-        self.subject_setter = await self.session.contacts.by_legacy_id("juliet")
+        self.subject_setter = await self.get_participant_by_legacy_id("juliet")
         self.subject_date = datetime(2000, 1, 1, 0, 0, tzinfo=timezone.utc)
         self.n_participants = 666
         self.user_nick = "Cool nick"
+        await self.set_avatar("AVATAR_URL")
 
 
 class Bookmarks(LegacyBookmarks):
@@ -146,7 +147,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </message>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
         juliet: Contact = self.run_coro(
             self.romeo_session.contacts.by_legacy_id("juliet")
         )
@@ -155,6 +156,7 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         cached_presence = juliet._get_last_presence()
         assert cached_presence is not None
         assert cached_presence.pstatus == "status msg"
+        assert juliet.avatar is not None
 
     def test_group_init(self):
         self.run_coro(self.romeo_session.bookmarks.by_legacy_id("room"))
@@ -162,6 +164,17 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         self.next_sent()  # juliet nick
         self.next_sent()  # juliet avatar
         muc = self.run_coro(self.romeo_session.bookmarks.by_legacy_id("room"))
-        self.send(None)
-
-        assert muc
+        assert self.next_sent() is None
+        # self.run_coro(muc._set)
+        assert muc.name == "Cool name"
+        assert muc.description == "Cool description"
+        assert muc.type == MucType.CHANNEL_NON_ANONYMOUS
+        assert muc.n_participants == 666
+        assert muc.user_nick == "Cool nick"
+        assert muc.avatar is not None
+        assert muc.subject == "Cool subject"
+        assert muc.subject_date == datetime(2000, 1, 1, 0, 0, tzinfo=timezone.utc)
+        assert (
+            muc.subject_setter
+            == self.run_coro(self.romeo_session.contacts.by_legacy_id("juliet")).name
+        )

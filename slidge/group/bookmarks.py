@@ -58,20 +58,26 @@ class LegacyBookmarks(
         return f"<Bookmarks of {self.user_jid}>"
 
     async def __finish_init_muc(self, legacy_id: LegacyGroupIdType, jid: JID):
-        muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)
         with self.__store.session():
-            muc.pk = self.__store.add(self.session.user_pk, str(muc.legacy_id), muc.jid)
-            muc.archive = MessageArchive(muc.pk, self.xmpp.store.mam)
+            stored = self.__store.get_by_legacy_id(self.session.user_pk, str(legacy_id))
+            if stored is not None:
+                if stored.updated:
+                    return self._muc_class.from_store(self.session, stored)
+                muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)
+                muc.pk = stored.id
+            else:
+                muc = self._muc_class(self.session, legacy_id=legacy_id, jid=jid)
+
             try:
-                await muc.avatar_wrap_update_info()
+                with muc.updating_info():
+                    await muc.avatar_wrap_update_info()
             except Exception as e:
-                self.log.debug("Deleting %s because of %r", legacy_id, e)
-                self.__store.delete(muc.pk)
                 raise XMPPError("internal-server-error", str(e))
             if not muc.user_nick:
                 muc.user_nick = self._user_nick
             self.log.debug("MUC created: %r", muc)
-            self.__store.update(muc)
+            muc.pk = self.__store.update(muc)
+            muc.archive = MessageArchive(muc.pk, self.xmpp.store.mam)
         return muc
 
     async def legacy_id_to_jid_local_part(self, legacy_id: LegacyGroupIdType):

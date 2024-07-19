@@ -220,7 +220,7 @@ class MUC(slidge.LegacyMUC):
         if self.jid.local == "coven":
             await self.set_avatar(
                 Path(__file__).parent.parent / "dev" / "assets" / "5x5.png",
-                blocking=True,
+                blocking=False,
             )
             self.name = "The coven"
 
