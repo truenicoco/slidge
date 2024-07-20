@@ -275,6 +275,7 @@ class Base(ClearSessionMixin, SlidgeTest):
                 JID(f"{name}@aim.shakespeare.lit")
             )
         )
+        muc.session.cancel_all_tasks()
         for resource in resources:
             muc.add_user_resource(resource)
             n = self.next_sent()
@@ -3886,6 +3887,9 @@ class TestHats(Base):
             </presence>
             """
         )
+        muc._participants_filled = True
+        self.xmpp.store.rooms.update(muc)
+        participant = self.run_coro(muc.get_participant("i-wear-hats"))
         participant.set_hats([Hat("uri1", "title1"), Hat("uri2", "title2")])
         self.send(  # language=XML
             """

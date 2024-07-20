@@ -117,6 +117,8 @@ class LegacyParticipant(
         if self._affiliation == affiliation:
             return
         self._affiliation = affiliation
+        if not self.muc._participants_filled:
+            return
         self.__part_store.set_affiliation(self.pk, affiliation)
         if not self._presence_sent:
             return
@@ -145,6 +147,8 @@ class LegacyParticipant(
         if self._role == role:
             return
         self._role = role
+        if not self.muc._participants_filled:
+            return
         self.__part_store.set_role(self.pk, role)
         if not self._presence_sent:
             return
@@ -154,6 +158,8 @@ class LegacyParticipant(
         if self._hats == hats:
             return
         self._hats = hats
+        if not self.muc._participants_filled:
+            return
         self.__part_store.set_hats(self.pk, hats)
         if not self._presence_sent:
             return
