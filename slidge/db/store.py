@@ -403,6 +403,7 @@ class ContactStore(UpdatedMixin):
             row.added_to_roster = contact.added_to_roster
             row.updated = True
             row.extra_attributes = contact.serialize_extra_attributes()
+            row.caps_ver = contact._caps_ver
             session.add(row)
             session.commit()
             return row.id

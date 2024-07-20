@@ -145,6 +145,7 @@ class Contact(Base):
     ptype: Mapped[Optional[str]] = mapped_column(nullable=True)
     pstatus: Mapped[Optional[str]] = mapped_column(nullable=True)
     pshow: Mapped[Optional[str]] = mapped_column(nullable=True)
+    caps_ver: Mapped[Optional[str]] = mapped_column(nullable=True)
 
     is_friend: Mapped[bool] = mapped_column(default=False)
     added_to_roster: Mapped[bool] = mapped_column(default=False)

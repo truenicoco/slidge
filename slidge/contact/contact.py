@@ -124,6 +124,7 @@ class LegacyContact(
         self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid.bare}")
         self._is_friend: bool = False
         self.added_to_roster = False
+        self._caps_ver: str | None = None
 
     @property
     def is_friend(self):
@@ -520,6 +521,22 @@ class LegacyContact(
         """
         pass
 
+    def _make_presence(
+        self,
+        *,
+        last_seen: Optional[datetime.datetime] = None,
+        status_codes: Optional[set[int]] = None,
+        user_full_jid: Optional[JID] = None,
+        **presence_kwargs,
+    ):
+        p = super()._make_presence(last_seen=last_seen, **presence_kwargs)
+        caps = self.xmpp.plugin["xep_0115"]
+        if p.get_from().resource and self._caps_ver:
+            p["caps"]["node"] = caps.caps_node
+            p["caps"]["hash"] = caps.hash
+            p["caps"]["ver"] = self._caps_ver
+        return p
+
     @classmethod
     def from_store(cls, session, stored: Contact, *args, **kwargs) -> Self:
         contact = cls(
@@ -536,6 +553,7 @@ class LegacyContact(
         if (data := stored.extra_attributes) is not None:
             contact.deserialize_extra_attributes(data)
         contact._set_avatar_from_store(stored)
+        contact._caps_ver = stored.caps_ver
         return contact
 
 

@@ -1391,7 +1391,6 @@ class TestContact(ClearSessionMixin, SlidgeTest):
         LegacyContact.REACTIONS_SINGLE_EMOJI = True
         LegacyContact.CORRECTION = False
         juliet = self.get_juliet()
-        # juliet.reset_caps_cache()
         juliet.is_friend = True
         juliet.online()
         self.send(  # language=XML

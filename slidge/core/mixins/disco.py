@@ -13,10 +13,6 @@ class BaseDiscoMixin(Base):
     DISCO_NAME: str = NotImplemented
     DISCO_LANG = None
 
-    def __init__(self):
-        super().__init__()
-        self.__caps_cache: Optional[str] = None
-
     def _get_disco_name(self):
         if self.DISCO_NAME is NotImplemented:
             return self.xmpp.COMPONENT_NAME
@@ -44,16 +40,10 @@ class BaseDiscoMixin(Base):
         return info
 
     async def get_caps_ver(self, jid: OptJid = None, node: Optional[str] = None):
-        if self.__caps_cache:
-            return self.__caps_cache
         info = await self.get_disco_info(jid, node)
         caps = self.xmpp.plugin["xep_0115"]
         ver = caps.generate_verstring(info, caps.hash)
-        self.__caps_cache = ver
         return ver
-
-    def reset_caps_cache(self):
-        self.__caps_cache = None
 
 
 class ChatterDiscoMixin(BaseDiscoMixin):

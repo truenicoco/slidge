@@ -5,8 +5,6 @@ from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.xmlstream import StanzaBase
 
-from ...contact import LegacyContact
-
 if TYPE_CHECKING:
     from .base import BaseGateway
 
@@ -23,6 +21,9 @@ class Caps:
         # anyway, we probably want to roll our own "dynamic disco"/caps
         # module in the long run, so it's a step in this direction
         if not isinstance(stanza, Presence):
+            return stanza
+
+        if stanza.get_plugin("caps", check=True):
             return stanza
 
         if stanza["type"] not in ("available", "chat", "away", "dnd", "xa"):
@@ -44,10 +45,11 @@ class Caps:
 
             await session.ready
 
-            entity = await session.get_contact_or_group_or_participant(pfrom)
-            if not isinstance(entity, LegacyContact):
+            try:
+                contact = await session.contacts.by_jid(pfrom)
+            except XMPPError:
                 return stanza
-            ver = await entity.get_caps_ver(pfrom)
+            ver = await contact.get_caps_ver(pfrom)
         else:
             ver = await caps.get_verstring(pfrom)
 
