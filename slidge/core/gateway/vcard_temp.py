@@ -61,7 +61,7 @@ class VCardTemp:
 
     async def __handle_get_vcard_temp(self, iq: Iq):
         session = self.xmpp.get_session_from_stanza(iq)
-        entity = await session.get_contact_or_group_or_participant(iq.get_to())
+        entity = await session.get_contact_or_group_or_participant(iq.get_to(), False)
         if not entity:
             raise XMPPError("item-not-found")
 

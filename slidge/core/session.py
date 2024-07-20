@@ -728,13 +728,16 @@ class BaseSession(
         # No reason to override this
         self.xmpp.re_login(self)
 
-    async def get_contact_or_group_or_participant(self, jid: JID):
+    async def get_contact_or_group_or_participant(self, jid: JID, create=True):
         if jid.bare in (contacts := self.contacts.known_contacts(only_friends=False)):
             return contacts[jid.bare]
         if (muc := self.bookmarks.by_jid_only_if_exists(JID(jid.bare))) is not None:
             return await self.__get_muc_or_participant(muc, jid)
         else:
             muc = None
+
+        if not create:
+            return None
 
         try:
             return await self.contacts.by_jid(jid)
