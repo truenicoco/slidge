@@ -206,6 +206,7 @@ class Room(Base):
     user_resources: Mapped[Optional[str]] = mapped_column(nullable=True)
 
     participants_filled: Mapped[bool] = mapped_column(default=False)
+    history_filled: Mapped[bool] = mapped_column(default=False)
 
     extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(default=None)
     updated: Mapped[bool] = mapped_column(default=False)

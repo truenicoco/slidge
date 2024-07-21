@@ -146,7 +146,7 @@ class LegacyMUC(
         self._user_nick: Optional[str] = None
 
         self._participants_filled = False
-        self.__history_filled = False
+        self._history_filled = False
         self._description = ""
         self._subject_date: Optional[datetime] = None
 
@@ -254,7 +254,7 @@ class LegacyMUC(
 
     async def __fill_history(self):
         async with self.lock("fill history"):
-            if self.__history_filled:
+            if self._history_filled:
                 log.debug("History has already been fetched %s", self)
                 return
             log.debug("Fetching history for %s", self)
@@ -275,7 +275,9 @@ class LegacyMUC(
                 await self.backfill(legacy_id, oldest_date)
             except NotImplementedError:
                 return
-            self.__history_filled = True
+            assert self.pk is not None
+            self.__store.set_history_filled(self.pk, True)
+            self._history_filled = True
 
     @property
     def name(self):
@@ -1197,7 +1199,7 @@ class LegacyMUC(
             muc._subject_date = stored.subject_date.replace(tzinfo=timezone.utc)
         muc._participants_filled = stored.participants_filled
         muc._n_participants = stored.n_participants
-        muc.__history_filled = True
+        muc._history_filled = stored.history_filled
         if stored.user_resources is not None:
             muc._user_resources = set(json.loads(stored.user_resources))
         muc._subject_setter = stored.subject_setter

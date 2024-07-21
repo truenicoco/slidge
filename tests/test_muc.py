@@ -2068,7 +2068,7 @@ class TestMuc(Base):
 
     def test_mam_metadata_empty(self):
         muc = self.get_private_muc()
-        muc._LegacyMUC__history_filled = True
+        self.xmpp.store.rooms.set_history_filled(muc.pk, True)
         self.recv(  # language=XML
             """
             <iq from='romeo@montague.lit/gajim'

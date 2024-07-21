@@ -683,7 +683,9 @@ class RoomStore(UpdatedMixin):
         super().__init__(*a, **kw)
         with self.session() as session:
             session.execute(
-                update(Room).values(subject_setter=None, user_resources=None)
+                update(Room).values(
+                    subject_setter=None, user_resources=None, history_filled=False
+                )
             )
             session.commit()
 
@@ -828,6 +830,13 @@ class RoomStore(UpdatedMixin):
         with self.session() as session:
             session.execute(
                 update(Room).where(Room.id == room_pk).values(participants_filled=val)
+            )
+            session.commit()
+
+    def set_history_filled(self, room_pk: int, val=True) -> None:
+        with self.session() as session:
+            session.execute(
+                update(Room).where(Room.id == room_pk).values(history_filled=True)
             )
             session.commit()
 
