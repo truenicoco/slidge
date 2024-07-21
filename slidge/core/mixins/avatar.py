@@ -28,7 +28,6 @@ class AvatarMixin:
 
     jid: JID = NotImplemented
     session: AnyBaseSession = NotImplemented
-    _avatar_pubsub_broadcast: bool = NotImplemented
     _avatar_bare_jid: bool = NotImplemented
 
     def __init__(self) -> None:
@@ -105,12 +104,17 @@ class AvatarMixin:
                 return
             self._avatar_pk = cached_avatar.pk
 
-        if self._avatar_pubsub_broadcast:
+        if self.__should_pubsub_broadcast():
             await self.session.xmpp.pubsub.broadcast_avatar(
                 self.__avatar_jid, self.session.user_jid, cached_avatar
             )
 
         self._post_avatar_update()
+
+    def __should_pubsub_broadcast(self):
+        return getattr(self, "is_friend", False) and getattr(
+            self, "added_to_roster", False
+        )
 
     async def _no_change(self, a: Optional[AvatarType], uid: Optional[AvatarIdType]):
         if a is None:
@@ -196,7 +200,7 @@ class AvatarMixin:
             # need to do anything else
             return
 
-        if self._avatar_pubsub_broadcast:
+        if self.__should_pubsub_broadcast():
             if new_id is None and cached_id is None:
                 return
             cached_avatar = avatar_cache.get(cached_id)

@@ -147,7 +147,6 @@ class LegacyMUC(
     tries to set the room subject.
     """
 
-    _avatar_pubsub_broadcast = False
     _avatar_bare_jid = True
     archive: MessageArchive
 

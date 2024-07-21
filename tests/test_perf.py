@@ -23,8 +23,9 @@ class Session(BaseSession):
 
 class Contact(LegacyContact):
     async def update_info(self):
-        self.name = "A name"
         self.is_friend = True
+        self.added_to_roster = True
+        self.name = "A name"
         self.online("status msg")
         await self.set_avatar("AVATAR_URL")
 

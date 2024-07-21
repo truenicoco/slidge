@@ -440,6 +440,15 @@ class ContactStore(UpdatedMixin):
             )
             session.commit()
 
+    def set_added_to_roster(self, contact_pk: int, value: bool) -> None:
+        with self.session() as session:
+            session.execute(
+                update(Contact)
+                .where(Contact.id == contact_pk)
+                .values(added_to_roster=value)
+            )
+            session.commit()
+
     def delete(self, contact_pk: int) -> None:
         with self.session() as session:
             session.execute(delete(Contact).where(Contact.id == contact_pk))

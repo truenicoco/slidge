@@ -84,7 +84,6 @@ class LegacyContact(
     STRIP_SHORT_DELAY = True
     _NON_FRIEND_PRESENCES_FILTER = {"subscribe", "unsubscribed"}
 
-    _avatar_pubsub_broadcast = True
     _avatar_bare_jid = True
 
     INVITATION_RECIPIENT = True
@@ -123,7 +122,7 @@ class LegacyContact(
         self.jid.resource = self.RESOURCE
         self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid.bare}")
         self._is_friend: bool = False
-        self.added_to_roster = False
+        self._added_to_roster = False
         self._caps_ver: str | None = None
 
     @property
@@ -270,9 +269,10 @@ class LegacyContact(
         if self._name == n:
             return
         self._name = n
-        self.xmpp.pubsub.broadcast_nick(
-            user_jid=self.user_jid, jid=self.jid.bare, nick=n
-        )
+        if self.is_friend and self.added_to_roster:
+            self.xmpp.pubsub.broadcast_nick(
+                user_jid=self.user_jid, jid=self.jid.bare, nick=n
+            )
         if self._updating_info:
             # means we're in update_info(), so no participants, and no need
             # to write to DB now, it will be called in Roster.__finish_init_contact
@@ -390,24 +390,25 @@ class LegacyContact(
             # we only broadcast pubsub events for contacts added to the roster
             # so if something was set before, we need to push it now
             self.added_to_roster = True
-            self.session.create_task(self.__broadcast_pubsub_items())
             self.send_last_presence()
 
     async def __broadcast_pubsub_items(self):
+        if not self.is_friend:
+            return
+        if not self.added_to_roster:
+            return
         cached_avatar = self.get_cached_avatar()
         if cached_avatar is not None:
             await self.xmpp.pubsub.broadcast_avatar(
                 self.jid.bare, self.session.user_jid, cached_avatar
             )
         nick = self.name
-        from ..core.pubsub import PepNick
 
         if nick is not None:
-            pep_nick = PepNick(nick)
-            await self.xmpp.pubsub.broadcast(
-                pep_nick.nick,
-                self.jid.bare,
+            self.xmpp.pubsub.broadcast_nick(
                 self.session.user_jid,
+                self.jid.bare,
+                nick,
             )
 
     async def _set_roster(self, **kw):
@@ -428,6 +429,7 @@ class LegacyContact(
         :param text: Optional message from the friend to the user
         """
         self.is_friend = True
+        self.added_to_roster = True
         assert self.contact_pk is not None
         self.log.debug("Accepting friend request")
         presence = self._make_presence(ptype="subscribed", pstatus=text, bare=True)

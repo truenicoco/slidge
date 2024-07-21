@@ -12,6 +12,7 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
     def setUp(self):
         super().setUp()
         self.juliet.is_friend = True
+        self.juliet.added_to_roster = True
 
     def __assert_not_found(self):
         juliet = self.juliet

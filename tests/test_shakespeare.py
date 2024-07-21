@@ -1947,6 +1947,7 @@ class TestUserGetsOnline(Base):
         super().setUp()
         self.get_romeo_session().contacts.ready.set_result(True)
         self.juliet.is_friend = True
+        self.juliet.added_to_roster = True
         self.juliet.name = "Juliet"
         self.send(  # language=XML
             """

@@ -20,8 +20,6 @@ from slixmpp.plugins.xep_0172 import UserNick
 from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import JidStr, OptJidStr
 
-from ..contact.contact import LegacyContact
-from ..contact.roster import ContactIsUser
 from ..db.avatar import CachedAvatar, avatar_cache
 from ..db.store import ContactStore, SlidgeStore
 from .mixins.lock import NamedLockMixin
@@ -174,7 +172,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             else:
                 if pep_avatar.metadata is None:
                     raise XMPPError("internal-server-error", "Avatar but no metadata?")
-                await self.broadcast(
+                await self.__broadcast(
                     data=pep_avatar.metadata,
                     from_=p.get_to(),
                     to=from_,
@@ -186,7 +184,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             except XMPPError:
                 pass
             else:
-                await self.broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
+                await self.__broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
         if VCARD4_NAMESPACE + "+notify" in features:
             await self.broadcast_vcard_event(p.get_to(), to=from_)
@@ -201,7 +199,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         # but movim expects it to be here, and I guess
 
         log.debug("Broadcast vcard4 event: %s", vcard)
-        await self.broadcast(
+        await self.__broadcast(
             data=vcard,
             from_=JID(from_).bare,
             to=to,
@@ -296,7 +294,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         result["pubsub"]["items"].append(item)
         result.send()
 
-    async def broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
+    async def __broadcast(self, data, from_: JidStr, to: OptJidStr = None, **kwargs):
         from_ = JID(from_)
         if from_ != self.xmpp.boundjid.bare and to is not None:
             to = JID(to)
@@ -304,12 +302,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             if session is None:
                 return
             await session.ready
-            try:
-                entity = await session.get_contact_or_group_or_participant(from_)
-            except ContactIsUser:
-                return
-            if isinstance(entity, LegacyContact) and not entity.is_friend:
-                return
 
         item = EventItem()
         if data:
@@ -342,12 +334,12 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         self, from_: JidStr, to: JidStr, cached_avatar: Optional[CachedAvatar]
     ) -> None:
         if cached_avatar is None:
-            await self.broadcast(AvatarMetadata(), from_, to)
+            await self.__broadcast(AvatarMetadata(), from_, to)
         else:
             pep_avatar = PepAvatar()
             pep_avatar.set_avatar_from_cache(cached_avatar)
             assert pep_avatar.metadata is not None
-            await self.broadcast(
+            await self.__broadcast(
                 pep_avatar.metadata, from_, to, id=pep_avatar.metadata["info"]["id"]
             )
 
@@ -360,7 +352,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         jid = JID(jid)
         nickname = PepNick(nick)
         log.debug("New nickname: %s", nickname.nick)
-        self.xmpp.loop.create_task(self.broadcast(nickname.nick, jid, user_jid.bare))
+        self.xmpp.loop.create_task(self.__broadcast(nickname.nick, jid, user_jid.bare))
 
 
 log = logging.getLogger(__name__)
