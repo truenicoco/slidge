@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import warnings
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Collection, Iterator, Optional, Type
@@ -142,31 +141,6 @@ class AvatarStore(EngineMixin):
         with self.session() as session:
             return session.execute(
                 select(Avatar).where(Avatar.legacy_id == legacy_id)
-            ).scalar()
-
-    def store_jid(self, sha: str, jid: JID) -> None:
-        with self.session() as session:
-            pk = session.execute(select(Avatar.id).where(Avatar.hash == sha)).scalar()
-            if pk is None:
-                warnings.warn("avatar not found")
-                return
-            session.execute(
-                update(Contact).where(Contact.jid == jid.bare).values(avatar_id=pk)
-            )
-            session.execute(
-                update(Room).where(Room.jid == jid.bare).values(avatar_id=pk)
-            )
-            session.commit()
-
-    def get_by_jid(self, jid: JID) -> Optional[Avatar]:
-        with self.session() as session:
-            avatar = session.execute(
-                select(Avatar).where(Avatar.contacts.any(Contact.jid == jid))
-            ).scalar()
-            if avatar is not None:
-                return avatar
-            return session.execute(
-                select(Avatar).where(Avatar.rooms.any(Room.jid == jid))
             ).scalar()
 
     def get_by_pk(self, pk: int) -> Optional[Avatar]:
