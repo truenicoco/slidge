@@ -17,6 +17,7 @@ import asyncio
 import importlib
 import logging
 import os
+import re
 import signal
 from pathlib import Path
 
@@ -49,7 +50,7 @@ class MainConfig(ConfigModule):
             args.home_dir = Path("/var/lib/slidge") / str(args.jid)
 
         if args.user_jid_validator is None:
-            args.user_jid_validator = ".*@" + args.server
+            args.user_jid_validator = ".*@" + re.escape(args.server)
 
         if args.db_url is None:
             args.db_url = f"sqlite:///{args.home_dir}/slidge.sqlite"
