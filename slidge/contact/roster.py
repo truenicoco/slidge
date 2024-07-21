@@ -52,6 +52,7 @@ class LegacyRoster(
         self.log = logging.getLogger(f"{self.session.user_jid.bare}:roster")
         self.user_legacy_id: Optional[LegacyUserIdType] = None
         self.ready: asyncio.Future[bool] = self.session.xmpp.loop.create_future()
+        self.__filling = False
         super().__init__()
 
     def __repr__(self):

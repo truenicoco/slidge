@@ -562,7 +562,7 @@ class BaseGateway(
         log.info("Login success for %s", session.user_jid)
         session.logged = True
         session.send_gateway_status("Syncing contacts…", show="dnd")
-        await session.contacts.fill()
+        await session.contacts._fill()
         if not (r := session.contacts.ready).done():
             r.set_result(True)
         if self.GROUPS:

@@ -352,7 +352,7 @@ class ContactStore(UpdatedMixin):
                 return None
             return contact.avatar.legacy_id
 
-    def update(self, contact: "LegacyContact") -> int:
+    def update(self, contact: "LegacyContact", commit=True) -> int:
         with self.session() as session:
             if contact.contact_pk is None:
                 if contact.cached_presence is not None:
@@ -379,7 +379,8 @@ class ContactStore(UpdatedMixin):
             row.extra_attributes = contact.serialize_extra_attributes()
             row.caps_ver = contact._caps_ver
             session.add(row)
-            session.commit()
+            if commit:
+                session.commit()
             return row.id
 
     def add_to_sent(self, contact_pk: int, msg_id: str) -> None:
