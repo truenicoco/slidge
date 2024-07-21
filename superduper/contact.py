@@ -8,8 +8,7 @@ from .session import Session
 class Roster(LegacyRoster[int, "Contact"]):
     async def fill(self):
         for i in 111, 222:
-            contact = await self.by_legacy_id(i)
-            await contact.add_to_roster()
+            yield await self.by_legacy_id(i)
 
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:

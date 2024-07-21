@@ -37,8 +37,10 @@ class MUC(LegacyMUC):
                 part.role = "moderator"
                 part.affiliation = "owner"
                 part.set_hats([Hat("test", "test"), Hat("prout", "prout")])
-        (await self.get_user_participant()).role = "moderator"
-        (await self.get_user_participant()).affiliation = "owner"
+            yield part
+        me = await self.get_user_participant()
+        me.role = "moderator"
+        me.affiliation = "owner"
 
     async def backfill(
         self,
