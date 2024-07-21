@@ -39,6 +39,7 @@ from ...slixfix.roster import RosterBackend
 from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
+from ...util.util import timeit
 from .. import config
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
@@ -271,6 +272,7 @@ class BaseGateway(
     """
 
     def __init__(self):
+        self.log = log
         self.datetime_started = datetime.now()
         self.xmpp = self  # ugly hack to work with the BaseSender mixin :/
         self.default_ns = "jabber:component:accept"
@@ -542,6 +544,7 @@ class BaseGateway(
                 exc_info=e,
             )
 
+    @timeit
     async def __login_wrap(self, session: "BaseSession"):
         session.send_gateway_status("Logging in…", show="dnd")
         try:

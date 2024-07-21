@@ -5,8 +5,6 @@ import string
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from functools import wraps
-from time import time
 from typing import TYPE_CHECKING, Generic, Optional, Self, Union
 from uuid import uuid4
 
@@ -38,7 +36,7 @@ from ..util.types import (
     MucAffiliation,
     MucType,
 )
-from ..util.util import deprecated
+from ..util.util import deprecated, timeit, with_session
 from .archive import MessageArchive
 from .participant import LegacyParticipant
 
@@ -47,27 +45,6 @@ if TYPE_CHECKING:
     from ..core.session import BaseSession
 
 ADMIN_NS = "http://jabber.org/protocol/muc#admin"
-
-
-def with_session(func):
-    @wraps(func)
-    async def wrapped(self, *args, **kwargs):
-        with self.xmpp.store.session():
-            return await func(self, *args, **kwargs)
-
-    return wrapped
-
-
-def timeit(func):
-    @wraps(func)
-    async def wrapped(self, *args, **kwargs):
-        start = time()
-        r = await func(self, *args, **kwargs)
-        self.log.warning("%s took %s ms", func.__name__, round((time() - start) * 1000))
-        return r
-
-    return wrapped
-
 
 SubjectSetterType = Union[str, None, "LegacyContact", "LegacyParticipant"]
 

@@ -55,7 +55,7 @@ class SlidgeInfo(AdminCommand):
     async def run(self, _session, _ifrom, *_):
         from slidge.__version__ import __version__
 
-        start = self.xmpp.datetime_started
+        start = self.xmpp.datetime_started  # type:ignore
         uptime = datetime.now() - start
 
         if uptime.days:

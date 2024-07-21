@@ -4,7 +4,9 @@ import re
 import subprocess
 import warnings
 from abc import ABCMeta
+from functools import wraps
 from pathlib import Path
+from time import time
 from typing import TYPE_CHECKING, Callable, NamedTuple, Optional, Type
 
 from .types import Mention, ResourceDict
@@ -293,3 +295,23 @@ def replace_mentions(
         cursor = mention.end
     pieces.append(text[cursor:])
     return "".join(pieces)
+
+
+def with_session(func):
+    @wraps(func)
+    async def wrapped(self, *args, **kwargs):
+        with self.xmpp.store.session():
+            return await func(self, *args, **kwargs)
+
+    return wrapped
+
+
+def timeit(func):
+    @wraps(func)
+    async def wrapped(self, *args, **kwargs):
+        start = time()
+        r = await func(self, *args, **kwargs)
+        self.log.info("%s took %s ms", func.__name__, round((time() - start) * 1000))
+        return r
+
+    return wrapped
