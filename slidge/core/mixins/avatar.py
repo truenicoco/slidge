@@ -85,7 +85,9 @@ class AvatarMixin:
             return None
         raise TypeError("Bad avatar", a)
 
-    async def __set_avatar(self, a: Optional[AvatarType], uid: Optional[AvatarIdType]):
+    async def __set_avatar(
+        self, a: Optional[AvatarType], uid: Optional[AvatarIdType], delete: bool
+    ):
         self.__avatar_unique_id = uid
 
         if a is None:
@@ -109,6 +111,9 @@ class AvatarMixin:
                 self.__avatar_jid, self.session.user_jid, cached_avatar
             )
 
+        if delete and isinstance(a, Path):
+            a.unlink()
+
         self._post_avatar_update()
 
     def __should_pubsub_broadcast(self):
@@ -131,6 +136,7 @@ class AvatarMixin:
         self,
         a: Optional[AvatarType],
         avatar_unique_id: Optional[LegacyFileIdType] = None,
+        delete: bool = False,
         blocking=False,
         cancel=True,
     ) -> None:
@@ -140,6 +146,8 @@ class AvatarMixin:
         :param a: The avatar, in one of the types slidge supports
         :param avatar_unique_id: A globally unique ID for the avatar on the
             legacy network
+        :param delete: If the avatar is provided as a Path, whether to delete
+            it once used or not.
         :param blocking: Internal use by slidge for tests, do not use!
         :param cancel: Internal use by slidge, do not use!
         """
@@ -150,7 +158,7 @@ class AvatarMixin:
         if cancel and self._set_avatar_task:
             self._set_avatar_task.cancel()
         awaitable = create_task(
-            self.__set_avatar(a, avatar_unique_id),
+            self.__set_avatar(a, avatar_unique_id, delete),
             name=f"Set pubsub avatar of {self}",
         )
         if not self._set_avatar_task or self._set_avatar_task.done():
