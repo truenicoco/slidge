@@ -181,9 +181,6 @@ class MUC(slidge.LegacyMUC):
         else:
             first = await self.get_participant("firstwitch")
             second = await self.get_participant("secondwitch")
-        if "weird" in str(self.legacy_id):
-            first = await self.get_participant_by_legacy_id(999)
-            second = await self.get_participant("secondwitch")
 
         first._affiliation = "owner"
         self.xmpp.store.participants.set_affiliation(first.pk, "owner")
@@ -195,7 +192,17 @@ class MUC(slidge.LegacyMUC):
         second._role = "moderator"
         self.xmpp.store.participants.set_role(second.pk, "moderator")
 
-        await self.get_user_participant()
+        yield first
+        yield second
+
+        if "weird" in str(self.legacy_id):
+            weird = await self.get_participant_by_legacy_id(999)
+            weird.affiliation = "owner"
+            weird.role = "moderator"
+            yield weird
+            # second = await self.get_participant("secondwitch")
+
+        yield await self.get_user_participant()
 
     async def update_info(self):
         if self.jid.local == "room-private":
@@ -2826,13 +2833,17 @@ class TestMuc(Base):
 
     def __get_participants(self):
         muc = self.get_private_muc(resources=["movim"])
-        # muc.user_resources.add("movim")
         self.run_coro(self.__fill_roster())
-        participants_before: list[Participant] = self.run_coro(muc.get_participants())
+        participants_before: list[Participant] = list(
+            self.run_coro(self.__participants_as_list(muc))
+        )
         for p in participants_before:
             p._presence_sent = True
             self.xmpp.store.participants.set_presence_sent(p.pk)
         return participants_before
+
+    async def __participants_as_list(self, muc: MUC):
+        return [p async for p in muc.get_participants()]
 
     def __test_rename_common(self, old_nick, participants_before):
         muc = self.get_private_muc()
@@ -2870,8 +2881,8 @@ class TestMuc(Base):
             </presence>
             """
         )
-
-        participants_after = self.run_coro(muc.get_participants())
+        muc = self.run_coro(muc.session.bookmarks.by_legacy_id(muc.legacy_id))
+        participants_after = self.run_coro(self.__participants_as_list(muc))
         assert len(participants_after) == len(participants_before)
         assert self.next_sent() is None
 
@@ -2938,7 +2949,7 @@ class TestMuc(Base):
             """
         )
         muc = self.get_private_muc()
-        participants_after = self.run_coro(muc.get_participants())
+        participants_after = self.run_coro(self.__participants_as_list(muc))
         assert len(participants_after) == len(participants_before)
         assert self.next_sent() is None
 
@@ -3041,8 +3052,8 @@ class TestMuc(Base):
             <presence from="weird@aim.shakespeare.lit/firstwitch"
                       to="romeo@montague.lit/cheogram">
               <x xmlns="http://jabber.org/protocol/muc#user">
-                <item affiliation="member"
-                      role="participant" />
+                <item affiliation="owner"
+                      role="moderator" />
               </x>
               <occupant-id xmlns="urn:xmpp:occupant-id:0"
                            id="uuid" />
@@ -3773,6 +3784,9 @@ class TestJoinAway(Base):
     def test_online_contact_joins(self):
         self.juliet.online()
         assert self.next_sent() is None
+        muc = self.muc
+        self.muc._participants_filled = True
+        self.xmpp.store.rooms.update(muc)
         self.get_juliet_participant()
         self.send(  # language=XML
             """
@@ -3807,6 +3821,9 @@ class TestJoinAway(Base):
     def test_away_contact_joins(self):
         self.juliet.away()
         assert self.next_sent() is None
+        muc = self.muc
+        self.muc._participants_filled = True
+        self.xmpp.store.rooms.update(muc)
         self.run_coro(self.muc.get_participant_by_contact(self.juliet))
         self.send(  # language=XML
             """

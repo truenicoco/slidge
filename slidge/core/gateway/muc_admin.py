@@ -28,7 +28,7 @@ class MucAdmin:
 
         reply = iq.reply()
         reply.enable("mucadmin_query")
-        for participant in await muc.get_participants():
+        async for participant in muc.get_participants():
             if not participant.affiliation == affiliation:
                 continue
             reply["mucadmin_query"].append(participant.mucadmin_item())

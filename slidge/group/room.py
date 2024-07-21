@@ -5,7 +5,7 @@ import string
 import warnings
 from copy import copy
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Generic, Optional, Self, Union
+from typing import TYPE_CHECKING, AsyncIterator, Generic, Optional, Self, Union
 from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
@@ -216,16 +216,41 @@ class LegacyMUC(
         self.__store.set_resource(self.pk, self._user_resources)
 
     async def __fill_participants(self):
+        if self._participants_filled:
+            return
+        assert self.pk is not None
         async with self.lock("fill participants"):
-            if self._participants_filled:
-                return
             self._participants_filled = True
-            try:
-                await self.fill_participants()
-            except NotImplementedError:
-                pass
-            assert self.pk is not None
+            async for p in self.fill_participants():
+                self.__participants_store.update(p)
+                self.__store.set_participants_filled(self.pk)
+
+    async def get_participants(self) -> AsyncIterator[LegacyParticipant]:
+        assert self.pk is not None
+        if self._participants_filled:
+            for db_participant in self.xmpp.store.participants.get_all(
+                self.pk, user_included=True
+            ):
+                participant = self.Participant.from_store(self.session, db_participant)
+                yield participant
+            return
+
+        async with self.lock("fill participants"):
+            self._participants_filled = True
+            # We only fill the participants list if/when the MUC is first
+            # joined by an XMPP client. But we may have instantiated
+            resources = set[str]()
+            for db_participant in self.xmpp.store.participants.get_all(
+                self.pk, user_included=True
+            ):
+                participant = self.Participant.from_store(self.session, db_participant)
+                resources.add(participant.jid.resource)
+                yield participant
+            async for p in self.fill_participants():
+                if p.jid.resource not in resources:
+                    yield p
             self.__store.set_participants_filled(self.pk)
+            return
 
     async def __fill_history(self):
         async with self.lock("fill history"):
@@ -335,12 +360,16 @@ class LegacyMUC(
         """
         raise NotImplementedError
 
-    async def fill_participants(self):
+    async def fill_participants(self) -> AsyncIterator[LegacyParticipant]:
         """
-        In here, call self.get_participant(), self.get_participant_by_contact(),
-        of self.get_user_participant() to make an initial list of participants.
+        This method should yield the list of all members of this group.
+
+        Typically, use ``participant = self.get_participant()``, self.get_participant_by_contact(),
+        of self.get_user_participant(), and update their affiliation, hats, etc.
+        before yielding them.
         """
-        raise NotImplementedError
+        return
+        yield
 
     @property
     def subject(self):
@@ -569,17 +598,16 @@ class LegacyMUC(
             requested_nickname,
         )
 
-        await self.__fill_participants()
-
-        assert self.pk is not None
-        for db_participant in self.xmpp.store.participants.get_all(
-            self.pk, user_included=False
-        ):
-            participant = self.Participant.from_store(self.session, db_participant)
+        user_nick = self.user_nick
+        user_participant = None
+        async for participant in self.get_participants():
+            if participant.is_user:
+                user_participant = participant
+                continue
             participant.send_initial_presence(full_jid=user_full_jid)
 
-        user_nick = self.user_nick
-        user_participant = await self.get_user_participant()
+        if user_participant is None:
+            user_participant = await self.get_user_participant()
         if not user_participant.is_user:  # type:ignore
             self.log.warning("is_user flag not set participant on user_participant")
             user_participant.is_user = True  # type:ignore
@@ -664,8 +692,9 @@ class LegacyMUC(
             construction (optional)
         :return:
         """
-        if fill_first:
-            await self.__fill_participants()
+        if fill_first and not self._participants_filled:
+            async for _ in self.get_participants():
+                pass
         if self.pk is not None:
             with self.xmpp.store.session():
                 stored = self.__participants_store.get_by_nickname(
@@ -738,15 +767,17 @@ class LegacyMUC(
         p = self.Participant(self, nickname, **kwargs)
         p.contact = c
 
-        if not self._updating_info:
-            self.__store_participant(p)
+        if self._updating_info:
+            return p
+
+        self.__store_participant(p)
         # FIXME: this is not great but given the current design,
         #        during participants fill and history backfill we do not
         #        want to send presence, because we might :update affiliation
         #        and role afterwards.
         # We need a refactor of the MUC class… later™
         if (
-            not self._updating_info
+            self._participants_filled
             and not self.get_lock("fill participants")
             and not self.get_lock("fill history")
         ):
@@ -761,21 +792,6 @@ class LegacyMUC(
         except ContactIsUser:
             return await self.get_user_participant(**kwargs)
         return await self.get_participant_by_contact(c, **kwargs)
-
-    async def get_participants(self, fill_first=True):
-        """
-        Get all known participants of the group, ensure :meth:`.LegacyMUC.fill_participants`
-        has been awaited once before. Plugins should not use that, internal
-        slidge use only.
-        :return:
-        """
-        if fill_first:
-            await self.__fill_participants()
-        assert self.pk is not None
-        return [
-            self.Participant.from_store(self.session, s)
-            for s in self.__participants_store.get_all(self.pk)
-        ]
 
     def remove_participant(self, p: "LegacyParticipantType", kick=False, ban=False):
         """
