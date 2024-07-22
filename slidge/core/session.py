@@ -481,14 +481,14 @@ class BaseSession(
         """
         await muc.on_set_affiliation(contact, "member", reason, None)
 
-    async def on_leave_group(self, muc: LegacyMUC):
+    async def on_leave_group(self, muc_legacy_id: LegacyGroupIdType):
         """
         Triggered when the user leaves a group via the dedicated slidge command
         or the :xep:`0077` ``<remove />`` mechanism.
 
         This should be interpreted as definitely leaving the group.
 
-        :param muc: The group to leave
+        :param muc_legacy_id: The legacy ID of the group to leave
         """
         raise NotImplementedError
 
