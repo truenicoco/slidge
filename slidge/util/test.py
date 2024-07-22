@@ -215,11 +215,11 @@ class SlidgeTest(SlixTestPlus):
                 self.plugin, LegacyBookmarks, base_ok=True
             )
 
-        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
-        self.xmpp.TEST_MODE = True
         engine = self.db_engine = create_engine("sqlite+pysqlite:///:memory:")
         Base.metadata.create_all(engine)
-        self.xmpp.store = SlidgeStore(engine)
+        BaseGateway.store = SlidgeStore(engine)
+        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+        self.xmpp.TEST_MODE = True
         PepNick.contact_store = self.xmpp.store.contacts
         PepAvatar.store = self.xmpp.store
         avatar_cache.store = self.xmpp.store.avatars

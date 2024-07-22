@@ -370,6 +370,8 @@ class BaseGateway(
 
         self.__mam_cleanup_task = self.loop.create_task(self.__mam_cleanup())
 
+        MessageMixin.__init__(self)  # ComponentXMPP does not call super().__init__()
+
     async def __mam_cleanup(self):
         if not config.MAM_MAX_DAYS:
             return
