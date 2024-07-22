@@ -131,7 +131,6 @@ class LegacyMUC(
     def __init__(self, session: "BaseSession", legacy_id: LegacyGroupIdType, jid: JID):
         self.session = session
         self.xmpp: "BaseGateway" = session.xmpp
-        self.log = logging.getLogger(f"{self.user_jid.bare}:muc:{jid}")
 
         self.legacy_id = legacy_id
         self.jid = jid
@@ -156,6 +155,8 @@ class LegacyMUC(
 
         self._n_participants: Optional[int] = None
 
+        self.log = logging.getLogger(self.jid.bare)
+        self._set_logger_name()
         super().__init__()
 
     @property
@@ -176,8 +177,11 @@ class LegacyMUC(
     def user_jid(self):
         return self.session.user_jid
 
+    def _set_logger_name(self):
+        self.log = logging.getLogger(f"{self.user_jid}:muc:{self}")
+
     def __repr__(self):
-        return f"<MUC {self.legacy_id}/{self.jid}/{self.name}>"
+        return f"<MUC #{self.pk} '{self.name}' ({self.legacy_id} - {self.jid.local})'>"
 
     @property
     def subject_date(self) -> Optional[datetime]:
@@ -287,6 +291,7 @@ class LegacyMUC(
         if self.DISCO_NAME == n:
             return
         self.DISCO_NAME = n
+        self._set_logger_name()
         self.__send_configuration_change((104,))
         if self._updating_info:
             return
@@ -1207,6 +1212,7 @@ class LegacyMUC(
             muc._user_resources = set(json.loads(stored.user_resources))
         muc._subject_setter = stored.subject_setter
         muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
+        muc._set_logger_name()
         muc._set_avatar_from_store(stored)
         return muc
 

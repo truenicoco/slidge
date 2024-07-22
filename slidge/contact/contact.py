@@ -120,7 +120,8 @@ class LegacyContact(
         self.xmpp = session.xmpp
         self.jid = JID(self.jid_username + "@" + self.xmpp.boundjid.bare)
         self.jid.resource = self.RESOURCE
-        self.log = logging.getLogger(f"{self.user_jid.bare}:{self.jid.bare}")
+        self.log = logging.getLogger(self.jid.bare)
+        self._set_logger_name()
         self._is_friend: bool = False
         self._added_to_roster = False
         self._caps_ver: str | None = None
@@ -171,8 +172,11 @@ class LegacyContact(
     def user_jid(self):
         return self.session.user_jid
 
+    def _set_logger_name(self):
+        self.log.name = f"{self.user_jid.bare}:contact:{self}"
+
     def __repr__(self):
-        return f"<Contact {self.jid.bare} - {self.name or self.legacy_id}'>"
+        return f"<Contact #{self.contact_pk} '{self.name}' ({self.legacy_id} - {self.jid.local})'>"
 
     def __get_subscription_string(self):
         if self.is_friend:
@@ -269,6 +273,7 @@ class LegacyContact(
         if self._name == n:
             return
         self._name = n
+        self._set_logger_name()
         if self.is_friend and self.added_to_roster:
             self.xmpp.pubsub.broadcast_nick(
                 user_jid=self.user_jid, jid=self.jid.bare, nick=n
@@ -293,6 +298,7 @@ class LegacyContact(
         if self.contact_pk is None:
             # happens in LegacyRoster.fill(), the contact primary key is not
             # set yet, but this will eventually be called in LegacyRoster.__finish_init_contact
+            self.log.debug("Not setting avatar PK")
             return
         self.xmpp.store.contacts.set_avatar(self.contact_pk, self._avatar_pk)
         for p in self.participants:
@@ -554,8 +560,9 @@ class LegacyContact(
         contact.added_to_roster = stored.added_to_roster
         if (data := stored.extra_attributes) is not None:
             contact.deserialize_extra_attributes(data)
-        contact._set_avatar_from_store(stored)
         contact._caps_ver = stored.caps_ver
+        contact._set_logger_name()
+        contact._set_avatar_from_store(stored)
         return contact
 
 
