@@ -2,14 +2,12 @@ import unittest.mock
 
 import pytest
 from conftest import AvatarFixtureMixin
-from slixmpp import JID, Iq, register_stanza_plugin
+from slixmpp import JID, register_stanza_plugin
 from slixmpp.plugins.xep_0060.stanza import EventItem
 from slixmpp.plugins.xep_0084 import MetaData
-from sqlalchemy import delete
 
-from slidge import BaseGateway, BaseSession, LegacyContact
+from slidge import BaseGateway, BaseSession
 from slidge.core.session import _sessions
-from slidge.db.models import Contact
 from slidge.util.test import SlidgeTest
 from slidge.util.types import LinkPreview
 
@@ -30,47 +28,9 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
 
     def setUp(self):
         super().setUp()
-        user = self.xmpp.store.users.new(
-            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
-        )
-        user.preferences = {"sync_avatar": True, "sync_presence": True}
-        self.xmpp.store.users.update(user)
-
-        with self.xmpp.store.session() as session:
-            session.execute(delete(Contact))
-            session.commit()
-
-        self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
-        welcome = self.next_sent()
-        assert welcome["body"]
-        stanza = self.next_sent()
-        assert "logging in" in stanza["status"].lower(), stanza
-        stanza = self.next_sent()
-        assert "syncing contacts" in stanza["status"].lower(), stanza
-        stanza = self.next_sent()
-        assert "yup" in stanza["status"].lower(), stanza
-
+        self.setup_logged_session()
         self.xmpp["xep_0060"].map_node_event(MetaData.namespace, "avatar_metadata")
         register_stanza_plugin(EventItem, MetaData)
-
-        self.juliet: LegacyContact = self.run_coro(
-            self.get_romeo_session().contacts.by_legacy_id("juliet")
-        )
-        self.room = self.run_coro(
-            self.get_romeo_session().bookmarks.by_legacy_id("room")
-        )
-        self.send(  # language=XML
-            """
-            <iq type="get"
-                to="romeo@montague.lit"
-                id="1"
-                from="aim.shakespeare.lit">
-              <pubsub xmlns="http://jabber.org/protocol/pubsub">
-                <items node="urn:xmpp:avatar:metadata" />
-              </pubsub>
-            </iq>
-            """
-        )
 
     def tearDown(self):
         super().tearDown()

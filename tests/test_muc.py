@@ -22,6 +22,7 @@ from slidge.db.models import ArchivedMessage
 from slidge.util.test import SlidgeTest
 from slidge.util.types import (
     Hat,
+    HoleBound,
     LegacyContactType,
     LegacyMessageType,
     Mention,
@@ -156,7 +157,11 @@ class MUC(slidge.LegacyMUC):
             return
         return {"💘", "❤️", "💜"}
 
-    async def backfill(self, _id=None, _when=None):
+    async def backfill(
+        self,
+        after: Optional[HoleBound] = None,
+        before: Optional[HoleBound] = None,
+    ):
         for hour in range(10):
             sender = await self.get_participant(f"history-man-{hour}")
             sender.send_text(

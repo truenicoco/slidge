@@ -1,6 +1,7 @@
 from copy import copy
 from datetime import datetime, timezone
 from typing import Optional, Union
+from uuid import uuid4
 from xml.etree import ElementTree as ET
 
 from slixmpp import Message
@@ -30,7 +31,7 @@ class HistoryMessage:
         else:
             from_db = False
 
-        self.id = stanza["stanza_id"]["id"]
+        self.id = stanza["stanza_id"]["id"] or uuid4().hex
         self.when: datetime = (
             when or stanza["delay"]["stamp"] or datetime.now(tz=timezone.utc)
         )

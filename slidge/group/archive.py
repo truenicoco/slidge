@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, Collection, Optional
 
 from slixmpp import Iq, Message
 
+from ..db.models import ArchivedMessage, ArchivedMessageSource
 from ..db.store import MAMStore
 from ..util.archive_msg import HistoryMessage
+from ..util.types import HoleBound
 
 if TYPE_CHECKING:
     from .participant import LegacyParticipant
@@ -22,12 +24,16 @@ class MessageArchive:
         self,
         msg: Message,
         participant: Optional["LegacyParticipant"] = None,
+        archive_only=False,
+        legacy_msg_id=None,
     ):
         """
         Add a message to the archive if it is deemed archivable
 
         :param msg:
         :param participant:
+        :param archive_only:
+        :param legacy_msg_id:
         """
         if not archivable(msg):
             return
@@ -47,10 +53,49 @@ class MessageArchive:
                     "jid"
                 ] = f"{uuid.uuid4()}@{participant.xmpp.boundjid.bare}"
 
-        self.__store.add_message(self.room_pk, HistoryMessage(new_msg))
+        self.__store.add_message(
+            self.room_pk,
+            HistoryMessage(new_msg),
+            archive_only,
+            None if legacy_msg_id is None else str(legacy_msg_id),
+        )
 
     def __iter__(self):
         return iter(self.get_all())
+
+    @staticmethod
+    def __to_bound(stored: ArchivedMessage):
+        return HoleBound(
+            stored.legacy_id,  # type:ignore
+            stored.timestamp.replace(tzinfo=timezone.utc),
+        )
+
+    def get_hole_bounds(self) -> tuple[HoleBound | None, HoleBound | None]:
+        most_recent = self.__store.get_most_recent_with_legacy_id(self.room_pk)
+        if most_recent is None:
+            return None, None
+        if most_recent.source == ArchivedMessageSource.BACKFILL:
+            # most recent = only backfill, fetch everything since last backfill
+            return self.__to_bound(most_recent), None
+
+        most_recent_back_filled = self.__store.get_most_recent_with_legacy_id(
+            self.room_pk, ArchivedMessageSource.BACKFILL
+        )
+        if most_recent_back_filled is None:
+            # group was never back-filled, fetch everything before first live
+            least_recent_live = self.__store.get_first(self.room_pk, True)
+            assert least_recent_live is not None
+            return None, self.__to_bound(least_recent_live)
+
+        assert most_recent_back_filled.legacy_id is not None
+        least_recent_live = self.__store.get_least_recent_with_legacy_id_after(
+            self.room_pk, most_recent_back_filled.legacy_id
+        )
+        assert least_recent_live is not None
+        # this is a hole caused by slidge downtime
+        return self.__to_bound(most_recent_back_filled), self.__to_bound(
+            least_recent_live
+        )
 
     def get_all(
         self,

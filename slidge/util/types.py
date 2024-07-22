@@ -193,6 +193,11 @@ class MamMetadata(NamedTuple):
     sent_on: datetime
 
 
+class HoleBound(NamedTuple):
+    id: int | str
+    timestamp: datetime
+
+
 class CachedPresence(NamedTuple):
     last_seen: Optional[datetime] = None
     ptype: Optional[PresenceTypes] = None

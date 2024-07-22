@@ -7,6 +7,7 @@ from xml.dom.minidom import parseString
 
 import xmldiff.main
 from slixmpp import (
+    JID,
     ElementBase,
     Iq,
     MatcherId,
@@ -20,7 +21,7 @@ from slixmpp.stanza.error import Error
 from slixmpp.test import SlixTest, TestTransport
 from slixmpp.xmlstream import highlight, tostring
 from slixmpp.xmlstream.matcher import MatchIDSender
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
 
 from slidge import (
     BaseGateway,
@@ -39,6 +40,7 @@ from ..core.pubsub import PepAvatar, PepNick
 from ..db import SlidgeStore
 from ..db.avatar import avatar_cache
 from ..db.meta import Base
+from ..db.models import Contact
 
 
 class SlixTestPlus(SlixTest):
@@ -263,6 +265,50 @@ class SlidgeTest(SlixTestPlus):
             slidge.db.store._session.commit()
             slidge.db.store._session = None
         Base.metadata.drop_all(self.xmpp.store._engine)
+
+    def setup_logged_session(self):
+        user = self.xmpp.store.users.new(
+            JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
+        )
+        user.preferences = {"sync_avatar": True, "sync_presence": True}
+        self.xmpp.store.users.update(user)
+
+        with self.xmpp.store.session() as session:
+            session.execute(delete(Contact))
+            session.commit()
+
+        self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
+        welcome = self.next_sent()
+        assert welcome["body"]
+        stanza = self.next_sent()
+        assert "logging in" in stanza["status"].lower(), stanza
+        stanza = self.next_sent()
+        assert "syncing contacts" in stanza["status"].lower(), stanza
+        stanza = self.next_sent()
+        assert "yup" in stanza["status"].lower(), stanza
+
+        self.romeo = BaseSession.get_self_or_unique_subclass().from_jid(
+            JID("romeo@montague.lit")
+        )
+        self.juliet: LegacyContact = self.run_coro(
+            self.romeo.contacts.by_legacy_id("juliet")
+        )
+        self.room: LegacyMUC = self.run_coro(self.romeo.bookmarks.by_legacy_id("room"))
+        self.first_witch: LegacyParticipant = self.run_coro(
+            self.room.get_participant("firstwitch")
+        )
+        self.send(  # language=XML
+            """
+            <iq type="get"
+                to="romeo@montague.lit"
+                id="1"
+                from="aim.shakespeare.lit">
+              <pubsub xmlns="http://jabber.org/protocol/pubsub">
+                <items node="urn:xmpp:avatar:metadata" />
+              </pubsub>
+            </iq>
+            """
+        )
 
     @classmethod
     def tearDownClass(cls):

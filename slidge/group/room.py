@@ -28,6 +28,7 @@ from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 from ..db.models import Room
 from ..util import ABCSubclassableOnceAtMost
 from ..util.types import (
+    HoleBound,
     LegacyGroupIdType,
     LegacyMessageType,
     LegacyParticipantType,
@@ -258,23 +259,21 @@ class LegacyMUC(
                 log.debug("History has already been fetched %s", self)
                 return
             log.debug("Fetching history for %s", self)
-            for msg in self.archive:
-                try:
-                    legacy_id = self.session.xmpp_to_legacy_msg_id(msg.id)
-                    oldest_date = msg.when
-                except Exception as e:
-                    # not all archived stanzas have a valid legacy msg ID, eg
-                    # reactions, corrections, message with multiple attachments…
-                    self.log.debug(f"Could not convert during history back-filling {e}")
-                else:
-                    break
-            else:
-                legacy_id = None
-                oldest_date = None
             try:
-                await self.backfill(legacy_id, oldest_date)
+                before, after = self.archive.get_hole_bounds()
+                if before is not None:
+                    before = before._replace(
+                        id=self.xmpp.LEGACY_MSG_ID_TYPE(before.id)  # type:ignore
+                    )
+                if after is not None:
+                    after = after._replace(
+                        id=self.xmpp.LEGACY_MSG_ID_TYPE(after.id)  # type:ignore
+                    )
+                await self.backfill(before, after)
             except NotImplementedError:
                 return
+            except Exception as e:
+                log.exception("Could not backfill: %s", e)
             assert self.pk is not None
             self.__store.set_history_filled(self.pk, True)
             self._history_filled = True
@@ -347,18 +346,22 @@ class LegacyMUC(
 
     async def backfill(
         self,
-        oldest_message_id: Optional[LegacyMessageType] = None,
-        oldest_message_date: Optional[datetime] = None,
+        after: Optional[HoleBound] = None,
+        before: Optional[HoleBound] = None,
     ):
         """
-        Override this if the legacy network provide server-side archive.
-        In it, send history messages using ``self.get_participant().send*``,
-        with the ``archive_only=True`` kwarg.
+        Override this if the legacy network provide server-side group archives.
 
-        You only need to fetch messages older than ``oldest_message_id``.
+        In it, send history messages using ``self.get_participant(xxx).send_xxxx``,
+        with the ``archive_only=True`` kwarg. This is only called once per slidge
+        run for a given group.
 
-        :param oldest_message_id: The oldest message ID already present in the archive
-        :param oldest_message_date: The oldest message date already present in the archive
+        :param after: Fetch messages after this one. If ``None``, it's up to you
+            to decide how far you want to go in the archive. If it's not ``None``,
+            it means slidge has some messages in this archive and you should really try
+            to complete it to avoid "holes" in the history of this group.
+        :param before: Fetch messages before this one. If ``None``, fetch all messages
+            up to the most recent one
         """
         raise NotImplementedError
 

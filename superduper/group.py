@@ -2,11 +2,12 @@
 Handling groups
 """
 
+import uuid
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
-from slidge.util.types import Hat
+from slidge.util.types import Hat, HoleBound
 
 if TYPE_CHECKING:
     from .session import Session
@@ -44,8 +45,8 @@ class MUC(LegacyMUC):
 
     async def backfill(
         self,
-        oldest_message_id: Optional[str] = None,
-        oldest_message_date: Optional[datetime] = None,
+        after: Optional[HoleBound] = None,
+        before: Optional[HoleBound] = None,
     ):
         # in a real case, this would probably call something like
         # self.session.legacy_client.fetch_group_history(self.legacy_id)
@@ -54,6 +55,7 @@ class MUC(LegacyMUC):
             part.send_text(
                 f"History message #{i}",
                 when=datetime.now() - timedelta(hours=i),
+                legacy_msg_id=f"{i}--{uuid.uuid4().hex}",
                 archive_only=True,
             )
 

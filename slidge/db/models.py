@@ -24,6 +24,16 @@ class XmppToLegacyEnum(IntEnum):
     THREAD = 3
 
 
+class ArchivedMessageSource(IntEnum):
+    """
+    Whether an archived message comes from ``LegacyMUC.backfill()`` or was received
+    as a "live" message.
+    """
+
+    LIVE = 1
+    BACKFILL = 2
+
+
 class GatewayUser(Base):
     """
     A user, registered to the gateway component.
@@ -230,6 +240,8 @@ class ArchivedMessage(Base):
     stanza_id: Mapped[str] = mapped_column(nullable=False)
     timestamp: Mapped[datetime] = mapped_column(nullable=False)
     author_jid: Mapped[JID] = mapped_column(nullable=False)
+    source: Mapped[ArchivedMessageSource] = mapped_column(nullable=False)
+    legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
 
     stanza: Mapped[str] = mapped_column(nullable=False)
 

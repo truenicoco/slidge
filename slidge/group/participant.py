@@ -319,6 +319,7 @@ class LegacyParticipant(
         stanza: MessageOrPresenceTypeVar,
         full_jid: Optional[JID] = None,
         archive_only=False,
+        legacy_msg_id=None,
         **send_kwargs,
     ) -> MessageOrPresenceTypeVar:
         stanza["occupant-id"]["id"] = self.__occupant_id
@@ -338,7 +339,7 @@ class LegacyParticipant(
                 stanza.send()
         else:
             if hasattr(self.muc, "archive") and isinstance(stanza, Message):
-                self.muc.archive.add(stanza, self)
+                self.muc.archive.add(stanza, self, archive_only, legacy_msg_id)
             if archive_only:
                 return stanza
             for user_full_jid in self.muc.user_full_jids():

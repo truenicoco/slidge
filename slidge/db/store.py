@@ -19,6 +19,7 @@ from ..util.types import MamMetadata, MucAffiliation, MucRole
 from .meta import Base
 from .models import (
     ArchivedMessage,
+    ArchivedMessageSource,
     Attachment,
     Avatar,
     Contact,
@@ -431,6 +432,14 @@ class ContactStore(UpdatedMixin):
 
 
 class MAMStore(EngineMixin):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        with self.session() as session:
+            session.execute(
+                update(ArchivedMessage).values(source=ArchivedMessageSource.BACKFILL)
+            )
+            session.commit()
+
     def nuke_older_than(self, days: int) -> None:
         with self.session() as session:
             session.execute(
@@ -440,8 +449,19 @@ class MAMStore(EngineMixin):
             )
             session.commit()
 
-    def add_message(self, room_pk: int, message: HistoryMessage) -> None:
+    def add_message(
+        self,
+        room_pk: int,
+        message: HistoryMessage,
+        archive_only: bool,
+        legacy_msg_id: str | None,
+    ) -> None:
         with self.session() as session:
+            source = (
+                ArchivedMessageSource.BACKFILL
+                if archive_only
+                else ArchivedMessageSource.LIVE
+            )
             existing = session.execute(
                 select(ArchivedMessage)
                 .where(ArchivedMessage.room_id == room_pk)
@@ -452,6 +472,8 @@ class MAMStore(EngineMixin):
                 existing.timestamp = message.when
                 existing.stanza = str(message.stanza)
                 existing.author_jid = message.stanza.get_from()
+                existing.source = source
+                existing.legacy_id = legacy_msg_id
                 session.add(existing)
                 session.commit()
                 return
@@ -461,6 +483,8 @@ class MAMStore(EngineMixin):
                 stanza=str(message.stanza),
                 author_jid=message.stanza.get_from(),
                 room_id=room_pk,
+                source=source,
+                legacy_id=legacy_msg_id,
             )
             session.add(mam_msg)
             session.commit()
@@ -533,24 +557,82 @@ class MAMStore(EngineMixin):
                     stanza=str(h.stanza), when=h.timestamp.replace(tzinfo=timezone.utc)
                 )
 
-    def get_first_and_last(self, room_pk: int) -> list[MamMetadata]:
-        r = []
+    def get_first(self, room_pk: int, with_legacy_id=False) -> ArchivedMessage | None:
         with self.session() as session:
-            first = session.execute(
-                select(ArchivedMessage.stanza_id, ArchivedMessage.timestamp)
+            q = (
+                select(ArchivedMessage)
                 .where(ArchivedMessage.room_id == room_pk)
                 .order_by(ArchivedMessage.timestamp.asc())
-            ).first()
+            )
+            if with_legacy_id:
+                q = q.filter(ArchivedMessage.legacy_id.isnot(None))
+            return session.execute(q).scalar()
+
+    def get_last(
+        self, room_pk: int, source: ArchivedMessageSource | None = None
+    ) -> ArchivedMessage | None:
+        with self.session() as session:
+            q = select(ArchivedMessage).where(ArchivedMessage.room_id == room_pk)
+
+            if source is not None:
+                q = q.where(ArchivedMessage.source == source)
+
+            return session.execute(
+                q.order_by(ArchivedMessage.timestamp.desc())
+            ).scalar()
+
+    def get_first_and_last(self, room_pk: int) -> list[MamMetadata]:
+        r = []
+        with self.session():
+            first = self.get_first(room_pk)
             if first is not None:
-                r.append(MamMetadata(*first))
-            last = session.execute(
-                select(ArchivedMessage.stanza_id, ArchivedMessage.timestamp)
-                .where(ArchivedMessage.room_id == room_pk)
-                .order_by(ArchivedMessage.timestamp.desc())
-            ).first()
+                r.append(MamMetadata(first.stanza_id, first.timestamp))
+            last = self.get_last(room_pk)
             if last is not None:
-                r.append(MamMetadata(*last))
+                r.append(MamMetadata(last.stanza_id, last.timestamp))
         return r
+
+    def get_most_recent_with_legacy_id(
+        self, room_pk: int, source: ArchivedMessageSource | None = None
+    ) -> ArchivedMessage | None:
+        with self.session() as session:
+            q = (
+                select(ArchivedMessage)
+                .where(ArchivedMessage.room_id == room_pk)
+                .where(ArchivedMessage.legacy_id.isnot(None))
+            )
+            if source is not None:
+                q = q.where(ArchivedMessage.source == source)
+            return session.execute(
+                q.order_by(ArchivedMessage.timestamp.desc())
+            ).scalar()
+
+    def get_least_recent_with_legacy_id_after(
+        self, room_pk: int, after_id: str, source=ArchivedMessageSource.LIVE
+    ) -> ArchivedMessage | None:
+        with self.session() as session:
+            after_timestamp = (
+                session.query(ArchivedMessage.timestamp)
+                .filter(ArchivedMessage.legacy_id == after_id)
+                .scalar()
+            )
+            q = (
+                select(ArchivedMessage)
+                .where(ArchivedMessage.room_id == room_pk)
+                .where(ArchivedMessage.legacy_id.isnot(None))
+                .where(ArchivedMessage.source == source)
+                .where(ArchivedMessage.timestamp > after_timestamp)
+            )
+            return session.execute(q.order_by(ArchivedMessage.timestamp.asc())).scalar()
+
+    def get_by_legacy_id(self, room_pk: int, legacy_id: str) -> ArchivedMessage | None:
+        with self.session() as session:
+            return (
+                session.query(ArchivedMessage)
+                .filter(ArchivedMessage.room_id == room_pk)
+                .filter(ArchivedMessage.legacy_id == legacy_id)
+                .first()
+            )
 
 
 class MultiStore(EngineMixin):

@@ -241,7 +241,13 @@ class ContentMessageMixin(AttachmentMixin):
         )
         if correction:
             msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
-        return self._send(msg, archive_only=archive_only, carbon=carbon, **send_kwargs)
+        return self._send(
+            msg,
+            archive_only=archive_only,
+            carbon=carbon,
+            legacy_msg_id=legacy_msg_id,
+            **send_kwargs,
+        )
 
     def correct(
         self,
