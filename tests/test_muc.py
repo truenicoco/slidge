@@ -3160,7 +3160,7 @@ class TestMuc(Base):
             """,
             use_values=False,
         )
-        self.send(None)
+        assert self.next_sent() is None
 
 
 class TestRoleAffiliation(Base):
@@ -3203,9 +3203,9 @@ class TestRoleAffiliation(Base):
             </presence>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
         part.role = "visitor"
-        self.send(None)
+        assert self.next_sent() is None
 
     def test_affiliation_change(self):
         part = self.get_participant("a-new-one")
@@ -3239,9 +3239,9 @@ class TestRoleAffiliation(Base):
             </presence>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
         part.affiliation = "admin"
-        self.send(None)
+        assert self.next_sent() is None
 
     def test_affiliation_change_new_part(self):
         part = self.get_participant("a-newer-one", presence_sent=False)
@@ -3261,7 +3261,7 @@ class TestRoleAffiliation(Base):
             </message>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
 
 
 @pytest.mark.usefixtures("avatar")
@@ -3323,7 +3323,7 @@ class TestSetAvatar(Base, AvatarFixtureMixin):
             </presence>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
 
 
 @pytest.mark.usefixtures("avatar")
@@ -3453,7 +3453,7 @@ class TestUserAvatar(Base, AvatarFixtureMixin):
             """,
             use_values=False,
         )
-        self.send(None)
+        assert self.next_sent() is None
 
 
 class TestMUCAdmin(Base):
@@ -3737,7 +3737,7 @@ class TestMUCAdmin(Base):
             """
             )
             on_set_subject.assert_awaited_once_with("Fire Burn and Cauldron Bubble!")
-        self.send(None)
+        assert self.next_sent() is None
 
     def test_kick(self):
         part = self.run_coro(self.muc.get_participant_by_legacy_id(111))
@@ -3959,7 +3959,7 @@ class TestNickChange(Base):
             </presence>
             """
         )
-        self.send(None)
+        assert self.next_sent() is None
 
     def test_user_gets_away(self):
         muc = self.get_private_muc("room-private", ("gajim",))
@@ -3972,7 +3972,7 @@ class TestNickChange(Base):
             """
         )
 
-        self.send(None)
+        assert self.next_sent() is None
 
 
 class TestMUCRegistration(Base):

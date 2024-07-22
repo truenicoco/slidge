@@ -442,4 +442,4 @@ class TestRoomAvatar(BaseMUC, AvatarFixtureMixin):
         self.romeo_joins(muc)
         self._assert_send_room_avatar(url=True)
         self.run_coro(muc.set_avatar(self.avatar_url, "id", blocking=True))
-        self.send(None)
+        assert self.next_sent() is None
