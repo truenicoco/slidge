@@ -32,6 +32,7 @@ from .models import (
     XmppIdsMulti,
     XmppToLegacyEnum,
     XmppToLegacyIds,
+    participant_hats,
 )
 
 if TYPE_CHECKING:
@@ -935,6 +936,7 @@ class ParticipantStore(EngineMixin):
         with self.session() as session:
             session.execute(delete(Participant))
             session.execute(delete(Hat))
+            session.execute(delete(participant_hats))
             session.commit()
 
     def add(self, room_pk: int, nickname: str) -> int:
