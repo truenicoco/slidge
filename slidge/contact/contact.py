@@ -137,6 +137,7 @@ class LegacyContact(
         self._is_friend = value
         if self._updating_info:
             return
+        self.__ensure_pk()
         assert self.contact_pk is not None
         self.xmpp.store.contacts.set_friend(self.contact_pk, value)
 
@@ -158,7 +159,10 @@ class LegacyContact(
 
     @property
     def participants(self) -> list["LegacyParticipant"]:
-        assert self.contact_pk is not None
+        if self.contact_pk is None:
+            return []
+
+        self.__ensure_pk()
         from ..group.participant import LegacyParticipant
 
         return [
@@ -177,6 +181,20 @@ class LegacyContact(
 
     def __repr__(self):
         return f"<Contact #{self.contact_pk} '{self.name}' ({self.legacy_id} - {self.jid.local})'>"
+
+    def __ensure_pk(self):
+        if self.contact_pk is not None:
+            return
+        with self.xmpp.store.session() as orm:
+            orm.commit()
+            stored = self.xmpp.store.contacts.get_by_legacy_id(
+                self.user_pk, str(self.legacy_id)
+            )
+            if stored is None:
+                self.log.error("Cannot find our primary key!", stack_info=True)
+                raise RuntimeError("Cannot find our primary key!")
+            self.contact_pk = stored.id
+        assert self.contact_pk is not None
 
     def __get_subscription_string(self):
         if self.is_friend:
@@ -238,6 +256,7 @@ class LegacyContact(
             and self.xmpp.MARK_ALL_MESSAGES
             and is_markable(stanza)
         ):
+            self.__ensure_pk()
             assert self.contact_pk is not None
             self.xmpp.store.contacts.add_to_sent(self.contact_pk, stanza["id"])
         stanza["to"] = self.user_jid
@@ -258,6 +277,7 @@ class LegacyContact(
         :param horizon_xmpp_id: The latest message
         :return: A list of XMPP ids or None if horizon_xmpp_id was not found
         """
+        self.__ensure_pk()
         assert self.contact_pk is not None
         return self.xmpp.store.contacts.pop_sent_up_to(self.contact_pk, horizon_xmpp_id)
 
@@ -284,6 +304,7 @@ class LegacyContact(
             return
         for p in self.participants:
             p.nickname = n
+        self.__ensure_pk()
         assert self.contact_pk is not None
         self.xmpp.store.contacts.update_nick(self.contact_pk, n)
 
@@ -436,7 +457,7 @@ class LegacyContact(
         """
         self.is_friend = True
         self.added_to_roster = True
-        assert self.contact_pk is not None
+        self.__ensure_pk()
         self.log.debug("Accepting friend request")
         presence = self._make_presence(ptype="subscribed", pstatus=text, bare=True)
         self._send(presence, nick=True)
