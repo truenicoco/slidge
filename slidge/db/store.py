@@ -660,7 +660,7 @@ class MultiStore(EngineMixin):
             if existing is not None:
                 if fail:
                     raise
-                log.warning("Resetting multi for %s", legacy_msg_id)
+                log.debug("Resetting multi for %s", legacy_msg_id)
                 session.execute(
                     delete(LegacyIdsMulti)
                     .where(LegacyIdsMulti.user_account_id == user_pk)
