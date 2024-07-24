@@ -191,13 +191,20 @@ class Room(Base):
     Legacy room
     """
 
+    __table_args__ = (
+        UniqueConstraint(
+            "user_account_id", "legacy_id", name="uq_room_user_account_id_legacy_id"
+        ),
+        UniqueConstraint("user_account_id", "jid", name="uq_room_user_account_id_jid"),
+    )
+
     __tablename__ = "room"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_account_id: Mapped[int] = mapped_column(ForeignKey("user_account.id"))
     user: Mapped[GatewayUser] = relationship(back_populates="rooms")
-    legacy_id: Mapped[str] = mapped_column(unique=True, nullable=False)
+    legacy_id: Mapped[str] = mapped_column(nullable=False)
 
-    jid: Mapped[JID] = mapped_column(unique=True)
+    jid: Mapped[JID] = mapped_column(nullable=False)
 
     avatar_id: Mapped[int] = mapped_column(ForeignKey("avatar.id"), nullable=True)
     avatar: Mapped[Avatar] = relationship(back_populates="rooms")
