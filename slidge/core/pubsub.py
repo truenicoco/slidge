@@ -135,6 +135,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
 
         to = p.get_to()
 
+        contact = None
         # we don't want to push anything for contacts that are not in the user's roster
         if to != self.xmpp.boundjid.bare:
             session = self.xmpp.get_session_from_stanza(p)
@@ -186,17 +187,19 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             else:
                 await self.__broadcast(data=pep_nick.nick, from_=p.get_to(), to=from_)
 
-        if VCARD4_NAMESPACE + "+notify" in features:
-            await self.broadcast_vcard_event(p.get_to(), to=from_)
+        if contact is not None and VCARD4_NAMESPACE + "+notify" in features:
+            await self.broadcast_vcard_event(
+                p.get_to(), from_, await contact.get_vcard()
+            )
 
-    async def broadcast_vcard_event(self, from_, to):
+    async def broadcast_vcard_event(self, from_: JID, to: JID, vcard: VCard4 | None):
         item = Item()
         item.namespace = VCARD4_NAMESPACE
         item["id"] = "current"
-        vcard: VCard4 = await self.xmpp["xep_0292_provider"].get_vcard(from_, to)
+        # vcard: VCard4 = await self.xmpp["xep_0292_provider"].get_vcard(from_, to)
         # The vcard content should NOT be in this event according to the spec:
         # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
-        # but movim expects it to be here, and I guess
+        # but movim expects it to be here, and I guess it does not hurt
 
         log.debug("Broadcast vcard4 event: %s", vcard)
         await self.__broadcast(
@@ -268,10 +271,9 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         # this is not the proper way that clients should retrieve VCards, but
         # gajim does it this way.
         # https://xmpp.org/extensions/xep-0292.html#sect-idm45669698174224
-        vcard: VCard4 = await self.xmpp["xep_0292_provider"].get_vcard(
-            iq.get_to().bare, iq.get_from().bare
-        )
-        log.debug("VCARD: %s -- %s -- %s", iq.get_to().bare, iq.get_from().bare, vcard)
+        session = self.xmpp.get_session_from_stanza(iq)
+        contact = await session.contacts.by_jid(iq.get_to())
+        vcard = await contact.get_vcard()
         if vcard is None:
             raise XMPPError("item-not-found")
         self._reply_with_payload(iq, vcard, "current", VCARD4_NAMESPACE)

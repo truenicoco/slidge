@@ -79,14 +79,14 @@ class VCardTemp:
             elif not (contact := entity.contact):
                 raise XMPPError("item-not-found", "This participant has no contact")
             else:
-                vcard = await self.xmpp.vcard.get_vcard(contact.jid, iq.get_from())
+                vcard = await contact.get_vcard()
                 avatar = contact.get_avatar()
                 type_ = "image/png"
         else:
             avatar = entity.get_avatar()
             type_ = "image/png"
             if isinstance(entity, LegacyContact):
-                vcard = await self.xmpp.vcard.get_vcard(entity.jid, iq.get_from())
+                vcard = await entity.get_vcard()
             else:
                 vcard = None
         v = self.xmpp.plugin["xep_0054"].make_vcard()

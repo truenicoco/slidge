@@ -68,6 +68,13 @@ class SessionDispatcher:
                 _exceptions_to_xmpp_errors(self.on_ibr_remove),  # type: ignore
             )
         )
+        self.xmpp.register_handler(
+            CoroutineCallback(
+                "get_vcard",
+                StanzaPath("iq@type=get/vcard"),
+                _exceptions_to_xmpp_errors(self.on_get_vcard),  # type:ignore
+            )
+        )
 
         for event in (
             "legacy_message",
@@ -777,6 +784,18 @@ class SessionDispatcher:
             return
 
         raise XMPPError("feature-not-implemented")
+
+    async def on_get_vcard(self, iq: Iq):
+        session = await self.__get_session(iq)
+        session.raise_if_not_logged()
+        contact = await session.contacts.by_jid(iq.get_to())
+        vcard = await contact.get_vcard()
+        reply = iq.reply()
+        if vcard:
+            reply.append(vcard)
+        else:
+            reply.enable("vcard")
+        reply.send()
 
     def _xmpp_msg_id_to_legacy(self, session: "BaseSession", xmpp_id: str):
         sent = self.xmpp.store.sent.get_legacy_id(session.user_pk, xmpp_id)

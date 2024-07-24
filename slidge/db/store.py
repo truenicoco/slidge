@@ -380,10 +380,21 @@ class ContactStore(UpdatedMixin):
             row.updated = True
             row.extra_attributes = contact.serialize_extra_attributes()
             row.caps_ver = contact._caps_ver
+            row.vcard = contact._vcard
+            row.vcard_fetched = contact._vcard_fetched
             session.add(row)
             if commit:
                 session.commit()
             return row.id
+
+    def set_vcard(self, contact_pk: int, vcard: str | None) -> None:
+        with self.session() as session:
+            session.execute(
+                update(Contact)
+                .where(Contact.id == contact_pk)
+                .values(vcard=vcard, vcard_fetched=True)
+            )
+            session.commit()
 
     def add_to_sent(self, contact_pk: int, msg_id: str) -> None:
         with self.session() as session:

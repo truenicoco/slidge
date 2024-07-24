@@ -287,7 +287,7 @@ class SlidgeTest(SlixTestPlus):
         stanza = self.next_sent()
         assert "yup" in stanza["status"].lower(), stanza
 
-        self.romeo = BaseSession.get_self_or_unique_subclass().from_jid(
+        self.romeo: BaseSession = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
         self.juliet: LegacyContact = self.run_coro(

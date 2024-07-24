@@ -36,7 +36,6 @@ from ...command.register import RegistrationType
 from ...db import GatewayUser, SlidgeStore
 from ...db.avatar import avatar_cache
 from ...slixfix.roster import RosterBackend
-from ...slixfix.xep_0292.vcard4 import VCard4Provider
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
 from ...util.util import timeit
@@ -331,7 +330,6 @@ class BaseGateway(
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
         self.pubsub: PubSubComponent = self["pubsub"]
-        self.vcard: VCard4Provider = self["xep_0292_provider"]
         self.delivery_receipt: DeliveryReceipt = DeliveryReceipt(self)
 
         # with this we receive user avatar updates

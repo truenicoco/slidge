@@ -3,6 +3,7 @@ import logging
 import warnings
 from datetime import date
 from typing import TYPE_CHECKING, Generic, Iterable, Optional, Self, Union
+from xml.etree import ElementTree as ET
 
 from slixmpp import JID, Message, Presence
 from slixmpp.exceptions import IqError
@@ -125,6 +126,16 @@ class LegacyContact(
         self._is_friend: bool = False
         self._added_to_roster = False
         self._caps_ver: str | None = None
+        self._vcard_fetched = False
+        self._vcard: str | None = None
+
+    async def get_vcard(self) -> VCard4 | None:
+        if not self._vcard_fetched:
+            await self.fetch_vcard()
+        if self._vcard is None:
+            return None
+
+        return VCard4(xml=ET.fromstring(self._vcard))
 
     @property
     def is_friend(self):
@@ -373,7 +384,17 @@ class LegacyContact(
         elif country:
             vcard.add_address(country, locality)
 
-        self.xmpp.vcard.set_vcard(self.jid.bare, vcard, {self.user_jid.bare})
+        self._vcard = str(vcard)
+        self._vcard_fetched = True
+        self.session.create_task(
+            self.xmpp.pubsub.broadcast_vcard_event(self.jid, self.user_jid, vcard)
+        )
+
+        if self._updating_info:
+            return
+
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_vcard(self.contact_pk, self._vcard)
 
     def get_roster_item(self):
         item = {
@@ -584,6 +605,8 @@ class LegacyContact(
         contact._caps_ver = stored.caps_ver
         contact._set_logger_name()
         contact._set_avatar_from_store(stored)
+        contact._vcard = stored.vcard
+        contact._vcard_fetched = stored.vcard_fetched
         return contact
 
 

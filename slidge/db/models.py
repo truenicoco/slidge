@@ -166,6 +166,9 @@ class Contact(Base):
     )
     updated: Mapped[bool] = mapped_column(default=False)
 
+    vcard: Mapped[Optional[str]] = mapped_column()
+    vcard_fetched: Mapped[bool] = mapped_column(default=False)
+
     participants: Mapped[list["Participant"]] = relationship(back_populates="contact")
 
 
