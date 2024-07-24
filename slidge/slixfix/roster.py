@@ -1,8 +1,7 @@
+import logging
 from typing import TYPE_CHECKING
 
 from slixmpp import JID
-
-from ..util.db import log
 
 if TYPE_CHECKING:
     from .. import BaseGateway
@@ -65,3 +64,6 @@ class RosterBackend:
                 "whitelisted": False,
                 "subscription": "none",
             }
+
+
+log = logging.getLogger(__name__)

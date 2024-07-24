@@ -32,7 +32,6 @@ from slidge.db.avatar import avatar_cache
 from slidge.db.meta import get_engine
 from slidge.migration import migrate
 from slidge.util.conf import ConfigModule
-from slidge.util.db import user_store
 
 
 class MainConfig(ConfigModule):
@@ -113,9 +112,6 @@ def configure():
     if not (h := config.HOME_DIR).exists():
         logging.info("Creating directory '%s'", h)
         h.mkdir()
-
-    db_file = config.HOME_DIR / "slidge.db"
-    user_store.set_file(db_file, args.secret_key)
 
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 

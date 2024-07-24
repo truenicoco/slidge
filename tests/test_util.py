@@ -11,7 +11,6 @@ from slidge.util import (
     SubclassableOnce,
     is_valid_phone_number,
 )
-from slidge.util.db import EncryptedShelf
 from slidge.util.types import Mention
 from slidge.util.util import merge_resources, replace_mentions
 
@@ -42,27 +41,6 @@ def test_subclass():
 
     # fmt: on
     SubclassableOnce.TEST_MODE = True
-
-
-def test_encrypted_shelf(tmp_path):
-    key = "test_key"
-    s = EncryptedShelf(tmp_path / "test.db", key)
-    s["x"] = 123
-    s["y"] = 777
-    s.close()
-
-    s = EncryptedShelf(tmp_path / "test.db", key)
-    assert s["x"] == 123
-    assert s["y"] == 777.0
-    s.close()
-
-    s = EncryptedShelf(tmp_path / "test.db", "WRONG_KEY")
-    try:
-        s["x"]
-    except Exception as e:
-        assert isinstance(e, cryptography.fernet.InvalidToken), e
-    else:
-        assert False
 
 
 def test_phone_validation():

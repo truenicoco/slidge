@@ -58,10 +58,19 @@ def downgrade() -> None:
 
 
 def migrate_from_shelf(accounts: sa.Table) -> None:
+    from slidge import global_config
+
+    db_file = global_config.HOME_DIR / "slidge.db"
+    if not db_file.exists():
+        return
+
     try:
-        from slidge.util.db import user_store
+        from slidge.db.alembic.old_user_store import user_store
     except ImportError:
         return
+
+    user_store.set_file(db_file, global_config.SECRET_KEY)
+
     try:
         users = list(user_store.get_all())
     except AttributeError:
@@ -83,3 +92,6 @@ def migrate_from_shelf(accounts: sa.Table) -> None:
             for user in users
         ],
     )
+
+    user_store.close()
+    db_file.unlink()
