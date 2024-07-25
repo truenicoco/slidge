@@ -172,14 +172,13 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             except XMPPError:
                 pass
             else:
-                if pep_avatar.metadata is None:
-                    raise XMPPError("internal-server-error", "Avatar but no metadata?")
-                await self.__broadcast(
-                    data=pep_avatar.metadata,
-                    from_=p.get_to(),
-                    to=from_,
-                    id=pep_avatar.metadata["info"]["id"],
-                )
+                if pep_avatar.metadata is not None:
+                    await self.__broadcast(
+                        data=pep_avatar.metadata,
+                        from_=p.get_to(),
+                        to=from_,
+                        id=pep_avatar.metadata["info"]["id"],
+                    )
         if UserNick.namespace + "+notify" in features:
             try:
                 pep_nick = await self._get_authorized_nick(p)
