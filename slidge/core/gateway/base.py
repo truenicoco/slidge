@@ -315,7 +315,7 @@ class BaseGateway(
 
         from ...group.room import LegacyMUC
 
-        LegacyMUC.get_unique_subclass().xmpp = self
+        LegacyMUC.get_self_or_unique_subclass().xmpp = self
 
         self.get_session_from_stanza: Callable[
             [Union[Message, Presence, Iq]], BaseSession
