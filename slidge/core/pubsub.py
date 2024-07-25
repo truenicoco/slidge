@@ -22,6 +22,7 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..db.avatar import CachedAvatar, avatar_cache
 from ..db.store import ContactStore, SlidgeStore
+from ..util.types import URL
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:
@@ -222,7 +223,9 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         item = PepAvatar()
         avatar_id = entity.avatar_id
         if avatar_id is not None:
-            stored = avatar_cache.get(str(avatar_id))
+            stored = avatar_cache.get(
+                avatar_id if isinstance(avatar_id, URL) else str(avatar_id)
+            )
             assert stored is not None
             item.set_avatar_from_cache(stored)
         return item
