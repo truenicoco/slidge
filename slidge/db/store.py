@@ -162,12 +162,20 @@ class AvatarStore(EngineMixin):
 class SentStore(EngineMixin):
     def set_message(self, user_pk: int, legacy_id: str, xmpp_id: str) -> None:
         with self.session() as session:
-            msg = XmppToLegacyIds(
-                user_account_id=user_pk,
-                legacy_id=legacy_id,
-                xmpp_id=xmpp_id,
-                type=XmppToLegacyEnum.DM,
+            msg = (
+                session.query(XmppToLegacyIds)
+                .filter(XmppToLegacyIds.user_account_id == user_pk)
+                .filter(XmppToLegacyIds.legacy_id == legacy_id)
+                .filter(XmppToLegacyIds.xmpp_id == xmpp_id)
+                .scalar()
             )
+            if msg is None:
+                msg = XmppToLegacyIds(user_account_id=user_pk)
+            else:
+                log.debug("Resetting a DM from sent store")
+            msg.legacy_id = legacy_id
+            msg.xmpp_id = xmpp_id
+            msg.type = XmppToLegacyEnum.DM
             session.add(msg)
             session.commit()
 
