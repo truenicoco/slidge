@@ -633,6 +633,7 @@ class MAMStore(EngineMixin):
         with self.session() as session:
             after_timestamp = (
                 session.query(ArchivedMessage.timestamp)
+                .filter(ArchivedMessage.room_id == room_pk)
                 .filter(ArchivedMessage.legacy_id == after_id)
                 .scalar()
             )
