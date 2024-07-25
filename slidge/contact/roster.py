@@ -225,7 +225,7 @@ class LegacyRoster(
                 item = contact.get_roster_item()
                 old = user_roster.get(contact.jid.bare)
                 if old is not None and all(
-                    old[k] == item[contact.jid.bare][k]
+                    old[k] == item[contact.jid.bare].get(k)
                     for k in ("subscription", "groups", "name")
                 ):
                     self.log.debug("No need to update roster")
