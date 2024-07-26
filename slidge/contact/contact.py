@@ -129,8 +129,8 @@ class LegacyContact(
         self._vcard_fetched = False
         self._vcard: str | None = None
 
-    async def get_vcard(self) -> VCard4 | None:
-        if not self._vcard_fetched:
+    async def get_vcard(self, fetch=True) -> VCard4 | None:
+        if fetch and not self._vcard_fetched:
             await self.fetch_vcard()
         if self._vcard is None:
             return None

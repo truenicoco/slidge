@@ -86,7 +86,7 @@ class VCardTemp:
             avatar = entity.get_avatar()
             type_ = "image/png"
             if isinstance(entity, LegacyContact):
-                vcard = await entity.get_vcard()
+                vcard = await entity.get_vcard(fetch=False)
             else:
                 vcard = None
         v = self.xmpp.plugin["xep_0054"].make_vcard()
