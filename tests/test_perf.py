@@ -179,3 +179,10 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             muc.subject_setter
             == self.run_coro(self.romeo_session.contacts.by_legacy_id("juliet")).name
         )
+
+    def test_set_user_nick_outside_update_info(self):
+        muc = self.run_coro(self.romeo_session.bookmarks.by_legacy_id("room"))
+        assert muc.user_nick == "Cool nick"
+        muc.user_nick = "Cooler nick"
+        muc = self.run_coro(self.romeo_session.bookmarks.by_legacy_id("room"))
+        assert muc.user_nick == "Cooler nick"

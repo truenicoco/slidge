@@ -42,6 +42,7 @@ class Session(BaseSession):
 
     def __init__(self, user):
         super().__init__(user)
+        self.bookmarks.user_nick = "thirdwitch"
 
     async def wait_for_ready(self, timeout=10):
         return
@@ -150,7 +151,6 @@ class MUC(slidge.LegacyMUC):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.history = []
-        self.user_nick = "thirdwitch"
 
     async def available_emojis(self, legacy_msg_id=None):
         if self.jid.local != "room-private-emoji-restricted":

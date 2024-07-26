@@ -899,6 +899,13 @@ class RoomStore(UpdatedMixin):
             )
             session.commit()
 
+    def update_user_nick(self, room_pk, nick: str) -> None:
+        with self.session() as session:
+            session.execute(
+                update(Room).where(Room.id == room_pk).values(user_nick=nick)
+            )
+            session.commit()
+
     def delete(self, room_pk: int) -> None:
         with self.session() as session:
             session.execute(delete(Room).where(Room.id == room_pk))

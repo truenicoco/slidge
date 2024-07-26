@@ -206,6 +206,8 @@ class LegacyMUC(
     @user_nick.setter
     def user_nick(self, nick: str):
         self._user_nick = nick
+        if not self._updating_info:
+            self.__store.update_user_nick(self.pk, nick)
 
     def add_user_resource(self, resource: str) -> None:
         self._user_resources.add(resource)
@@ -1195,7 +1197,7 @@ class LegacyMUC(
         )
         muc.pk = stored.id
         muc.type = stored.muc_type  # type: ignore
-        muc.user_nick = stored.user_nick
+        muc._user_nick = stored.user_nick
         if stored.name:
             muc.DISCO_NAME = stored.name
         if stored.description:
