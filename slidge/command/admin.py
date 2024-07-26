@@ -1,5 +1,6 @@
 # Commands only accessible for slidge admins
 import functools
+import importlib
 import logging
 from datetime import datetime
 from typing import Any, Optional
@@ -7,6 +8,7 @@ from typing import Any, Optional
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
+from ..core import config
 from ..util.types import AnyBaseSession
 from .base import (
     Command,
@@ -90,8 +92,12 @@ class SlidgeInfo(AdminCommand):
             [a for a in (days_ago, hours_ago, minutes_ago, seconds_ago) if a]
         )
 
+        legacy_module = importlib.import_module(config.LEGACY_MODULE)
+        version = getattr(legacy_module, "__version__", "No version")
+
         return (
-            f"{self.xmpp.COMPONENT_NAME} version {__version__}\n"
+            f"{self.xmpp.COMPONENT_NAME} (slidge core {__version__},"
+            f" {config.LEGACY_MODULE} {version})\n"
             f"Up since {start:%Y-%m-%d %H:%M} ({ago} ago)"
         )
 
