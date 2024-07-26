@@ -8,6 +8,7 @@ from slixmpp.exceptions import IqError, XMPPError
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..core.mixins.lock import NamedLockMixin
+from ..db.models import Contact
 from ..db.store import ContactStore
 from ..util import SubclassableOnce
 from ..util.types import LegacyContactType, LegacyUserIdType
@@ -63,37 +64,6 @@ class LegacyRoster(
             for stored in self.__store.get_all(user_pk=self.session.user_pk):
                 yield self._contact_cls.from_store(self.session, stored)
 
-    async def __finish_init_contact(
-        self, legacy_id: LegacyUserIdType, jid_username: str, *args, **kwargs
-    ):
-        async with self.lock(("finish", legacy_id)):
-            with self.__store.session():
-                stored = self.__store.get_by_legacy_id(
-                    self.session.user_pk, str(legacy_id)
-                )
-                if stored is not None:
-                    if stored.updated:
-                        return self._contact_cls.from_store(self.session, stored)
-                    c: LegacyContact = self._contact_cls(
-                        self.session, legacy_id, jid_username, *args, **kwargs
-                    )
-                    c.contact_pk = stored.id
-                else:
-                    c = self._contact_cls(
-                        self.session, legacy_id, jid_username, *args, **kwargs
-                    )
-                try:
-                    with c.updating_info():
-                        await c.avatar_wrap_update_info()
-                except Exception as e:
-                    raise XMPPError("internal-server-error", str(e))
-                c._caps_ver = await c.get_caps_ver(c.jid)
-                need_avatar = c.contact_pk is None
-                c.contact_pk = self.__store.update(c, commit=not self.__filling)
-                if need_avatar:
-                    c._post_avatar_update()
-        return c
-
     def known_contacts(self, only_friends=True) -> dict[str, LegacyContactType]:
         if only_friends:
             return {c.jid.bare: c for c in self if c.is_friend}
@@ -112,17 +82,15 @@ class LegacyRoster(
         # """
         username = contact_jid.node
         async with self.lock(("username", username)):
-            with self.__store.session():
-                stored = self.__store.get_by_jid(self.session.user_pk, contact_jid)
-                if stored is not None and stored.updated:
-                    return self._contact_cls.from_store(self.session, stored)
-
             legacy_id = await self.jid_username_to_legacy_id(username)
             log.debug("Contact %s not found", contact_jid)
             if self.get_lock(("legacy_id", legacy_id)):
                 log.debug("Already updating %s", contact_jid)
                 return await self.by_legacy_id(legacy_id)
-            return await self.__finish_init_contact(legacy_id, username)
+
+            with self.__store.session():
+                stored = self.__store.get_by_jid(self.session.user_pk, contact_jid)
+                return await self.__update_contact(stored, legacy_id, username)
 
     async def by_legacy_id(
         self, legacy_id: LegacyUserIdType, *args, **kwargs
@@ -145,26 +113,48 @@ class LegacyRoster(
         if legacy_id == self.user_legacy_id:
             raise ContactIsUser
         async with self.lock(("legacy_id", legacy_id)):
-            with self.__store.session():
-                stored = self.__store.get_by_legacy_id(
-                    self.session.user_pk, str(legacy_id)
-                )
-                if stored is not None and stored.updated:
-                    return self._contact_cls.from_store(
-                        self.session, stored, *args, **kwargs
-                    )
-
             username = await self.legacy_id_to_jid_username(legacy_id)
-            log.debug("Contact %s not found", legacy_id)
             if self.get_lock(("username", username)):
                 log.debug("Already updating %s", username)
                 jid = JID()
                 jid.node = username
                 jid.domain = self.session.xmpp.boundjid.bare
                 return await self.by_jid(jid)
-            return await self.__finish_init_contact(
-                legacy_id, username, *args, **kwargs
-            )
+
+            with self.__store.session():
+                stored = self.__store.get_by_legacy_id(
+                    self.session.user_pk, str(legacy_id)
+                )
+                return await self.__update_contact(
+                    stored, legacy_id, username, *args, **kwargs
+                )
+
+    async def __update_contact(
+        self,
+        stored: Contact | None,
+        legacy_id: LegacyUserIdType,
+        username: str,
+        *a,
+        **kw,
+    ) -> LegacyContactType:
+        if stored is None:
+            contact = self._contact_cls(self.session, legacy_id, username, *a, **kw)
+        else:
+            contact = self._contact_cls.from_store(self.session, stored, *a, **kw)
+            if stored.updated:
+                return contact
+
+        try:
+            with contact.updating_info():
+                await contact.avatar_wrap_update_info()
+        except Exception as e:
+            raise XMPPError("internal-server-error", str(e))
+        contact._caps_ver = await contact.get_caps_ver(contact.jid)
+        need_avatar = contact.contact_pk is None
+        contact.contact_pk = self.__store.update(contact, commit=not self.__filling)
+        if need_avatar:
+            contact._post_avatar_update()
+        return contact
 
     async def by_stanza(self, s) -> LegacyContact:
         # """
