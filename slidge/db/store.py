@@ -787,7 +787,10 @@ class RoomStore(UpdatedMixin):
         with self.session() as session:
             session.execute(
                 update(Room).values(
-                    subject_setter=None, user_resources=None, history_filled=False
+                    subject_setter=None,
+                    user_resources=None,
+                    history_filled=False,
+                    participants_filled=False,
                 )
             )
             session.commit()
