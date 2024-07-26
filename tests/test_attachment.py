@@ -344,3 +344,31 @@ class TestAttachmentNoUpload(Base):
             assert mock.call_args[1] == dict(thread=None)
         self.xmpp.use_message_ids = False
         self.xmpp.LEGACY_MSG_ID_TYPE = True
+
+    def test_multi_moderation(self):
+        session = self.get_romeo_session()
+        muc = self.run_coro(session.bookmarks.by_legacy_id("room"))
+        muc.add_user_resource("gajim")
+        part = muc.get_system_participant()
+        self.run_coro(
+            part.send_files(
+                [
+                    LegacyAttachment(path=self.avatar_path),
+                    LegacyAttachment(path=self.avatar_path, caption="CAPTION"),
+                ],
+                legacy_msg_id="the-real-msg-id",
+                body="BODY",
+            )
+        )
+        stanza_ids = []
+        while (stanza := self.next_sent()) is not None:
+            stanza_ids.append(stanza["stanza_id"]["id"])
+        assert len(stanza_ids) == 4  # 2 attachments, the caption and the body
+        assert "the-real-msg-id" in stanza_ids
+
+        part.moderate("the-real-msg-id")
+
+        moderated_ids = []
+        while (stanza := self.next_sent()) is not None:
+            moderated_ids.append(stanza["apply_to"]["id"])
+        assert set(stanza_ids) == set(moderated_ids)

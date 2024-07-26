@@ -450,13 +450,21 @@ class LegacyParticipant(
         return super().get_disco_info()
 
     def moderate(self, legacy_msg_id: LegacyMessageType, reason: Optional[str] = None):
-        m = self.muc.get_system_participant()._make_message()
-        m["apply_to"]["id"] = self._legacy_to_xmpp(legacy_msg_id)
-        m["apply_to"]["moderated"].enable("retract")
-        m["apply_to"]["moderated"]["by"] = self.jid
-        if reason:
-            m["apply_to"]["moderated"]["reason"] = reason
-        self._send(m)
+        xmpp_id = self._legacy_to_xmpp(legacy_msg_id)
+        multi = self.xmpp.store.multi.get_xmpp_ids(self.session.user_pk, xmpp_id)
+        if multi is None:
+            msg_ids = [xmpp_id]
+        else:
+            msg_ids = multi + [xmpp_id]
+
+        for i in msg_ids:
+            m = self.muc.get_system_participant()._make_message()
+            m["apply_to"]["id"] = i
+            m["apply_to"]["moderated"].enable("retract")
+            m["apply_to"]["moderated"]["by"] = self.jid
+            if reason:
+                m["apply_to"]["moderated"]["reason"] = reason
+            self._send(m)
 
     def set_room_subject(
         self,
