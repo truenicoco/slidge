@@ -206,6 +206,11 @@ class AvatarCache:
             stored = orm.execute(select(Avatar).where(Avatar.hash == hash_)).scalar()
 
             if stored is not None:
+                if unique_id is not None:
+                    log.warning("Updating 'unique' IDs of a known avatar.")
+                    stored.legacy_id = str(unique_id)
+                    orm.add(stored)
+                    orm.commit()
                 return CachedAvatar.from_store(stored, self.dir)
 
             stored = Avatar(
