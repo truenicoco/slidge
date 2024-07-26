@@ -218,7 +218,10 @@ class SlidgeTest(SlixTestPlus):
         engine = self.db_engine = create_engine("sqlite+pysqlite:///:memory:")
         Base.metadata.create_all(engine)
         BaseGateway.store = SlidgeStore(engine)
-        self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+        try:
+            self.xmpp = BaseGateway.get_self_or_unique_subclass()()
+        except Exception:
+            raise
         self.xmpp.TEST_MODE = True
         PepNick.contact_store = self.xmpp.store.contacts
         PepAvatar.store = self.xmpp.store
@@ -266,7 +269,7 @@ class SlidgeTest(SlixTestPlus):
             slidge.db.store._session = None
         Base.metadata.drop_all(self.xmpp.store._engine)
 
-    def setup_logged_session(self):
+    def setup_logged_session(self, n_contacts=0):
         user = self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
@@ -284,12 +287,18 @@ class SlidgeTest(SlixTestPlus):
         assert "logging in" in stanza["status"].lower(), stanza
         stanza = self.next_sent()
         assert "syncing contacts" in stanza["status"].lower(), stanza
+        if BaseGateway.get_self_or_unique_subclass().GROUPS:
+            stanza = self.next_sent()
+            assert "syncing groups" in stanza["status"].lower(), stanza
+        for _ in range(n_contacts):
+            probe = self.next_sent()
+            assert probe.get_type() == "probe"
         stanza = self.next_sent()
         assert "yup" in stanza["status"].lower(), stanza
-
         self.romeo: BaseSession = BaseSession.get_self_or_unique_subclass().from_jid(
             JID("romeo@montague.lit")
         )
+
         self.juliet: LegacyContact = self.run_coro(
             self.romeo.contacts.by_legacy_id("juliet")
         )

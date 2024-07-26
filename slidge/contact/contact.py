@@ -196,15 +196,19 @@ class LegacyContact(
     def __ensure_pk(self):
         if self.contact_pk is not None:
             return
+        # This happens for legacy modules that don't follow the Roster.fill /
+        # populate contact attributes in Contact.update_info() method.
+        # This results in (even) less optimised SQL writes and read, but
+        # we allow it because it fits some legacy network libs better.
         with self.xmpp.store.session() as orm:
             orm.commit()
             stored = self.xmpp.store.contacts.get_by_legacy_id(
                 self.user_pk, str(self.legacy_id)
             )
             if stored is None:
-                self.log.error("Cannot find our primary key!", stack_info=True)
-                raise RuntimeError("Cannot find our primary key!")
-            self.contact_pk = stored.id
+                self.contact_pk = self.xmpp.store.contacts.update(self, commit=True)
+            else:
+                self.contact_pk = stored.id
         assert self.contact_pk is not None
 
     def __get_subscription_string(self):
