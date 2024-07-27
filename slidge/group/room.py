@@ -758,6 +758,7 @@ class LegacyMUC(
         await self.session.contacts.ready
 
         if self.pk is not None:
+            c._LegacyContact__ensure_pk()  # type: ignore
             assert c.contact_pk is not None
             with self.__store.session():
                 stored = self.__participants_store.get_by_contact(self.pk, c.contact_pk)

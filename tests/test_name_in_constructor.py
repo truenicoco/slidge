@@ -59,3 +59,8 @@ class TestSetContactNameInConstructor(AvatarFixtureMixin, SlidgeTest):
         assert contact.name == "some name"
         muc = self.run_coro(self.romeo.bookmarks.by_legacy_id("some group id"))
         assert muc.name == "some group name"
+
+    def test_participant(self):
+        muc = self.run_coro(self.romeo.bookmarks.by_legacy_id("some group id"))
+        participant = self.run_coro(muc.get_participant_by_legacy_id("some other id"))
+        assert participant.nickname == "some other id"
