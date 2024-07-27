@@ -8,7 +8,14 @@ license = "AGPL-3.0-or-later"
 homepage = "https://sr.ht/~nicoco/slidge/"
 repository = "https://git.sr.ht/~nicoco/slidge/"
 documentation = "https://slidge.im/"
-include = ["slidge/util/schema.sql"]
+classifiers = [
+    "Topic :: Internet :: XMPP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://todo.sr.ht/~nicoco/slidge"
+"Chat room" = "xmpp:slidge@conference.nicoco.fr?join"
 
 [tool.poetry.dependencies]
 python = "^3.11"
