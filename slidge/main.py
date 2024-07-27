@@ -15,6 +15,7 @@ https://git.sr.ht/~nicoco/slidge/tree/master/item/dev/confs/slidge-example.ini
 
 import asyncio
 import importlib
+import inspect
 import logging
 import os
 import re
@@ -140,6 +141,11 @@ def main():
     if plugin_config_obj := getattr(
         legacy_module, "config", getattr(legacy_module, "Config", None)
     ):
+        # If the legacy module has default parameters that depend on dynamic defaults
+        # of the slidge main config, it needs to be refreshed at this point, because
+        # now the dynamic defaults are set.
+        if inspect.ismodule(plugin_config_obj):
+            importlib.reload(plugin_config_obj)
         logging.debug("Found a config object in plugin: %r", plugin_config_obj)
         ConfigModule.ENV_VAR_PREFIX += (
             f"_{config.LEGACY_MODULE.split('.')[-1].upper()}_"
