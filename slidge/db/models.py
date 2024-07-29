@@ -367,7 +367,7 @@ class Participant(Base):
     )
 
     contact_id: Mapped[int] = mapped_column(ForeignKey("contact.id"), nullable=True)
-    contact: Mapped[Contact] = relationship(back_populates="participants")
+    contact: Mapped[Contact] = relationship(lazy=False, back_populates="participants")
 
     is_user: Mapped[bool] = mapped_column(default=False)
 
