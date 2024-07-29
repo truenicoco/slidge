@@ -174,7 +174,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
                 if pep_avatar.metadata is not None:
                     await self.__broadcast(
                         data=pep_avatar.metadata,
-                        from_=p.get_to(),
+                        from_=p.get_to().bare,
                         to=from_,
                         id=pep_avatar.metadata["info"]["id"],
                     )
