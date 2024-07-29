@@ -5,8 +5,12 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from slixmpp import JID
 
 from .core import config
+from .db.meta import get_engine
+from .db.models import GatewayUser
+from .db.store import SlidgeStore
 
 
 def remove_avatar_cache_v1():
@@ -26,8 +30,18 @@ def get_alembic_cfg() -> Config:
     return alembic_cfg
 
 
-def migrate():
+def remove_resource_parts_from_users(store: SlidgeStore) -> None:
+    with store.session() as orm:
+        for user in orm.query(GatewayUser).all():
+            if user.jid.resource:
+                user.jid = JID(user.jid.bare)
+                orm.add(user)
+        orm.commit()
+
+
+def migrate(store: SlidgeStore) -> None:
     remove_avatar_cache_v1()
+    remove_resource_parts_from_users(store)
     command.upgrade(get_alembic_cfg(), "head")
 
 
