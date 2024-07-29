@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import aiohttp
 from multidict import CIMultiDictProxy
@@ -18,7 +18,7 @@ from sqlalchemy import select
 from slidge.core import config
 from slidge.db.models import Avatar
 from slidge.db.store import AvatarStore
-from slidge.util.types import URL, AvatarType, LegacyFileIdType
+from slidge.util.types import URL, AvatarType
 
 
 @dataclass
@@ -62,7 +62,6 @@ class AvatarCache:
     dir: Path
     http: aiohttp.ClientSession
     store: AvatarStore
-    legacy_avatar_type: Callable[[str], Any] = str
 
     def __init__(self):
         self._thread_pool = ThreadPoolExecutor(config.AVATAR_RESAMPLING_THREADS)
@@ -119,15 +118,6 @@ class AvatarCache:
         headers = self.__get_http_headers(cached)
         return await self.__is_modified(url, headers)
 
-    def get(self, unique_id: LegacyFileIdType | URL) -> Optional[CachedAvatar]:
-        if isinstance(unique_id, URL):
-            stored = self.store.get_by_url(unique_id)
-        else:
-            stored = self.store.get_by_legacy_id(str(unique_id))
-        if stored is None:
-            return None
-        return CachedAvatar.from_store(stored, self.dir)
-
     def get_by_pk(self, pk: int) -> CachedAvatar:
         stored = self.store.get_by_pk(pk)
         assert stored is not None
@@ -141,40 +131,21 @@ class AvatarCache:
             return open_image(avatar)
         raise TypeError("Avatar must be bytes or a Path", avatar)
 
-    async def convert_or_get(
-        self,
-        avatar: AvatarType,
-        unique_id: Optional[LegacyFileIdType],
-    ) -> CachedAvatar:
-        if unique_id is not None:
-            cached = self.get(str(unique_id))
-            if cached is not None:
-                return cached
-
+    async def convert_or_get(self, avatar: AvatarType) -> CachedAvatar:
         if isinstance(avatar, (URL, str)):
-            if unique_id is None:
-                with self.store.session():
-                    stored = self.store.get_by_url(avatar)
-                    try:
-                        img, response_headers = await self.__download(
-                            avatar, self.__get_http_headers(stored)
-                        )
-                    except NotModified:
-                        assert stored is not None
-                        return CachedAvatar.from_store(stored, self.dir)
-            else:
-                img, _ = await self.__download(avatar, {})
-                response_headers = None
+            with self.store.session():
+                stored = self.store.get_by_url(avatar)
+                try:
+                    img, response_headers = await self.__download(
+                        avatar, self.__get_http_headers(stored)
+                    )
+                except NotModified:
+                    assert stored is not None
+                    return CachedAvatar.from_store(stored, self.dir)
         else:
             img = await self._get_image(avatar)
             response_headers = None
         with self.store.session() as orm:
-            stored = orm.execute(
-                select(Avatar).where(Avatar.legacy_id == str(unique_id))
-            ).scalar()
-            if stored is not None and stored.url is None:
-                return CachedAvatar.from_store(stored, self.dir)
-
             resize = (size := config.AVATAR_SIZE) and any(x > size for x in img.size)
             if resize:
                 await asyncio.get_event_loop().run_in_executor(
@@ -188,8 +159,8 @@ class AvatarCache:
             if (
                 not resize
                 and img.format == "PNG"
-                and isinstance(unique_id, str)
-                and (path := Path(unique_id))
+                and isinstance(avatar, (str, Path))
+                and (path := Path(avatar))
                 and path.exists()
             ):
                 img_bytes = path.read_bytes()
@@ -206,11 +177,6 @@ class AvatarCache:
             stored = orm.execute(select(Avatar).where(Avatar.hash == hash_)).scalar()
 
             if stored is not None:
-                if unique_id is not None:
-                    log.warning("Updating 'unique' IDs of a known avatar.")
-                    stored.legacy_id = str(unique_id)
-                    orm.add(stored)
-                    orm.commit()
                 return CachedAvatar.from_store(stored, self.dir)
 
             stored = Avatar(
@@ -218,7 +184,6 @@ class AvatarCache:
                 hash=hash_,
                 height=img.height,
                 width=img.width,
-                legacy_id=None if unique_id is None else str(unique_id),
                 url=avatar if isinstance(avatar, (URL, str)) else None,
             )
             if response_headers:

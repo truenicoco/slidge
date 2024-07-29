@@ -150,10 +150,7 @@ class LegacyRoster(
         except Exception as e:
             raise XMPPError("internal-server-error", str(e))
         contact._caps_ver = await contact.get_caps_ver(contact.jid)
-        need_avatar = contact.contact_pk is None
         contact.contact_pk = self.__store.update(contact, commit=not self.__filling)
-        if need_avatar:
-            contact._post_avatar_update()
         return contact
 
     async def by_stanza(self, s) -> LegacyContact:

@@ -329,14 +329,13 @@ class LegacyContact(
         return self.xmpp.store.contacts.get_avatar_legacy_id(self.contact_pk)
 
     def _post_avatar_update(self):
-        if self._updating_info:
-            return
-        if self.contact_pk is None:
-            # happens in LegacyRoster.fill(), the contact primary key is not
-            # set yet, but this will eventually be called in LegacyRoster.__finish_init_contact
-            self.log.debug("Not setting avatar PK")
-            return
-        self.xmpp.store.contacts.set_avatar(self.contact_pk, self._avatar_pk)
+        self.__ensure_pk()
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_avatar(
+            self.contact_pk,
+            self._avatar_pk,
+            None if self.avatar_id is None else str(self.avatar_id),
+        )
         for p in self.participants:
             self.log.debug("Propagating new avatar to %s", p.muc)
             p.send_last_presence(force=True, no_cache_online=True)
@@ -608,7 +607,12 @@ class LegacyContact(
             contact.deserialize_extra_attributes(data)
         contact._caps_ver = stored.caps_ver
         contact._set_logger_name()
-        contact._set_avatar_from_store(stored)
+        contact._AvatarMixin__avatar_unique_id = (  # type:ignore
+            None
+            if stored.avatar_legacy_id is None
+            else session.xmpp.AVATAR_ID_TYPE(stored.avatar_legacy_id)
+        )
+        contact._avatar_pk = stored.avatar_id
         contact._vcard = stored.vcard
         contact._vcard_fetched = stored.vcard_fetched
         return contact

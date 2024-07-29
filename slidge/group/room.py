@@ -570,7 +570,11 @@ class LegacyMUC(
         if self.pk is None:
             return
         assert self.pk is not None
-        self.xmpp.store.rooms.set_avatar(self.pk, self._avatar_pk)
+        self.xmpp.store.rooms.set_avatar(
+            self.pk,
+            self._avatar_pk,
+            None if self.avatar_id is None else str(self.avatar_id),
+        )
         self.__send_configuration_change((104,))
         self._send_room_presence()
 
@@ -1216,7 +1220,12 @@ class LegacyMUC(
         muc._subject_setter = stored.subject_setter
         muc.archive = MessageArchive(muc.pk, session.xmpp.store.mam)
         muc._set_logger_name()
-        muc._set_avatar_from_store(stored)
+        muc._AvatarMixin__avatar_unique_id = (  # type:ignore
+            None
+            if stored.avatar_legacy_id is None
+            else session.xmpp.AVATAR_ID_TYPE(stored.avatar_legacy_id)
+        )
+        muc._avatar_pk = stored.avatar_id
         return muc
 
 

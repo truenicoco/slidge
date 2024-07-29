@@ -95,10 +95,7 @@ class AvatarMixin:
             self._avatar_pk = None
         else:
             try:
-                cached_avatar = await avatar_cache.convert_or_get(
-                    URL(a) if isinstance(a, URL) else a,
-                    None if isinstance(uid, URL) else uid,
-                )
+                cached_avatar = await avatar_cache.convert_or_get(a)
             except Exception as e:
                 self.session.log.error("Failed to set avatar %s", a, exc_info=e)
                 self._avatar_pk = None
@@ -167,9 +164,9 @@ class AvatarMixin:
             await awaitable
 
     def get_cached_avatar(self) -> Optional["CachedAvatar"]:
-        if not self.__avatar_unique_id:
+        if self._avatar_pk is None:
             return None
-        return avatar_cache.get(self.__avatar_unique_id)
+        return avatar_cache.get_by_pk(self._avatar_pk)
 
     def get_avatar(self) -> Optional["PepAvatar"]:
         cached_avatar = self.get_cached_avatar()
@@ -211,7 +208,10 @@ class AvatarMixin:
         if self.__should_pubsub_broadcast():
             if new_id is None and cached_id is None:
                 return
-            cached_avatar = avatar_cache.get(cached_id)
+            if self._avatar_pk is not None:
+                cached_avatar = avatar_cache.get_by_pk(self._avatar_pk)
+            else:
+                cached_avatar = None
             self.__broadcast_task = self.session.xmpp.loop.create_task(
                 self.session.xmpp.pubsub.broadcast_avatar(
                     self.__avatar_jid, self.session.user_jid, cached_avatar

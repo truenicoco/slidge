@@ -156,15 +156,14 @@ def main():
         if unknown_argv:
             raise RuntimeError("Some arguments have not been recognized", unknown_argv)
 
-    store = SlidgeStore(get_engine(config.DB_URL))
-    migrate(store)
+    migrate()
 
+    store = SlidgeStore(get_engine(config.DB_URL))
     BaseGateway.store = store
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
     avatar_cache.http = gateway.http
     avatar_cache.store = gateway.store.avatars
     avatar_cache.set_dir(config.HOME_DIR / "slidge_avatars_v3")
-    avatar_cache.legacy_avatar_type = gateway.AVATAR_ID_TYPE
 
     PepAvatar.store = gateway.store
     PepNick.contact_store = gateway.store.contacts

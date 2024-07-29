@@ -20,19 +20,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table(
-        "room",
-        schema=None,
-        # without copy_from, the newly created table keeps the constraints
-        # we actually want to ditch.
-        copy_from=Room.__table__,  # type:ignore
-    ) as batch_op:
-        batch_op.create_unique_constraint(
-            "uq_room_user_account_id_jid", ["user_account_id", "jid"]
-        )
-        batch_op.create_unique_constraint(
-            "uq_room_user_account_id_legacy_id", ["user_account_id", "legacy_id"]
-        )
+    try:
+        with op.batch_alter_table(
+            "room",
+            schema=None,
+            # without copy_from, the newly created table keeps the constraints
+            # we actually want to ditch.
+            copy_from=Room.__table__,  # type:ignore
+        ) as batch_op:
+            batch_op.create_unique_constraint(
+                "uq_room_user_account_id_jid", ["user_account_id", "jid"]
+            )
+            batch_op.create_unique_constraint(
+                "uq_room_user_account_id_legacy_id", ["user_account_id", "legacy_id"]
+            )
+    except Exception:
+        # happens when migration is not needed
+        # wouldn't be necessary if the constraint was named in the first place,
+        # cf https://alembic.sqlalchemy.org/en/latest/naming.html
+        pass
 
 
 def downgrade() -> None:

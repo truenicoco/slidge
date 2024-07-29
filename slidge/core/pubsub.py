@@ -22,7 +22,6 @@ from slixmpp.types import JidStr, OptJidStr
 
 from ..db.avatar import CachedAvatar, avatar_cache
 from ..db.store import ContactStore, SlidgeStore
-from ..util.types import URL
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:
@@ -220,11 +219,8 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         entity = await session.get_contact_or_group_or_participant(stanza.get_to())
 
         item = PepAvatar()
-        avatar_id = entity.avatar_id
-        if avatar_id is not None:
-            stored = avatar_cache.get(
-                avatar_id if isinstance(avatar_id, URL) else str(avatar_id)
-            )
+        if entity._avatar_pk is not None:
+            stored = avatar_cache.get_by_pk(entity._avatar_pk)
             assert stored is not None
             item.set_avatar_from_cache(stored)
         return item

@@ -114,9 +114,6 @@ class Avatar(Base):
     height: Mapped[int] = mapped_column()
     width: Mapped[int] = mapped_column()
 
-    # legacy network-wide unique identifier for the avatar
-    legacy_id: Mapped[Optional[str]] = mapped_column(unique=True, nullable=True)
-
     # this is only used when avatars are available as HTTP URLs and do not
     # have a legacy_id
     url: Mapped[Optional[str]] = mapped_column(default=None)
@@ -170,6 +167,8 @@ class Contact(Base):
     vcard_fetched: Mapped[bool] = mapped_column(default=False)
 
     participants: Mapped[list["Participant"]] = relationship(back_populates="contact")
+
+    avatar_legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
 
 
 class ContactSent(Base):
@@ -234,6 +233,8 @@ class Room(Base):
     participants: Mapped[list["Participant"]] = relationship(
         back_populates="room", primaryjoin="Participant.room_id == Room.id"
     )
+
+    avatar_legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
 
 
 class ArchivedMessage(Base):

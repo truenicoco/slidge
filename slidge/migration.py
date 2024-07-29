@@ -7,6 +7,8 @@ from alembic import command
 from alembic.config import Config
 from slixmpp import JID
 
+from slidge.db.meta import get_engine
+
 from .core import config
 from .db.meta import get_engine
 from .db.models import GatewayUser
@@ -30,8 +32,8 @@ def get_alembic_cfg() -> Config:
     return alembic_cfg
 
 
-def remove_resource_parts_from_users(store: SlidgeStore) -> None:
-    with store.session() as orm:
+def remove_resource_parts_from_users() -> None:
+    with SlidgeStore(get_engine(config.DB_URL)).session() as orm:
         for user in orm.query(GatewayUser).all():
             if user.jid.resource:
                 user.jid = JID(user.jid.bare)
@@ -39,10 +41,10 @@ def remove_resource_parts_from_users(store: SlidgeStore) -> None:
         orm.commit()
 
 
-def migrate(store: SlidgeStore) -> None:
+def migrate() -> None:
     remove_avatar_cache_v1()
-    remove_resource_parts_from_users(store)
     command.upgrade(get_alembic_cfg(), "head")
+    remove_resource_parts_from_users()
 
 
 def main():

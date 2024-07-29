@@ -60,7 +60,11 @@ def downgrade() -> None:
 def migrate_from_shelf(accounts: sa.Table) -> None:
     from slidge import global_config
 
-    db_file = global_config.HOME_DIR / "slidge.db"
+    home = getattr(global_config, "HOME_DIR", None)
+    if home is None:
+        return
+
+    db_file = home / "slidge.db"
     if not db_file.exists():
         return
 

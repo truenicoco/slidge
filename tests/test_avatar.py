@@ -139,24 +139,38 @@ class TestContactAvatar(BaseNoMUC, AvatarFixtureMixin):
 
         self.xmpp.AVATAR_ID_TYPE = int
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
-        self.__assert_publish(rewritten=True)
+        self.__assert_publish(rewritten=False)
 
-        assert juliet._AvatarMixin__get_cached_avatar_id() == 123
+        assert juliet.avatar_id == 123
 
         self.run_coro(juliet.set_avatar(self.avatar_path, 123))
         assert self.next_sent() is None
 
-        assert juliet._AvatarMixin__get_cached_avatar_id() == 123
+        assert juliet.avatar_id == 123
 
         self.xmpp.AVATAR_ID_TYPE = str
         self.run_coro(juliet.set_avatar(self.avatar_path, "123"))
-        self.__assert_publish(rewritten=True)
-        assert juliet._AvatarMixin__get_cached_avatar_id() == "123"
+        self.__assert_publish(rewritten=False)
+        assert juliet.avatar_id == "123"
 
         self.run_coro(juliet.set_avatar(None))
         self.__assert_publish_empty()
 
-        assert juliet._AvatarMixin__get_cached_avatar_id() is None
+        assert juliet.avatar_id is None
+
+    def test_same_avatar_with_different_legacy_ids(self):
+        self.run_coro(self.juliet.set_avatar(self.avatar_path, "123"))
+        self.__assert_publish(rewritten=False)
+        assert self.juliet.avatar_id == "123"
+        assert self.juliet.get_avatar().id == self.avatar_original_sha1
+
+        self.run_coro(self.juliet.set_avatar(self.avatar_path, "456"))
+        self.__assert_publish(
+            rewritten=False
+        )  # FIXME: ideally, we should not publish here…
+        assert self.juliet.avatar_id == "456"
+
+        assert self.juliet.get_avatar().id == self.avatar_original_sha1
 
     def test_avatar_with_url(self):
         juliet = self.juliet

@@ -455,10 +455,8 @@ class BaseGateway(
         await disco.del_feature(feature="urn:xmpp:http:upload:0", jid=self.boundjid)
         await self.plugin["xep_0115"].update_caps(jid=self.boundjid)
 
-        if self.COMPONENT_AVATAR:
-            cached_avatar = await avatar_cache.convert_or_get(
-                self.COMPONENT_AVATAR, None
-            )
+        if self.COMPONENT_AVATAR is not None:
+            cached_avatar = await avatar_cache.convert_or_get(self.COMPONENT_AVATAR)
             self.avatar_pk = cached_avatar.pk
         else:
             cached_avatar = None

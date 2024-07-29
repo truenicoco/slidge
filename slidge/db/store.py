@@ -65,9 +65,6 @@ class UpdatedMixin(EngineMixin):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         with self.session() as session:
-            session.execute(
-                delete(self.model).where(~self.model.updated)  # type:ignore
-            )
             session.execute(update(self.model).values(updated=False))  # type:ignore
             session.commit()
 
@@ -138,12 +135,6 @@ class AvatarStore(EngineMixin):
     def get_by_url(self, url: URL | str) -> Optional[Avatar]:
         with self.session() as session:
             return session.execute(select(Avatar).where(Avatar.url == url)).scalar()
-
-    def get_by_legacy_id(self, legacy_id: str) -> Optional[Avatar]:
-        with self.session() as session:
-            return session.execute(
-                select(Avatar).where(Avatar.legacy_id == legacy_id)
-            ).scalar()
 
     def get_by_pk(self, pk: int) -> Optional[Avatar]:
         with self.session() as session:
@@ -344,12 +335,14 @@ class ContactStore(UpdatedMixin):
             )
             session.commit()
 
-    def set_avatar(self, contact_pk: int, avatar_pk: Optional[int]):
+    def set_avatar(
+        self, contact_pk: int, avatar_pk: Optional[int], avatar_legacy_id: Optional[str]
+    ):
         with self.session() as session:
             session.execute(
                 update(Contact)
                 .where(Contact.id == contact_pk)
-                .values(avatar_id=avatar_pk)
+                .values(avatar_id=avatar_pk, avatar_legacy_id=avatar_legacy_id)
             )
             session.commit()
 
@@ -360,7 +353,7 @@ class ContactStore(UpdatedMixin):
             ).scalar()
             if contact is None or contact.avatar is None:
                 return None
-            return contact.avatar.legacy_id
+            return contact.avatar_legacy_id
 
     def update(self, contact: "LegacyContact", commit=True) -> int:
         with self.session() as session:
@@ -795,10 +788,14 @@ class RoomStore(UpdatedMixin):
             )
             session.commit()
 
-    def set_avatar(self, room_pk: int, avatar_pk: int | None) -> None:
+    def set_avatar(
+        self, room_pk: int, avatar_pk: int | None, avatar_legacy_id: str | None
+    ) -> None:
         with self.session() as session:
             session.execute(
-                update(Room).where(Room.id == room_pk).values(avatar_id=avatar_pk)
+                update(Room)
+                .where(Room.id == room_pk)
+                .values(avatar_id=avatar_pk, avatar_legacy_id=avatar_legacy_id)
             )
             session.commit()
 
@@ -807,7 +804,7 @@ class RoomStore(UpdatedMixin):
             room = session.execute(select(Room).where(Room.id == room_pk)).scalar()
             if room is None or room.avatar is None:
                 return None
-            return room.avatar.legacy_id
+            return room.avatar_legacy_id
 
     def get_by_jid(self, user_pk: int, jid: JID) -> Optional[Room]:
         if jid.resource:

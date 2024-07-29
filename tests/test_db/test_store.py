@@ -38,7 +38,6 @@ def test_delete_avatar(slidge_store):
             hash="hash",
             height=0,
             width=0,
-            legacy_id="prout",
         )
 
         contact = Contact(
