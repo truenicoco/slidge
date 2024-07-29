@@ -186,3 +186,16 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         muc.user_nick = "Cooler nick"
         muc = self.run_coro(self.romeo_session.bookmarks.by_legacy_id("room"))
         assert muc.user_nick == "Cooler nick"
+
+    def test_user_available(self):
+        self.run_coro(self.romeo_session.contacts.by_legacy_id("juliet"))
+        for _ in range(3):
+            assert self.next_sent() is not None
+        self.recv(  # language=XML
+            f"""
+            <presence from="romeo@montague.lit/movim"
+                      to="juliet@{self.xmpp.boundjid.bare}" />
+            """
+        )
+        assert self.next_sent() is not None
+        assert self.next_sent() is None

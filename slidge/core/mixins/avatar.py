@@ -73,6 +73,10 @@ class AvatarMixin:
             name=f"Set avatar of {self} from property",
         )
 
+    @property
+    def avatar_pk(self) -> int | None:
+        return self._avatar_pk
+
     @staticmethod
     def __get_uid(a: Optional[AvatarType]) -> Optional[AvatarIdType]:
         if isinstance(a, str):

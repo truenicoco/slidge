@@ -25,7 +25,8 @@ from ..db.store import ContactStore, SlidgeStore
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:
-    from slidge import BaseGateway
+    from ..contact.contact import LegacyContact
+    from ..core.gateway.base import BaseGateway
 
 VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 
@@ -115,7 +116,6 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
                 self._get_vcard,  # type:ignore
             )
         )
-        self.xmpp.add_event_handler("presence_available", self._on_presence_available)
 
         disco = self.xmpp.plugin["xep_0030"]
         disco.add_identity("pubsub", "pep", self.component_name)
@@ -124,50 +124,38 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
         disco.add_feature("http://jabber.org/protocol/pubsub#retrieve-items")
         disco.add_feature("http://jabber.org/protocol/pubsub#persistent-items")
 
-    async def _on_presence_available(self, p: Presence):
-        if p.get_plugin("muc_join", check=True) is not None:
-            log.debug("Ignoring MUC presence here")
-            return
-
-        from_ = p.get_from()
-        ver_string = p["caps"]["ver"]
-        info = None
-
-        to = p.get_to()
-
-        contact = None
-        # we don't want to push anything for contacts that are not in the user's roster
-        if to != self.xmpp.boundjid.bare:
-            session = self.xmpp.get_session_from_stanza(p)
-
-            if session is None:
-                return
-
-            await session.contacts.ready
-            try:
-                contact = await session.contacts.by_jid(to)
-            except XMPPError as e:
-                log.debug(
-                    "Could not determine if %s was added to the roster: %s", to, e
-                )
-                return
-            except Exception as e:
-                log.warning("Could not determine if %s was added to the roster.", to)
-                log.exception(e)
-                return
-            if not contact.is_friend:
-                return
-
+    async def __get_features(self, presence: Presence) -> list[str]:
+        from_ = presence.get_from()
+        ver_string = presence["caps"]["ver"]
         if ver_string:
             info = await self.xmpp.plugin["xep_0115"].get_caps(from_)
+        else:
+            info = None
         if info is None:
             async with self.lock(from_):
                 iq = await self.xmpp.plugin["xep_0030"].get_info(from_)
             info = iq["disco_info"]
-        features = info["features"]
+        return info["features"]
+
+    async def on_presence_available(
+        self, p: Presence, contact: Optional["LegacyContact"]
+    ):
+        if p.get_plugin("muc_join", check=True) is not None:
+            log.debug("Ignoring MUC presence here")
+            return
+
+        to = p.get_to()
+        if to != self.xmpp.boundjid.bare:
+            # we don't want to push anything for contacts that are not in the user's roster
+            if contact is None or not contact.is_friend:
+                return
+
+        from_ = p.get_from()
+        features = await self.__get_features(p)
+
         if AvatarMetadata.namespace + "+notify" in features:
             try:
-                pep_avatar = await self._get_authorized_avatar(p)
+                pep_avatar = await self._get_authorized_avatar(p, contact)
             except XMPPError:
                 pass
             else:
@@ -180,7 +168,7 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
                     )
         if UserNick.namespace + "+notify" in features:
             try:
-                pep_nick = await self._get_authorized_nick(p)
+                pep_nick = await self._get_authorized_nick(p, contact)
             except XMPPError:
                 pass
             else:
@@ -209,61 +197,64 @@ class PubSubComponent(NamedLockMixin, BasePlugin):
             node=VCARD4_NAMESPACE,
         )
 
-    async def _get_authorized_avatar(self, stanza: Union[Iq, Presence]) -> PepAvatar:
+    async def __get_contact(self, stanza: Union[Iq, Presence]):
+        session = self.xmpp.get_session_from_stanza(stanza)
+        return await session.contacts.by_jid(stanza.get_to())
+
+    async def _get_authorized_avatar(
+        self, stanza: Union[Iq, Presence], contact: Optional["LegacyContact"] = None
+    ) -> PepAvatar:
         if stanza.get_to() == self.xmpp.boundjid.bare:
             item = PepAvatar()
             item.set_avatar_from_cache(avatar_cache.get_by_pk(self.xmpp.avatar_pk))
             return item
 
-        session = self.xmpp.get_session_from_stanza(stanza)
-        entity = await session.get_contact_or_group_or_participant(stanza.get_to())
+        if contact is None:
+            contact = await self.__get_contact(stanza)
 
         item = PepAvatar()
-        if entity._avatar_pk is not None:
-            stored = avatar_cache.get_by_pk(entity._avatar_pk)
+        if contact.avatar_pk is not None:
+            stored = avatar_cache.get_by_pk(contact.avatar_pk)
             assert stored is not None
             item.set_avatar_from_cache(stored)
         return item
 
-    async def _get_authorized_nick(self, stanza: Union[Iq, Presence]) -> PepNick:
+    async def _get_authorized_nick(
+        self, stanza: Union[Iq, Presence], contact: Optional["LegacyContact"] = None
+    ) -> PepNick:
         if stanza.get_to() == self.xmpp.boundjid.bare:
             return PepNick(self.xmpp.COMPONENT_NAME)
 
-        session = self.xmpp.get_session_from_stanza(stanza)
-        entity = await session.contacts.by_jid(stanza.get_to())
+        if contact is None:
+            contact = await self.__get_contact(stanza)
 
-        if entity.name is not None:
-            return PepNick(entity.name)
+        if contact.name is not None:
+            return PepNick(contact.name)
         else:
             return PepNick()
 
-    async def _get_avatar_data(self, iq: Iq):
-        pep_avatar = await self._get_authorized_avatar(iq)
-
+    def __reply_with(
+        self, iq: Iq, content: AvatarData | AvatarMetadata | None, item_id: str | None
+    ) -> None:
         requested_items = iq["pubsub"]["items"]
+
         if len(requested_items) == 0:
-            self._reply_with_payload(iq, pep_avatar.data, pep_avatar.id)
+            self._reply_with_payload(iq, content, item_id)
         else:
             for item in requested_items:
-                if item["id"] == pep_avatar.id:
-                    self._reply_with_payload(iq, pep_avatar.data, pep_avatar.id)
+                if item["id"] == item_id:
+                    self._reply_with_payload(iq, content, item_id)
                     return
             else:
                 raise XMPPError("item-not-found")
+
+    async def _get_avatar_data(self, iq: Iq):
+        pep_avatar = await self._get_authorized_avatar(iq)
+        self.__reply_with(iq, pep_avatar.data, pep_avatar.id)
 
     async def _get_avatar_metadata(self, iq: Iq):
         pep_avatar = await self._get_authorized_avatar(iq)
-
-        requested_items = iq["pubsub"]["items"]
-        if len(requested_items) == 0:
-            self._reply_with_payload(iq, pep_avatar.metadata, pep_avatar.id)
-        else:
-            for item in requested_items:
-                if item["id"] == pep_avatar.id:
-                    self._reply_with_payload(iq, pep_avatar.metadata, pep_avatar.id)
-                    return
-            else:
-                raise XMPPError("item-not-found")
+        self.__reply_with(iq, pep_avatar.metadata, pep_avatar.id)
 
     async def _get_vcard(self, iq: Iq):
         # this is not the proper way that clients should retrieve VCards, but

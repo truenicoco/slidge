@@ -503,7 +503,18 @@ class SessionDispatcher:
                 resources,
                 merge_resources(resources),
             )
+            if p.get_type() == "available":
+                await self.xmpp.pubsub.on_presence_available(p, None)
             return
+
+        if p.get_type() == "available":
+            try:
+                contact = await session.contacts.by_jid(pto)
+            except XMPPError:
+                contact = None
+            if contact is not None:
+                await self.xmpp.pubsub.on_presence_available(p, contact)
+                return
 
         muc = session.bookmarks.by_jid_only_if_exists(JID(pto.bare))
 
