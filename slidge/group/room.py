@@ -238,7 +238,9 @@ class LegacyMUC(
             for db_participant in self.xmpp.store.participants.get_all(
                 self.pk, user_included=True
             ):
-                participant = self.Participant.from_store(self.session, db_participant)
+                participant = self.Participant.from_store(
+                    self.session, db_participant, muc=self
+                )
                 yield participant
             return
 
@@ -250,7 +252,9 @@ class LegacyMUC(
             for db_participant in self.xmpp.store.participants.get_all(
                 self.pk, user_included=True
             ):
-                participant = self.Participant.from_store(self.session, db_participant)
+                participant = self.Participant.from_store(
+                    self.session, db_participant, muc=self
+                )
                 resources.add(participant.jid.resource)
                 yield participant
             async for p in self.fill_participants():
