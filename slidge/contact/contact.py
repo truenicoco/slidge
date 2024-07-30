@@ -602,7 +602,7 @@ class LegacyContact(
         contact.contact_pk = stored.id
         contact._name = stored.nick
         contact._is_friend = stored.is_friend
-        contact.added_to_roster = stored.added_to_roster
+        contact._added_to_roster = stored.added_to_roster
         if (data := stored.extra_attributes) is not None:
             contact.deserialize_extra_attributes(data)
         contact._caps_ver = stored.caps_ver
