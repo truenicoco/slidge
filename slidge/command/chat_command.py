@@ -153,6 +153,9 @@ class ChatCommandProvider:
         self.xmpp.delivery_receipt.ack(msg)
         return await self._handle_result(result, msg, session)
 
+    def __make_uri(self, body: str) -> str:
+        return f"xmpp:{self.xmpp.boundjid.bare}?message;body={body}"
+
     async def _handle_result(self, result: CommandResponseType, msg: Message, session):
         if isinstance(result, str) or result is None:
             reply = msg.reply()
@@ -175,9 +178,14 @@ class ChatCommandProvider:
                         ).send()
                     if f.options:
                         for o in f.options:
-                            msg.reply(f"{o['value']} -- {o['label']}").send()
+                            msg.reply(
+                                f"{o['label']}: {self.__make_uri(o['value'])}"
+                            ).send()
                     if f.value:
                         msg.reply(f"Default: {f.value}").send()
+                    if f.type == "boolean":
+                        msg.reply("yes: " + self.__make_uri("yes")).send()
+                        msg.reply("no: " + self.__make_uri("no")).send()
 
                     ans = await self.xmpp.input(
                         msg.get_from(), (f.label or f.var) + "? (or 'abort')"
@@ -186,6 +194,12 @@ class ChatCommandProvider:
                         return await self._handle_result(
                             "Command aborted", msg, session
                         )
+                    if f.type == "boolean":
+                        if ans.lower() == "yes":
+                            ans = "true"
+                        else:
+                            ans = "false"
+
                     if f.type.endswith("multi"):
                         form_values[f.var] = f.validate(ans.split(" "))
                     else:
