@@ -591,12 +591,7 @@ class SessionDispatcher:
         if session.user.avatar_hash == hash_:
             session.log.debug("We already know this avatar hash")
             return
-        with self.xmpp.store.session() as orm_session:
-            user = self.xmpp.store.users.get(session.user_jid)
-            assert user is not None
-            user.avatar_hash = hash_
-            orm_session.add(user)
-            orm_session.commit()
+        self.xmpp.store.users.set_avatar_hash(session.user_pk, None)
 
         if hash_:
             try:

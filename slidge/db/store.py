@@ -130,6 +130,13 @@ class UserStore(EngineMixin):
             session.delete(self.get(jid))
             session.commit()
 
+    def set_avatar_hash(self, pk: int, h: str | None = None) -> None:
+        with self.session() as session:
+            session.execute(
+                update(GatewayUser).where(GatewayUser.id == pk).values(avatar_hash=h)
+            )
+            session.commit()
+
 
 class AvatarStore(EngineMixin):
     def get_by_url(self, url: URL | str) -> Optional[Avatar]:

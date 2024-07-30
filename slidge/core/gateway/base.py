@@ -578,6 +578,8 @@ class BaseGateway(
             session.send_gateway_status(status, show="chat")
         if session.user.preferences.get("sync_avatar", False):
             session.create_task(self.fetch_user_avatar(session))
+        else:
+            self.xmpp.store.users.set_avatar_hash(session.user_pk, None)
 
     async def fetch_user_avatar(self, session: BaseSession):
         try:
@@ -586,8 +588,8 @@ class BaseGateway(
                 self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
                 ifrom=self.boundjid.bare,
             )
-        except IqError as e:
-            session.log.debug("Failed to retrieve avatar: %r", e)
+        except IqError:
+            self.xmpp.store.users.set_avatar_hash(session.user_pk, None)
             return
         await self.__dispatcher.on_avatar_metadata_info(
             session, iq["pubsub"]["items"]["item"]["avatar_metadata"]["info"]

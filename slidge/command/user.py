@@ -260,6 +260,8 @@ class Preferences(Command):
         self.xmpp.store.users.update(user)
         if form_values["sync_avatar"]:
             await self.xmpp.fetch_user_avatar(session)
+        else:
+            session.xmpp.store.users.set_avatar_hash(session.user_pk, None)
         return "Your preferences have been updated."
 
 
