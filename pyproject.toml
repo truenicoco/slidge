@@ -26,9 +26,9 @@ ConfigArgParse = "^1.5.3"
 pickle-secure = "^0.99.9"
 python-magic = "^0.4.27"
 slixmpp = "^1.8.5"
-blurhash-python = "^1.2.1"
 sqlalchemy = "^2.0.29"
 alembic = "^1.13.1"
+thumbhash = "^0.1.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -65,7 +65,7 @@ exclude = ["tests", "slidge.slixfix.*"]
 
 [[tool.mypy.overrides]]
 module = [
-    "blurhash",
+    "thumbhash",
     "configargparse",
     "qrcode",
 ]

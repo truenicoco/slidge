@@ -101,8 +101,8 @@ class Base(Shakespeare, AvatarFixtureMixin):
                     <thumbnail xmlns="urn:xmpp:thumbs:1"
                                width="5"
                                height="5"
-                               media-type="image/blurhash"
-                               uri="data:image/blurhash,e00000fQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQfQ" />
+                               media-type="image/thumbhash"
+                               uri="data:image/thumbhash,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
                   </file>
                 </media-sharing>
               </reference>
@@ -119,6 +119,11 @@ class Base(Shakespeare, AvatarFixtureMixin):
                   <date>{when}</date>
                   <hash xmlns="urn:xmpp:hashes:2"
                         algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
+                  <thumbnail xmlns="urn:xmpp:thumbs:1"
+                             width="5"
+                             height="5"
+                             media-type="image/thumbhash"
+                             uri="data:image/thumbhash,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
                 </file>
               </file-sharing>
               <x xmlns="jabber:x:oob">
@@ -178,7 +183,7 @@ class TestAttachmentUpload(Base):
             ),
         )
 
-    def test_blurhash(self):
+    def test_thumbhash(self):
         self.__test_basic(
             LegacyAttachment(path=self.avatar_path, content_type="image/png"),
             dict(

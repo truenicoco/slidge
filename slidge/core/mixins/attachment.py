@@ -1,3 +1,4 @@
+import base64
 import functools
 import logging
 import os
@@ -7,6 +8,7 @@ import stat
 import tempfile
 import warnings
 from datetime import datetime
+from itertools import chain
 from mimetypes import guess_type
 from pathlib import Path
 from typing import IO, AsyncIterator, Collection, Optional, Sequence, Union
@@ -14,15 +16,15 @@ from urllib.parse import quote as urlquote
 from uuid import uuid4
 from xml.etree import ElementTree as ET
 
-import blurhash
-from PIL import Image
+import thumbhash
+from PIL import Image, ImageOps
 from slixmpp import JID, Message
 from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0363 import FileUploadError
-from slixmpp.plugins.xep_0385.stanza import Sims
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
 from ...db.avatar import avatar_cache
+from ...slixfix.xep_0264.stanza import Thumbnail
 from ...util.types import (
     LegacyAttachment,
     LegacyMessageType,
@@ -223,37 +225,44 @@ class AttachmentMixin(MessageMaker):
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
         file_name: Optional[str] = None,
-    ):
+    ) -> Thumbnail | None:
         cache = self.__store.get_sims(uploaded_url)
         if cache:
-            msg.append(Sims(xml=ET.fromstring(cache)))
-            return
+            ref = self.xmpp["xep_0372"].stanza.Reference(xml=ET.fromstring(cache))
+            msg.append(ref)
+            if ref["sims"]["file"].get_plugin("thumbnail", check=True):
+                return ref["sims"]["file"]["thumbnail"]
+            else:
+                return None
 
         if not path:
-            return
+            return None
 
-        sims = self.xmpp["xep_0385"].get_sims(
+        ref = self.xmpp["xep_0385"].get_sims(
             path, [uploaded_url], content_type, caption
         )
         if file_name:
-            sims["sims"]["file"]["name"] = file_name
+            ref["sims"]["file"]["name"] = file_name
+        thumbnail = None
         if content_type is not None and content_type.startswith("image"):
             try:
                 h, x, y = await self.xmpp.loop.run_in_executor(
-                    avatar_cache._thread_pool, get_blurhash, path
+                    avatar_cache._thread_pool, get_thumbhash, path
                 )
             except Exception as e:
-                log.debug("Could not generate a blurhash", exc_info=e)
+                log.debug("Could not generate a thumbhash", exc_info=e)
             else:
-                thumbnail = sims["sims"]["file"]["thumbnail"]
+                thumbnail = ref["sims"]["file"]["thumbnail"]
                 thumbnail["width"] = x
                 thumbnail["height"] = y
-                thumbnail["media-type"] = "image/blurhash"
-                thumbnail["uri"] = "data:image/blurhash," + urlquote(h)
+                thumbnail["media-type"] = "image/thumbhash"
+                thumbnail["uri"] = "data:image/thumbhash," + urlquote(h)
 
-        self.__store.set_sims(uploaded_url, str(sims))
+        self.__store.set_sims(uploaded_url, str(ref))
 
-        msg.append(sims)
+        msg.append(ref)
+
+        return thumbnail
 
     def __set_sfs(
         self,
@@ -263,6 +272,7 @@ class AttachmentMixin(MessageMaker):
         content_type: Optional[str] = None,
         caption: Optional[str] = None,
         file_name: Optional[str] = None,
+        thumbnail: Optional[Thumbnail] = None,
     ):
         cache = self.__store.get_sfs(uploaded_url)
         if cache:
@@ -275,6 +285,8 @@ class AttachmentMixin(MessageMaker):
         sfs = self.xmpp["xep_0447"].get_sfs(path, [uploaded_url], content_type, caption)
         if file_name:
             sfs["file"]["name"] = file_name
+        if thumbnail is not None:
+            sfs["file"].append(thumbnail)
         self.__store.set_sfs(uploaded_url, str(sfs))
 
         msg.append(sfs)
@@ -371,10 +383,12 @@ class AttachmentMixin(MessageMaker):
             self._set_msg_id(msg, legacy_msg_id)
             return None, [self._send(msg, **kwargs)]
 
-        await self.__set_sims(
+        thumbnail = await self.__set_sims(
             msg, new_url, local_path, content_type, caption, file_name
         )
-        self.__set_sfs(msg, new_url, local_path, content_type, caption, file_name)
+        self.__set_sfs(
+            msg, new_url, local_path, content_type, caption, file_name, thumbnail
+        )
         if is_temp and isinstance(local_path, Path):
             local_path.unlink()
             local_path.parent.rmdir()
@@ -493,32 +507,18 @@ class AttachmentMixin(MessageMaker):
         )
 
 
-def get_blurhash(path: Path, n=9) -> tuple[str, int, int]:
-    img = Image.open(path)
-    width, height = img.size
-    n = min(width, height, n)
-    if width == height:
-        x = y = n
-    elif width > height:
-        x = n
-        y = round(n * height / width)
-    else:
-        x = round(n * width / height)
-        y = n
-    # There are 2 blurhash-python packages:
-    # https://github.com/woltapp/blurhash-python
-    # https://github.com/halcy/blurhash-python
-    # With this hack we're compatible with both, which is useful for packaging
-    # without using pyproject.toml, as most distro do
-    try:
-        hash_ = blurhash.encode(img, x, y)
-    except TypeError:
-        # We are using halcy's blurhash which expects
-        # the 1st argument to be a 3-dimensional array
-        import numpy  # type:ignore
-
-        hash_ = blurhash.encode(numpy.array(img.convert("RGB")), x, y)
-    return hash_, width, height
+def get_thumbhash(path: Path) -> tuple[str, int, int]:
+    with path.open("rb") as fp:
+        img = Image.open(fp)
+        width, height = img.size
+        img = img.convert("RGBA")
+        if width > 100 or height > 100:
+            img.thumbnail((100, 100))
+    img = ImageOps.exif_transpose(img)
+    rgba_2d = list(img.getdata())
+    rgba = list(chain(*rgba_2d))
+    ints = thumbhash.rgba_to_thumb_hash(img.width, img.height, rgba)
+    return base64.b64encode(bytes(ints)).decode(), width, height
 
 
 log = logging.getLogger(__name__)
