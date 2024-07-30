@@ -31,7 +31,6 @@ class Ignore(BaseException):
 class SessionDispatcher:
     def __init__(self, xmpp: "BaseGateway"):
         self.xmpp = xmpp
-        self.http = xmpp.http
 
         xmpp.register_handler(
             CoroutineCallback(
@@ -97,6 +96,10 @@ class SessionDispatcher:
             xmpp.add_event_handler(
                 event, _exceptions_to_xmpp_errors(getattr(self, "on_" + event))
             )
+
+    @property
+    def http(self):
+        return self.xmpp.http
 
     async def __get_session(
         self, stanza: Union[Message, Presence, Iq], timeout: Optional[int] = 10

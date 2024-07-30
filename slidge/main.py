@@ -161,7 +161,6 @@ def main():
     store = SlidgeStore(get_engine(config.DB_URL))
     BaseGateway.store = store
     gateway: BaseGateway = BaseGateway.get_unique_subclass()()
-    avatar_cache.http = gateway.http
     avatar_cache.store = gateway.store.avatars
     avatar_cache.set_dir(config.HOME_DIR / "slidge_avatars_v3")
 

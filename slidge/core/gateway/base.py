@@ -270,6 +270,8 @@ class BaseGateway(
     Common example: ``int``.
     """
 
+    http: aiohttp.ClientSession
+
     def __init__(self):
         self.log = log
         self.datetime_started = datetime.now()
@@ -303,7 +305,7 @@ class BaseGateway(
             fix_error_ns=True,
         )
         self.loop.set_exception_handler(self.__exception_handler)
-        self.http: aiohttp.ClientSession = aiohttp.ClientSession()
+        self.loop.create_task(self.__set_http())
         self.has_crashed: bool = False
         self.use_origin_id = False
 
@@ -369,6 +371,12 @@ class BaseGateway(
         self.__mam_cleanup_task = self.loop.create_task(self.__mam_cleanup())
 
         MessageMixin.__init__(self)  # ComponentXMPP does not call super().__init__()
+
+    async def __set_http(self):
+        self.http = aiohttp.ClientSession()
+        if getattr(self, "_test_mode", False):
+            return
+        avatar_cache.http = self.http
 
     async def __mam_cleanup(self):
         if not config.MAM_MAX_DAYS:

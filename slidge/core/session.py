@@ -73,8 +73,6 @@ class BaseSession(
     session-specific.
     """
 
-    http: aiohttp.ClientSession
-
     MESSAGE_IDS_ARE_THREAD_IDS = False
     """
     Set this to True if the legacy service uses message IDs as thread IDs,
@@ -106,8 +104,6 @@ class BaseSession(
             self
         )
 
-        self.http = self.xmpp.http
-
         self.thread_creation_lock = asyncio.Lock()
 
         self.__cached_presence: Optional[CachedPresence] = None
@@ -117,6 +113,10 @@ class BaseSession(
     @property
     def user(self) -> GatewayUser:
         return self.xmpp.store.users.get(self.user_jid)  # type:ignore
+
+    @property
+    def http(self) -> aiohttp.ClientSession:
+        return self.xmpp.http
 
     def __remove_task(self, fut):
         self.log.debug("Removing fut %s", fut)

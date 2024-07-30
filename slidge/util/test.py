@@ -224,6 +224,7 @@ class SlidgeTest(SlixTestPlus):
         )
         Base.metadata.create_all(engine)
         BaseGateway.store = SlidgeStore(engine)
+        BaseGateway._test_mode = True
         try:
             self.xmpp = BaseGateway.get_self_or_unique_subclass()()
         except Exception:
