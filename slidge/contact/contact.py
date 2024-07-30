@@ -17,7 +17,7 @@ from ..core.mixins.disco import ContactAccountDiscoMixin
 from ..core.mixins.recipient import ReactionRecipientMixin, ThreadRecipientMixin
 from ..db.models import Contact
 from ..util import SubclassableOnce
-from ..util.types import LegacyUserIdType, MessageOrPresenceTypeVar
+from ..util.types import ClientType, LegacyUserIdType, MessageOrPresenceTypeVar
 
 if TYPE_CHECKING:
     from ..core.session import BaseSession
@@ -128,6 +128,7 @@ class LegacyContact(
         self._caps_ver: str | None = None
         self._vcard_fetched = False
         self._vcard: str | None = None
+        self._client_type: ClientType = "pc"
 
     async def get_vcard(self, fetch=True) -> VCard4 | None:
         if fetch and not self._vcard_fetched:
@@ -186,6 +187,32 @@ class LegacyContact(
     @property
     def user_jid(self):
         return self.session.user_jid
+
+    @property  # type:ignore
+    def DISCO_TYPE(self) -> ClientType:
+        return self._client_type
+
+    @DISCO_TYPE.setter
+    def DISCO_TYPE(self, value: ClientType) -> None:
+        self.client_type = value
+
+    @property
+    def client_type(self) -> ClientType:
+        """
+        The client type of this contact, cf https://xmpp.org/registrar/disco-categories.html#client
+
+        Default is "pc".
+        """
+        return self._client_type
+
+    @client_type.setter
+    def client_type(self, value: ClientType) -> None:
+        self._client_type = value
+        if self._updating_info:
+            return
+        self.__ensure_pk()
+        assert self.contact_pk is not None
+        self.xmpp.store.contacts.set_client_type(self.contact_pk, value)
 
     def _set_logger_name(self):
         self.log.name = f"{self.user_jid.bare}:contact:{self}"
@@ -615,6 +642,7 @@ class LegacyContact(
         contact._avatar_pk = stored.avatar_id
         contact._vcard = stored.vcard
         contact._vcard_fetched = stored.vcard_fetched
+        contact._client_type = stored.client_type
         return contact
 
 

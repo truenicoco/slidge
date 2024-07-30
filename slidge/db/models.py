@@ -9,7 +9,7 @@ from slixmpp.types import MucAffiliation, MucRole
 from sqlalchemy import ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..util.types import MucType
+from ..util.types import ClientType, MucType
 from .meta import Base, JSONSerializable, JSONSerializableTypes
 
 
@@ -169,6 +169,8 @@ class Contact(Base):
     participants: Mapped[list["Participant"]] = relationship(back_populates="contact")
 
     avatar_legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
+
+    client_type: Mapped[ClientType] = mapped_column(nullable=False, default="pc")
 
 
 class ContactSent(Base):

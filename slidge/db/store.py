@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, attributes
 from sqlalchemy.sql.functions import count
 
 from ..util.archive_msg import HistoryMessage
-from ..util.types import URL, CachedPresence
+from ..util.types import URL, CachedPresence, ClientType
 from ..util.types import Hat as HatTuple
 from ..util.types import MamMetadata, MucAffiliation, MucRole
 from .meta import Base
@@ -383,6 +383,7 @@ class ContactStore(UpdatedMixin):
             row.caps_ver = contact._caps_ver
             row.vcard = contact._vcard
             row.vcard_fetched = contact._vcard_fetched
+            row.client_type = contact.client_type
             session.add(row)
             if commit:
                 session.commit()
@@ -441,6 +442,15 @@ class ContactStore(UpdatedMixin):
     def delete(self, contact_pk: int) -> None:
         with self.session() as session:
             session.execute(delete(Contact).where(Contact.id == contact_pk))
+            session.commit()
+
+    def set_client_type(self, contact_pk: int, value: ClientType):
+        with self.session() as session:
+            session.execute(
+                update(Contact)
+                .where(Contact.id == contact_pk)
+                .values(client_type=value)
+            )
             session.commit()
 
 

@@ -75,6 +75,10 @@ FieldType = Literal[
 ]
 MucAffiliation = Literal["owner", "admin", "member", "outcast", "none"]
 MucRole = Literal["visitor", "participant", "moderator", "none"]
+# https://xmpp.org/registrar/disco-categories.html#client
+ClientType = Literal[
+    "bot", "console", "game", "handheld", "pc", "phone", "sms", "tablet", "web"
+]
 
 
 @dataclass

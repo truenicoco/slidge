@@ -215,7 +215,13 @@ class SlidgeTest(SlixTestPlus):
                 self.plugin, LegacyBookmarks, base_ok=True
             )
 
-        engine = self.db_engine = create_engine("sqlite+pysqlite:///:memory:")
+        from sqlalchemy import log as sqlalchemy_log
+
+        sqlalchemy_log._add_default_handler = lambda x: None
+
+        engine = self.db_engine = create_engine(
+            "sqlite+pysqlite:///:memory:", echo=True
+        )
         Base.metadata.create_all(engine)
         BaseGateway.store = SlidgeStore(engine)
         try:
