@@ -36,6 +36,8 @@ class Gateway(BaseGateway):
     GROUPS = True
     MARK_ALL_MESSAGES = True
 
+    LEGACY_CONTACT_ID_TYPE = int
+
     async def validate(
         self, user_jid: JID, registration_form: dict[str, Optional[str]]
     ):
