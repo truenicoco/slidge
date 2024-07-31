@@ -214,7 +214,7 @@ class ContentMessageMixin(AttachmentMixin):
         :param archive_only: (only in groups) Do not send this message to user,
             but store it in the archive. Meant to be used during ``MUC.backfill()``
         """
-        if carbon:
+        if carbon and not hasattr(self, "muc"):
             if not correction and self.xmpp.store.sent.was_sent_by_user(
                 self.session.user_pk, str(legacy_msg_id)
             ):
@@ -223,6 +223,11 @@ class ContentMessageMixin(AttachmentMixin):
                     legacy_msg_id,
                 )
                 return
+            if hasattr(self, "muc") and not self.is_user:  # type:ignore
+                log.warning(
+                    "send_text() called with carbon=True on a participant who is not the user",
+                    legacy_msg_id,
+                )
             self.xmpp.store.sent.set_message(
                 self.session.user_pk,
                 str(legacy_msg_id),
