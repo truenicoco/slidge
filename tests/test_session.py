@@ -286,3 +286,24 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </message>
             """
         )
+
+    def test_mark_all_messages(self):
+        self.xmpp.MARK_ALL_MESSAGES = True
+        self.juliet.send_text("whatever", "msg_00")
+        self.juliet.send_text("whatever", "msg_01")
+        self.juliet.send_text("whatever", "msg_02")
+        with unittest.mock.patch(
+            "slidge.core.session.BaseSession.on_displayed"
+        ) as on_displayed:
+            self.recv(  # language=XML
+                f"""
+            <message from="romeo@montague.lit"
+                     to="{self.juliet.jid.bare}">
+              <displayed xmlns='urn:xmpp:chat-markers:0'
+                         id='msg_03' />
+            </message>
+            """
+            )
+        assert on_displayed.await_count == 3
+        for i in range(3):
+            assert on_displayed.call_args_list[i][0][1] == f"msg_0{i}"
