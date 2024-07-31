@@ -133,6 +133,67 @@ class SessionDispatcher:
         legacy_thread = await _xmpp_to_legacy_thread(session, msg, e)
         return session, e, legacy_thread
 
+    async def __get_reply(
+        self, msg: Message, session: BaseSession, entity: Recipient
+    ) -> tuple[str, str | int | None, Recipient | None, str | None]:
+        try:
+            reply_to_msg_id = self._xmpp_msg_id_to_legacy(session, msg["reply"]["id"])
+        except XMPPError:
+            session.log.debug(
+                "Could not determine reply-to legacy msg ID, sending quote instead."
+            )
+            return msg["body"], None, None, None
+
+        reply_to_jid = JID(msg["reply"]["to"])
+        reply_to = None
+        if msg["type"] == "chat":
+            if reply_to_jid.bare != session.user_jid.bare:
+                try:
+                    reply_to = await session.contacts.by_jid(reply_to_jid)
+                except XMPPError:
+                    pass
+        elif msg["type"] == "groupchat":
+            nick = reply_to_jid.resource
+            try:
+                muc = await session.bookmarks.by_jid(reply_to_jid)
+            except XMPPError:
+                pass
+            else:
+                if nick != muc.user_nick:
+                    reply_to = await muc.get_participant(
+                        reply_to_jid.resource, store=False
+                    )
+
+        if msg.get_plugin("fallback", check=True) and (
+            isinstance(entity, LegacyMUC) or entity.REPLIES
+        ):
+            text = msg["fallback"].get_stripped_body(self.xmpp["xep_0461"].namespace)
+            try:
+                reply_fallback = msg["reply"].get_fallback_body()
+            except AttributeError:
+                reply_fallback = None
+        else:
+            text = msg["body"]
+            reply_fallback = None
+
+        return text, reply_to_msg_id, reply_to, reply_fallback
+
+    async def __send_url(
+        self, url: str, session: BaseSession, entity: Recipient, **kwargs
+    ) -> int | str | None:
+        async with self.http.get(url) as response:
+            if response.status >= 400:
+                session.log.warning(
+                    (
+                        "OOB url cannot be downloaded: %s, sending the URL as text"
+                        " instead."
+                    ),
+                    response,
+                )
+                return await session.on_text(entity, url, **kwargs)
+
+            return await session.on_file(entity, url, http_response=response, **kwargs)
+
     async def on_legacy_message(self, msg: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -167,90 +228,38 @@ class SessionDispatcher:
         else:
             url = None
 
-        text = msg["body"]
-
-        reply_to = None
-        reply_fallback = None
         if msg.get_plugin("reply", check=True):
-            try:
-                reply_to_msg_xmpp_id = self._xmpp_msg_id_to_legacy(
-                    session, msg["reply"]["id"]
-                )
-            except XMPPError:
-                session.log.debug(
-                    "Could not determine reply-to legacy msg ID, sending quote instead."
-                )
-                text = msg["body"]
-                reply_fallback = None
-                reply_to_msg_xmpp_id = None
-            else:
-                reply_to_jid = JID(msg["reply"]["to"])
-                if msg["type"] == "chat":
-                    if reply_to_jid.bare != session.user_jid.bare:
-                        try:
-                            reply_to = await session.contacts.by_jid(reply_to_jid)
-                        except XMPPError:
-                            pass
-                elif msg["type"] == "groupchat":
-                    nick = reply_to_jid.resource
-                    try:
-                        muc = await session.bookmarks.by_jid(reply_to_jid)
-                    except XMPPError:
-                        pass
-                    else:
-                        if nick != muc.user_nick:
-                            reply_to = await muc.get_participant(
-                                reply_to_jid.resource, store=False
-                            )
-                if msg.get_plugin("fallback", check=True) and (
-                    isinstance(e, LegacyMUC) or e.REPLIES
-                ):
-                    text = msg["fallback"].get_stripped_body(
-                        self.xmpp["xep_0461"].namespace
-                    )
-                    try:
-                        reply_fallback = msg["reply"].get_fallback_body()
-                    except AttributeError:
-                        pass
+            text, reply_to_msg_id, reply_to, reply_fallback = await self.__get_reply(
+                msg, session, e
+            )
         else:
-            reply_to_msg_xmpp_id = None
+            text = msg["body"]
+            reply_to_msg_id = None
             reply_to = None
+            reply_fallback = None
 
         if msg.get_plugin("link_previews", check=True):
             pass
 
         kwargs = dict(
-            reply_to_msg_id=reply_to_msg_xmpp_id,
+            reply_to_msg_id=reply_to_msg_id,
             reply_to_fallback_text=reply_fallback,
             reply_to=reply_to,
             thread=thread,
         )
 
         if not url and isinstance(e, LegacyMUC):
-            kwargs["mentions"] = await e.parse_mentions(text)
+            kwargs["mentions"] = await e.parse_mentions(text)  # type: ignore
 
         if previews := msg["link_previews"]:
-            kwargs["link_previews"] = [
+            kwargs["link_previews"] = [  # type: ignore
                 dict_to_named_tuple(p, LinkPreview) for p in previews
             ]
 
         if url:
-            async with self.http.get(url) as response:
-                if response.status >= 400:
-                    session.log.warning(
-                        (
-                            "OOB url cannot be downloaded: %s, sending the URL as text"
-                            " instead."
-                        ),
-                        response,
-                    )
-                    legacy_msg_id = await session.on_text(e, url, **kwargs)
-                else:
-                    legacy_msg_id = await session.on_file(
-                        e, url, http_response=response, **kwargs
-                    )
+            legacy_msg_id = await self.__send_url(url, session, entity, **kwargs)
         elif text:
-            legacy_msg_id = await session.on_text(e, text, **kwargs)
+            legacy_msg_id = await session.on_text(e, text, **kwargs)  # type: ignore
         else:
             log.debug("Ignoring %s", msg.get_id())
             return
@@ -259,16 +268,18 @@ class SessionDispatcher:
             await e.echo(msg, legacy_msg_id)
             if legacy_msg_id is not None:
                 self.xmpp.store.sent.set_group_message(
-                    session.user_pk, legacy_msg_id, msg.get_id()
+                    session.user_pk, str(legacy_msg_id), msg.get_id()
                 )
         else:
             self.__ack(msg)
             if legacy_msg_id is not None:
                 self.xmpp.store.sent.set_message(
-                    session.user_pk, legacy_msg_id, msg.get_id()
+                    session.user_pk, str(legacy_msg_id), msg.get_id()
                 )
                 if session.MESSAGE_IDS_ARE_THREAD_IDS and (t := msg["thread"]):
-                    self.xmpp.store.sent.set_thread(session.user_pk, t, legacy_msg_id)
+                    self.xmpp.store.sent.set_thread(
+                        session.user_pk, t, str(legacy_msg_id)
+                    )
 
     async def on_groupchat_message(self, msg: Message):
         await self.on_legacy_message(msg)
