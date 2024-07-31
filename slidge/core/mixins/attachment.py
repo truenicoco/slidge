@@ -9,7 +9,7 @@ import tempfile
 import warnings
 from datetime import datetime
 from itertools import chain
-from mimetypes import guess_type
+from mimetypes import guess_extension, guess_type
 from pathlib import Path
 from typing import IO, AsyncIterator, Collection, Optional, Sequence, Union
 from urllib.parse import quote as urlquote
@@ -171,7 +171,12 @@ class AttachmentMixin(MessageMaker):
             )
 
         if file_path is None:
-            file_name = str(uuid4()) if file_name is None else file_name
+            if file_name is None:
+                file_name = str(uuid4())
+                if content_type is not None:
+                    ext = guess_extension(content_type, strict=False)  # type:ignore
+                    if ext is not None:
+                        file_name += ext
             temp_dir = Path(tempfile.mkdtemp())
             file_path = temp_dir / file_name
             if file_url:
