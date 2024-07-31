@@ -282,8 +282,9 @@ class LegacyContact(
             self._privileged_send(stanza)
             return stanza  # type:ignore
 
-        if not self._updating_info and isinstance(stanza, Presence):
-            self.__propagate_to_participants(stanza)
+        if isinstance(stanza, Presence):
+            if not self._updating_info:
+                self.__propagate_to_participants(stanza)
             if (
                 not self.is_friend
                 and stanza["type"] not in self._NON_FRIEND_PRESENCES_FILTER
