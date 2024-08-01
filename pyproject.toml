@@ -29,6 +29,7 @@ slixmpp = "^1.8.5"
 sqlalchemy = "^2.0.29"
 alembic = "^1.13.1"
 thumbhash = "^0.1.2"
+defusedxml = "^0.7.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

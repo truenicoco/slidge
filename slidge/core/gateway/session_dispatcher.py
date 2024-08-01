@@ -1,6 +1,7 @@
 import logging
 from copy import copy
 from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
+from xml.etree import ElementTree
 
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import IqError, XMPPError
@@ -194,6 +195,16 @@ class SessionDispatcher:
 
             return await session.on_file(entity, url, http_response=response, **kwargs)
 
+    async def __send_bob(
+        self, from_: JID, cid: str, session: BaseSession, entity: Recipient, **kwargs
+    ) -> int | str | None:
+        sticker = self.xmpp.store.bob.get_sticker(cid)
+        if sticker is None:
+            await self.xmpp.plugin["xep_0231"].get_bob(from_, cid)
+            sticker = self.xmpp.store.bob.get_sticker(cid)
+        assert sticker is not None
+        return await session.on_sticker(entity, sticker, **kwargs)
+
     async def on_legacy_message(self, msg: Message):
         """
         Meant to be called from :class:`BaseGateway` only.
@@ -217,6 +228,19 @@ class SessionDispatcher:
             # ignore message retraction fallback.
             # the retraction itself is handled by self.on_retract
             return
+        cid = None
+        if msg.get_plugin("html", check=True) is not None:
+            body = ElementTree.fromstring("<body>" + msg["html"].get_body() + "</body>")
+            p = body.findall("p")
+            if p is not None and len(p) == 1:
+                if p[0].text is None or not p[0].text.strip():
+                    images = p[0].findall("img")
+                    if len(images) == 1:
+                        # no text, single img ⇒ this is a sticker
+                        # other cases should be interpreted as "custom emojis" in text
+                        src = images[0].get("src")
+                        if src is not None and src.startswith("cid:"):
+                            cid = src.removeprefix("cid:")
 
         session, entity, thread = await self.__get_session_entity_thread(msg)
 
@@ -258,6 +282,10 @@ class SessionDispatcher:
 
         if url:
             legacy_msg_id = await self.__send_url(url, session, entity, **kwargs)
+        elif cid:
+            legacy_msg_id = await self.__send_bob(
+                msg.get_from(), cid, session, entity, **kwargs
+            )
         elif text:
             legacy_msg_id = await session.on_text(e, text, **kwargs)  # type: ignore
         else:

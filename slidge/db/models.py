@@ -386,3 +386,16 @@ class Participant(Base):
     )
 
     extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(default=None)
+
+
+class Bob(Base):
+    __tablename__ = "bob"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    file_name: Mapped[str] = mapped_column(nullable=False)
+
+    sha_1: Mapped[str] = mapped_column(nullable=False, unique=True)
+    sha_256: Mapped[str] = mapped_column(nullable=False, unique=True)
+    sha_512: Mapped[str] = mapped_column(nullable=False, unique=True)
+
+    content_type: Mapped[Optional[str]] = mapped_column(nullable=False)

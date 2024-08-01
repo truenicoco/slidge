@@ -307,3 +307,86 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         assert on_displayed.await_count == 3
         for i in range(3):
             assert on_displayed.call_args_list[i][0][1] == f"msg_0{i}"
+
+    def test_movim_sticker(self):
+        sticker_stanza = f"""
+            <message from="romeo@montague.lit/movim"
+                     to="{self.juliet.jid.bare}">
+              <body>Un autocollant a été envoyé via Movim</body>
+              <html xmlns="http://jabber.org/protocol/xhtml-im">
+                <body xmlns="http://www.w3.org/1999/xhtml">
+                  <p>
+                    <img src="cid:sha1+4b97ce7f0f06a0e05999f3c719cd5b4f3da992a7@bob.xmpp.org"
+                         alt="Sticker" />
+                  </p>
+                </body>
+              </html>
+            </message>
+            """
+        self.recv(sticker_stanza)
+        self.send(  # language=XML
+            """
+            <iq id="2"
+                type="get"
+                to="romeo@montague.lit/movim">
+              <data xmlns="urn:xmpp:bob"
+                    cid="sha1+4b97ce7f0f06a0e05999f3c719cd5b4f3da992a7@bob.xmpp.org" />
+            </iq>
+            """
+        )
+        with unittest.mock.patch(
+            "slidge.core.session.BaseSession.on_sticker"
+        ) as on_sticker:
+            self.recv(  # language=XML
+                f"""
+            <iq from='romeo@montague.lit/movim'
+                id='2'
+                to='{self.xmpp.boundjid.bare}'
+                type='result'>
+              <data xmlns='urn:xmpp:bob'
+                    cid='sha-1+4b97ce7f0f06a0e05999f3c719cd5b4f3da992a7@bob.xmpp.org'
+                    max-age='86400'
+                    type='image/png'>iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9YGARc5KB0XV+IAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAF1JREFUGNO9zL0NglAAxPEfdLTs4BZM4DIO4C7OwQg2JoQ9LE1exdlYvBBeZ7jqch9//q1uH4TLzw4d6+ErXMMcXuHWxId3KOETnnXXV6MJpcq2MLaI97CER3N0vr4MkhoXe0rZigAAAABJRU5ErkJggg==</data>
+            </iq>
+            """
+            )
+            on_sticker.assert_awaited_once()
+            args, kwargs = on_sticker.call_args
+            chat, sticker = args
+            assert chat.legacy_id == self.juliet.legacy_id
+            assert sticker.hashes["sha_1"] == "4b97ce7f0f06a0e05999f3c719cd5b4f3da992a7"
+            assert sticker.path.exists()
+            assert sticker.content_type == "image/png"
+        # this time slidge must have cached the BoBd ata, so no bob-fetching IQ
+        with unittest.mock.patch(
+            "slidge.core.session.BaseSession.on_sticker"
+        ) as on_sticker:
+            self.recv(sticker_stanza)
+            on_sticker.assert_awaited_once()
+            args, kwargs = on_sticker.call_args
+            chat, sticker = args
+            assert chat.legacy_id == self.juliet.legacy_id
+            assert sticker.hashes["sha_1"] == "4b97ce7f0f06a0e05999f3c719cd5b4f3da992a7"
+            assert sticker.path.exists()
+        assert self.next_sent() is None
+
+    def test_movim_custom_emoji(self):
+        with unittest.mock.patch("slidge.core.session.BaseSession.on_text") as on_text:
+            self.recv(  # language=XML
+                f"""
+            <message from="romeo@montague.lit/movim"
+                     to="{self.juliet.jid.bare}">
+              <body>fdsf :amogus:</body>
+              <html xmlns="http://jabber.org/protocol/xhtml-im">
+                <body xmlns="http://www.w3.org/1999/xhtml">
+                  <p>fdsf
+                  <img src="cid:sha-256+583ca9a99f6cd8454c24d81a43d913a98dd80f282ce5c8f0f8ede418990134af@bob.xmpp.org"
+                       alt=":amogus:" /></p>
+                </body>
+              </html>
+            </message>
+            """
+            )
+        on_text.assert_awaited_once()
+        args, kwargs = on_text.call_args
+        assert args[1] == "fdsf :amogus:"

@@ -17,8 +17,12 @@ class MDSMixin:
             self.xmpp["xep_0356"].granted_privileges[domain].iq[
                 "http://jabber.org/protocol/pubsub#owner"
             ] = IqPermission.BOTH
-        patch = unittest.mock.patch("uuid.uuid4", return_value="uuid")
-        patch.start()
+        self.patch_uuid = unittest.mock.patch("uuid.uuid4", return_value="uuid")
+        self.patch_uuid.start()
+
+    def tearDown(self):
+        super().tearDown()
+        self.patch_uuid.stop()
 
 
 class TestMDS(MDSMixin, BaseMUC):

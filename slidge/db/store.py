@@ -1,27 +1,33 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from mimetypes import guess_extension
 from typing import TYPE_CHECKING, Collection, Iterator, Optional, Type
 
 from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import XMPPError
+from slixmpp.plugins.xep_0231.stanza import BitsOfBinary
 from sqlalchemy import Engine, delete, select, update
 from sqlalchemy.orm import Session, attributes
 from sqlalchemy.sql.functions import count
 
+from ..core import config
 from ..util.archive_msg import HistoryMessage
 from ..util.types import URL, CachedPresence, ClientType
 from ..util.types import Hat as HatTuple
-from ..util.types import MamMetadata, MucAffiliation, MucRole
+from ..util.types import MamMetadata, MucAffiliation, MucRole, Sticker
 from .meta import Base
 from .models import (
     ArchivedMessage,
     ArchivedMessageSource,
     Attachment,
     Avatar,
+    Bob,
     Contact,
     ContactSent,
     GatewayUser,
@@ -87,6 +93,7 @@ class SlidgeStore(EngineMixin):
         self.rooms = RoomStore(engine)
         self.sent = SentStore(engine)
         self.participants = ParticipantStore(engine)
+        self.bob = BobStore(engine)
 
 
 class UserStore(EngineMixin):
@@ -1118,6 +1125,116 @@ class ParticipantStore(EngineMixin):
             return session.query(
                 count(Participant.id).filter(Participant.room_id == room_pk)
             ).scalar()
+
+
+class BobStore(EngineMixin):
+    _ATTR_MAP = {
+        "sha-1": "sha_1",
+        "sha1": "sha_1",
+        "sha-256": "sha_256",
+        "sha256": "sha_256",
+        "sha-512": "sha_512",
+        "sha512": "sha_512",
+    }
+
+    _ALG_MAP = {
+        "sha_1": hashlib.sha1,
+        "sha_256": hashlib.sha256,
+        "sha_512": hashlib.sha512,
+    }
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.root_dir = config.HOME_DIR / "slidge_stickers"
+        self.root_dir.mkdir(exist_ok=True)
+
+    @staticmethod
+    def __split_cid(cid: str) -> list[str]:
+        return cid.removesuffix("@bob.xmpp.org").split("+")
+
+    def __get_condition(self, cid: str):
+        alg_name, digest = self.__split_cid(cid)
+        attr = self._ATTR_MAP.get(alg_name)
+        if attr is None:
+            log.warning("Unknown hash algo: %s", alg_name)
+            return None
+        return getattr(Bob, attr) == digest
+
+    def get(self, cid: str) -> Bob | None:
+        with self.session() as session:
+            try:
+                return session.query(Bob).filter(self.__get_condition(cid)).scalar()
+            except ValueError:
+                log.warning("Cannot get Bob with CID: %s", cid)
+                return None
+
+    def get_sticker(self, cid: str) -> Sticker | None:
+        bob = self.get(cid)
+        if bob is None:
+            return None
+        return Sticker(
+            self.root_dir / bob.file_name,
+            bob.content_type,
+            {h: getattr(bob, h) for h in self._ALG_MAP},
+        )
+
+    def get_bob(self, _jid, _node, _ifrom, cid: str) -> BitsOfBinary | None:
+        stored = self.get(cid)
+        if stored is None:
+            return None
+        bob = BitsOfBinary()
+        bob["data"] = (self.root_dir / stored.file_name).read_bytes()
+        if stored.content_type is not None:
+            bob["type"] = stored.content_type
+        bob["cid"] = cid
+        return bob
+
+    def del_bob(self, _jid, _node, _ifrom, cid: str) -> None:
+        with self.session() as orm:
+            try:
+                file_name = orm.scalar(
+                    delete(Bob)
+                    .where(self.__get_condition(cid))
+                    .returning(Bob.file_name)
+                )
+            except ValueError:
+                log.warning("Cannot delete Bob with CID: %s", cid)
+                return None
+            if file_name is None:
+                log.warning("No BoB with CID: %s", cid)
+                return None
+            (self.root_dir / file_name).unlink()
+            orm.commit()
+
+    def set_bob(self, _jid, _node, _ifrom, bob: BitsOfBinary) -> None:
+        cid = bob["cid"]
+        try:
+            alg_name, digest = self.__split_cid(cid)
+        except ValueError:
+            log.warning("Cannot set Bob with CID: %s", cid)
+            return
+        attr = self._ATTR_MAP.get(alg_name)
+        if attr is None:
+            log.warning("Cannot set BoB with unknown hash algo: %s", alg_name)
+            return None
+        with self.session() as orm:
+            existing = self.get(bob["cid"])
+            if existing is not None:
+                log.debug("Bob already known")
+                return
+            bytes_ = bob["data"]
+            path = self.root_dir / uuid.uuid4().hex
+            if bob["type"]:
+                path = path.with_suffix(guess_extension(bob["type"]) or "")
+            path.write_bytes(bytes_)
+            hashes = {k: v(bytes_).hexdigest() for k, v in self._ALG_MAP.items()}
+            if hashes[attr] != digest:
+                raise ValueError(
+                    "The given CID does not correspond to the result of our hash"
+                )
+            row = Bob(file_name=path.name, content_type=bob["type"] or None, **hashes)
+            orm.add(row)
+            orm.commit()
 
 
 log = logging.getLogger(__name__)

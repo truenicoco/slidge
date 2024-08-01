@@ -207,3 +207,9 @@ class CachedPresence(NamedTuple):
     ptype: Optional[PresenceTypes] = None
     pstatus: Optional[str] = None
     pshow: Optional[PresenceShows] = None
+
+
+class Sticker(NamedTuple):
+    path: Path
+    content_type: Optional[str]
+    hashes: dict[str, str]

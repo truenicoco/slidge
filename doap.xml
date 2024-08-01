@@ -94,6 +94,13 @@
     </implements>
     <implements>
         <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0071.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:note>For stickers from XMPP to the legacy network</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0077.html"/>
             <xmpp:status>complete</xmpp:status>
             <xmpp:version>2.4</xmpp:version>
@@ -287,6 +294,13 @@
             <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0224.html"/>
             <xmpp:status>planned</xmpp:status>
             <xmpp:note>Will implement if useful for a plugin. MSN nudges (or wizzes) anyone?</xmpp:note>
+        </xmpp:SupportedXep>
+    </implements>
+    <implements>
+        <xmpp:SupportedXep>
+            <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0231.html"/>
+            <xmpp:status>partial</xmpp:status>
+            <xmpp:note>For stickers from XMPP to the legacy network</xmpp:note>
         </xmpp:SupportedXep>
     </implements>
     <implements>

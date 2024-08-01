@@ -31,6 +31,7 @@ from ..util.types import (
     PseudoPresenceShow,
     RecipientType,
     ResourceDict,
+    Sticker,
 )
 from ..util.util import deprecated
 
@@ -224,6 +225,31 @@ class BaseSession(
         raise NotImplementedError
 
     send_file = deprecated("BaseSession.send_file", on_file)
+
+    async def on_sticker(
+        self,
+        chat: RecipientType,
+        sticker: Sticker,
+        *,
+        reply_to_msg_id: Optional[LegacyMessageType] = None,
+        reply_to_fallback_text: Optional[str] = None,
+        reply_to: Optional[Union["LegacyContact", "LegacyParticipant"]] = None,
+        thread: Optional[LegacyThreadType] = None,
+    ) -> Optional[LegacyMessageType]:
+        """
+        Triggered when the user sends a file using HTTP Upload (:xep:`0363`)
+
+        :param chat: See :meth:`.BaseSession.on_text`
+        :param sticker: The sticker sent by the user.
+        :param reply_to_msg_id: See :meth:`.BaseSession.on_text`
+        :param reply_to_fallback_text: See :meth:`.BaseSession.on_text`
+        :param reply_to: See :meth:`.BaseSession.on_text`
+        :param thread:
+
+        :return: An ID of some sort that can be used later to ack and mark the message
+            as read by the user
+        """
+        raise NotImplementedError
 
     async def on_active(
         self, chat: RecipientType, thread: Optional[LegacyThreadType] = None

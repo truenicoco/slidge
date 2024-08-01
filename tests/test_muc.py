@@ -261,19 +261,31 @@ class Bookmarks(LegacyBookmarks):
 class Base(ClearSessionMixin, SlidgeTest):
     plugin = globals()
 
+    @classmethod
+    def setUpClass(cls):
+        cls.patches = [
+            unittest.mock.patch("uuid.uuid4", return_value="uuid"),
+            unittest.mock.patch("slidge.group.room.uuid4", return_value="uuid"),
+            unittest.mock.patch(
+                "slidge.core.mixins.message_maker.uuid4", return_value="uuid"
+            ),
+        ]
+        for p in cls.patches:
+            p.start()
+        super().setUpClass()
+
     def setUp(self):
         super().setUp()
         self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
-        slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = (
-            uuid.uuid4
-        ) = lambda: "uuid"
         self.get_romeo_session().logged = True
 
-    def tearDown(self):
-        super().tearDown()
-        slidge.group.room.uuid4 = slidge.core.mixins.message_maker.uuid4 = uuid.uuid4
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for p in cls.patches:
+            p.stop()
 
     @staticmethod
     def get_romeo_session() -> Session:

@@ -328,6 +328,7 @@ class BaseGateway(
 
         self.register_plugins()
         self.__register_slixmpp_events()
+        self.__register_slixmpp_api()
         self.roster.set_backend(RosterBackend(self))
 
         self.register_plugin("pubsub", {"component_name": self.COMPONENT_NAME})
@@ -426,6 +427,11 @@ class BaseGateway(
         self.add_event_handler("user_register", self._on_user_register)
         self.add_event_handler("user_unregister", self._on_user_unregister)
         self.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
+
+    def __register_slixmpp_api(self) -> None:
+        self.plugin["xep_0231"].api.register(self.store.bob.get_bob, "get_bob")
+        self.plugin["xep_0231"].api.register(self.store.bob.set_bob, "set_bob")
+        self.plugin["xep_0231"].api.register(self.store.bob.del_bob, "del_bob")
 
     @property  # type: ignore
     def jid(self):
@@ -972,6 +978,7 @@ SLIXMPP_PLUGINS = [
     "xep_0055",  # Jabber search
     "xep_0059",  # Result Set Management
     "xep_0066",  # Out of Band Data
+    "xep_0071",  # XHTML-IM (for stickers and custom emojis maybe later)
     "xep_0077",  # In-band registration
     "xep_0084",  # User Avatar
     "xep_0085",  # Chat state notifications
@@ -984,6 +991,7 @@ SLIXMPP_PLUGINS = [
     "xep_0184",  # Message Delivery Receipts
     "xep_0199",  # XMPP Ping
     "xep_0221",  # Data Forms Media Element
+    "xep_0231",  # Bits of Binary (for stickers and custom emojis maybe later)
     "xep_0249",  # Direct MUC Invitations
     "xep_0264",  # Jingle Content Thumbnails
     "xep_0280",  # Carbons
