@@ -14,8 +14,8 @@ classifiers = [
 ]
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://todo.sr.ht/~nicoco/slidge"
-"Chat room" = "xmpp:slidge@conference.nicoco.fr?join"
+"Bug tracker" = "https://todo.sr.ht/~nicoco/slidge"
+"Chat room" = "https://conference.nicoco.fr:5281/muc_log/slidge/"
 
 [tool.poetry.dependencies]
 python = "^3.11"
