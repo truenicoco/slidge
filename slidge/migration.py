@@ -7,8 +7,6 @@ from alembic import command
 from alembic.config import Config
 from slixmpp import JID
 
-from slidge.db.meta import get_engine
-
 from .core import config
 from .db.meta import get_engine
 from .db.models import GatewayUser
