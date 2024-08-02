@@ -316,9 +316,13 @@ class SessionDispatcher:
         session, entity, thread = await self.__get_session_entity_thread(msg)
         xmpp_id = msg["replace"]["id"]
         if isinstance(entity, LegacyMUC):
-            legacy_id = self.xmpp.store.sent.get_group_legacy_id(
+            legacy_id_str = self.xmpp.store.sent.get_group_legacy_id(
                 session.user_pk, xmpp_id
             )
+            if legacy_id_str is None:
+                legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
+            else:
+                legacy_id = self.xmpp.LEGACY_MSG_ID_TYPE(legacy_id_str)
         else:
             legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
 
