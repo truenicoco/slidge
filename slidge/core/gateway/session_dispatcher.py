@@ -50,6 +50,13 @@ class SessionDispatcher:
         xmpp.register_handler(
             CoroutineCallback(
                 "muc#admin",
+                StanzaPath("iq@type=get/mucadmin_query"),
+                _exceptions_to_xmpp_errors(self.on_muc_admin_query_get),  # type: ignore
+            )
+        )
+        xmpp.register_handler(
+            CoroutineCallback(
+                "muc#admin",
                 StanzaPath("iq@type=get/mucowner_query"),
                 _exceptions_to_xmpp_errors(self.on_muc_owner_query),  # type: ignore
             )
@@ -714,6 +721,25 @@ class SessionDispatcher:
             await muc.on_kick(contact, item["reason"] or None)
 
         iq.reply(clear=True).send()
+
+    async def on_muc_admin_query_get(self, iq: Iq):
+        affiliation = iq["mucadmin_query"]["item"]["affiliation"]
+
+        if not affiliation:
+            raise XMPPError("bad-request")
+
+        session = await self.__get_session(iq, 1)
+        session.raise_if_not_logged()
+
+        muc = await self.xmpp.get_muc_from_stanza(iq)
+
+        reply = iq.reply()
+        reply.enable("mucadmin_query")
+        async for participant in muc.get_participants():
+            if not participant.affiliation == affiliation:
+                continue
+            reply["mucadmin_query"].append(participant.mucadmin_item())
+        reply.send()
 
     async def on_groupchat_direct_invite(self, msg: Message):
         session = await self.__get_session(msg)

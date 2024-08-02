@@ -47,7 +47,6 @@ from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
-from .muc_admin import MucAdmin
 from .ping import Ping
 from .presence import PresenceHandlerMixin
 from .registration import Registration
@@ -363,7 +362,6 @@ class BaseGateway(
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
         self.__vcard_temp_handler = VCardTemp(self)
-        self.__muc_admin_handler = MucAdmin(self)
         self.__registration = Registration(self)
         self.__dispatcher = SessionDispatcher(self)
 
