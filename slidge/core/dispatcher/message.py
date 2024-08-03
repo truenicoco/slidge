@@ -89,11 +89,6 @@ class MessageMixin(DispatcherMixin):
         else:
             link_previews = []
 
-        if not url and isinstance(entity, LegacyMUC):
-            mentions = {"mentions": await entity.parse_mentions(text)}
-        else:
-            mentions = {}
-
         if url:
             legacy_msg_id = await self.__send_url(
                 url,
@@ -103,8 +98,6 @@ class MessageMixin(DispatcherMixin):
                 reply_to_fallback_text=reply_fallback,
                 reply_to=reply_to,
                 thread=thread,
-                link_previews=link_previews,
-                **mentions,
             )
         elif cid:
             legacy_msg_id = await self.__send_bob(
@@ -116,10 +109,12 @@ class MessageMixin(DispatcherMixin):
                 reply_to_fallback_text=reply_fallback,
                 reply_to=reply_to,
                 thread=thread,
-                link_previews=link_previews,
-                **mentions,
             )
         elif text:
+            if isinstance(entity, LegacyMUC):
+                mentions = {"mentions": await entity.parse_mentions(text)}
+            else:
+                mentions = {}
             legacy_msg_id = await session.on_text(
                 entity,
                 text,
