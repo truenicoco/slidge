@@ -46,7 +46,6 @@ from ..session import BaseSession
 from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
-from .mam import Mam
 from .ping import Ping
 from .search import Search
 from .session_dispatcher import SessionDispatcher
@@ -354,14 +353,11 @@ class BaseGateway(
         self.__disco_handler = Disco(self)
 
         self.__ping_handler = Ping(self)
-        self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
         self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()
-
-        self.__mam_cleanup_task = self.loop.create_task(self.__mam_cleanup())
 
         MessageMixin.__init__(self)  # ComponentXMPP does not call super().__init__()
 
@@ -370,13 +366,6 @@ class BaseGateway(
         if getattr(self, "_test_mode", False):
             return
         avatar_cache.http = self.http
-
-    async def __mam_cleanup(self):
-        if not config.MAM_MAX_DAYS:
-            return
-        while True:
-            await asyncio.sleep(3600 * 6)
-            self.store.mam.nuke_older_than(config.MAM_MAX_DAYS)
 
     def __register_commands(self):
         for cls in Command.subclasses:

@@ -1,15 +1,20 @@
+import asyncio
 from typing import TYPE_CHECKING
 
 from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
+from ... import config
+from ..util import DispatcherMixin
+
 if TYPE_CHECKING:
-    from .base import BaseGateway
+    from ..base import BaseGateway
 
 
-class Mam:
+class MamMixin(DispatcherMixin):
     def __init__(self, xmpp: "BaseGateway"):
-        self.xmpp = xmpp
+        super().__init__(xmpp)
+        self.__mam_cleanup_task = xmpp.loop.create_task(self.__mam_cleanup())
         xmpp.register_handler(
             CoroutineCallback(
                 "MAM_query",
@@ -31,6 +36,13 @@ class Mam:
                 self.__handle_mam_metadata,  # type:ignore
             )
         )
+
+    async def __mam_cleanup(self):
+        if not config.MAM_MAX_DAYS:
+            return
+        while True:
+            await asyncio.sleep(3600 * 6)
+            self.xmpp.store.mam.nuke_older_than(config.MAM_MAX_DAYS)
 
     async def __handle_mam(self, iq: Iq):
         muc = await self.xmpp.get_muc_from_stanza(iq)
