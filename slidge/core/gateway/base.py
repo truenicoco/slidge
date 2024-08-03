@@ -51,7 +51,6 @@ from .ping import Ping
 from .registration import Registration
 from .search import Search
 from .session_dispatcher import SessionDispatcher
-from .vcard_temp import VCardTemp
 
 if TYPE_CHECKING:
     from ...group.room import LegacyMUC
@@ -359,7 +358,6 @@ class BaseGateway(
         self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
-        self.__vcard_temp_handler = VCardTemp(self)
         self.__registration = Registration(self)
         self.__dispatcher = SessionDispatcher(self)
 
