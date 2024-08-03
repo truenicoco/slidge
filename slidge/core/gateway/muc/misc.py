@@ -1,3 +1,5 @@
+import logging
+
 from slixmpp import JID, CoroutineCallback, Iq, Message, Presence, StanzaPath
 from slixmpp.exceptions import XMPPError
 
@@ -18,6 +20,30 @@ class MucMiscMixin(DispatcherMixin):
             "groupchat_direct_invite", self.on_groupchat_direct_invite
         )
         xmpp.add_event_handler("groupchat_subject", self.on_groupchat_subject)
+        xmpp.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
+
+    async def __on_group_chat_error(self, msg: Message):
+        condition = msg["error"].get_condition()
+        if condition not in KICKABLE_ERRORS:
+            return
+
+        try:
+            muc = await self.get_muc_from_stanza(msg)
+        except XMPPError as e:
+            log.debug("Not removing resource", exc_info=e)
+            return
+        mfrom = msg.get_from()
+        resource = mfrom.resource
+        try:
+            muc.remove_user_resource(resource)
+        except KeyError:
+            # this actually happens quite frequently on for both beagle and monal
+            # (not sure why?), but is of no consequence
+            log.debug("%s was not in the resources of %s", resource, muc)
+        else:
+            log.info(
+                "Removed %s from the resources of %s because of error", resource, muc
+            )
 
     @exceptions_to_xmpp_errors
     async def on_ibr_remove(self, iq: Iq):
@@ -83,3 +109,19 @@ class MucMiscMixin(DispatcherMixin):
                 "Use the room configuration to update its name or description",
             )
         await muc.on_set_subject(msg["subject"])
+
+
+KICKABLE_ERRORS = {
+    "gone",
+    "internal-server-error",
+    "item-not-found",
+    "jid-malformed",
+    "recipient-unavailable",
+    "redirect",
+    "remote-server-not-found",
+    "remote-server-timeout",
+    "service-unavailable",
+    "malformed error",
+}
+
+log = logging.getLogger(__name__)
