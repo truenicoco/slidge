@@ -45,7 +45,6 @@ from ..pubsub import PubSubComponent
 from ..session import BaseSession
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
-from .search import Search
 from .session_dispatcher import SessionDispatcher
 
 if TYPE_CHECKING:
@@ -350,7 +349,6 @@ class BaseGateway(
         self.__chat_commands_handler: ChatCommandProvider = ChatCommandProvider(self)
         self.__disco_handler = Disco(self)
 
-        self.__search_handler = Search(self)
         self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()

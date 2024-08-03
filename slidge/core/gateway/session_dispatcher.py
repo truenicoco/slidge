@@ -13,6 +13,7 @@ from .message import MessageMixin
 from .muc import MucMixin
 from .presence import PresenceHandlerMixin
 from .registration import RegistrationMixin
+from .search import SearchMixin
 from .util import exceptions_to_xmpp_errors
 from .vcard import VCardMixin
 
@@ -28,6 +29,7 @@ class SessionDispatcher(
     MessageMixin,
     MucMixin,
     PresenceHandlerMixin,
+    SearchMixin,
     VCardMixin,
 ):
     def __init__(self, xmpp: "BaseGateway"):

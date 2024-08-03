@@ -3,13 +3,15 @@ from typing import TYPE_CHECKING
 from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
+from .util import DispatcherMixin
+
 if TYPE_CHECKING:
     from .base import BaseGateway
 
 
-class Search:
+class SearchMixin(DispatcherMixin):
     def __init__(self, xmpp: "BaseGateway"):
-        self.xmpp = xmpp
+        super().__init__(xmpp)
 
         xmpp["xep_0055"].api.register(self.search_get_form, "search_get_form")
         xmpp["xep_0055"].api.register(self._search_query, "search_query")
