@@ -7,7 +7,7 @@ from abc import ABCMeta
 from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Callable, NamedTuple, Optional, Type
+from typing import TYPE_CHECKING, Callable, NamedTuple, Optional, Type, TypeVar
 
 from .types import Mention, ResourceDict
 
@@ -276,7 +276,10 @@ def deprecated(name: str, new: Callable):
     return wrapped
 
 
-def dict_to_named_tuple(data: dict, cls: Type[NamedTuple]):
+T = TypeVar("T", bound=NamedTuple)
+
+
+def dict_to_named_tuple(data: dict, cls: Type[T]) -> T:
     return cls(*(data.get(f) for f in cls._fields))  # type:ignore
 
 
