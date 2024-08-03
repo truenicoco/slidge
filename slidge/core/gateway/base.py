@@ -48,7 +48,6 @@ from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
 from .ping import Ping
-from .registration import Registration
 from .search import Search
 from .session_dispatcher import SessionDispatcher
 
@@ -358,7 +357,6 @@ class BaseGateway(
         self.__mam_handler = Mam(self)
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
-        self.__registration = Registration(self)
         self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()
@@ -426,8 +424,6 @@ class BaseGateway(
         self.del_event_handler("presence_probe", self._handle_probe)
         self.add_event_handler("session_start", self.__on_session_start)
         self.add_event_handler("disconnected", self.connect)
-        self.add_event_handler("user_register", self._on_user_register)
-        self.add_event_handler("user_unregister", self._on_user_unregister)
         self.add_event_handler("groupchat_message_error", self.__on_group_chat_error)
 
     def __register_slixmpp_api(self) -> None:
@@ -498,7 +494,7 @@ class BaseGateway(
                 pto=user.jid.bare, ptype="probe"
             )  # ensure we get all resources for user
             session = self.session_cls.from_user(user)
-            session.create_task(self.__login_wrap(session))
+            session.create_task(self.login_wrap(session))
             if cached_avatar is not None:
                 await self.pubsub.broadcast_avatar(
                     self.boundjid.bare, session.user_jid, cached_avatar
@@ -559,7 +555,7 @@ class BaseGateway(
             )
 
     @timeit
-    async def __login_wrap(self, session: "BaseSession"):
+    async def login_wrap(self, session: "BaseSession"):
         session.send_gateway_status("Logging in…", show="dnd")
         try:
             status = await session.login()
@@ -619,21 +615,6 @@ class BaseGateway(
             stanza.set_to(mto)
         stanza.send()
         return stanza
-
-    async def _on_user_register(self, iq: Iq):
-        session = self.get_session_from_stanza(iq)
-        for jid in config.ADMINS:
-            self.send_message(
-                mto=jid,
-                mbody=f"{iq.get_from()} has registered",
-                mtype="chat",
-                mfrom=self.boundjid.bare,
-            )
-        session.send_gateway_message(self.WELCOME_MESSAGE)
-        await self.__login_wrap(session)
-
-    async def _on_user_unregister(self, iq: Iq):
-        await self.session_cls.kill_by_jid(iq.get_from())
 
     def raise_if_not_allowed_jid(self, jid: JID):
         if not self.jid_validator.match(jid.bare):
@@ -727,7 +708,7 @@ class BaseGateway(
         async def w():
             session.cancel_all_tasks()
             await session.logout()
-            await self.__login_wrap(session)
+            await self.login_wrap(session)
 
         session.create_task(w())
 

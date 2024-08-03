@@ -287,7 +287,11 @@ class SlidgeTest(SlixTestPlus):
             session.execute(delete(Contact))
             session.commit()
 
-        self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
+        self.run_coro(
+            self.xmpp._BaseGateway__dispatcher._on_user_register(
+                Iq(sfrom="romeo@montague.lit/gajim")
+            )
+        )
         welcome = self.next_sent()
         assert welcome["body"]
         stanza = self.next_sent()

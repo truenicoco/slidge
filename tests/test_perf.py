@@ -61,7 +61,11 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         )
         user.preferences = {"sync_avatar": True, "sync_presence": True}
         self.xmpp.store.users.update(user)
-        self.run_coro(self.xmpp._on_user_register(Iq(sfrom="romeo@montague.lit/gajim")))
+        self.run_coro(
+            self.xmpp._BaseGateway__dispatcher._on_user_register(
+                Iq(sfrom="romeo@montague.lit/gajim")
+            )
+        )
         welcome = self.next_sent()
         assert welcome["body"]
         stanza = self.next_sent()

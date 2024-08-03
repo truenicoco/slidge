@@ -22,7 +22,10 @@ class DispatcherMixin:
         self.xmpp = xmpp
 
     async def _get_session(
-        self, stanza: Message | Presence | Iq, timeout: int | None = 10
+        self,
+        stanza: Message | Presence | Iq,
+        timeout: int | None = 10,
+        wait_for_ready=True,
     ) -> BaseSession:
         xmpp = self.xmpp
         if stanza.get_from().server == xmpp.boundjid.bare:
@@ -36,7 +39,8 @@ class DispatcherMixin:
             log.debug("Ignoring message to component")
             raise Ignore
         session = xmpp.get_session_from_stanza(stanza)
-        await session.wait_for_ready(timeout)
+        if wait_for_ready:
+            await session.wait_for_ready(timeout)
         if isinstance(stanza, Message) and _ignore(session, stanza):
             raise Ignore
         return session

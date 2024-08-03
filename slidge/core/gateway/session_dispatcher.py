@@ -11,6 +11,7 @@ from .marker import MarkerMixin
 from .message import MessageMixin
 from .muc import MucMixin
 from .presence import PresenceHandlerMixin
+from .registration import RegistrationMixin
 from .util import exceptions_to_xmpp_errors
 from .vcard import VCardMixin
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
 class SessionDispatcher(
     ChatStateMixin,
+    RegistrationMixin,
     MarkerMixin,
     MessageMixin,
     MucMixin,
