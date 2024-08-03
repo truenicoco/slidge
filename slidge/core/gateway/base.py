@@ -43,7 +43,6 @@ from .. import config
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
-from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .search import Search
@@ -352,7 +351,6 @@ class BaseGateway(
         self.__disco_handler = Disco(self)
 
         self.__search_handler = Search(self)
-        self.__caps_handler = Caps(self)
         self.__dispatcher = SessionDispatcher(self)
 
         self.__register_commands()

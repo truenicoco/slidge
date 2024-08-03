@@ -5,13 +5,15 @@ from slixmpp import Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.xmlstream import StanzaBase
 
+from .util import DispatcherMixin
+
 if TYPE_CHECKING:
     from .base import BaseGateway
 
 
-class Caps:
+class CapsMixin(DispatcherMixin):
     def __init__(self, xmpp: "BaseGateway"):
-        self.xmpp = xmpp
+        super().__init__(xmpp)
         xmpp.del_filter("out", xmpp.plugin["xep_0115"]._filter_add_caps)
         xmpp.add_filter("out", self._filter_add_caps)  # type:ignore
 

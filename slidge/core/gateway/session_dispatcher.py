@@ -6,6 +6,7 @@ from slixmpp.exceptions import IqError
 from slixmpp.plugins.xep_0084.stanza import Info
 
 from ..session import BaseSession
+from .caps import CapsMixin
 from .chat_state import ChatStateMixin
 from .marker import MarkerMixin
 from .message import MessageMixin
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
 
 class SessionDispatcher(
+    CapsMixin,
     ChatStateMixin,
     RegistrationMixin,
     MarkerMixin,
