@@ -4,7 +4,7 @@ from slixmpp import JID
 
 import slidge.command.chat_command
 from slidge.command import Command, Confirmation
-from slidge.core.gateway.delivery_receipt import DeliveryReceipt
+from slidge.slixfix.delivery_receipt import DeliveryReceipt
 from slidge.util.test import SlixTestPlus
 
 

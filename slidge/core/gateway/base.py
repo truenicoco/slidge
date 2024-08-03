@@ -35,6 +35,7 @@ from ...command.chat_command import ChatCommandProvider
 from ...command.register import RegistrationType
 from ...db import GatewayUser, SlidgeStore
 from ...db.avatar import avatar_cache
+from ...slixfix.delivery_receipt import DeliveryReceipt
 from ...slixfix.roster import RosterBackend
 from ...util import ABCSubclassableOnceAtMost
 from ...util.types import AvatarType, MessageOrPresenceTypeVar
@@ -43,7 +44,6 @@ from .. import config
 from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
-from .delivery_receipt import DeliveryReceipt
 from .session_dispatcher import SessionDispatcher
 
 if TYPE_CHECKING:
