@@ -5,13 +5,15 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 from slixmpp.types import OptJid
 
+from .util import DispatcherMixin
+
 if TYPE_CHECKING:
     from .base import BaseGateway
 
 
-class Disco:
+class DiscoMixin(DispatcherMixin):
     def __init__(self, xmpp: "BaseGateway"):
-        self.xmpp = xmpp
+        super().__init__(xmpp)
 
         xmpp.plugin["xep_0030"].set_node_handler(
             "get_info",

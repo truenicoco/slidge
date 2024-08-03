@@ -8,6 +8,7 @@ from slixmpp.plugins.xep_0084.stanza import Info
 from ..session import BaseSession
 from .caps import CapsMixin
 from .chat_state import ChatStateMixin
+from .disco import DiscoMixin
 from .marker import MarkerMixin
 from .message import MessageMixin
 from .muc import MucMixin
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
 class SessionDispatcher(
     CapsMixin,
     ChatStateMixin,
+    DiscoMixin,
     RegistrationMixin,
     MarkerMixin,
     MessageMixin,

@@ -44,7 +44,6 @@ from ..mixins import MessageMixin
 from ..pubsub import PubSubComponent
 from ..session import BaseSession
 from .delivery_receipt import DeliveryReceipt
-from .disco import Disco
 from .session_dispatcher import SessionDispatcher
 
 if TYPE_CHECKING:
@@ -347,7 +346,6 @@ class BaseGateway(
         # why does mypy need these type annotations? no idea
         self.__adhoc_handler: AdhocProvider = AdhocProvider(self)
         self.__chat_commands_handler: ChatCommandProvider = ChatCommandProvider(self)
-        self.__disco_handler = Disco(self)
 
         self.__dispatcher = SessionDispatcher(self)
 
