@@ -95,7 +95,7 @@ class MucAdminMixin(DispatcherMixin):
         session = await self._get_session(iq, 1)
         session.raise_if_not_logged()
 
-        muc = await self.xmpp.get_muc_from_stanza(iq)
+        muc = await self.get_muc_from_stanza(iq)
 
         reply = iq.reply()
         reply.enable("mucadmin_query")

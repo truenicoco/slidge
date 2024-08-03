@@ -11,6 +11,7 @@ from ..session import BaseSession
 
 if TYPE_CHECKING:
     from slidge import BaseGateway
+    from slidge.group import LegacyMUC
 
 
 class Ignore(BaseException):
@@ -44,6 +45,17 @@ class DispatcherMixin:
         if isinstance(stanza, Message) and _ignore(session, stanza):
             raise Ignore
         return session
+
+    async def get_muc_from_stanza(self, iq: Iq | Message) -> "LegacyMUC":
+        ito = iq.get_to()
+
+        if ito == self.xmpp.boundjid.bare:
+            raise XMPPError("bad-request", text="This is only handled for MUCs")
+
+        session = await self._get_session(iq)
+        muc = await session.bookmarks.by_jid(ito)
+
+        return muc
 
     def _xmpp_msg_id_to_legacy(self, session: "BaseSession", xmpp_id: str):
         sent = self.xmpp.store.sent.get_legacy_id(session.user_pk, xmpp_id)

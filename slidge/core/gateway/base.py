@@ -47,7 +47,7 @@ from .delivery_receipt import DeliveryReceipt
 from .session_dispatcher import SessionDispatcher
 
 if TYPE_CHECKING:
-    from ...group.room import LegacyMUC
+    pass
 
 
 class BaseGateway(
@@ -423,7 +423,7 @@ class BaseGateway(
             return
 
         try:
-            muc = await self.get_muc_from_stanza(msg)
+            muc = await self.__dispatcher.get_muc_from_stanza(msg)
         except XMPPError as e:
             log.debug("Not removing resource", exc_info=e)
             return
@@ -634,26 +634,6 @@ class BaseGateway(
             return self.session_cls.from_jid(j)
         except XMPPError:
             pass
-
-    async def get_muc_from_stanza(self, iq: Union[Iq, Message]) -> "LegacyMUC":
-        ito = iq.get_to()
-
-        if ito == self.boundjid.bare:
-            raise XMPPError(
-                text="No MAM on the component itself, use a JID with a resource"
-            )
-
-        ifrom = iq.get_from()
-        user = self.store.users.get(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.get_session_from_user(user)
-        session.raise_if_not_logged()
-
-        muc = await session.bookmarks.by_jid(ito)
-
-        return muc
 
     def exception(self, exception: Exception):
         # """

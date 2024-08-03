@@ -1473,9 +1473,9 @@ class TestMuc(Base):
                 type="error"
                 id="iq-id1"
                 to="romeo@montague.lit/gajim">
-              <error type="cancel">
-                <undefined-condition xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
-                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">No MAM on the component itself, use a JID with a resource</text>
+              <error type="modify">
+                <bad-request xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+                <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">This is only handled for MUCs</text>
               </error>
             </iq>
             """

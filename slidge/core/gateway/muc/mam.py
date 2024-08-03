@@ -45,7 +45,7 @@ class MamMixin(DispatcherMixin):
             self.xmpp.store.mam.nuke_older_than(config.MAM_MAX_DAYS)
 
     async def __handle_mam(self, iq: Iq):
-        muc = await self.xmpp.get_muc_from_stanza(iq)
+        muc = await self.get_muc_from_stanza(iq)
         await muc.send_mam(iq)
 
     async def __handle_mam_get_form(self, iq: Iq):
@@ -80,5 +80,5 @@ class MamMixin(DispatcherMixin):
         reply.send()
 
     async def __handle_mam_metadata(self, iq: Iq):
-        muc = await self.xmpp.get_muc_from_stanza(iq)
+        muc = await self.get_muc_from_stanza(iq)
         await muc.send_mam_metadata(iq)

@@ -120,7 +120,7 @@ class VCardMixin(DispatcherMixin):
         reply.send()
 
     async def __handle_set_vcard_temp(self, iq: Iq):
-        muc = await self.xmpp.get_muc_from_stanza(iq)
+        muc = await self.get_muc_from_stanza(iq)
         to = iq.get_to()
 
         if to.resource:
