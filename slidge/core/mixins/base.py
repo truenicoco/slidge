@@ -6,8 +6,8 @@ from slixmpp import JID
 from ...util.types import MessageOrPresenceTypeVar
 
 if TYPE_CHECKING:
-    from slidge.core.gateway import BaseGateway
-    from slidge.core.session import BaseSession
+    from ..gateway import BaseGateway
+    from ..session import BaseSession
 
 
 class MetaBase(ABCMeta):

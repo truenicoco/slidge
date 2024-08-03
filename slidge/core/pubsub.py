@@ -25,8 +25,9 @@ from ..db.store import ContactStore, SlidgeStore
 from .mixins.lock import NamedLockMixin
 
 if TYPE_CHECKING:
+    from slidge.core.gateway import BaseGateway
+
     from ..contact.contact import LegacyContact
-    from ..core.gateway.base import BaseGateway
 
 VCARD4_NAMESPACE = "urn:xmpp:vcard4"
 

@@ -8,7 +8,7 @@ from slixmpp.types import OptJid
 from .util import DispatcherMixin
 
 if TYPE_CHECKING:
-    from .base import BaseGateway
+    from slidge.core.gateway import BaseGateway
 
 
 class DiscoMixin(DispatcherMixin):

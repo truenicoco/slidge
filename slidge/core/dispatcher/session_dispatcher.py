@@ -19,7 +19,7 @@ from .util import exceptions_to_xmpp_errors
 from .vcard import VCardMixin
 
 if TYPE_CHECKING:
-    from .base import BaseGateway
+    from slidge.core.gateway import BaseGateway
 
 
 class SessionDispatcher(

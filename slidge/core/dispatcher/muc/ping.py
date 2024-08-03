@@ -7,7 +7,7 @@ from ....group import LegacyMUC
 from ..util import DispatcherMixin
 
 if TYPE_CHECKING:
-    from ..base import BaseGateway
+    from slidge.core.gateway import BaseGateway
 
 
 class PingMixin(DispatcherMixin):

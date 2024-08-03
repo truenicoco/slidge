@@ -11,7 +11,7 @@ from slixmpp import JID, Message
 from slixmpp.types import MessageTypes
 
 if TYPE_CHECKING:
-    from slidge.core.gateway.base import BaseGateway
+    from slidge.core.gateway import BaseGateway
 
 
 class DeliveryReceipt:

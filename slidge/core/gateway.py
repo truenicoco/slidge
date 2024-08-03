@@ -27,24 +27,24 @@ from slixmpp.plugins.xep_0060.stanza import OwnerAffiliation
 from slixmpp.types import MessageTypes
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 
-from ... import command  # noqa: F401
-from ...command.adhoc import AdhocProvider
-from ...command.admin import Exec
-from ...command.base import Command, FormField
-from ...command.chat_command import ChatCommandProvider
-from ...command.register import RegistrationType
-from ...db import GatewayUser, SlidgeStore
-from ...db.avatar import avatar_cache
-from ...slixfix.delivery_receipt import DeliveryReceipt
-from ...slixfix.roster import RosterBackend
-from ...util import ABCSubclassableOnceAtMost
-from ...util.types import AvatarType, MessageOrPresenceTypeVar
-from ...util.util import timeit
-from .. import config
-from ..mixins import MessageMixin
-from ..pubsub import PubSubComponent
-from ..session import BaseSession
-from .session_dispatcher import SessionDispatcher
+from slidge import command  # noqa: F401
+from slidge.command.adhoc import AdhocProvider
+from slidge.command.admin import Exec
+from slidge.command.base import Command, FormField
+from slidge.command.chat_command import ChatCommandProvider
+from slidge.command.register import RegistrationType
+from slidge.core import config
+from slidge.core.dispatcher.session_dispatcher import SessionDispatcher
+from slidge.core.mixins import MessageMixin
+from slidge.core.pubsub import PubSubComponent
+from slidge.core.session import BaseSession
+from slidge.db import GatewayUser, SlidgeStore
+from slidge.db.avatar import avatar_cache
+from slidge.slixfix.delivery_receipt import DeliveryReceipt
+from slidge.slixfix.roster import RosterBackend
+from slidge.util import ABCSubclassableOnceAtMost
+from slidge.util.types import AvatarType, MessageOrPresenceTypeVar
+from slidge.util.util import timeit
 
 if TYPE_CHECKING:
     pass
@@ -305,7 +305,7 @@ class BaseGateway(
         self.session_cls: BaseSession = BaseSession.get_unique_subclass()
         self.session_cls.xmpp = self
 
-        from ...group.room import LegacyMUC
+        from ..group.room import LegacyMUC
 
         LegacyMUC.get_self_or_unique_subclass().xmpp = self
 

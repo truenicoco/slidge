@@ -13,7 +13,7 @@ from . import Command, CommandResponseType, Confirmation, Form, TableResult
 from .base import FormField
 
 if TYPE_CHECKING:
-    from ..core.gateway.base import BaseGateway
+    from ..core.gateway import BaseGateway
     from ..core.session import BaseSession
 
 
