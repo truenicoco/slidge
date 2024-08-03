@@ -3,15 +3,16 @@ from typing import TYPE_CHECKING
 from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
-from ...group import LegacyMUC
+from ....group import LegacyMUC
+from ..util import DispatcherMixin
 
 if TYPE_CHECKING:
-    from .base import BaseGateway
+    from ..base import BaseGateway
 
 
-class Ping:
+class PingMixin(DispatcherMixin):
     def __init__(self, xmpp: "BaseGateway"):
-        self.xmpp = xmpp
+        super().__init__(xmpp)
 
         xmpp.remove_handler("Ping")
         xmpp.register_handler(

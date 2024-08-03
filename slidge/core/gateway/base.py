@@ -46,7 +46,6 @@ from ..session import BaseSession
 from .caps import Caps
 from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
-from .ping import Ping
 from .search import Search
 from .session_dispatcher import SessionDispatcher
 
@@ -352,7 +351,6 @@ class BaseGateway(
         self.__chat_commands_handler: ChatCommandProvider = ChatCommandProvider(self)
         self.__disco_handler = Disco(self)
 
-        self.__ping_handler = Ping(self)
         self.__search_handler = Search(self)
         self.__caps_handler = Caps(self)
         self.__dispatcher = SessionDispatcher(self)
