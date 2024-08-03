@@ -48,7 +48,6 @@ from .delivery_receipt import DeliveryReceipt
 from .disco import Disco
 from .mam import Mam
 from .ping import Ping
-from .presence import PresenceHandlerMixin
 from .registration import Registration
 from .search import Search
 from .session_dispatcher import SessionDispatcher
@@ -59,7 +58,6 @@ if TYPE_CHECKING:
 
 
 class BaseGateway(
-    PresenceHandlerMixin,
     ComponentXMPP,
     MessageMixin,
     metaclass=ABCSubclassableOnceAtMost,
@@ -420,6 +418,14 @@ class BaseGateway(
             loop.stop()
 
     def __register_slixmpp_events(self):
+        self.del_event_handler("presence_subscribe", self._handle_subscribe)
+        self.del_event_handler("presence_unsubscribe", self._handle_unsubscribe)
+        self.del_event_handler("presence_subscribed", self._handle_subscribed)
+        self.del_event_handler("presence_unsubscribed", self._handle_unsubscribed)
+        self.del_event_handler(
+            "roster_subscription_request", self._handle_new_subscription
+        )
+        self.del_event_handler("presence_probe", self._handle_probe)
         self.add_event_handler("session_start", self.__on_session_start)
         self.add_event_handler("disconnected", self.connect)
         self.add_event_handler("user_register", self._on_user_register)
