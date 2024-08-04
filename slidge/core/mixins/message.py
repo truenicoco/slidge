@@ -357,11 +357,12 @@ class ContentMessageMixin(AttachmentMixin):
 class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
     def _privileged_send(self, msg: Message):
         i = msg.get_id()
-        if not i:
-            i = str(uuid.uuid4())
+        if i:
+            self.session.ignore_messages.add(i)
+        else:
+            i = "slidge-carbon-" + str(uuid.uuid4())
             msg.set_id(i)
         msg.del_origin_id()
-        self.session.ignore_messages.add(i)
         try:
             self.xmpp["xep_0356"].send_privileged_message(msg)
         except PermissionError:

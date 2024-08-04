@@ -148,6 +148,9 @@ class MessageContentMixin(DispatcherMixin):
 
     @exceptions_to_xmpp_errors
     async def on_message_correction(self, msg: Message):
+        if msg.get_plugin("retract", check=True) is not None:
+            # ignore message retraction fallback (fallback=last msg correction)
+            return
         session, entity, thread = await self._get_session_entity_thread(msg)
         xmpp_id = msg["replace"]["id"]
         if isinstance(entity, LegacyMUC):

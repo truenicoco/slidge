@@ -101,7 +101,10 @@ class DispatcherMixin:
 
 
 def _ignore(session: "BaseSession", msg: Message):
-    if (i := msg.get_id()) not in session.ignore_messages:
+    i = msg.get_id()
+    if i.startswith("slidge-carbon-"):
+        return True
+    if i not in session.ignore_messages:
         return False
     session.log.debug("Ignored sent carbon: %s", i)
     session.ignore_messages.remove(i)

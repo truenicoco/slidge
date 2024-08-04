@@ -390,3 +390,34 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         on_text.assert_awaited_once()
         args, kwargs = on_text.call_args
         assert args[1] == "fdsf :amogus:"
+
+    def test_carbon_retract(self):
+        with (
+            unittest.mock.patch(
+                "slidge.core.session.BaseSession.on_retract"
+            ) as on_retract,
+            unittest.mock.patch(
+                "slidge.core.session.BaseSession.on_correct"
+            ) as on_correct,
+        ):
+            self.juliet.retract("some-id", carbon=True)
+            self.recv(  # language=XML
+                f"""
+            <message type="chat"
+                     to="{self.juliet.jid.bare}"
+                     from="romeo@montague.lit/movim"
+                     id="slidge-carbon-whatever">
+              <body>/me retracted the message 1269564719166132224</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <store xmlns="urn:xmpp:hints" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:message-retract:1" />
+              <retract xmlns="urn:xmpp:message-retract:1"
+                       id="some-id" />
+              <replace xmlns="urn:xmpp:message-correct:0"
+                       id="some-id" />
+            </message>
+            """
+            )
+            on_correct.assert_not_awaited()
+            on_retract.assert_not_awaited()
