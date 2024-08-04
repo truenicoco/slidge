@@ -47,6 +47,10 @@ class MarkerMixin(DispatcherMixin):
         self, msg: StanzaBase
     ) -> None:
         assert isinstance(msg, Message)
+        chat_jid = JID(msg["pubsub_event"]["items"]["item"]["id"])
+        if chat_jid.server != self.xmpp.boundjid.bare:
+            return
+
         session = await self._get_session(msg, timeout=None)
 
         chat_jid = msg["pubsub_event"]["items"]["item"]["id"]
