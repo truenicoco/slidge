@@ -27,10 +27,7 @@ class MucOwnerMixin(DispatcherMixin):
     @exceptions_to_xmpp_errors
     async def on_muc_owner_query(self, iq: StanzaBase) -> None:
         assert isinstance(iq, Iq)
-        session = await self._get_session(iq)
-        session.raise_if_not_logged()
-
-        muc = await session.bookmarks.by_jid(iq.get_to())
+        muc = await self.get_muc_from_stanza(iq)
 
         reply = iq.reply()
 
@@ -65,9 +62,7 @@ class MucOwnerMixin(DispatcherMixin):
     @exceptions_to_xmpp_errors
     async def on_muc_owner_set(self, iq: StanzaBase) -> None:
         assert isinstance(iq, Iq)
-        session = await self._get_session(iq)
-        session.raise_if_not_logged()
-        muc = await session.bookmarks.by_jid(iq.get_to())
+        muc = await self.get_muc_from_stanza(iq)
         query = iq["mucowner_query"]
 
         if form := query.get_plugin("form", check=True):
@@ -93,7 +88,7 @@ class MucOwnerMixin(DispatcherMixin):
             if reason is not None:
                 presence["muc"]["destroy"]["reason"] = reason
             user_participant._send(presence)
-            session.bookmarks.remove(muc)
+            muc.session.bookmarks.remove(muc)
             clear = True
         else:
             raise XMPPError("bad-request")

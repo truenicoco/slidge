@@ -24,9 +24,6 @@ class PresenceHandlerMixin(DispatcherMixin):
         xmpp.add_event_handler("presence_probe", self._handle_probe)
         xmpp.add_event_handler("presence", self.on_presence)
 
-    def get_session_from_stanza(self, s) -> BaseSession:
-        raise NotImplementedError
-
     async def __get_contact(self, pres: Presence):
         sess = await self._get_session(pres)
         pto = pres.get_to()

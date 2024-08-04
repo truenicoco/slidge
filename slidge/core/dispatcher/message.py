@@ -372,10 +372,8 @@ class MessageMixin(DispatcherMixin):
         async with self.xmpp.http.get(url) as response:
             if response.status >= 400:
                 session.log.warning(
-                    (
-                        "OOB url cannot be downloaded: %s, sending the URL as text"
-                        " instead."
-                    ),
+                    "OOB url cannot be downloaded: %s, sending the URL as text"
+                    " instead.",
                     response,
                 )
                 return await session.on_text(entity, url, **kwargs)

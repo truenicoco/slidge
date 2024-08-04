@@ -17,7 +17,7 @@ class CapsMixin(DispatcherMixin):
         xmpp.del_filter("out", xmpp.plugin["xep_0115"]._filter_add_caps)
         xmpp.add_filter("out", self._filter_add_caps)  # type:ignore
 
-    async def _filter_add_caps(self, stanza: StanzaBase):
+    async def _filter_add_caps(self, stanza: StanzaBase) -> StanzaBase:
         # we rolled our own "add caps on presences" filter because
         # there is too much magic happening in slixmpp
         # anyway, we probably want to roll our own "dynamic disco"/caps

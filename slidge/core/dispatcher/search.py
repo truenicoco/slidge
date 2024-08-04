@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from slixmpp import JID, CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
-from .util import DispatcherMixin
+from .util import DispatcherMixin, exceptions_to_xmpp_errors
 
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
@@ -47,13 +47,9 @@ class SearchMixin(DispatcherMixin):
         """
         Handles a search request
         """
-        user = self.xmpp.store.users.get(ifrom)
-        if user is None:
-            raise XMPPError(text="Search is only allowed for registered users")
+        session = await self._get_session(iq)
 
-        result = await self.xmpp.get_session_from_stanza(iq).on_search(
-            iq["search"]["form"].get_values()
-        )
+        result = await session.on_search(iq["search"]["form"].get_values())
 
         if not result:
             raise XMPPError("item-not-found", text="Nothing was found")
@@ -66,19 +62,17 @@ class SearchMixin(DispatcherMixin):
             form.add_item(item)
         return reply
 
+    @exceptions_to_xmpp_errors
     async def _handle_gateway_iq(self, iq: Iq):
         if iq.get_to() != self.xmpp.boundjid.bare:
             raise XMPPError("bad-request", "This can only be used on the component JID")
-
-        user = self.xmpp.store.users.get(iq.get_from())
-        if user is None:
-            raise XMPPError("not-authorized", "Register to the gateway first")
 
         if len(self.xmpp.SEARCH_FIELDS) > 1:
             raise XMPPError(
                 "feature-not-implemented", "Use jabber search for this gateway"
             )
 
+        session = await self._get_session(iq)
         field = self.xmpp.SEARCH_FIELDS[0]
 
         reply = iq.reply()
@@ -87,7 +81,6 @@ class SearchMixin(DispatcherMixin):
             reply["gateway"]["prompt"] = field.label
         elif iq["type"] == "set":
             prompt = iq["gateway"]["prompt"]
-            session = self.xmpp.session_cls.from_user(user)
             result = await session.on_search({field.var: prompt})
             if result is None or not result.items:
                 raise XMPPError(

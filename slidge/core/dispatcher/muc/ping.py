@@ -4,7 +4,7 @@ from slixmpp import CoroutineCallback, Iq, StanzaPath
 from slixmpp.exceptions import XMPPError
 
 from ....group import LegacyMUC
-from ..util import DispatcherMixin
+from ..util import DispatcherMixin, exceptions_to_xmpp_errors
 
 if TYPE_CHECKING:
     from slidge.core.gateway import BaseGateway
@@ -19,24 +19,18 @@ class PingMixin(DispatcherMixin):
             CoroutineCallback(
                 "Ping",
                 StanzaPath("iq@type=get/ping"),
-                self.__handle_ping,  # type:ignore
+                self.__handle_ping,
             )
         )
         xmpp.plugin["xep_0030"].add_feature("urn:xmpp:ping")
 
-    async def __handle_ping(self, iq: Iq):
+    @exceptions_to_xmpp_errors
+    async def __handle_ping(self, iq: Iq) -> None:
         ito = iq.get_to()
-
         if ito == self.xmpp.boundjid.bare:
             iq.reply().send()
 
-        ifrom = iq.get_from()
-        user = self.xmpp.store.users.get(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.xmpp.get_session_from_user(user)
-        session.raise_if_not_logged()
+        session = await self._get_session(iq)
 
         try:
             muc = await session.bookmarks.by_jid(ito)
@@ -59,7 +53,7 @@ class PingMixin(DispatcherMixin):
         )
 
     @staticmethod
-    def __handle_muc_ping(muc: LegacyMUC, iq: Iq):
+    def __handle_muc_ping(muc: LegacyMUC, iq: Iq) -> None:
         if iq.get_from().resource in muc.get_user_resources():
             iq.reply().send()
         else:

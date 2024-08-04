@@ -38,15 +38,11 @@ class DiscoMixin(DispatcherMixin):
         if ifrom is None:
             raise XMPPError("subscription-required")
 
-        user = self.xmpp.store.users.get(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-        session = self.xmpp.get_session_from_user(user)
-        await session.wait_for_ready()
+        assert jid is not None
+        session = await self._get_session_from_jid(jid=ifrom)
 
         log.debug("Looking for entity: %s", jid)
 
-        assert jid is not None
         entity = await session.get_contact_or_group_or_participant(jid)
 
         if entity is None:
@@ -63,12 +59,8 @@ class DiscoMixin(DispatcherMixin):
         if jid != self.xmpp.boundjid.bare:
             return DiscoItems()
 
-        user = self.xmpp.store.users.get(ifrom)
-        if user is None:
-            raise XMPPError("registration-required")
-
-        session = self.xmpp.get_session_from_user(user)
-        await session.wait_for_ready()
+        assert ifrom is not None
+        session = await self._get_session_from_jid(ifrom)
 
         d = DiscoItems()
         for room in self.xmpp.store.rooms.get_all_jid_and_names(session.user_pk):

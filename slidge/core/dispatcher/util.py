@@ -2,7 +2,7 @@ import logging
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
 
-from slixmpp import Iq, Message, Presence
+from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.xmlstream import StanzaBase
 
@@ -27,6 +27,7 @@ class DispatcherMixin:
         stanza: Message | Presence | Iq,
         timeout: int | None = 10,
         wait_for_ready=True,
+        logged=False,
     ) -> BaseSession:
         xmpp = self.xmpp
         if stanza.get_from().server == xmpp.boundjid.bare:
@@ -39,22 +40,36 @@ class DispatcherMixin:
         ):
             log.debug("Ignoring message to component")
             raise Ignore
-        session = xmpp.get_session_from_stanza(stanza)
-        if wait_for_ready:
-            await session.wait_for_ready(timeout)
+        session = await self._get_session_from_jid(
+            stanza.get_from(), timeout, wait_for_ready, logged
+        )
         if isinstance(stanza, Message) and _ignore(session, stanza):
             raise Ignore
         return session
 
-    async def get_muc_from_stanza(self, iq: Iq | Message) -> "LegacyMUC":
-        ito = iq.get_to()
+    async def _get_session_from_jid(
+        self,
+        jid: JID,
+        timeout: int | None = 10,
+        wait_for_ready=True,
+        logged=False,
+    ) -> BaseSession:
+        session = self.xmpp.get_session_from_jid(jid)
+        if session is None:
+            raise XMPPError("registration-required")
+        if logged:
+            session.raise_if_not_logged()
+        if wait_for_ready:
+            await session.wait_for_ready(timeout)
+        return session
 
+    async def get_muc_from_stanza(self, iq: Iq | Message | Presence) -> "LegacyMUC":
+        ito = iq.get_to()
         if ito == self.xmpp.boundjid.bare:
             raise XMPPError("bad-request", text="This is only handled for MUCs")
 
-        session = await self._get_session(iq)
+        session = await self._get_session(iq, logged=True)
         muc = await session.bookmarks.by_jid(ito)
-
         return muc
 
     def _xmpp_msg_id_to_legacy(self, session: "BaseSession", xmpp_id: str):

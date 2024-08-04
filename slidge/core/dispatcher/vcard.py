@@ -24,7 +24,7 @@ class VCardMixin(DispatcherMixin):
             CoroutineCallback(
                 "VCardTemp",
                 StanzaPath("iq/vcard_temp"),
-                self.__vcard_temp_handler,  # type:ignore
+                self.__vcard_temp_handler,
             )
         )
         # TODO: MR to slixmpp adding this to XEP-0084
@@ -35,8 +35,7 @@ class VCardMixin(DispatcherMixin):
 
     @exceptions_to_xmpp_errors
     async def on_get_vcard(self, iq: Iq):
-        session = await self._get_session(iq)
-        session.raise_if_not_logged()
+        session = await self._get_session(iq, logged=True)
         contact = await session.contacts.by_jid(iq.get_to())
         vcard = await contact.get_vcard()
         reply = iq.reply()

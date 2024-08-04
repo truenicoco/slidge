@@ -33,10 +33,7 @@ class MucAdminMixin(DispatcherMixin):
     @exceptions_to_xmpp_errors
     async def on_user_moderation(self, iq: StanzaBase) -> None:
         assert isinstance(iq, Iq)
-        session = await self._get_session(iq)
-        session.raise_if_not_logged()
-
-        muc = await session.bookmarks.by_jid(iq.get_to())
+        muc = await self.get_muc_from_stanza(iq)
 
         apply_to = iq["apply_to"]
         xmpp_id = apply_to["id"]
@@ -50,21 +47,18 @@ class MucAdminMixin(DispatcherMixin):
                 "Slidge only implements moderation/retraction",
             )
 
-        legacy_id = self._xmpp_msg_id_to_legacy(session, xmpp_id)
-        await session.on_moderate(muc, legacy_id, moderate["reason"] or None)
+        legacy_id = self._xmpp_msg_id_to_legacy(muc.session, xmpp_id)
+        await muc.session.on_moderate(muc, legacy_id, moderate["reason"] or None)
         iq.reply(clear=True).send()
 
     @exceptions_to_xmpp_errors
     async def on_user_set_affiliation(self, iq: StanzaBase) -> None:
         assert isinstance(iq, Iq)
-        session = await self._get_session(iq)
-        session.raise_if_not_logged()
-
-        muc = await session.bookmarks.by_jid(iq.get_to())
+        muc = await self.get_muc_from_stanza(iq)
 
         item = iq["mucadmin_query"]["item"]
         if item["jid"]:
-            contact = await session.contacts.by_jid(JID(item["jid"]))
+            contact = await muc.session.contacts.by_jid(JID(item["jid"]))
         else:
             part = await muc.get_participant(
                 item["nick"], fill_first=True, raise_if_not_found=True
@@ -92,10 +86,8 @@ class MucAdminMixin(DispatcherMixin):
         if not affiliation:
             raise XMPPError("bad-request")
 
-        session = await self._get_session(iq, 1)
-        session.raise_if_not_logged()
-
-        muc = await self.get_muc_from_stanza(iq)
+        session = await self._get_session(iq, 1, logged=True)
+        muc = await session.bookmarks.by_jid(iq.get_to())
 
         reply = iq.reply()
         reply.enable("mucadmin_query")
