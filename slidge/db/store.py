@@ -13,7 +13,7 @@ from slixmpp import JID, Iq, Message, Presence
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0231.stanza import BitsOfBinary
 from sqlalchemy import Engine, delete, select, update
-from sqlalchemy.orm import Session, attributes
+from sqlalchemy.orm import Session, attributes, load_only
 from sqlalchemy.sql.functions import count
 
 from ..core import config
@@ -979,6 +979,15 @@ class RoomStore(UpdatedMixin):
             yield from session.execute(
                 select(Room).where(Room.user_account_id == user_pk)
             ).scalars()
+
+    def get_all_jid_and_names(self, user_pk: int) -> Iterator[Room]:
+        with self.session() as session:
+            yield from session.scalars(
+                select(Room)
+                .filter(Room.user_account_id == user_pk)
+                .options(load_only(Room.jid, Room.name))
+                .order_by(Room.name)
+            ).all()
 
 
 class ParticipantStore(EngineMixin):

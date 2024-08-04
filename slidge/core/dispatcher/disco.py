@@ -71,8 +71,8 @@ class DiscoMixin(DispatcherMixin):
         await session.wait_for_ready()
 
         d = DiscoItems()
-        for muc in sorted(session.bookmarks, key=lambda m: m.name):
-            d.add_item(muc.jid, name=muc.name)
+        for room in self.xmpp.store.rooms.get_all_jid_and_names(session.user_pk):
+            d.add_item(room.jid, name=room.name)
 
         return d
 
