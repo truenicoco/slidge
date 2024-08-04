@@ -92,6 +92,13 @@ class LegacyRoster(
                 stored = self.__store.get_by_jid(self.session.user_pk, contact_jid)
                 return await self.__update_contact(stored, legacy_id, username)
 
+    def by_jid_only_if_exists(self, contact_jid: JID) -> LegacyContactType | None:
+        with self.__store.session():
+            stored = self.__store.get_by_jid(self.session.user_pk, contact_jid)
+            if stored is not None and stored.updated:
+                return self._contact_cls.from_store(self.session, stored)
+        return None
+
     async def by_legacy_id(
         self, legacy_id: LegacyUserIdType, *args, **kwargs
     ) -> LegacyContactType:
