@@ -8,16 +8,7 @@ import re
 import tempfile
 from copy import copy
 from datetime import datetime
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Collection,
-    Mapping,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, Sequence, Union
 
 import aiohttp
 import qrcode
@@ -108,7 +99,7 @@ class BaseGateway(
     Path, bytes or URL used by the component as an avatar.
     """
 
-    REGISTRATION_FIELDS: Collection[FormField] = [
+    REGISTRATION_FIELDS: Sequence[FormField] = [
         FormField(var="username", label="User name", required=True),
         FormField(var="password", label="Password", required=True, private=True),
     ]

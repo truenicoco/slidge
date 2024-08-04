@@ -6,9 +6,9 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Collection,
     Iterable,
     Optional,
+    Sequence,
     Type,
     TypedDict,
     Union,
@@ -54,11 +54,11 @@ class TableResult:
     Structured data as the result of a command
     """
 
-    fields: Collection["FormField"]
+    fields: Sequence["FormField"]
     """
     The 'columns names' of the table.
     """
-    items: Collection[dict[str, Union[str, JID]]]
+    items: Sequence[dict[str, Union[str, JID]]]
     """
     The rows of the table. Each row is a dict where keys are the fields ``var``
     attribute.
@@ -149,7 +149,7 @@ class Form:
 
     title: str
     instructions: str
-    fields: Collection["FormField"]
+    fields: Sequence["FormField"]
     handler: FormHandlerType
     handler_args: Iterable[Any] = field(default_factory=list)
     handler_kwargs: dict[str, Any] = field(default_factory=dict)
