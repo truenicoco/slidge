@@ -5,17 +5,17 @@ from xml.etree import ElementTree
 from slixmpp import JID, Message
 from slixmpp.exceptions import XMPPError
 
-from ...contact.contact import LegacyContact
-from ...group.participant import LegacyParticipant
-from ...group.room import LegacyMUC
-from ...util.types import LinkPreview, Recipient
-from ...util.util import dict_to_named_tuple, remove_emoji_variation_selector_16
-from .. import config
-from ..session import BaseSession
-from .util import DispatcherMixin, exceptions_to_xmpp_errors
+from ....contact.contact import LegacyContact
+from ....group.participant import LegacyParticipant
+from ....group.room import LegacyMUC
+from ....util.types import LinkPreview, Recipient
+from ....util.util import dict_to_named_tuple, remove_emoji_variation_selector_16
+from ... import config
+from ...session import BaseSession
+from ..util import DispatcherMixin, exceptions_to_xmpp_errors
 
 
-class MessageMixin(DispatcherMixin):
+class MessageContentMixin(DispatcherMixin):
     def __init__(self, xmpp):
         super().__init__(xmpp)
         xmpp.add_event_handler("legacy_message", self.on_legacy_message)

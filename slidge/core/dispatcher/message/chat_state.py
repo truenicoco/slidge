@@ -1,7 +1,7 @@
 from slixmpp import Message
 from slixmpp.xmlstream import StanzaBase
 
-from .util import DispatcherMixin, exceptions_to_xmpp_errors
+from ..util import DispatcherMixin, exceptions_to_xmpp_errors
 
 
 class ChatStateMixin(DispatcherMixin):

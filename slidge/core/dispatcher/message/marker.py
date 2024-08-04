@@ -1,9 +1,9 @@
 from slixmpp import JID, Message
 from slixmpp.xmlstream import StanzaBase
 
-from ...group.room import LegacyMUC
-from ...util.types import Recipient
-from .util import (
+from ....group.room import LegacyMUC
+from ....util.types import Recipient
+from ..util import (
     DispatcherMixin,
     _get_entity,
     _xmpp_to_legacy_thread,
