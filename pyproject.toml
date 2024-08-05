@@ -57,7 +57,7 @@ git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
 branch = "master"
 
 [tool.poetry.scripts]
-slidge = 'slidge.__main__:main'
+slidge = 'slidge.main:main'
 
 [tool.mypy]
 check_untyped_defs = true
