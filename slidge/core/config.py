@@ -154,9 +154,6 @@ LAST_SEEN_FALLBACK__DOC = (
 QR_TIMEOUT = 60
 QR_TIMEOUT__DOC = "Timeout for QR code flashing confirmation."
 
-DOWNLOAD_CHUNK_SIZE = 1024
-DOWNLOAD_CHUNK_SIZE__DOC = "Chunk size when slidge needs to download files using HTTP."
-
 LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND = False
 LAST_MESSAGE_CORRECTION_RETRACTION_WORKAROUND__DOC = (
     "If the legacy service does not support last message correction but supports"
