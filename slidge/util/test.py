@@ -293,7 +293,7 @@ class SlidgeTest(SlixTestPlus):
             )
         )
         welcome = self.next_sent()
-        assert welcome["body"]
+        assert welcome["body"], welcome
         stanza = self.next_sent()
         assert "logging in" in stanza["status"].lower(), stanza
         stanza = self.next_sent()
