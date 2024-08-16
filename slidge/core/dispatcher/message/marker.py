@@ -3,12 +3,7 @@ from slixmpp.xmlstream import StanzaBase
 
 from ....group.room import LegacyMUC
 from ....util.types import Recipient
-from ..util import (
-    DispatcherMixin,
-    _get_entity,
-    _xmpp_to_legacy_thread,
-    exceptions_to_xmpp_errors,
-)
+from ..util import DispatcherMixin, _get_entity, exceptions_to_xmpp_errors
 
 
 class MarkerMixin(DispatcherMixin):
@@ -26,7 +21,7 @@ class MarkerMixin(DispatcherMixin):
         session = await self._get_session(msg)
 
         e: Recipient = await _get_entity(session, msg)
-        legacy_thread = await _xmpp_to_legacy_thread(session, msg, e)
+        legacy_thread = await self._xmpp_to_legacy_thread(session, msg, e)
         displayed_msg_id = msg["displayed"]["id"]
         if not isinstance(e, LegacyMUC) and self.xmpp.MARK_ALL_MESSAGES:
             to_mark = e.get_msg_xmpp_id_up_to(displayed_msg_id)  # type: ignore

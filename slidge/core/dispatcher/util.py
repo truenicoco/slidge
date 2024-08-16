@@ -96,8 +96,30 @@ class DispatcherMixin:
     ) -> tuple["BaseSession", Recipient, int | str]:
         session = await self._get_session(msg)
         e: Recipient = await _get_entity(session, msg)
-        legacy_thread = await _xmpp_to_legacy_thread(session, msg, e)
+        legacy_thread = await self._xmpp_to_legacy_thread(session, msg, e)
         return session, e, legacy_thread
+
+    async def _xmpp_to_legacy_thread(
+        self, session: "BaseSession", msg: Message, recipient: RecipientType
+    ):
+        xmpp_thread = msg["thread"]
+        if not xmpp_thread:
+            return None
+
+        if session.MESSAGE_IDS_ARE_THREAD_IDS:
+            return self._xmpp_msg_id_to_legacy(session, xmpp_thread)
+
+        legacy_thread_str = session.xmpp.store.sent.get_legacy_thread(
+            session.user_pk, xmpp_thread
+        )
+        if legacy_thread_str is not None:
+            return session.xmpp.LEGACY_MSG_ID_TYPE(legacy_thread_str)
+        async with session.thread_creation_lock:
+            legacy_thread = await recipient.create_thread(xmpp_thread)
+            session.xmpp.store.sent.set_thread(
+                session.user_pk, str(legacy_thread), xmpp_thread
+            )
+            return legacy_thread
 
 
 def _ignore(session: "BaseSession", msg: Message):
@@ -109,29 +131,6 @@ def _ignore(session: "BaseSession", msg: Message):
     session.log.debug("Ignored sent carbon: %s", i)
     session.ignore_messages.remove(i)
     return True
-
-
-async def _xmpp_to_legacy_thread(
-    session: "BaseSession", msg: Message, recipient: RecipientType
-):
-    xmpp_thread = msg["thread"]
-    if not xmpp_thread:
-        return
-
-    if session.MESSAGE_IDS_ARE_THREAD_IDS:
-        return session.xmpp.store.sent.get_legacy_thread(session.user_pk, xmpp_thread)
-
-    legacy_thread_str = session.xmpp.store.sent.get_legacy_thread(
-        session.user_pk, xmpp_thread
-    )
-    if legacy_thread_str is not None:
-        return session.xmpp.LEGACY_MSG_ID_TYPE(legacy_thread_str)
-    async with session.thread_creation_lock:
-        legacy_thread = await recipient.create_thread(xmpp_thread)
-        session.xmpp.store.sent.set_thread(
-            session.user_pk, str(legacy_thread), xmpp_thread
-        )
-        return legacy_thread
 
 
 async def _get_entity(session: "BaseSession", m: Message) -> RecipientType:
