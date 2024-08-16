@@ -251,15 +251,6 @@ class SentStore(EngineMixin):
                 .where(XmppToLegacyIds.type == XmppToLegacyEnum.THREAD)
             ).scalar()
 
-    def get_xmpp_thread(self, user_pk: int, legacy_id: str) -> Optional[str]:
-        with self.session() as session:
-            return session.execute(
-                select(XmppToLegacyIds.xmpp_id)
-                .where(XmppToLegacyIds.user_account_id == user_pk)
-                .where(XmppToLegacyIds.legacy_id == legacy_id)
-                .where(XmppToLegacyIds.type == XmppToLegacyEnum.THREAD)
-            ).scalar()
-
     def was_sent_by_user(self, user_pk: int, legacy_id: str) -> bool:
         with self.session() as session:
             return (

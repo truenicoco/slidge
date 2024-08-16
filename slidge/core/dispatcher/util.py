@@ -121,16 +121,17 @@ async def _xmpp_to_legacy_thread(
     if session.MESSAGE_IDS_ARE_THREAD_IDS:
         return session.xmpp.store.sent.get_legacy_thread(session.user_pk, xmpp_thread)
 
+    legacy_thread_str = session.xmpp.store.sent.get_legacy_thread(
+        session.user_pk, xmpp_thread
+    )
+    if legacy_thread_str is not None:
+        return session.xmpp.LEGACY_MSG_ID_TYPE(legacy_thread_str)
     async with session.thread_creation_lock:
-        legacy_thread_str = session.xmpp.store.sent.get_legacy_thread(
-            session.user_pk, xmpp_thread
+        legacy_thread = await recipient.create_thread(xmpp_thread)
+        session.xmpp.store.sent.set_thread(
+            session.user_pk, str(legacy_thread), xmpp_thread
         )
-        if legacy_thread_str is None:
-            legacy_thread = str(await recipient.create_thread(xmpp_thread))
-            session.xmpp.store.sent.set_thread(
-                session.user_pk, xmpp_thread, legacy_thread
-            )
-    return session.xmpp.LEGACY_MSG_ID_TYPE(legacy_thread)
+        return legacy_thread
 
 
 async def _get_entity(session: "BaseSession", m: Message) -> RecipientType:

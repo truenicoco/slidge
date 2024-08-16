@@ -421,3 +421,43 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             )
             on_correct.assert_not_awaited()
             on_retract.assert_not_awaited()
+
+    def test_new_thread_from_xmpp(self):
+        with (
+            unittest.mock.patch("slidge.core.session.BaseSession.on_text") as on_text,
+            unittest.mock.patch(
+                "slidge.contact.contact.LegacyContact.create_thread",
+                return_value="legacy-thread-id",
+            ),
+        ):
+            self.recv(  # language=XML
+                f"""
+            <message type="chat"
+                     to="{self.juliet.jid.bare}"
+                     from="romeo@montague.lit/movim"
+                     id="xmpp-msg-id">
+              <body>I start a new thread</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <thread>xmpp-thread-id</thread>
+            </message>
+            """
+            )
+            on_text.assert_awaited_once()
+            args, kwargs = on_text.call_args
+            assert kwargs["thread"] == "legacy-thread-id"
+        with unittest.mock.patch("slidge.core.session.BaseSession.on_text") as on_text:
+            self.recv(  # language=XML
+                f"""
+            <message type="chat"
+                     to="{self.juliet.jid.bare}"
+                     from="romeo@montague.lit/movim"
+                     id="xmpp-msg-id-2">
+              <body>I send a new message in the new thread</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <thread>xmpp-thread-id</thread>
+            </message>
+            """
+            )
+            on_text.assert_awaited_once()
+            args, kwargs = on_text.call_args
+            assert kwargs["thread"] == "legacy-thread-id"
