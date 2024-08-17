@@ -156,7 +156,9 @@ class Contact(Base):
 
     is_friend: Mapped[bool] = mapped_column(default=False)
     added_to_roster: Mapped[bool] = mapped_column(default=False)
-    sent_order: Mapped[list["ContactSent"]] = relationship(back_populates="contact")
+    sent_order: Mapped[list["ContactSent"]] = relationship(
+        back_populates="contact", cascade="all, delete-orphan"
+    )
 
     extra_attributes: Mapped[Optional[JSONSerializable]] = mapped_column(
         default=None, nullable=True

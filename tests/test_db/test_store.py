@@ -9,9 +9,13 @@ from slidge.db.store import SlidgeStore
 
 
 @pytest.fixture
-def slidge_store():
+def slidge_store(tmp_path):
     engine = sa.create_engine("sqlite+pysqlite:///:memory:", echo=True)
     Base.metadata.create_all(engine)
+    import slidge.core.config
+
+    if not hasattr(slidge.core.config, "HOME_DIR"):
+        slidge.core.config.HOME_DIR = tmp_path
     yield SlidgeStore(engine)
 
 
@@ -60,3 +64,16 @@ def test_delete_avatar(slidge_store):
         slidge_store.avatars.delete_by_pk(avatar_pk)
         contact = slidge_store.contacts.get_by_pk(contact_pk)
         assert contact.avatar is None
+
+
+def test_unregister(slidge_store):
+    user = slidge_store.users.new(JID("test@test"), {})
+    with slidge_store.session() as orm:
+        contact = Contact(
+            jid=JID("xxx@xxx.com"), legacy_id="prout", user_account_id=user.id
+        )
+        orm.add(contact)
+        orm.commit()
+        contact_pk = contact.id
+    slidge_store.contacts.add_to_sent(contact_pk, "an-id")
+    slidge_store.users.delete(user.jid)
