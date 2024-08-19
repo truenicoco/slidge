@@ -305,7 +305,9 @@ class LeaveGroup(Command):
                 FormField(
                     "group",
                     "Group name",
-                    options=[{"label": g.name, "value": g.name} for g in groups],
+                    options=[
+                        {"label": g.name, "value": str(i)} for i, g in enumerate(groups)
+                    ],
                 )
             ],
             handler=self.confirm,  # type:ignore
