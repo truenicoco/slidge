@@ -405,6 +405,16 @@ class ContactStore(UpdatedMixin):
 
     def add_to_sent(self, contact_pk: int, msg_id: str) -> None:
         with self.session() as session:
+            if (
+                session.query(ContactSent.id)
+                .where(ContactSent.contact_id == contact_pk)
+                .where(ContactSent.msg_id == msg_id)
+                .first()
+            ) is not None:
+                log.warning(
+                    "Contact %s has already sent message %s", contact_pk, msg_id
+                )
+                return
             new = ContactSent(contact_id=contact_pk, msg_id=msg_id)
             session.add(new)
             session.commit()
