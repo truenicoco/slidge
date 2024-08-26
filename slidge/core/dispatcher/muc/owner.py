@@ -88,7 +88,7 @@ class MucOwnerMixin(DispatcherMixin):
             if reason is not None:
                 presence["muc"]["destroy"]["reason"] = reason
             user_participant._send(presence)
-            muc.session.bookmarks.remove(muc)
+            await muc.session.bookmarks.remove(muc, kick=False)
             clear = True
         else:
             raise XMPPError("bad-request")

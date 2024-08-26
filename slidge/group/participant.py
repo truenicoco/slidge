@@ -324,7 +324,7 @@ class LegacyParticipant(
     ) -> MessageOrPresenceTypeVar:
         stanza["occupant-id"]["id"] = self.__occupant_id
         self.__add_nick_element(stanza)
-        if isinstance(stanza, Presence):
+        if not self.is_user and isinstance(stanza, Presence):
             if stanza["type"] == "unavailable" and not self._presence_sent:
                 return stanza  # type:ignore
             self._presence_sent = True
@@ -432,17 +432,17 @@ class LegacyParticipant(
         """
         self.muc.remove_participant(self)
 
-    def kick(self):
+    def kick(self, reason: str | None = None):
         """
         Call this when the participant is kicked from the room
         """
-        self.muc.remove_participant(self, kick=True)
+        self.muc.remove_participant(self, kick=True, reason=reason)
 
-    def ban(self):
+    def ban(self, reason: str | None = None):
         """
         Call this when the participant is banned from the room
         """
-        self.muc.remove_participant(self, ban=True)
+        self.muc.remove_participant(self, ban=True, reason=reason)
 
     def get_disco_info(self, jid: OptJid = None, node: Optional[str] = None):
         if self.contact is not None:

@@ -160,6 +160,26 @@ class LegacyBookmarks(
                 " LegacyBookmarks.fill() was not overridden."
             )
 
-    def remove(self, muc: LegacyMUC):
+    async def remove(
+        self,
+        muc: LegacyMUC,
+        reason="You left this group from the official client.",
+        kick=True,
+    ) -> None:
+        """
+        Delete everything about a specific group.
+
+        This should be called when the user leaves the group from the official
+        app.
+
+        :param muc: The MUC to remove.
+        :param reason: Optionally, a reason why this group was removed.
+        :param kick: Whether the user should be kicked from this group. Set this
+            to False in case you do this somewhere else in your code, eg, on
+            receiving the confirmation that the group was deleted.
+        """
         assert muc.pk is not None
+        if kick:
+            user_participant = await muc.get_user_participant()
+            user_participant.kick(reason)
         self.__store.delete(muc.pk)

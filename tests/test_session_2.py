@@ -49,7 +49,7 @@ class Bookmarks(LegacyBookmarks):
 
 
 @pytest.mark.usefixtures("avatar")
-class TestSession(AvatarFixtureMixin, SlidgeTest):
+class TestSession2(AvatarFixtureMixin, SlidgeTest):
     plugin = globals()
     xmpp: Gateway
 
@@ -148,7 +148,8 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
                 </items>
               </event>
             </message>
-            """
+            """,
+            use_values=False,  # I do not understand why this is necessary, related on test run order?!?
         )
         assert self.next_sent() is None
         juliet: Contact = self.run_coro(
@@ -201,3 +202,39 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         )
         assert self.next_sent() is not None
         assert self.next_sent() is None
+
+    def test_leave_group(self):
+        muc: LegacyMUC = self.run_coro(
+            self.romeo_session.bookmarks.by_legacy_id("room")
+        )
+        self.next_sent()  # juliet presence
+        self.next_sent()  # juliet nick
+        self.next_sent()  # juliet avatar
+        assert self.next_sent() is None
+        assert muc.jid in list([m.jid for m in self.romeo_session.bookmarks])
+
+        muc.add_user_resource("gajim")
+        self.run_coro(self.romeo_session.bookmarks.remove(muc))
+        self.send(  # language=XML
+            """
+            <presence xmlns="jabber:component:accept"
+                      type="unavailable"
+                      from="room@aim.shakespeare.lit/Cool nick"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="romeo@montague.lit">
+                  <reason>You left this group from the official client.</reason>
+                </item>
+                <status code="307" />
+                <status code="100" />
+                <status code="110" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+              <priority>0</priority>
+            </presence>
+            """
+        )
+        assert muc.jid not in list([m.jid for m in self.romeo_session.bookmarks])

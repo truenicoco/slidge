@@ -814,13 +814,20 @@ class LegacyMUC(
             return await self.get_user_participant(**kwargs)
         return await self.get_participant_by_contact(c, **kwargs)
 
-    def remove_participant(self, p: "LegacyParticipantType", kick=False, ban=False):
+    def remove_participant(
+        self,
+        p: "LegacyParticipantType",
+        kick=False,
+        ban=False,
+        reason: str | None = None,
+    ):
         """
         Call this when a participant leaves the room
 
         :param p: The participant
         :param kick: Whether the participant left because they were kicked
         :param ban: Whether the participant left because they were banned
+        :param reason: Optionally, a reason why the participant was removed.
         """
         if kick and ban:
             raise TypeError("Either kick or ban")
@@ -834,6 +841,8 @@ class LegacyMUC(
         presence = p._make_presence(ptype="unavailable", status_codes=codes)
         p._affiliation = "outcast" if ban else "none"
         p._role = "none"
+        if reason:
+            presence["muc"].set_item_attr("reason", reason)
         p._send(presence)
 
     def rename_participant(self, old_nickname: str, new_nickname: str):
