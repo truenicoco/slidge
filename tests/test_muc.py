@@ -2842,6 +2842,15 @@ class TestMuc(Base):
             """,
             use_values=False,
         )
+        self.recv(  # language=XML
+            """
+            <iq to="aim.shakespeare.lit"
+                from="romeo@montague.lit"
+                xmlns="jabber:component:accept"
+                type="result"
+                id="0" />
+            """
+        )
         slixmpp.plugins.xep_0356.privilege.uuid.uuid4 = o
 
     async def __fill_roster(self):

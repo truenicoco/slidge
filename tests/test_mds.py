@@ -195,3 +195,11 @@ class TestMDS(MDSMixin, BaseMUC):
             """,
             use_values=False,
         )
+        self.recv(  # language=XML
+            """
+            <iq id="uuid"
+                from="romeo@montague.lit"
+                to="aim.shakespeare.lit"
+                type="result" />
+            """
+        )
