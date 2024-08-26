@@ -55,7 +55,6 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
 
     def setUp(self):
         super().setUp()
-        self.db_engine.echo = False
         user = self.xmpp.store.users.new(
             JID("romeo@montague.lit/gajim"), {"username": "romeo", "city": ""}
         )
@@ -89,7 +88,6 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             </iq>
             """
         )
-        self.db_engine.echo = True
 
     def tearDown(self):
         super().tearDown()

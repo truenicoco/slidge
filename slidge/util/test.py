@@ -215,13 +215,13 @@ class SlidgeTest(SlixTestPlus):
                 self.plugin, LegacyBookmarks, base_ok=True
             )
 
+        # workaround for duplicate output of sql alchemy's log, cf
+        # https://stackoverflow.com/a/76498428/5902284
         from sqlalchemy import log as sqlalchemy_log
 
         sqlalchemy_log._add_default_handler = lambda x: None
 
-        engine = self.db_engine = create_engine(
-            "sqlite+pysqlite:///:memory:", echo=True
-        )
+        engine = self.db_engine = create_engine("sqlite+pysqlite:///:memory:")
         Base.metadata.create_all(engine)
         BaseGateway.store = SlidgeStore(engine)
         BaseGateway._test_mode = True
