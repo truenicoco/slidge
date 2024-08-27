@@ -33,16 +33,13 @@ from ...util.types import (
 )
 from ...util.util import fix_suffix
 from .. import config
-from .message_maker import MessageMaker
+from .message_text import TextMessageMixin
 
 
-class AttachmentMixin(MessageMaker):
+class AttachmentMixin(TextMessageMixin):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.__store = self.xmpp.store.attachments
-
-    def send_text(self, *_, **k) -> Optional[Message]:
-        raise NotImplementedError
 
     async def __upload(
         self,
