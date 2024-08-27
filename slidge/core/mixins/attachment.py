@@ -301,6 +301,7 @@ class AttachmentMixin(TextMessageMixin):
         caption: Optional[str] = None,
         carbon=False,
         when: Optional[datetime] = None,
+        correction=False,
         **kwargs,
     ) -> list[Message]:
         msg["oob"]["url"] = uploaded_url
@@ -308,11 +309,19 @@ class AttachmentMixin(TextMessageMixin):
         if caption:
             m1 = self._send(msg, carbon=carbon, **kwargs)
             m2 = self.send_text(
-                caption, legacy_msg_id=legacy_msg_id, when=when, carbon=carbon, **kwargs
+                caption,
+                legacy_msg_id=legacy_msg_id,
+                when=when,
+                carbon=carbon,
+                correction=correction,
+                **kwargs,
             )
             return [m1, m2] if m2 else [m1]
         else:
-            self._set_msg_id(msg, legacy_msg_id)
+            if correction:
+                msg["replace"]["id"] = self._replace_id(legacy_msg_id)
+            else:
+                self._set_msg_id(msg, legacy_msg_id)
             return [self._send(msg, carbon=carbon, **kwargs)]
 
     async def send_file(
@@ -355,6 +364,16 @@ class AttachmentMixin(TextMessageMixin):
         carbon = kwargs.pop("carbon", False)
         mto = kwargs.pop("mto", None)
         store_multi = kwargs.pop("store_multi", True)
+        correction = kwargs.get("correction", False)
+        if correction and (original_xmpp_id := self._legacy_to_xmpp(legacy_msg_id)):
+            xmpp_ids = self.xmpp.store.multi.get_xmpp_ids(
+                self.session.user_pk, original_xmpp_id
+            )
+
+            for xmpp_id in xmpp_ids:
+                if xmpp_id == original_xmpp_id:
+                    continue
+                self.retract(xmpp_id, thread)
         msg = self._make_message(
             when=when,
             reply_to=reply_to,

@@ -21,7 +21,7 @@ class TextMessageMixin(MessageMaker):
         elif self.mtype == "groupchat":
             return {"markable"}
 
-    def __replace_id(self, legacy_msg_id: LegacyMessageType):
+    def _replace_id(self, legacy_msg_id: LegacyMessageType):
         if self.mtype == "groupchat":
             return self.xmpp.store.sent.get_group_xmpp_id(
                 self.session.user_pk, str(legacy_msg_id)
@@ -99,7 +99,7 @@ class TextMessageMixin(MessageMaker):
             link_previews=link_previews,
         )
         if correction:
-            msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
+            msg["replace"]["id"] = self._replace_id(legacy_msg_id)
         return self._send(
             msg,
             archive_only=archive_only,
@@ -204,7 +204,7 @@ class TextMessageMixin(MessageMaker):
         msg.enable("fallback")
         # namespace version mismatch between slidge and slixmpp, update me later
         msg["fallback"]["for"] = self.xmpp["xep_0424"].namespace[:-1] + "1"
-        msg["retract"]["id"] = msg["replace"]["id"] = self.__replace_id(legacy_msg_id)
+        msg["retract"]["id"] = msg["replace"]["id"] = self._replace_id(legacy_msg_id)
         self._send(msg, **kwargs)
 
 

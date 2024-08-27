@@ -461,3 +461,158 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
             on_text.assert_awaited_once()
             args, kwargs = on_text.call_args
             assert kwargs["thread"] == "legacy-thread-id"
+
+    def test_multi_correction_caption(self):
+        from slidge import global_config
+
+        global_config.USE_ATTACHMENT_ORIGINAL_URLS = True
+        self.xmpp.use_message_ids = True
+
+        self.run_coro(
+            self.juliet.send_file(
+                file_url=self.avatar_url, legacy_msg_id="original-id", caption="prout"
+            )
+        )
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit"
+                     id="2">
+              <x xmlns="jabber:x:oob">
+                <url>AVATAR_URL</url>
+              </x>
+              <body>AVATAR_URL</body>
+            </message>
+            """,
+            use_values=False,
+        )
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     id="original-id"
+                     to="romeo@montague.lit">
+              <body>prout</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <store xmlns="urn:xmpp:hints" />
+            </message>
+            """,
+            use_values=False,
+        )
+
+        self.run_coro(
+            self.juliet.send_file(
+                file_url=self.avatar_url + "--NEW",
+                legacy_msg_id="original-id",
+                caption="prout",
+                correction=True,
+            )
+        )
+
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     id="4"
+                     to="romeo@montague.lit">
+              <body>/me retracted the message 2</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <store xmlns="urn:xmpp:hints" />
+              <fallback xmlns="urn:xmpp:fallback:0"
+                        for="urn:xmpp:message-retract:1" />
+              <retract xmlns="urn:xmpp:message-retract:1"
+                       id="2" />
+              <replace xmlns="urn:xmpp:message-correct:0"
+                       id="2" />
+            </message>
+            """,
+            use_values=False,
+        )
+
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit"
+                     id="5">
+              <x xmlns="jabber:x:oob">
+                <url>AVATAR_URL--NEW</url>
+              </x>
+              <body>AVATAR_URL--NEW</body>
+            </message>
+            """,
+            use_values=False,
+        )
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     id="6"
+                     to="romeo@montague.lit">
+              <body>prout</body>
+              <active xmlns="http://jabber.org/protocol/chatstates" />
+              <markable xmlns="urn:xmpp:chat-markers:0" />
+              <store xmlns="urn:xmpp:hints" />
+              <replace xmlns="urn:xmpp:message-correct:0"
+                       id="original-id" />
+            </message>
+            """,
+            use_values=False,
+        )
+
+        self.xmpp.use_message_ids = False
+        global_config.USE_ATTACHMENT_ORIGINAL_URLS = False
+
+    def test_multi_correction(self):
+        from slidge import global_config
+
+        global_config.USE_ATTACHMENT_ORIGINAL_URLS = True
+        self.xmpp.use_message_ids = True
+
+        self.run_coro(
+            self.juliet.send_file(file_url=self.avatar_url, legacy_msg_id="original-id")
+        )
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit"
+                     id="original-id">
+              <x xmlns="jabber:x:oob">
+                <url>AVATAR_URL</url>
+              </x>
+              <body>AVATAR_URL</body>
+            </message>
+            """,
+            use_values=False,
+        )
+
+        self.run_coro(
+            self.juliet.send_file(
+                file_url=self.avatar_url + "--NEW",
+                legacy_msg_id="original-id",
+                correction=True,
+            )
+        )
+
+        self.send(  # language=XML
+            """
+            <message type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     id="3"
+                     to="romeo@montague.lit">
+              <x xmlns="jabber:x:oob">
+                <url>AVATAR_URL--NEW</url>
+              </x>
+              <body>AVATAR_URL--NEW</body>
+              <replace xmlns="urn:xmpp:message-correct:0"
+                       id="original-id" />
+            </message>
+            """,
+            use_values=False,
+        )
+
+        self.xmpp.use_message_ids = False
+        global_config.USE_ATTACHMENT_ORIGINAL_URLS = False
