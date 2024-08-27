@@ -332,3 +332,4 @@ class LeaveGroup(Command):
     @staticmethod
     async def finish(session: AnyBaseSession, _ifrom, group: LegacyMUC):
         await session.on_leave_group(group.legacy_id)
+        await session.bookmarks.remove(group, reason="You left this group via slidge.")
