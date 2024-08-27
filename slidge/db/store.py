@@ -505,6 +505,12 @@ class MAMStore(EngineMixin):
                 .where(ArchivedMessage.room_id == room_pk)
                 .where(ArchivedMessage.stanza_id == message.id)
             ).scalar()
+            if existing is None and legacy_msg_id is not None:
+                existing = session.execute(
+                    select(ArchivedMessage)
+                    .where(ArchivedMessage.room_id == room_pk)
+                    .where(ArchivedMessage.legacy_id == legacy_msg_id)
+                ).scalar()
             if existing is not None:
                 log.debug("Updating message %s in room %s", message.id, room_pk)
                 existing.timestamp = message.when
