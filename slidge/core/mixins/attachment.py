@@ -258,7 +258,7 @@ class AttachmentMixin(TextMessageMixin):
                 thumbnail["width"] = x
                 thumbnail["height"] = y
                 thumbnail["media-type"] = "image/thumbhash"
-                thumbnail["uri"] = "data:image/thumbhash," + urlquote(h)
+                thumbnail["uri"] = "data:image/thumbhash;base64," + urlquote(h)
 
         self.__store.set_sims(uploaded_url, str(ref))
 

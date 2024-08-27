@@ -102,7 +102,7 @@ class Base(Shakespeare, AvatarFixtureMixin):
                                width="5"
                                height="5"
                                media-type="image/thumbhash"
-                               uri="data:image/thumbhash,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
+                               uri="data:image/thumbhash;base64,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
                   </file>
                 </media-sharing>
               </reference>
@@ -123,7 +123,7 @@ class Base(Shakespeare, AvatarFixtureMixin):
                              width="5"
                              height="5"
                              media-type="image/thumbhash"
-                             uri="data:image/thumbhash,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
+                             uri="data:image/thumbhash;base64,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
                 </file>
               </file-sharing>
               <x xmlns="jabber:x:oob">
