@@ -4073,6 +4073,28 @@ class TestMUCRegistration(Base):
                 id="1" />
             """
         )
+        self.send(  # language=XML
+            """
+            <presence xmlns="jabber:component:accept"
+                      type="unavailable"
+                      from="room-private@aim.shakespeare.lit/thirdwitch"
+                      to="romeo@montague.lit/gajim">
+              <x xmlns="http://jabber.org/protocol/muc#user">
+                <item affiliation="member"
+                      role="participant"
+                      jid="romeo@montague.lit">
+                  <reason>You left this chat from an XMPP client.</reason>
+                </item>
+                <status code="307" />
+                <status code="100" />
+                <status code="110" />
+              </x>
+              <occupant-id xmlns="urn:xmpp:occupant-id:0"
+                           id="slidge-user" />
+              <priority>0</priority>
+            </presence>
+            """
+        )
         self.recv(  # language=XML
             f"""
             <iq from='{muc.user_jid}/gajim'

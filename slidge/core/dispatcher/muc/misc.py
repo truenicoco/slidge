@@ -54,6 +54,9 @@ class MucMiscMixin(DispatcherMixin):
             muc = await self.get_muc_from_stanza(iq)
             await muc.session.on_leave_group(muc.legacy_id)
             iq.reply().send()
+            await muc.session.bookmarks.remove(
+                muc, "You left this chat from an XMPP client."
+            )
             return
 
         raise XMPPError("feature-not-implemented")
