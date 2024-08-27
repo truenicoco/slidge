@@ -154,6 +154,8 @@ class LegacyRoster(
         try:
             with contact.updating_info():
                 await contact.avatar_wrap_update_info()
+        except XMPPError:
+            raise
         except Exception as e:
             raise XMPPError("internal-server-error", str(e))
         contact._caps_ver = await contact.get_caps_ver(contact.jid)

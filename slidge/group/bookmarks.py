@@ -133,6 +133,8 @@ class LegacyBookmarks(
         try:
             with muc.updating_info():
                 await muc.avatar_wrap_update_info()
+        except XMPPError:
+            raise
         except Exception as e:
             raise XMPPError("internal-server-error", str(e))
         if not muc.user_nick:
