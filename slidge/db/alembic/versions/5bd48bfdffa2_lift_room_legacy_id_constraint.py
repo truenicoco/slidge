@@ -4,8 +4,12 @@ Revision ID: 5bd48bfdffa2
 Revises: b64b1a793483
 Create Date: 2024-07-24 10:29:23.467851
 
+Broken; fixed by "Remove bogus unique constraints on room table",
+rev 15b0bd83407a.
+
 """
 
+import logging
 from typing import Sequence, Union
 
 from alembic import op
@@ -26,6 +30,8 @@ def upgrade() -> None:
             schema=None,
             # without copy_from, the newly created table keeps the constraints
             # we actually want to ditch.
+            # LATER EDIT: this actually does not work, I should have copied the
+            # schema in here.
             copy_from=Room.__table__,  # type:ignore
         ) as batch_op:
             batch_op.create_unique_constraint(
@@ -35,9 +41,11 @@ def upgrade() -> None:
                 "uq_room_user_account_id_legacy_id", ["user_account_id", "legacy_id"]
             )
     except Exception:
-        # happens when migration is not needed
+        # This only works when upgrading rev by rev because I messed up. It
         # wouldn't be necessary if the constraint was named in the first place,
         # cf https://alembic.sqlalchemy.org/en/latest/naming.html
+        # This is fixed by rev 15b0bd83407a
+        log.info("Skipping")
         pass
 
 
@@ -48,3 +56,6 @@ def downgrade() -> None:
         batch_op.drop_constraint("uq_room_user_account_id_jid", type_="unique")
 
     # ### end Alembic commands ###
+
+
+log = logging.getLogger(__name__)
