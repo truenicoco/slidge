@@ -6,6 +6,7 @@ Dockerhub
 ---------
 
 Containers for arm64 and amd64 are available on `docker hub <https://hub.docker.com/u/nicocool84>`_.
+The slidge-whatsapp arm64 container is kindly provided by `raver <https://hub.docker.com/u/ravermeister>`_.
 See :ref:`Containers` for more details.
 
 debian
