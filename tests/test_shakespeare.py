@@ -627,7 +627,7 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="🛷️ Slidge administration"
+                      node="https://slidge.im/command/core/admin"
                       name="🛷️ Slidge administration" />
                 <item jid="aim.shakespeare.lit"
                       node="jabber:iq:register"
@@ -657,19 +657,19 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="🛷️ Slidge administration"
-                      name="🛷️ Slidge administration" />
+                      name="🛷️ Slidge administration"
+                      node="https://slidge.im/command/core/admin" />
                 <item jid="aim.shakespeare.lit"
-                      node="👤 Contacts"
+                      node="https://slidge.im/command/core/contacts"
                       name="👤 Contacts" />
                 <item jid="aim.shakespeare.lit"
-                      node="👥 Groups"
+                      node="https://slidge.im/command/core/groups"
                       name="👥 Groups" />
                 <item jid="aim.shakespeare.lit"
-                      node="preferences"
+                      node="https://slidge.im/command/core/preferences"
                       name="⚙️ Preferences" />
                 <item jid="aim.shakespeare.lit"
-                      node="unregister"
+                      node="https://slidge.im/command/core/unregister"
                       name="❌ Unregister from the gateway" />
               </query>
             </iq>
@@ -697,16 +697,16 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="🛷️ Slidge administration"
+                      node="https://slidge.im/command/core/admin"
                       name="🛷️ Slidge administration" />
                 <item jid="aim.shakespeare.lit"
-                      node="re-login"
+                      node="https://slidge.im/command/core/re-login"
                       name="🔐 Re-login to the legacy network" />
                 <item jid="aim.shakespeare.lit"
-                      node="preferences"
+                      node="https://slidge.im/command/core/preferences"
                       name="⚙️ Preferences" />
                 <item jid="aim.shakespeare.lit"
-                      node="unregister"
+                      node="https://slidge.im/command/core/unregister"
                       name="❌ Unregister from the gateway" />
               </query>
             </iq>
@@ -736,8 +736,8 @@ class TestAimShakespeareBase(Base):
               <query xmlns='http://jabber.org/protocol/disco#items'
                      node='http://jabber.org/protocol/commands'>
                 <item jid="aim.shakespeare.lit"
-                      node="{ADMINISTRATION}"
-                      name="{ADMINISTRATION}" />
+                      node="{ADMINISTRATION.node}"
+                      name="{ADMINISTRATION.name}" />
                 <item jid="aim.shakespeare.lit"
                       node="jabber:iq:register"
                       name="📝 Register to the gateway" />
@@ -760,7 +760,7 @@ class TestAimShakespeareBase(Base):
                 id="123">
               <command xmlns="http://jabber.org/protocol/commands"
                        action="execute"
-                       node="{ADMINISTRATION}" />
+                       node="{ADMINISTRATION.node}" />
             </iq>
             """
             )
@@ -771,7 +771,7 @@ class TestAimShakespeareBase(Base):
                 to="test@localhost/gajim"
                 id="123">
               <command xmlns="http://jabber.org/protocol/commands"
-                       node="🛷️ Slidge administration"
+                       node="https://slidge.im/command/core/admin"
                        sessionid="session-id"
                        status="executing">
                 <actions>
@@ -784,7 +784,7 @@ class TestAimShakespeareBase(Base):
                          label="Command"
                          type="list-single">
                     <option label="ℹ️ Server information">
-                      <value>0</value>
+                      <value>https://slidge.im/command/core/admin/info</value>
                     </option>
                     <value />
                   </field>

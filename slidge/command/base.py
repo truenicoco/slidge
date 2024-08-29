@@ -25,9 +25,12 @@ from slixmpp.types import JidStr
 from ..core import config
 from ..util.types import AnyBaseSession, FieldType
 
+NODE_PREFIX = "https://slidge.im/command/core/"
+
 if TYPE_CHECKING:
     from ..core.gateway import BaseGateway
     from ..core.session import BaseSession
+    from .categories import CommandCategory
 
 
 HandlerType = Union[
@@ -347,7 +350,7 @@ class Command(ABC):
     Who can use this command
     """
 
-    CATEGORY: Optional[str] = None
+    CATEGORY: Optional[Union[str, "CommandCategory"]] = None
     """
     If used, the command will be under this top-level category.
     Use the same string for several commands to group them.

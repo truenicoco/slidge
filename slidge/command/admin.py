@@ -11,6 +11,7 @@ from slixmpp.exceptions import XMPPError
 from ..core import config
 from ..util.types import AnyBaseSession
 from .base import (
+    NODE_PREFIX,
     Command,
     CommandAccess,
     Confirmation,
@@ -21,6 +22,8 @@ from .base import (
 )
 from .categories import ADMINISTRATION
 
+NODE_PREFIX = NODE_PREFIX + "admin/"
+
 
 class AdminCommand(Command):
     ACCESS = CommandAccess.ADMIN_ONLY
@@ -30,7 +33,8 @@ class AdminCommand(Command):
 class ListUsers(AdminCommand):
     NAME = "👤 List registered users"
     HELP = "List the users registered to this gateway"
-    NODE = CHAT_COMMAND = "list_users"
+    CHAT_COMMAND = "list_users"
+    NODE = NODE_PREFIX + CHAT_COMMAND
 
     async def run(self, _session, _ifrom, *_):
         items = []
@@ -51,7 +55,8 @@ class ListUsers(AdminCommand):
 class SlidgeInfo(AdminCommand):
     NAME = "ℹ️ Server information"
     HELP = "List the users registered to this gateway"
-    NODE = CHAT_COMMAND = "info"
+    CHAT_COMMAND = "info"
+    NODE = NODE_PREFIX + CHAT_COMMAND
     ACCESS = CommandAccess.ANY
 
     async def run(self, _session, _ifrom, *_):
@@ -105,7 +110,8 @@ class SlidgeInfo(AdminCommand):
 class DeleteUser(AdminCommand):
     NAME = "❌ Delete a user"
     HELP = "Unregister a user from the gateway"
-    NODE = CHAT_COMMAND = "delete_user"
+    CHAT_COMMAND = "delete_user"
+    NODE = NODE_PREFIX + CHAT_COMMAND
 
     async def run(self, _session, _ifrom, *_):
         return Form(
@@ -141,7 +147,8 @@ class DeleteUser(AdminCommand):
 class ChangeLoglevel(AdminCommand):
     NAME = "📋 Change the verbosity of the logs"
     HELP = "Set the logging level"
-    NODE = CHAT_COMMAND = "loglevel"
+    CHAT_COMMAND = "loglevel"
+    NODE = NODE_PREFIX + CHAT_COMMAND
 
     async def run(self, _session, _ifrom, *_):
         return Form(

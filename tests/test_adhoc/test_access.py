@@ -213,10 +213,10 @@ class TestCommandsDisco(SlixTestPlus):
                          type="list-single"
                          label="Command">
                     <option label="Command number three">
-                      <value>0</value>
+                      <value>command3</value>
                     </option>
                     <option label="Command number four">
-                      <value>1</value>
+                      <value>command4</value>
                     </option>
                     <value />
                   </field>
@@ -238,7 +238,7 @@ class TestCommandsDisco(SlixTestPlus):
                 <x xmlns='jabber:x:data'
                    type='submit'>
                   <field var='command'>
-                    <value>0</value>
+                    <value>command3</value>
                   </field>
                 </x>
               </command>

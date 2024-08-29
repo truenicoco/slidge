@@ -26,8 +26,8 @@ if TYPE_CHECKING:
 class Search(Command):
     NAME = "🔎 Search for contacts"
     HELP = "Search for contacts via this gateway"
-    NODE = "search"
     CHAT_COMMAND = "find"
+    NODE = CONTACTS.node + "/" + CHAT_COMMAND
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = CONTACTS
 
@@ -64,7 +64,8 @@ class SyncContacts(Command):
         "Synchronize your XMPP roster with your legacy contacts. "
         "Slidge will only add/remove/modify contacts in its dedicated roster group"
     )
-    NODE = CHAT_COMMAND = "sync-contacts"
+    CHAT_COMMAND = "sync-contacts"
+    NODE = CONTACTS.node + "/" + CHAT_COMMAND
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = CONTACTS
 
@@ -123,7 +124,8 @@ class SyncContacts(Command):
 
 class ListContacts(Command):
     NAME = HELP = "👤 List your legacy contacts"
-    NODE = CHAT_COMMAND = "contacts"
+    CHAT_COMMAND = "contacts"
+    NODE = CONTACTS.node + "/" + CHAT_COMMAND
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = CONTACTS
 
@@ -143,7 +145,8 @@ class ListContacts(Command):
 
 class ListGroups(Command):
     NAME = HELP = "👥 List your legacy groups"
-    NODE = CHAT_COMMAND = "groups"
+    CHAT_COMMAND = "groups"
+    NODE = GROUPS.node + "/" + CHAT_COMMAND
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = GROUPS
 
@@ -162,7 +165,8 @@ class ListGroups(Command):
 class Login(Command):
     NAME = "🔐 Re-login to the legacy network"
     HELP = "Login to the legacy service"
-    NODE = CHAT_COMMAND = "re-login"
+    CHAT_COMMAND = "re-login"
+    NODE = "https://slidge.im/command/core/" + CHAT_COMMAND
 
     ACCESS = CommandAccess.USER_NON_LOGGED
 
@@ -184,7 +188,8 @@ class Login(Command):
 class CreateGroup(Command):
     NAME = "🆕 New legacy group"
     HELP = "Create a group on the legacy service"
-    NODE = CHAT_COMMAND = "create-group"
+    CHAT_COMMAND = "create-group"
+    NODE = GROUPS.node + "/" + CHAT_COMMAND
     CATEGORY = GROUPS
 
     ACCESS = CommandAccess.USER_LOGGED
@@ -233,7 +238,8 @@ class CreateGroup(Command):
 class Preferences(Command):
     NAME = "⚙️ Preferences"
     HELP = "Customize the gateway behaviour to your liking"
-    NODE = CHAT_COMMAND = "preferences"
+    CHAT_COMMAND = "preferences"
+    NODE = "https://slidge.im/command/core/preferences"
     ACCESS = CommandAccess.USER
 
     async def run(
@@ -268,7 +274,8 @@ class Preferences(Command):
 class Unregister(Command):
     NAME = "❌ Unregister from the gateway"
     HELP = "Unregister from the gateway"
-    NODE = CHAT_COMMAND = "unregister"
+    CHAT_COMMAND = "unregister"
+    NODE = "https://slidge.im/command/core/unregister"
     ACCESS = CommandAccess.USER
 
     async def run(
@@ -290,7 +297,8 @@ class Unregister(Command):
 
 class LeaveGroup(Command):
     NAME = HELP = "❌ Leave a legacy group"
-    NODE = CHAT_COMMAND = "leave-group"
+    CHAT_COMMAND = "leave-group"
+    NODE = GROUPS.node + "/" + CHAT_COMMAND
     ACCESS = CommandAccess.USER_LOGGED
     CATEGORY = GROUPS
 

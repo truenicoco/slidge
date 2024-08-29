@@ -13,6 +13,7 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.types import JidStr, MessageTypes
 
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
+from .categories import CommandCategory
 
 if TYPE_CHECKING:
     from ..core.gateway import BaseGateway
@@ -280,7 +281,19 @@ class ChatCommandProvider:
     def _help(self, mfrom: JID):
         msg = "Available commands:"
         for c in sorted(
-            self._commands.values(), key=lambda co: (co.CATEGORY or "", co.CHAT_COMMAND)
+            self._commands.values(),
+            key=lambda co: (
+                (
+                    co.CATEGORY
+                    if isinstance(co.CATEGORY, str)
+                    else (
+                        co.CATEGORY.name
+                        if isinstance(co.CATEGORY, CommandCategory)
+                        else ""
+                    )
+                ),
+                co.CHAT_COMMAND,
+            ),
         ):
             try:
                 c.raise_if_not_authorized(mfrom)

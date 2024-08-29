@@ -13,6 +13,7 @@ from ..core import config
 from ..util.util import strip_leading_emoji
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 from .base import FormField
+from .categories import CommandCategory
 
 if TYPE_CHECKING:
     from ..core.gateway import BaseGateway
@@ -48,19 +49,19 @@ class AdhocProvider:
         return await self.__handle_result(session, result, adhoc_session)
 
     async def __handle_category_list(
-        self, category: str, iq: Iq, adhoc_session: AdhocSessionType
+        self, category: CommandCategory, iq: Iq, adhoc_session: AdhocSessionType
     ) -> AdhocSessionType:
         try:
             session = self.xmpp.get_session_from_stanza(iq)
         except XMPPError:
             session = None
-        commands = []
-        for command in self._categories[category]:
+        commands: dict[str, Command] = {}
+        for command in self._categories[category.node]:
             try:
                 command.raise_if_not_authorized(iq.get_from())
             except XMPPError:
                 continue
-            commands.append(command)
+            commands[command.NODE] = command
         if len(commands) == 0:
             raise XMPPError(
                 "not-authorized", "There is no command you can run in this category"
@@ -68,7 +69,7 @@ class AdhocProvider:
         return await self.__handle_result(
             session,
             Form(
-                category,
+                category.name,
                 "",
                 [
                     FormField(
@@ -78,9 +79,9 @@ class AdhocProvider:
                         options=[
                             {
                                 "label": strip_leading_emoji_if_needed(command.NAME),
-                                "value": str(i),
+                                "value": command.NODE,
                             }
-                            for i, command in enumerate(commands)
+                            for command in commands.values()
                         ],
                     )
                 ],
@@ -91,12 +92,12 @@ class AdhocProvider:
 
     async def __handle_category_choice(
         self,
-        commands: list[Command],
+        commands: dict[str, Command],
         form_values: dict[str, str],
         session: "BaseSession[Any, Any]",
         jid: JID,
     ):
-        command = commands[int(form_values["command"])]
+        command = commands[form_values["command"]]
         result = await self.__wrap_handler(command.run, session, jid)
         return result
 
@@ -216,15 +217,19 @@ class AdhocProvider:
                 handler=partial(self.__wrap_initial_handler, command),
             )
         else:
-            if category not in self._categories:
-                self._categories[category] = list[Command]()
+            if isinstance(category, str):
+                category = CommandCategory(category, category)
+            node = category.node
+            name = category.name
+            if node not in self._categories:
+                self._categories[node] = list[Command]()
                 self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
                     jid=jid,
-                    node=category,
-                    name=strip_leading_emoji_if_needed(category),
+                    node=node,
+                    name=strip_leading_emoji_if_needed(name),
                     handler=partial(self.__handle_category_list, category),
                 )
-            self._categories[category].append(command)
+            self._categories[node].append(command)
 
     async def get_items(self, jid: JID, node: str, iq: Iq) -> DiscoItems:
         """
