@@ -12,7 +12,7 @@ from slidge.util import (
     is_valid_phone_number,
 )
 from slidge.util.types import Mention
-from slidge.util.util import merge_resources, replace_mentions
+from slidge.util.util import merge_resources, replace_mentions, strip_leading_emoji
 
 
 def test_subclass():
@@ -244,3 +244,15 @@ def test_replace_mentions():
         replace_mentions(text, mentions, lambda c: "@" + c[-1])
         == "Text @1 and @2, and @3 blabla"
     )
+
+
+def test_strip_emoji():
+    try:
+        import emoji
+    except ImportError:
+        return
+    assert strip_leading_emoji("🛷️ Slidge administration") == "Slidge administration"
+    assert strip_leading_emoji("no emoji") == "no emoji"
+    assert strip_leading_emoji("no") == "no"
+    assert strip_leading_emoji("👤 Contacts") == "Contacts"
+    assert strip_leading_emoji("👥 Groups") == "Groups"

@@ -9,6 +9,8 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0004 import Form as SlixForm  # type: ignore[attr-defined]
 from slixmpp.plugins.xep_0030.stanza.items import DiscoItems
 
+from ..core import config
+from ..util.util import strip_leading_emoji
 from . import Command, CommandResponseType, Confirmation, Form, TableResult
 from .base import FormField
 
@@ -74,7 +76,10 @@ class AdhocProvider:
                         label="Command",
                         type="list-single",
                         options=[
-                            {"label": command.NAME, "value": str(i)}
+                            {
+                                "label": strip_leading_emoji_if_needed(command.NAME),
+                                "value": str(i),
+                            }
                             for i, command in enumerate(commands)
                         ],
                     )
@@ -207,7 +212,7 @@ class AdhocProvider:
             self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
                 jid=jid,
                 node=command.NODE,
-                name=command.NAME,
+                name=strip_leading_emoji_if_needed(command.NAME),
                 handler=partial(self.__wrap_initial_handler, command),
             )
         else:
@@ -216,7 +221,7 @@ class AdhocProvider:
                 self.xmpp.plugin["xep_0050"].add_command(  # type: ignore[no-untyped-call]
                     jid=jid,
                     node=category,
-                    name=category,
+                    name=strip_leading_emoji_if_needed(category),
                     handler=partial(self.__handle_category_list, category),
                 )
             self._categories[category].append(command)
@@ -260,6 +265,12 @@ class AdhocProvider:
                 filtered_items.append(item)
 
         return filtered_items
+
+
+def strip_leading_emoji_if_needed(text: str) -> str:
+    if config.STRIP_LEADING_EMOJI_ADHOC:
+        return strip_leading_emoji(text)
+    return text
 
 
 log = logging.getLogger(__name__)

@@ -9,6 +9,13 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Callable, NamedTuple, Optional, Type, TypeVar
 
+try:
+    import emoji
+except ImportError:
+    EMOJI_LIB_AVAILABLE = False
+else:
+    EMOJI_LIB_AVAILABLE = True
+
 from .types import Mention, ResourceDict
 
 if TYPE_CHECKING:
@@ -318,3 +325,14 @@ def timeit(func):
         return r
 
     return wrapped
+
+
+def strip_leading_emoji(text: str) -> str:
+    if not EMOJI_LIB_AVAILABLE:
+        return text
+    words = text.split(" ")
+    # is_emoji returns False for 🛷️ for obscure reasons,
+    # purely_emoji seems better
+    if len(words) > 1 and emoji.purely_emoji(words[0]):
+        return " ".join(words[1:])
+    return text

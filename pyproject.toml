@@ -51,6 +51,7 @@ xmldiff = "^2.5"
 types-pillow = "^9.5.0.0"
 pre-commit = "^3.3.0"
 coverage = "^7.2.7"
+emoji = "*"
 
 [tool.poetry.group.dev.dependencies.slidge-dev-helpers]
 git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"

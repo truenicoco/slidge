@@ -214,3 +214,9 @@ DEV_MODE__DOC = (
     "Enables an interactive python shell via chat commands, for admins."
     "Not safe to use in prod, but great during dev."
 )
+
+STRIP_LEADING_EMOJI_ADHOC = False
+STRIP_LEADING_EMOJI_ADHOC__DOC = (
+    "Strip the leading emoji in ad-hoc command names, if present, in case you "
+    "are a emoji-hater."
+)
