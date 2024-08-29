@@ -130,17 +130,17 @@ class TestSession2(AvatarFixtureMixin, SlidgeTest):
             use_values=False,
         )
         self.send(  # language=XML
-            """
+            f"""
             <message type="headline"
                      from="juliet@aim.shakespeare.lit"
                      to="romeo@montague.lit">
               <event xmlns="http://jabber.org/protocol/pubsub#event">
                 <items node="urn:xmpp:avatar:metadata">
-                  <item id="630e98ce280a370dd1c7933289ce7a0338b8b3f1">
+                  <item id="{self.avatar_sha1}">
                     <metadata xmlns="urn:xmpp:avatar:metadata">
-                      <info id="630e98ce280a370dd1c7933289ce7a0338b8b3f1"
+                      <info id="{self.avatar_sha1}"
                             type="image/png"
-                            bytes="470"
+                            bytes="{len(self.avatar_bytes)}"
                             height="5"
                             width="5" />
                     </metadata>
