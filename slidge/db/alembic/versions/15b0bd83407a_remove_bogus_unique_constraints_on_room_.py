@@ -59,6 +59,8 @@ room_table = sa.Table(
 
 
 def upgrade() -> None:
+    if op.get_bind().engine.name == "postgresql":
+        return
     with op.batch_alter_table(
         "room",
         schema=None,

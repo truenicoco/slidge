@@ -37,12 +37,13 @@ def upgrade() -> None:
 
     with op.batch_alter_table("room", schema=None) as batch_op:
         batch_op.add_column(sa.Column("avatar_legacy_id", sa.String(), nullable=True))
-        batch_op.create_unique_constraint(
-            "uq_room_user_account_id_jid", ["user_account_id", "jid"]
-        )
-        batch_op.create_unique_constraint(
-            "uq_room_user_account_id_legacy_id", ["user_account_id", "legacy_id"]
-        )
+        if op.get_bind().engine.name != "postgresql":
+            batch_op.create_unique_constraint(
+                "uq_room_user_account_id_jid", ["user_account_id", "jid"]
+            )
+            batch_op.create_unique_constraint(
+                "uq_room_user_account_id_legacy_id", ["user_account_id", "legacy_id"]
+            )
 
     for room_pk, avatar_legacy_id in room_avatars:
         conn.execute(

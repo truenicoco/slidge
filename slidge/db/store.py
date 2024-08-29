@@ -1001,9 +1001,9 @@ class ParticipantStore(EngineMixin):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         with self.session() as session:
-            session.execute(delete(Participant))
-            session.execute(delete(Hat))
             session.execute(delete(participant_hats))
+            session.execute(delete(Hat))
+            session.execute(delete(Participant))
             session.commit()
 
     def add(self, room_pk: int, nickname: str) -> int:

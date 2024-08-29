@@ -95,6 +95,12 @@ def upgrade() -> None:
     op.add_column("room", sa.Column("description", sa.String(), nullable=True))
     op.add_column("room", sa.Column("subject", sa.String(), nullable=True))
     op.add_column("room", sa.Column("subject_date", sa.DateTime(), nullable=True))
+
+    if op.get_bind().engine.name == "postgresql":
+        op.execute(
+            "CREATE TYPE muctype AS ENUM ('GROUP', 'CHANNEL', 'CHANNEL_NON_ANONYMOUS')"
+        )
+
     op.add_column(
         "room",
         sa.Column(

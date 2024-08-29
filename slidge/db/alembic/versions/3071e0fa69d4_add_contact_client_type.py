@@ -37,7 +37,7 @@ def upgrade() -> None:
                     native_enum=False,
                 ),
                 nullable=False,
-                server_default=sa.text("pc"),
+                server_default=sa.literal("pc"),
             )
         )
 
