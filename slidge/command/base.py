@@ -178,8 +178,8 @@ class Form:
         """
         form = SlixForm()  # type: ignore[no-untyped-call]
         form["type"] = "form"
-        form["instructions"] = self.instructions
         form["title"] = self.title
+        form["instructions"] = self.instructions
         for fi in self.fields:
             form.append(fi.get_xml())
         return form
