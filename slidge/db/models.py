@@ -317,7 +317,7 @@ class LegacyIdsMulti(Base):
 
     legacy_id: Mapped[str] = mapped_column(nullable=False)
     xmpp_ids: Mapped[list["XmppIdsMulti"]] = relationship(
-        back_populates="legacy_ids_multi"
+        back_populates="legacy_ids_multi", cascade="all, delete-orphan"
     )
 
 
