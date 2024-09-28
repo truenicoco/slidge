@@ -4,8 +4,10 @@ import logging
 from collections import defaultdict
 
 import slixmpp.plugins
-from slixmpp import Message
+from slixmpp import Iq, Message
+from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0050 import XEP_0050, Command
+from slixmpp.plugins.xep_0231 import XEP_0231
 from slixmpp.plugins.xep_0356.privilege import _VALID_ACCESSES, XEP_0356
 from slixmpp.xmlstream import StanzaBase
 
@@ -53,6 +55,34 @@ def _handle_privilege(self, msg: StanzaBase):
 
 
 XEP_0356._handle_privilege = _handle_privilege
+
+
+async def _handle_bob_iq(self, iq: Iq):
+    cid = iq["bob"]["cid"]
+
+    if iq["type"] == "result":
+        await self.api["set_bob"](iq["from"], None, iq["to"], args=iq["bob"])
+        self.xmpp.event("bob", iq)
+    elif iq["type"] == "get":
+        data = await self.api["get_bob"](iq["to"], None, iq["from"], args=cid)
+
+        if data is None:
+            raise XMPPError(
+                "item-not-found",
+                f"Bits of binary '{cid}' is not available.",
+            )
+
+        if isinstance(data, Iq):
+            data["id"] = iq["id"]
+            data.send()
+            return
+
+        iq = iq.reply()
+        iq.append(data)
+        iq.send()
+
+
+XEP_0231._handle_bob_iq = _handle_bob_iq
 
 
 def session_bind(self, jid):

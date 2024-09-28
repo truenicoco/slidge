@@ -391,6 +391,31 @@ class TestSession(AvatarFixtureMixin, SlidgeTest):
         args, kwargs = on_text.call_args
         assert args[1] == "fdsf :amogus:"
 
+    def test_bob_not_found(self):
+        self.recv(  # language=XML
+            f"""
+            <iq from='{self.romeo.user_jid}/movim'
+                id='get-data-1'
+                to='juliet@{self.xmpp.boundjid.bare}'
+                type='get'>
+              <data xmlns='urn:xmpp:bob'
+                    cid='bogus' />
+            </iq>
+            """
+        )
+        self.send(  # language=XML
+            """
+            <iq from="juliet@aim.shakespeare.lit"
+                id="get-data-1"
+                to="romeo@montague.lit/movim"
+                type="error">\n
+            <error type="cancel">
+              <item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" />
+              <text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">Bits of binary 'bogus' is not available.</text>
+            </error></iq>
+            """
+        )
+
     def test_carbon_retract(self):
         with (
             unittest.mock.patch(
