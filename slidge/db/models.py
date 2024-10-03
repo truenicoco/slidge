@@ -235,7 +235,9 @@ class Room(Base):
     updated: Mapped[bool] = mapped_column(default=False)
 
     participants: Mapped[list["Participant"]] = relationship(
-        back_populates="room", primaryjoin="Participant.room_id == Room.id"
+        back_populates="room",
+        primaryjoin="Participant.room_id == Room.id",
+        cascade="all, delete-orphan",
     )
 
     avatar_legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)

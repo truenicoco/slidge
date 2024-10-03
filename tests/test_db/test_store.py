@@ -4,7 +4,7 @@ from slixmpp import JID
 
 import slidge.db.store
 from slidge.db.meta import Base
-from slidge.db.models import Avatar, Contact
+from slidge.db.models import Avatar, Contact, Participant, Room
 from slidge.db.store import SlidgeStore
 
 
@@ -76,4 +76,28 @@ def test_unregister(slidge_store):
         orm.commit()
         contact_pk = contact.id
     slidge_store.contacts.add_to_sent(contact_pk, "an-id")
+    slidge_store.users.delete(user.jid)
+
+
+def test_unregister_with_participants(slidge_store):
+    user = slidge_store.users.new(JID("test@test"), {})
+    with slidge_store.session() as orm:
+        contact = Contact(
+            jid=JID("xxx@xxx.com"), legacy_id="prout", user_account_id=user.id
+        )
+        orm.add(contact)
+        orm.commit()
+
+        room = Room(
+            user_account_id=user.id,
+            legacy_id="legacy-room",
+            jid=JID("legacy-room@something"),
+        )
+        orm.add(room)
+        orm.commit()
+
+        participant = Participant(room_id=room.id, contact_id=contact.id)
+        orm.add(participant)
+        orm.commit()
+
     slidge_store.users.delete(user.jid)
