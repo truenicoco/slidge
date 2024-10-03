@@ -154,14 +154,13 @@ class PresenceHandlerMixin(DispatcherMixin):
             # when setting a status message, or going away, etc.
             return
 
-        # We can't use XMPPError here because from must be room@slidge/VALID-USER-NICK
+        # We can't use XMPPError here because XMPPError does not have a way to
+        # add the <x xmlns="http://jabber.org/protocol/muc" /> element
 
-        error_from = JID(muc.jid)
-        error_from.resource = muc.user_nick
         error_stanza = p.error()
         error_stanza.set_to(p.get_from())
-        error_stanza.set_from(error_from)
-        error_stanza.enable("muc_join")
+        error_stanza.set_from(pto)
+        error_stanza.enable("muc_join")  # <x xmlns="http://jabber.org/protocol/muc" />
         error_stanza.enable("error")
         error_stanza["error"]["type"] = "cancel"
         error_stanza["error"]["by"] = muc.jid

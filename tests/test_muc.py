@@ -3967,7 +3967,7 @@ class TestNickChange(Base):
         )
         self.send(  # language=XML
             f"""
-            <presence from='{muc.jid}/{muc.user_nick}'
+            <presence from='{muc.jid}/new-nick'
                       id='nick-change'
                       to='{muc.user_jid}/gajim'
                       type='error'>
