@@ -1,14 +1,13 @@
 # This module contains patches for slixmpp; some have pending requests upstream
 # and should be removed on the next slixmpp release.
-import logging
-from collections import defaultdict
+
+# ruff: noqa: F401
 
 import slixmpp.plugins
 from slixmpp import Iq, Message
 from slixmpp.exceptions import XMPPError
 from slixmpp.plugins.xep_0050 import XEP_0050, Command
 from slixmpp.plugins.xep_0231 import XEP_0231
-from slixmpp.plugins.xep_0356.privilege import _VALID_ACCESSES, XEP_0356
 from slixmpp.xmlstream import StanzaBase
 
 from . import (  # xep_0356,
@@ -24,37 +23,6 @@ from . import (  # xep_0356,
     xep_0424,
     xep_0490,
 )
-
-# ruff: noqa: F401
-
-
-# TODO: Remove me once https://codeberg.org/poezio/slixmpp/pulls/3541 makes it
-#       to a slixmpp release
-def _handle_privilege(self, msg: StanzaBase):
-    """
-    Called when the XMPP server advertise the component's privileges.
-
-    Stores the privileges in this instance's granted_privileges attribute (a dict)
-    and raises the privileges_advertised event
-    """
-    permissions = self.granted_privileges[msg.get_from()]
-    for perm in msg["privilege"]["perms"]:
-        access = perm["access"]
-        if access == "iq":
-            if not perm.get_plugin("namespace", check=True):
-                permissions.iq = defaultdict(lambda: perm["type"])
-            else:
-                for ns in perm["namespaces"]:
-                    permissions.iq[ns["ns"]] = ns["type"]
-        elif access in _VALID_ACCESSES:
-            setattr(permissions, access, perm["type"])
-        else:
-            log.warning("Received an invalid privileged access: %s", access)
-    log.debug("Privileges: %s", self.granted_privileges)
-    self.xmpp.event("privileges_advertised")
-
-
-XEP_0356._handle_privilege = _handle_privilege
 
 
 async def _handle_bob_iq(self, iq: Iq):
@@ -128,4 +96,3 @@ slixmpp.plugins.PLUGINS.extend(
 
 
 Message.reply = reply  # type: ignore
-log = logging.getLogger(__name__)
