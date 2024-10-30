@@ -112,7 +112,7 @@ def configure():
 
     if not (h := config.HOME_DIR).exists():
         logging.info("Creating directory '%s'", h)
-        h.mkdir()
+        os.makedirs(h)
 
     config.UPLOAD_REQUESTER = config.UPLOAD_REQUESTER or config.JID.bare
 
