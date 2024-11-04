@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, AsyncIterator, Generic, Iterator, Optional, Type
 
 from slixmpp import JID
-from slixmpp.exceptions import IqError, XMPPError
+from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.jid import JID_UNESCAPE_TRANSFORMATIONS, _unescape_node
 
 from ..core.mixins.lock import NamedLockMixin
@@ -210,7 +210,7 @@ class LegacyRoster(
                 self.session.user_jid.bare
             )
             user_roster = iq["roster"]["items"]
-        except (PermissionError, IqError):
+        except (PermissionError, IqError, IqTimeout):
             user_roster = None
 
         with self.__store.session() as orm:
@@ -232,7 +232,7 @@ class LegacyRoster(
                         self.session.user_jid.bare,
                         item,
                     )
-                except (PermissionError, IqError) as e:
+                except (PermissionError, IqError, IqTimeout) as e:
                     warnings.warn(f"Could not add to roster: {e}")
                 else:
                     contact._added_to_roster = True

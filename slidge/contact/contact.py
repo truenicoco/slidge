@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Generic, Iterable, Optional, Self, Union
 from xml.etree import ElementTree as ET
 
 from slixmpp import JID, Message, Presence
-from slixmpp.exceptions import IqError
+from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.plugins.xep_0292.stanza import VCard4
 from slixmpp.types import MessageTypes
 
@@ -463,7 +463,7 @@ class LegacyContact(
                     "slidge is not allowed to manage your roster."
                 )
             return
-        except IqError as e:
+        except (IqError, IqTimeout) as e:
             self.log.warning("Could not add to roster", exc_info=e)
         else:
             # we only broadcast pubsub events for contacts added to the roster

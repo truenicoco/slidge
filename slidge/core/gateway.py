@@ -429,7 +429,7 @@ class BaseGateway(
             try:
                 await self["xep_0100"].add_component_to_roster(user.jid)
                 await self.__add_component_to_mds_whitelist(user.jid)
-            except IqError as e:
+            except (IqError, IqTimeout) as e:
                 # TODO: remove the user when this happens? or at least
                 # this can happen when the user has unsubscribed from the XMPP server
                 log.warning(
@@ -464,7 +464,7 @@ class BaseGateway(
                 "create the MDS node of %s",
                 user_jid,
             )
-        except IqError as e:
+        except (IqError, IqTimeout) as e:
             # conflict this means the node already exists, we can ignore that
             if e.condition != "conflict":
                 log.exception(
@@ -548,7 +548,7 @@ class BaseGateway(
                 self.xmpp.plugin["xep_0084"].stanza.MetaData.namespace,
                 ifrom=self.boundjid.bare,
             )
-        except IqError:
+        except (IqError, IqTimeout):
             self.xmpp.store.users.set_avatar_hash(session.user_pk, None)
             return
         await self.__dispatcher.on_avatar_metadata_info(

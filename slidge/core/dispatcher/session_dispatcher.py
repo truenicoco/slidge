@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from slixmpp import Message
-from slixmpp.exceptions import IqError
+from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.plugins.xep_0084.stanza import Info
 
 from ..session import BaseSession
@@ -59,7 +59,7 @@ class SessionDispatcher(
                 iq = await self.xmpp.plugin["xep_0084"].retrieve_avatar(
                     session.user_jid, hash_, ifrom=self.xmpp.boundjid.bare
                 )
-            except IqError as e:
+            except (IqError, IqTimeout) as e:
                 session.log.warning("Could not fetch the user's avatar: %s", e)
                 return
             bytes_ = iq["pubsub"]["items"]["item"]["avatar_data"]["value"]

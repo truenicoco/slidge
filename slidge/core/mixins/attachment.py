@@ -19,7 +19,7 @@ from xml.etree import ElementTree as ET
 import thumbhash
 from PIL import Image, ImageOps
 from slixmpp import JID, Message
-from slixmpp.exceptions import IqError
+from slixmpp.exceptions import IqError, IqTimeout
 from slixmpp.plugins.xep_0363 import FileUploadError
 from slixmpp.plugins.xep_0447.stanza import StatelessFileSharing
 
@@ -65,7 +65,7 @@ class AttachmentMixin(TextMessageMixin):
                 ifrom=config.UPLOAD_REQUESTER or self.xmpp.boundjid,
                 domain=JID(domain),
             )
-        except (FileUploadError, IqError) as e:
+        except (FileUploadError, IqError, IqTimeout) as e:
             warnings.warn(f"Something is wrong with the upload service: {e!r}")
             return None
         finally:

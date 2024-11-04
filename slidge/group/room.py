@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Generic, Optional, Self, Union
 from uuid import uuid4
 
 from slixmpp import JID, Iq, Message, Presence
-from slixmpp.exceptions import IqError, XMPPError
+from slixmpp.exceptions import IqError, IqTimeout, XMPPError
 from slixmpp.jid import _unescape_node
 from slixmpp.plugins.xep_0004 import Form
 from slixmpp.plugins.xep_0060.stanza import Item
@@ -1029,7 +1029,7 @@ class LegacyMUC(
                 # (slixmpp annoying magic)
                 item = ans["pubsub"]["items"]["item"]
                 item["id"] = self.jid
-            except IqError:
+            except (IqError, IqTimeout):
                 item["conference"]["autojoin"] = auto_join
             except PermissionError:
                 warnings.warn(
