@@ -98,7 +98,7 @@ class Register(Command):
                 raise
 
         user = GatewayUser(
-            jid=ifrom.bare,
+            jid=JID(ifrom.bare),
             legacy_module_data=form_values if data is None else data,
         )
 
