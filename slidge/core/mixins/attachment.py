@@ -374,9 +374,20 @@ class AttachmentMixin(TextMessageMixin):
                 if xmpp_id == original_xmpp_id:
                     continue
                 self.retract(xmpp_id, thread)
+
+        if reply_to is not None and reply_to.body:
+            # We cannot have a "quote fallback" for attachments since most (all?)
+            # XMPP clients will only treat a message as an attachment if the
+            # body is the URL and nothing else.
+            reply_to_for_attachment: MessageReference | None = MessageReference(
+                reply_to.legacy_id, reply_to.author
+            )
+        else:
+            reply_to_for_attachment = reply_to
+
         msg = self._make_message(
             when=when,
-            reply_to=reply_to,
+            reply_to=reply_to_for_attachment,
             carbon=carbon,
             mto=mto,
             thread=thread,

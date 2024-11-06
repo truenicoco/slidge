@@ -10,7 +10,7 @@ from conftest import AvatarFixtureMixin
 from test_shakespeare import Base as Shakespeare
 
 from slidge.core import config
-from slidge.util.types import LegacyAttachment
+from slidge.util.types import LegacyAttachment, MessageReference
 
 
 @pytest.fixture(scope="function")
@@ -377,3 +377,72 @@ class TestAttachmentNoUpload(Base):
         while (stanza := self.next_sent()) is not None:
             moderated_ids.append(stanza["apply_to"]["id"])
         assert set(stanza_ids) == set(moderated_ids)
+
+    def test_reply_with_attachment(self):
+        self.run_coro(
+            self.juliet.send_files(
+                [
+                    LegacyAttachment(path=self.avatar_path),
+                ],
+                reply_to=MessageReference("some_msg_id", body="a body"),
+            )
+        )
+        self.send(  # language=XML
+            """
+            <message xmlns="jabber:component:accept"
+                     type="chat"
+                     from="juliet@aim.shakespeare.lit/slidge"
+                     to="romeo@montague.lit">
+              <reply xmlns="urn:xmpp:reply:0"
+                     id="some_msg_id" />
+              <body>https://url/uuid/uuid/5x5.png</body>
+              <reference xmlns="urn:xmpp:reference:0"
+                         type="data">
+                <media-sharing xmlns="urn:xmpp:sims:1">
+                  <sources>
+                    <reference xmlns="urn:xmpp:reference:0"
+                               uri="https://url/uuid/uuid/5x5.png"
+                               type="data" />
+                  </sources>
+                  <file xmlns="urn:xmpp:jingle:apps:file-transfer:5">
+                    <media-type>image/png</media-type>
+                    <name>5x5.png</name>
+                    <size>547</size>
+                    <date>2023-02-28T18:18:18.190378</date>
+                    <hash xmlns="urn:xmpp:hashes:2"
+                          algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
+                    <thumbnail xmlns="urn:xmpp:thumbs:1"
+                               width="5"
+                               height="5"
+                               media-type="image/thumbhash"
+                               uri="data:image/thumbhash;base64,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
+                  </file>
+                </media-sharing>
+              </reference>
+              <file-sharing xmlns="urn:xmpp:sfs:0"
+                            disposition="inline">
+                <sources>
+                  <url-data xmlns="http://jabber.org/protocol/url-data"
+                            target="https://url/uuid/uuid/5x5.png" />
+                </sources>
+                <file xmlns="urn:xmpp:file:metadata:0">
+                  <media-type>image/png</media-type>
+                  <name>5x5.png</name>
+                  <size>547</size>
+                  <date>2023-02-28T18:18:18.190378</date>
+                  <hash xmlns="urn:xmpp:hashes:2"
+                        algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
+                  <thumbnail xmlns="urn:xmpp:thumbs:1"
+                             width="5"
+                             height="5"
+                             media-type="image/thumbhash"
+                             uri="data:image/thumbhash;base64,AAgCBwAAAAAAAAAAAAAAAAAAAAAAAAAA" />
+                </file>
+              </file-sharing>
+              <x xmlns="jabber:x:oob">
+                <url>https://url/uuid/uuid/5x5.png</url>
+              </x>
+            </message>
+            """,
+            use_values=False,
+        )
