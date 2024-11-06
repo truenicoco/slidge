@@ -242,6 +242,10 @@ class Room(Base):
 
     avatar_legacy_id: Mapped[Optional[str]] = mapped_column(nullable=True)
 
+    archive: Mapped[list["ArchivedMessage"]] = relationship(
+        cascade="all, delete-orphan"
+    )
+
 
 class ArchivedMessage(Base):
     """
