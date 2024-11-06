@@ -245,7 +245,7 @@ class FormField:
             self.type = "text-private"
 
     def __acceptable_options(self) -> list[str]:
-        if not self.options:
+        if self.options is None:
             raise RuntimeError
         return [x["value"] for x in self.options]
 
