@@ -454,7 +454,7 @@ class LegacyContact(
         except PermissionError:
             warnings.warn(
                 "Slidge does not have privileges to add contacts to the roster. Refer"
-                " to https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html for"
+                " to https://slidge.im/core/admin/privilege.html for"
                 " more info."
             )
             if config.ROSTER_PUSH_PRESENCE_SUBSCRIPTION_REQUEST_FALLBACK:

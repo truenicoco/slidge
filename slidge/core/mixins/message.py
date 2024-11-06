@@ -172,7 +172,7 @@ class CarbonMessageMixin(ContentMessageMixin, MarkerMixin):
                 warnings.warn(
                     "Slidge does not have privileges to send message on behalf of"
                     " user.Refer to"
-                    " https://slidge.readthedocs.io/en/latest/admin/xmpp_server.html"
+                    " https://slidge.im/core/admin/privilege.html"
                     " for more info."
                 )
 
