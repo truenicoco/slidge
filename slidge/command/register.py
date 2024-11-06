@@ -75,7 +75,8 @@ class Register(Command):
         self.xmpp.event("user_register", Iq(sfrom=ifrom.bare))
         return self.SUCCESS_MESSAGE
 
-    async def run(self, _session, _ifrom, *_):
+    async def run(self, _session, ifrom: JID, *_):
+        self.xmpp.raise_if_not_allowed_jid(ifrom)
         return Form(
             title=f"Registration to '{self.xmpp.COMPONENT_NAME}'",
             instructions=self.xmpp.REGISTRATION_INSTRUCTIONS,
