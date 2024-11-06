@@ -797,6 +797,9 @@ class BaseGateway(
             fut.set_exception(exception)
 
     async def unregister_user(self, user: GatewayUser):
+        self.send_presence(
+            pshow="busy", pstatus="You are not registered to this gateway anymore."
+        )
         await self.xmpp.plugin["xep_0077"].api["user_remove"](None, None, user.jid)
         await self.xmpp.session_cls.kill_by_jid(user.jid)
 

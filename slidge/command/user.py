@@ -292,7 +292,7 @@ class Unregister(Command):
         user = self.xmpp.store.users.get(session.user_jid)
         assert user is not None
         await self.xmpp.unregister_user(user)
-        return "OK"
+        return "You are not registered anymore. Bye!"
 
 
 class LeaveGroup(Command):
