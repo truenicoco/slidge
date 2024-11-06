@@ -175,7 +175,9 @@ class ChatCommandProvider:
                 else:
                     if f.type == "list-multi":
                         msg.reply(
-                            "Multiple selection allowed, use a single space as a separator"
+                            "Multiple selection allowed, use new lines as a separator, ie, "
+                            "one selected item per line. To select no item, reply with a space "
+                            "(the punctuation)."
                         ).send()
                     if f.options:
                         for o in f.options:
@@ -202,7 +204,8 @@ class ChatCommandProvider:
                             ans = "false"
 
                     if f.type.endswith("multi"):
-                        form_values[f.var] = f.validate(ans.split(" "))
+                        choices = [] if ans == " " else ans.split("\n")
+                        form_values[f.var] = f.validate(choices)
                     else:
                         form_values[f.var] = f.validate(ans)
             result = await self.__wrap_handler(
