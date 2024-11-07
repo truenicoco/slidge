@@ -387,8 +387,13 @@ class TestAttachmentNoUpload(Base):
                 reply_to=MessageReference("some_msg_id", body="a body"),
             )
         )
+        when = (
+            datetime.fromtimestamp(self.avatar_path.stat().st_mtime)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         self.send(  # language=XML
-            """
+            f"""
             <message xmlns="jabber:component:accept"
                      type="chat"
                      from="juliet@aim.shakespeare.lit/slidge"
@@ -408,7 +413,7 @@ class TestAttachmentNoUpload(Base):
                     <media-type>image/png</media-type>
                     <name>5x5.png</name>
                     <size>547</size>
-                    <date>2023-02-28T18:18:18.190378</date>
+                    <date>{when}</date>
                     <hash xmlns="urn:xmpp:hashes:2"
                           algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
                     <thumbnail xmlns="urn:xmpp:thumbs:1"
@@ -429,7 +434,7 @@ class TestAttachmentNoUpload(Base):
                   <media-type>image/png</media-type>
                   <name>5x5.png</name>
                   <size>547</size>
-                  <date>2023-02-28T18:18:18.190378</date>
+                  <date>{when}</date>
                   <hash xmlns="urn:xmpp:hashes:2"
                         algo="sha-256">NdpqDQuHlshve2c0iU25l2KI4cjpoyzaTk3a/CdbjPQ=</hash>
                   <thumbnail xmlns="urn:xmpp:thumbs:1"
